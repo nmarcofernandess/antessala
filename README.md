@@ -34,6 +34,7 @@ pode aparecer duas vezes na fila — isso é aceito, não é erro.
 | Arquivo | Para quem |
 |---|---|
 | [`docs/PLANO.html`](docs/PLANO.html) | **Comece aqui.** Plano de trabalho: tarefas, passos e quem faz o quê. Abre no navegador com dois cliques. |
+| [`docs/INVENTARIO.html`](docs/INVENTARIO.html) | O arsenal: tudo que o kit base tem, o que a branch Studio já resolveu, o que roubamos do DietFlow/EscalaFlow — e a proposta de preparo do repo. |
 | [`specs/000-produto-antessala/analysis.md`](specs/000-produto-antessala/analysis.md) | O analyst: a decisão do ID descartável, as quatro telas, a jornada, os invariantes. |
 | [`specs/001-preparar-ambiente/spec.md`](specs/001-preparar-ambiente/spec.md) | O que fica e o que sai do casco herdado. |
 

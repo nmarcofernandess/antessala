@@ -1,0 +1,594 @@
+<meta charset="utf-8">
+<title>Antessala — inventário do arsenal</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box }
+  html { scroll-behavior: smooth }
+
+  :root {
+    --paper: #f3efe6;
+    --paper-2: #ece7da;
+    --ink: #191613;
+    --ink-soft: #4f4a42;
+    --ink-faint: #8a8377;
+    --signal: #b3492a;
+    --signal-soft: #f6ded5;
+    --ok: #2c6e49;
+    --ok-soft: #dcebe2;
+    --warn: #96690d;
+    --warn-soft: #f5e9cd;
+    --rule: #d6cfc0;
+    --display: 'Futura', 'Avenir Next', 'Century Gothic', 'Trebuchet MS', sans-serif;
+    --mono: 'SF Mono', 'Menlo', 'Cascadia Code', 'Consolas', monospace;
+  }
+
+  body {
+    font-family: var(--display); background: var(--paper); color: var(--ink); line-height: 1.5;
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0 2px, rgba(25,22,19,.012) 2px 4px),
+      radial-gradient(ellipse 120% 90% at 50% -10%, rgba(255,255,255,.5), transparent 60%);
+  }
+  .page { max-width: 1000px; margin: 0 auto; padding: 0 28px 100px }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: none } }
+  .r { animation: rise .7s cubic-bezier(.2,.7,.2,1) both }
+  .d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}
+
+  .doc-plate { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .12em; color: var(--ink-soft);
+    text-transform: uppercase; border: 1px solid var(--ink); padding: 8px 14px; margin: 26px 0 44px }
+  .doc-plate b { color: var(--signal) }
+
+  header.capa { padding: 8px 0 34px; border-bottom: 3px solid var(--ink) }
+  h1 { font-size: clamp(38px,7vw,68px); font-weight: 700; letter-spacing: -.02em; line-height: .95;
+    text-transform: uppercase }
+  h1 .thin { font-weight: 400; display: block; font-size: .3em; letter-spacing: .13em; margin-top: 16px;
+    color: var(--ink-soft); text-transform: none }
+  .lede { margin-top: 22px; font-size: 17.5px; max-width: 62ch; color: var(--ink-soft) }
+  .lede b { color: var(--ink) }
+
+  section { padding: 52px 0 8px; border-bottom: 1px solid var(--rule) }
+  .kicker { font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--signal); margin-bottom: 10px }
+  h2 { font-size: clamp(24px,3.4vw,33px); text-transform: uppercase; line-height: 1.05; max-width: 24ch }
+  h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; margin: 30px 0 6px;
+    padding-bottom: 5px; border-bottom: 1px solid var(--rule) }
+  p { max-width: 66ch; margin-top: 12px; color: var(--ink-soft); font-size: 15.5px }
+  p b { color: var(--ink) }
+
+  .sec-head { display: flex; align-items: flex-start; gap: 20px }
+  .num { font-size: clamp(46px,6.5vw,76px); font-weight: 700; line-height: .85; color: transparent;
+    -webkit-text-stroke: 1.5px var(--ink); flex: none }
+
+  ul { list-style: none; margin: 12px 0 0; max-width: 66ch }
+  li { position: relative; padding-left: 20px; margin-bottom: 7px; color: var(--ink-soft); font-size: 15px }
+  li::before { content: '—'; position: absolute; left: 0; color: var(--signal) }
+  li b { color: var(--ink) }
+
+  /* ── tabelas ── */
+  .rolagem { overflow-x: auto; margin-top: 14px }
+  table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14.5px }
+  th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+    text-align: left; color: var(--ink-faint); border-bottom: 1.5px solid var(--ink); padding: 7px 8px;
+    font-weight: 400; vertical-align: bottom }
+  td { padding: 8px; border-bottom: 1px dotted var(--rule); vertical-align: top; color: var(--ink-soft) }
+  td b { color: var(--ink) }
+  tbody tr:hover { background: rgba(25,22,19,.025) }
+  code { font-family: var(--mono); font-size: 12.5px; background: var(--paper-2); padding: 1px 5px;
+    border: 1px solid var(--rule); white-space: nowrap }
+
+  .st { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+    padding: 2px 7px; border: 1px solid var(--rule); white-space: nowrap; display: inline-block }
+  .st.fica { border-color: var(--ok); color: var(--ok); background: var(--ok-soft) }
+  .st.esconde { border-color: var(--warn); color: var(--warn); background: var(--warn-soft) }
+  .st.sai { border-color: var(--signal); color: var(--signal); background: var(--signal-soft) }
+  .st.rouba { border-color: var(--ink); color: var(--ink); background: #fff }
+
+  /* ── diorama ── */
+  .fig { position: relative; border: 1px solid var(--ink);
+    background:
+      linear-gradient(rgba(25,22,19,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(25,22,19,.045) 1px, transparent 1px);
+    background-size: 22px 22px; background-color: #fffdf9;
+    padding: 26px 22px 32px; display: flex; flex-direction: column; gap: 11px; min-height: 190px;
+    justify-content: center; margin-top: 20px }
+  .fig::after { content: attr(data-fig); position: absolute; bottom: -1px; right: -1px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+    background: var(--ink); color: var(--paper); padding: 4px 12px }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start }
+
+  .ficha { background: #fff; border: 1.5px solid var(--ink); box-shadow: 3px 3px 0 rgba(25,22,19,.1);
+    padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px }
+  .ficha.fantasma { border-style: dashed; box-shadow: none; opacity: .5; background: transparent }
+  .ficha b { font-size: 14px; display: block }
+  .ficha small { font-family: var(--mono); font-size: 9.5px; color: var(--ink-faint) }
+
+  .fluxo { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 10px;
+    flex-wrap: wrap }
+  .fluxo .no { border: 1.5px solid var(--ink); background: #fff; padding: 6px 10px; text-transform: uppercase;
+    letter-spacing: .05em; white-space: nowrap }
+  .fluxo .no.hot { background: var(--signal); border-color: var(--signal); color: #fff }
+  .fluxo .no.gh { border-style: dashed; opacity: .45; background: transparent }
+  .fluxo .seta { flex: 1; min-width: 14px; height: 1.5px;
+    background: repeating-linear-gradient(90deg, var(--ink) 0 5px, transparent 5px 10px) }
+
+  .aviso { border: 1.5px solid var(--signal); background: var(--signal-soft); padding: 12px 15px;
+    font-size: 15px; color: var(--ink); max-width: 66ch; margin-top: 18px }
+  .aviso .rot { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--signal); margin-bottom: 6px }
+  .aviso b { font-weight: 700; color: var(--ink) }
+  .aviso.bom { border-color: var(--ok); background: var(--ok-soft) }
+  .aviso.bom .rot { color: var(--ok) }
+
+  .placar { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 26px }
+  .kpi { border: 1.5px solid var(--ink); background: #fff; box-shadow: 4px 4px 0 rgba(25,22,19,.1);
+    padding: 14px }
+  .kpi .n { font-size: 30px; font-weight: 700; line-height: 1 }
+  .kpi .l { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); margin-top: 6px }
+
+  .passo { display: grid; grid-template-columns: 46px 1fr; gap: 16px; padding: 13px 0;
+    border-bottom: 1px dotted var(--rule) }
+  .passo:last-child { border-bottom: none }
+  .passo .p { font-family: var(--mono); font-size: 13px; color: var(--signal); padding-top: 2px }
+  .passo b { display: block; font-size: 16px; margin-bottom: 3px }
+  .passo span { font-size: 14.5px; color: var(--ink-soft) }
+
+  footer { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint); text-align: center; padding-top: 36px }
+
+  @media (max-width: 820px) {
+    .grid2 { grid-template-columns: 1fr; gap: 22px }
+    .placar { grid-template-columns: 1fr 1fr }
+    .sec-head { flex-direction: column; gap: 4px }
+  }
+  @media print { .r { animation: none !important; opacity: 1 !important } body { background: #fff } }
+</style>
+
+<div class="page">
+
+  <div class="doc-plate r d1">
+    <span>Inventário do arsenal · <b>Antessala</b></span>
+    <span>13 ago 2026 · levantado no código, não de memória</span>
+  </div>
+
+  <header class="capa r d2">
+    <h1>O que já<br>existe
+      <span class="thin">Tudo que o kit tem, o que o Studio já resolveu, e o que dá pra roubar do resto.</span>
+    </h1>
+    <p class="lede">Três repositórios foram abertos e lidos: o <b>FlowKit</b> (o kit base),
+      a branch <b>Studio</b> (o mesmo kit já podado e reorganizado) e o <b>DietFlow</b> +
+      <b>EscalaFlow</b> (de onde vêm os widgets, os dados clínicos e o PDF). No fim, a
+      proposta de ajuste do repositório.</p>
+
+    <div class="placar">
+      <div class="kpi"><div class="n">14</div><div class="l">recursos no kit base</div></div>
+      <div class="kpi"><div class="n">9</div><div class="l">já resolvidos pelo Studio</div></div>
+      <div class="kpi"><div class="n">6</div><div class="l">peças a roubar</div></div>
+      <div class="kpi"><div class="n">4</div><div class="l">a construir do zero</div></div>
+    </div>
+  </header>
+
+  <!-- ═══════ 01 · O KIT ═══════ -->
+  <section class="r d3">
+    <div class="sec-head">
+      <div class="num">01</div>
+      <div>
+        <div class="kicker">o kit base · FlowKit</div>
+        <h2>Tudo que vem na caixa</h2>
+      </div>
+    </div>
+
+    <p>O FlowKit se descreve como <i>"kit quickstart para apps Electron offline com IA + RAG
+      + Knowledge Graph"</i>. Ele entrega catorze coisas. A última coluna é o que cada uma
+      vale para a triagem.</p>
+
+    <h3>Fundação — o que sustenta o app</h3>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Recurso</th><th>O que é</th><th>Onde vive</th><th>Antessala</th></tr></thead>
+        <tbody>
+          <tr><td><b>Casca Electron</b></td><td>Janela nativa, empacotamento .dmg/.exe, auto-update</td><td><code>electron-vite</code></td><td><span class="st fica">fica</span></td></tr>
+          <tr><td><b>React 19 + rotas</b></td><td>Hash router, layout com sidebar colapsável</td><td><code>App.tsx</code></td><td><span class="st fica">fica</span></td></tr>
+          <tr><td><b>UI shadcn/ui</b></td><td>32 componentes Radix + Tailwind v4</td><td><code>components/ui/</code></td><td><span class="st fica">fica</span></td></tr>
+          <tr><td><b>PGlite</b></td><td>Postgres embarcado no app, com pgvector e trigram</td><td><code>db/pglite.ts</code></td><td><span class="st fica">fica</span></td></tr>
+          <tr><td><b>IPC tipado</b></td><td>Chamada direta tipada entre janela e processo principal</td><td><code>tipc.ts</code> · ~70 handlers</td><td><span class="st fica">fica</span></td></tr>
+          <tr><td><b>Testes</b></td><td>Vitest + Playwright E2E abrindo o Electron real</td><td><code>tests/</code> · 409 verdes</td><td><span class="st fica">fica</span></td></tr>
+          <tr><td><b>Backup/restore</b></td><td>ZIP com as tabelas do app</td><td><code>backup.ts</code></td><td><span class="st fica">fica</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Inteligência — o que o kit faz com IA</h3>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Recurso</th><th>O que é</th><th>Custo</th><th>Antessala</th></tr></thead>
+        <tbody>
+          <tr><td><b>Chat com IA</b></td><td>Streaming, 3 provedores (Gemini, OpenRouter, local)</td><td>—</td><td><span class="st fica">fica</span></td></tr>
+          <tr><td><b>Tool calling</b></td><td>11 handlers reais agrupados em 3 famílias para o modelo</td><td>—</td><td><span class="st fica">simplifica</span></td></tr>
+          <tr><td><b>Contexto automático</b></td><td>Injeta stats, memórias e busca em toda mensagem</td><td>—</td><td><span class="st fica">troca pelo do Studio</span></td></tr>
+          <tr><td><b>Memórias</b></td><td>Fatos persistentes, máx. 50, manual + automático</td><td>—</td><td><span class="st esconde">esconde</span></td></tr>
+          <tr><td><b>RAG / busca híbrida</b></td><td>Vetor 70% + texto 30% + trigram</td><td><b>278 MB</b> baixados no 1º boot</td><td><span class="st esconde">esconde</span></td></tr>
+          <tr><td><b>Knowledge Graph</b></td><td>Entidades e relações extraídas por LLM + visualização</td><td>força-gráfico 2D</td><td><span class="st esconde">esconde</span></td></tr>
+          <tr><td><b>Modelo local</b></td><td>Gemma 4 via <code>llama-server</code></td><td>GB em disco</td><td><span class="st sai">sai</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Superfícies extras — o que o kit abre além do app</h3>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Recurso</th><th>O que é</th><th>Antessala</th></tr></thead>
+        <tbody>
+          <tr><td><b>Terminal embutido</b></td><td>Shell vivo na UI + harness de exec/read/write com auditoria</td><td><span class="st sai">sai</span></td></tr>
+          <tr><td><b>CLI</b></td><td><code>npm run cli</code> — chat, RAG, jobs, terminal</td><td><span class="st sai">sai</span></td></tr>
+          <tr><td><b>Servidor MCP + tool-server</b></td><td>HTTP na porta 17380 subindo junto com o app</td><td><span class="st sai">sai</span></td></tr>
+          <tr><td><b>Galeria</b></td><td>Grid de imagens com tags e favoritos</td><td><span class="st sai">sai</span></td></tr>
+          <tr><td><b>Importadores</b></td><td>.md .txt .pdf .zip + exports do ChatGPT e Claude</td><td><span class="st esconde">esconde</span></td></tr>
+          <tr><td><b>Cron</b></td><td>Pipeline de 6 passos rodando no relógio</td><td><span class="st sai">sai</span></td></tr>
+          <tr><td><b>Ditado / STT</b></td><td>Parakeet/Whisper com binário Rust</td><td><span class="st sai">sai</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="aviso">
+      <span class="rot">a conta que ninguém vê</span>
+      O install é limpo — 53 s, sem baixar modelo. Mas <b>o primeiro boot baixa 278 MB</b>
+      de <code>model_quantized.onnx</code> da internet, e semeia a base com a documentação
+      do próprio FlowKit: 44 fragmentos, 31 entidades, 28 relações. Um app que a gente
+      chama de offline, precisando de internet para abrir a primeira vez.
+    </div>
+  </section>
+
+  <!-- ═══════ 02 · O STUDIO ═══════ -->
+  <section>
+    <div class="sec-head">
+      <div class="num">02</div>
+      <div>
+        <div class="kicker">a branch já podada · Editorial Studio</div>
+        <h2>O trabalho que já foi feito</h2>
+      </div>
+    </div>
+
+    <p>O Studio é o mesmo kit levado a um produto real: <b>293 arquivos alterados,
+      +46 mil linhas</b>. Ele grava aula, transcreve, traduz e vira livro. Nada disso serve
+      para nós — mas <b>quase toda a encanação que ele construiu no caminho serve.</b></p>
+
+    <h3>O que ele já resolveu e a gente herda de graça</h3>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Peça</th><th>O que o Studio fez</th><th>Serve para</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Editor rich text</b></td>
+            <td>TipTap v3 completo — negrito, listas, link, marca-texto, autosave, e a
+              <b>seleção do texto alimentando a IA</b> com hash e revisão</td>
+            <td>O bloco de notas da Memória. <b>Já está pronto</b> — não é plano.</td>
+          </tr>
+          <tr>
+            <td><b>Contexto da IA</b></td>
+            <td>Reescrito do zero: 3 modos (<code>global</code>, <code>adaptive</code>,
+              <code>pinned</code>), escopo que sobe de documento → caderno → global só com
+              motivo declarado, catálogo com apelidos e <b>orçamento de caracteres por
+              parte</b> (seleção 6k, catálogo 4k, fontes 8k, teto 16k)</td>
+            <td>A IA lendo a anamnese aberta sem estourar contexto nem alucinar de onde
+              tirou. É a peça mais valiosa do Studio.</td>
+          </tr>
+          <tr>
+            <td><b>IA que navega</b></td>
+            <td>A IA pede para abrir uma tela; o app confirma ou recusa. Com resolução de
+              nome ambíguo e confirmação de execução</td>
+            <td>"Me leva pro próximo da fila" funcionando de verdade.</td>
+          </tr>
+          <tr>
+            <td><b>Navegação enxuta</b></td>
+            <td>Reescreveu as rotas: <b>zero</b> apontam para Memória, Galeria, Terminal,
+              Maiá ou o Dashboard antigo — as páginas continuam no repo, só saíram do mapa</td>
+            <td>É exatamente o "esconde por agora" sem apagar nada.</td>
+          </tr>
+          <tr>
+            <td><b>Home = coleção + fila</b></td>
+            <td>Grid de cadernos em cima, <b>fila de trabalho em andamento</b> embaixo, com
+              estado e progresso</td>
+            <td>A anatomia da nossa tela 3, pronta para trocar o conteúdo.</td>
+          </tr>
+          <tr>
+            <td><b>Máquina de estados</b></td>
+            <td>Tabela de fila com 19 estados válidos travados no banco e percentual de
+              progresso</td>
+            <td>Modelo direto para a jornada do registro — o Codex não começa do papel.</td>
+          </tr>
+          <tr>
+            <td><b>Configurações refeitas</b></td>
+            <td>Página nova com duas seções apenas: provedor de IA e captura de áudio.
+              A página antiga, com tudo dentro, ficou fora das rotas</td>
+            <td>A base do nosso Configurações magro.</td>
+          </tr>
+          <tr>
+            <td><b>Identidade central</b></td>
+            <td>Um arquivo define nome do app, do assistente e da CLI — e tudo o mais lê dali</td>
+            <td>Já usei: mudei um arquivo e o nome propagou para toda a interface.</td>
+          </tr>
+          <tr>
+            <td><b>Onboarding próprio</b></td>
+            <td>Wizard reescrito, sem passo de tema, com teste real dos recursos</td>
+            <td>Molde para o nosso — que provavelmente não precisa existir.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="aviso">
+      <span class="rot">duas coisas que você lembrava diferente</span>
+      <b>1.</b> O rich text não está "só planejado" — está implementado e funcionando, com
+      a seleção do texto já ligada ao contexto da IA.<br>
+      <b>2.</b> O dropdown de tema claro/escuro/sistema <b>não existe</b> no Studio. O
+      provedor está fixo em "sistema" e o único seletor vivo mora na página de
+      Configurações antiga, que está fora das rotas. Ou seja: hoje, no Studio, <b>não há
+      como trocar o tema pela interface.</b> Se a gente quiser o dropdown, é construir —
+      são poucas linhas, mas é construir.
+    </div>
+
+    <figure class="fig" data-fig="Fig. 1 — o Studio desligou pelo mapa, não pela tesoura">
+      <div class="fluxo">
+        <span class="no hot">rotas do Studio</span><span class="seta"></span>
+        <span class="no">fila</span><span class="no">gravar</span><span class="no">caderno</span>
+        <span class="no">documento</span><span class="no">assistente</span><span class="no">config</span>
+      </div>
+      <div class="fluxo">
+        <span class="no gh">memória</span><span class="no gh">galeria</span>
+        <span class="no gh">terminal</span><span class="no gh">maiá</span><span class="no gh">dashboard</span>
+      </div>
+      <div class="ficha fantasma">
+        <div><b>as páginas continuam no repositório</b><small>tracejado = existe no código, não existe no menu</small></div>
+      </div>
+    </figure>
+  </section>
+
+  <!-- ═══════ 03 · MAIÁ ═══════ -->
+  <section>
+    <div class="sec-head">
+      <div class="num">03</div>
+      <div>
+        <div class="kicker">o terceiro projeto</div>
+        <h2>Maiá: já foi absorvido</h2>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <p>A pasta <code>~/maia</code> hoje tem <b>dois arquivos e nenhum código</b>. O Maiá
+          virou um módulo dentro do próprio FlowKit: leitura de texto selecionado por atalho
+          global, barra flutuante, permissões de acessibilidade do macOS e um adaptador de
+          chat próprio.</p>
+        <p>Para a triagem: <b>nada aproveitável</b>. Atalho global, captura de tela e leitura
+          em voz alta não têm função clínica aqui, e o módulo carrega junto permissões de
+          sistema que assustam numa demonstração em hospital.</p>
+        <p>Vale como confirmação: <b>não existe um quarto projeto escondido</b> com uma base
+          mais limpa. Varri o Mac e o Vader — só existem <code>~/flowkit</code> e
+          <code>~/antessala</code>. Aquele "EditorialStudio" que parecia candidato é um
+          projeto <b>.NET/C#</b>, sem relação nenhuma com este código.</p>
+      </div>
+      <figure class="fig" data-fig="Fig. 2 — onde cada base está hoje">
+        <div class="ficha"><div><b>FlowKit</b><small>o kit completo, main</small></div><span class="st fica">base</span></div>
+        <div class="ficha"><div><b>Studio</b><small>branch, +46 mil linhas, já podado</small></div><span class="st rouba">doador</span></div>
+        <div class="ficha"><div><b>Antessala</b><small>fork nosso, renomeado e rodando</small></div><span class="st fica">aqui</span></div>
+        <div class="ficha fantasma"><div><b>Maiá</b><small>absorvido pelo FlowKit</small></div></div>
+        <div class="ficha fantasma"><div><b>EditorialStudio</b><small>.NET/C#, falso parente</small></div></div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ═══════ 04 · O ROUBO ═══════ -->
+  <section>
+    <div class="sec-head">
+      <div class="num">04</div>
+      <div>
+        <div class="kicker">DietFlow · EscalaFlow · e o que já fizemos</div>
+        <h2>Seis peças para trazer de fora</h2>
+      </div>
+    </div>
+
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Peça</th><th>De onde</th><th>O que é, exatamente</th><th>Como vem</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Contrato de widget</b></td>
+            <td>DietFlow</td>
+            <td>Cada widget declara metadados, schema de validação, <code>renderToText</code>,
+              dados padrão e conectores. 8 widgets clínicos prontos, entre eles
+              <b>medicações</b> e <b>problemas de saúde</b> com código de diagnóstico</td>
+            <td>Copiar o <b>contrato</b> e o registro</td>
+          </tr>
+          <tr>
+            <td><b>Drawer de composição</b></td>
+            <td>DietFlow</td>
+            <td>898 linhas em 7 arquivos: o composer, a gaveta de seleção, o botão de
+              adicionar e o container de widget</td>
+            <td>Copiar o <b>padrão</b>, refazer o visual</td>
+          </tr>
+          <tr>
+            <td><b>Templates ("salvos")</b></td>
+            <td>DietFlow</td>
+            <td>Conjunto nomeado de widgets em ordem, cada um já com seus dados padrão —
+              é literalmente o "pré-operatório X, pré-operatório Y, geral rápido"</td>
+            <td>Copiar quase direto</td>
+          </tr>
+          <tr>
+            <td><b>Export para PDF</b></td>
+            <td>EscalaFlow</td>
+            <td>HTML entra, PDF sai, pelo motor de impressão do próprio Electron —
+              <b>sem biblioteca nenhuma</b>. Já vem com salvar HTML, salvar CSV e lote</td>
+            <td>Copiar direto</td>
+          </tr>
+          <tr>
+            <td><b>Dados clínicos</b></td>
+            <td>já extraídos</td>
+            <td><b>382 medicamentos</b> com classe terapêutica, <b>12 grupos</b> de risco
+              perioperatório, <b>94 atividades</b> com equivalente metabólico,
+              <b>14 comorbidades</b> com CID-10</td>
+            <td>Mover os arquivos</td>
+          </tr>
+          <tr>
+            <td><b>Classificador de risco</b></td>
+            <td>já escrito</td>
+            <td>Função pura que classifica estado físico, risco cardíaco e capacidade,
+              transformando dado ausente em pendência em vez de chute. <b>16 testes verdes</b></td>
+            <td>Mover e converter</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="aviso">
+      <span class="rot">a pegadinha do roubo</span>
+      O DietFlow desenha com <b>HeroUI</b>; este app desenha com <b>shadcn/ui</b>. São
+      bibliotecas diferentes. O que atravessa é o <b>contrato</b> — tipos, registro,
+      validação, o texto que o widget gera. O visual precisa ser refeito. Copiar o JSX
+      inteiro não compila, e insistir nisso queima o dia.
+    </div>
+
+    <div class="aviso bom">
+      <span class="rot">o que já é nosso e está pronto</span>
+      Os dados clínicos e o classificador de risco <b>já existem e já passam nos testes</b>.
+      Não é promessa: é arquivo em disco. São a única parte do produto que hoje está
+      efetivamente construída.
+    </div>
+  </section>
+
+  <!-- ═══════ 05 · CRUZAMENTO ═══════ -->
+  <section>
+    <div class="sec-head">
+      <div class="num">05</div>
+      <div>
+        <div class="kicker">o cruzamento</div>
+        <h2>Cada tela e de onde ela nasce</h2>
+      </div>
+    </div>
+
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Tela</th><th>Herda de</th><th>Falta construir</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>1 · Entrada</b></td>
+            <td>Formulário shadcn do kit</td>
+            <td>Quatro campos e um botão. É a mais barata do projeto.</td>
+          </tr>
+          <tr>
+            <td><b>2 · Anamnese</b></td>
+            <td>Contrato de widget + drawer (DietFlow) · rich text (Studio) · templates
+              para os "salvos"</td>
+            <td>Refazer o visual dos widgets em shadcn e ligar no nosso banco.</td>
+          </tr>
+          <tr>
+            <td><b>3 · Fila</b></td>
+            <td>Home do Studio (coleção + fila com estado) · máquina de estados do banco</td>
+            <td>O motor de ordenação — <b>frente do Codex</b>.</td>
+          </tr>
+          <tr>
+            <td><b>4 · Resumo</b></td>
+            <td>Classificador de risco (nosso) · export PDF (EscalaFlow) ·
+              contexto da IA (Studio)</td>
+            <td>A leitura resumida e o botão de jornada.</td>
+          </tr>
+          <tr>
+            <td><b>Memória</b> <span class="st esconde">depois</span></td>
+            <td>Rich text do Studio · RAG do kit</td>
+            <td>Fica escondida agora. Volta quando for para guardar conteúdo científico
+              e deixar a IA opinar sobre risco com o contexto da tela.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure class="fig" data-fig="Fig. 3 — a IA ajudando a decidir o risco">
+      <div class="fluxo">
+        <span class="no">anamnese aberta</span><span class="seta"></span>
+        <span class="no hot">contexto com orçamento</span><span class="seta"></span>
+        <span class="no">resposta com citação</span>
+      </div>
+      <div class="ficha"><div><b>a tela em que o especialista está</b><small>escopo documento — o registro aberto</small></div><span class="st rouba">Studio</span></div>
+      <div class="ficha"><div><b>a memória científica</b><small>escopo global — só com motivo declarado</small></div><span class="st esconde">depois</span></div>
+      <div class="ficha"><div><b>382 medicamentos e 12 grupos de risco</b><small>dado duro, não opinião do modelo</small></div><span class="st fica">pronto</span></div>
+    </figure>
+  </section>
+
+  <!-- ═══════ 06 · PROPOSTA ═══════ -->
+  <section style="border-bottom:none">
+    <div class="sec-head">
+      <div class="num">06</div>
+      <div>
+        <div class="kicker">a proposta</div>
+        <h2>Como preparar o repositório</h2>
+      </div>
+    </div>
+
+    <p>A decisão que muda o tamanho do trabalho: <b>não vamos podar o kit à mão.</b> O
+      Studio já podou. Traz-se o trabalho dele por cima do nosso fork e removem-se as
+      partes editoriais — que é subtração óbvia, não engenharia.</p>
+
+    <h3>Três regras que governam o corte</h3>
+    <ul>
+      <li><b>Esconder é tirar da rota, não apagar o arquivo.</b> Memória, RAG, grafo,
+        importadores e galeria saem do menu e continuam no repositório. Voltar é
+        acrescentar uma linha.</li>
+      <li><b>Remover é remover mesmo.</b> Terminal, CLI, servidor MCP, tool-server, cron,
+        ditado e modelo local saem do código e do <code>package.json</code>. São eles que
+        carregam o peso, as permissões de sistema e boa parte das vulnerabilidades.</li>
+      <li><b>Nada de baixar modelo no primeiro boot.</b> Enquanto a busca semântica estiver
+        escondida, o download de 278 MB não acontece — e o app volta a merecer a palavra
+        offline.</li>
+    </ul>
+
+    <h3>A ordem</h3>
+    <div style="margin-top:16px">
+      <div class="passo"><div class="p">01</div><div>
+        <b>Trazer o Studio por cima do fork</b>
+        <span>A poda, o rich text, o contexto da IA, a navegação e as configurações
+          magras entram de uma vez, em vez de serem reinventadas.</span></div></div>
+      <div class="passo"><div class="p">02</div><div>
+        <b>Remover o editorial</b>
+        <span>Gravação, transcrição, tradução, glossário, montador de livro, cadernos e
+          aulas. Subtração direta, com os testes servindo de rede.</span></div></div>
+      <div class="passo"><div class="p">03</div><div>
+        <b>Remover as superfícies extras</b>
+        <span>Terminal, CLI, MCP, tool-server, cron, ditado, modelo local, galeria.</span></div></div>
+      <div class="passo"><div class="p">04</div><div>
+        <b>Esconder o que volta depois</b>
+        <span>Memória, RAG, grafo e importadores saem do menu. O primeiro boot para de
+          semear a documentação do FlowKit e de baixar modelo.</span></div></div>
+      <div class="passo"><div class="p">05</div><div>
+        <b>Deixar o essencial no lugar do supérfluo</b>
+        <span>Fora: o painel que manda "configure seu tema" e o passo de tema no wizard.
+          Dentro: um seletor claro / escuro / sistema no canto — que <b>não existe hoje</b>
+          em nenhuma das duas bases e precisa ser feito.</span></div></div>
+      <div class="passo"><div class="p">06</div><div>
+        <b>Plantar os nossos dados</b>
+        <span>Medicamentos, grupos de risco, equivalentes metabólicos, comorbidades e o
+          classificador com seus 16 testes entram no banco e na pasta de regras.</span></div></div>
+      <div class="passo"><div class="p">07</div><div>
+        <b>Trazer as peças de fora</b>
+        <span>Contrato de widget e drawer do DietFlow, templates para os "salvos", export
+          em PDF do EscalaFlow.</span></div></div>
+      <div class="passo"><div class="p">08</div><div>
+        <b>Provar</b>
+        <span>Instalação limpa, app abrindo sem internet, testes verdes, nenhuma rota
+          morta no menu — e o tamanho do <code>node_modules</code> registrado antes e
+          depois.</span></div></div>
+    </div>
+
+    <div class="aviso">
+      <span class="rot">o risco desta proposta, dito na cara</span>
+      Trazer o Studio significa engolir <b>+46 mil linhas</b> de uma vez, e depois remover
+      metade. Se a remoção emperrar, a alternativa é o caminho longo: podar o kit base à
+      mão e copiar do Studio só o rich text, o contexto da IA e as configurações.
+      <b>Mais lento, porém sem surpresa.</b> A decisão de qual caminho seguir é a única
+      coisa que esta análise não decide sozinha.
+    </div>
+  </section>
+
+  <footer>
+    Antessala · inventário do arsenal · levantado no código em 13 de agosto de 2026
+  </footer>
+</div>
