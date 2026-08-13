@@ -139,9 +139,9 @@ As 40 vulnerabilidades restantes vêm da árvore ainda necessária. Não foi usa
 | Rotas/menu | **verde** | E2E confirmou exatamente `/`, `/ia`, `/configuracoes` e três itens de navegação |
 | Tema | **verde** | E2E alternou claro, escuro e sistema e conferiu `antessala-theme` |
 | `npm run typecheck` | **verde** | main e renderer, sem arquivos clínicos/knowledge escondidos por `exclude` |
-| `npm test` | **verde** | 51 arquivos, 216 testes, zero falha e zero skip, em 38,08 s |
-| `npm run build` | **verde** | main, preload e renderer produzidos em 12,92 s; apenas avisos de chunk estático/dinâmico |
-| `npm run test:e2e` | **verde** | 1/1 fluxo Electron em 11,3 s |
+| `npm test` | **verde** | 51 arquivos, 216 testes, zero falha e zero skip, em 38,10 s |
+| `npm run build` | **verde** | main, preload e renderer produzidos em 12,17 s; apenas avisos de chunk estático/dinâmico |
+| `npm run test:e2e` | **verde** | 1/1 fluxo Electron em 12,0 s |
 | Workflows | **verde** | `actionlint` sem diagnóstico; expansão de assets provada no Bash 3.2 do macOS |
 | PDF isolado | **verde** | 7 testes de sandbox, bloqueio de rede, impressão e cleanup |
 
@@ -149,13 +149,11 @@ O Mac não foi fisicamente desconectado, conforme autorizado pelo usuário. A
 prova combinou seed instrumentado fail-closed, boot real com banco temporário,
 política de sessão que bloqueia HTTP/HTTPS/WS/WSS no renderer e E2E do Electron.
 
-A cadeia `typecheck → test → build → E2E` foi executada no commit de código
-`3c747a9`; depois dela, `7fefa12` alterou somente o glob do workflow de release e
-removeu recursos gráficos/manuais sem consumidor. Esse delta foi validado por
-`actionlint` e por execução do glob no Bash 3.2 nativo do macOS. Por fim,
-`e244188` apenas concluiu a troca de nomes internos do STT dormente e de fixtures;
-nele, `typecheck`, 24 testes focados, `cargo metadata --locked --offline` e
-`actionlint` passaram.
+A cadeia `actionlint → typecheck → test → build → E2E` foi repetida e fechou
+verde no commit `bc98182`. A correção documental que registra este resultado é
+o único delta posterior à prova e não muda código, dependências ou workflows.
+O glob dos assets também foi executado no Bash 3.2 nativo do macOS e o contrato
+Rust dormente passou em `cargo metadata --locked --offline`.
 
 O baseline tinha 409 testes passando e 4 ignorados. O resultado final tem 216
 passando e nenhum ignorado: uma **redução líquida de 193**, não uma contagem
