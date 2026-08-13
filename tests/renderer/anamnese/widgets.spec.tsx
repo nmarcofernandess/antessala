@@ -7,8 +7,10 @@ import userEvent from '@testing-library/user-event'
 import {
   WIDGET_REGISTRY,
   createEmptyAnamnese,
+  createWidgetBlock,
   type AdesaoData,
   type AnamneseContent,
+  type Bloco,
   type ObservacoesGeraisData,
 } from '../../../src/shared/anamnese'
 import {
@@ -16,6 +18,7 @@ import {
   AnamneseComposer,
   ObservacoesGeraisWidget,
   WIDGET_UI_REGISTRY,
+  reorderWidgetsPreservingAnchors,
 } from '../../../src/renderer/src/anamnese'
 
 beforeAll(() => {
@@ -42,6 +45,14 @@ function ObservacoesHarness(): React.JSX.Element {
 function ComposerHarness(): React.JSX.Element {
   const [content, setContent] = useState<AnamneseContent>(createEmptyAnamnese())
   return <AnamneseComposer value={content} onChange={setContent} availableWidgetTypes={['hidratacao']} />
+}
+
+function HydrationComposerHarness(): React.JSX.Element {
+  const [content, setContent] = useState<AnamneseContent>(() => ({
+    _v: 2,
+    blocos: [createWidgetBlock('hidratacao', 'hidratacao-1')],
+  }))
+  return <AnamneseComposer value={content} onChange={setContent} />
 }
 
 describe('editores shadcn da anamnese', () => {
@@ -93,5 +104,56 @@ describe('editores shadcn da anamnese', () => {
 
     expect(await screen.findByText('Consumo de água em litros por dia')).toBeInTheDocument()
     expect(screen.getByLabelText('Litros por dia')).toHaveValue(2)
+  })
+
+  it('preserva o editor durante um número intermediário inválido e permite corrigi-lo', async () => {
+    const user = userEvent.setup()
+    render(<HydrationComposerHarness />)
+
+    const peso = screen.getByLabelText('Peso para cálculo local (kg)')
+    await user.type(peso, '7')
+    await user.tab()
+
+    expect(peso).toHaveValue(7)
+    expect(screen.getByRole('alert')).toHaveTextContent('Valor mínimo: 20.')
+    expect(screen.queryByText(/dados deste widget são inválidos/i)).not.toBeInTheDocument()
+
+    await user.click(peso)
+    await user.type(peso, '0')
+    await user.tab()
+
+    expect(peso).toHaveValue(70)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('reordena widgets sem deslocar snapshots e resultados', () => {
+    const blocos: Bloco[] = [
+      createWidgetBlock('adesao', 'w1'),
+      {
+        id: 'snapshot',
+        type: 'snapshot',
+        dataCaptura: '2026-08-13T10:00:00Z',
+        dados: { dataCaptura: '2026-08-13T10:00:00Z' },
+      },
+      createWidgetBlock('sono', 'w2'),
+      createWidgetBlock('hidratacao', 'w3'),
+      {
+        id: 'resultado',
+        type: 'resultado_protocolo',
+        protocoloTipo: 'teste',
+        protocoloId: 'p1',
+        scoreCapturado: 1,
+        dataCaptura: '2026-08-13T10:00:00Z',
+      },
+    ]
+
+    const reordered = reorderWidgetsPreservingAnchors(blocos, 'w3', 'w1')
+    expect(reordered.map((bloco) => bloco.id)).toEqual([
+      'w3',
+      'snapshot',
+      'w1',
+      'w2',
+      'resultado',
+    ])
   })
 })

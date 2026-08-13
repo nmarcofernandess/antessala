@@ -6,10 +6,8 @@ import {
   type HidratacaoPerfil,
 } from '@shared/anamnese'
 
-import { Input } from '@/components/ui/input'
-
 import type { WidgetEditorProps } from '../types'
-import { WidgetField, numberOrUndefined } from './WidgetFields'
+import { BoundedNumberInput, WidgetField } from './WidgetFields'
 
 export function HidratacaoWidget({ data, onChange, disabled }: WidgetEditorProps<HidratacaoData>): React.JSX.Element {
   const prefix = useId()
@@ -17,15 +15,16 @@ export function HidratacaoWidget({ data, onChange, disabled }: WidgetEditorProps
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <WidgetField label="Litros por dia" htmlFor={`${prefix}-litros`}>
-        <Input
+        <BoundedNumberInput
           id={`${prefix}-litros`}
-          type="number"
           min={0}
           max={15}
           step={0.1}
           value={data.litrosDia}
           disabled={disabled}
-          onChange={(event) => onChange({ ...data, litrosDia: Number(event.target.value) })}
+          onCommit={(value) => {
+            if (value !== undefined) onChange({ ...data, litrosDia: value })
+          }}
         />
       </WidgetField>
       <WidgetField label="Perfil" htmlFor={`${prefix}-perfil`}>
@@ -46,26 +45,27 @@ export function HidratacaoWidget({ data, onChange, disabled }: WidgetEditorProps
         </select>
       </WidgetField>
       <WidgetField label="Peso para cálculo local (kg)" htmlFor={`${prefix}-peso`}>
-        <Input
+        <BoundedNumberInput
           id={`${prefix}-peso`}
-          type="number"
           min={20}
           max={300}
           step={0.1}
-          value={data.pesoLocal ?? ''}
+          value={data.pesoLocal}
+          optional
           disabled={disabled}
-          onChange={(event) => onChange({ ...data, pesoLocal: numberOrUndefined(event.target.value) })}
+          onCommit={(value) => onChange({ ...data, pesoLocal: value })}
         />
       </WidgetField>
       <WidgetField label="Máximo da escala (L)" htmlFor={`${prefix}-max`}>
-        <Input
+        <BoundedNumberInput
           id={`${prefix}-max`}
-          type="number"
           min={3}
           max={15}
           value={data.sliderMax}
           disabled={disabled}
-          onChange={(event) => onChange({ ...data, sliderMax: Number(event.target.value) })}
+          onCommit={(value) => {
+            if (value !== undefined) onChange({ ...data, sliderMax: value })
+          }}
         />
       </WidgetField>
     </div>

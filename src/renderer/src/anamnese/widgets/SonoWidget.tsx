@@ -18,10 +18,8 @@ import {
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-
 import type { WidgetEditorProps } from '../types'
-import { WidgetField, numberOrUndefined } from './WidgetFields'
+import { BoundedNumberInput, WidgetField } from './WidgetFields'
 
 interface LikertFieldProps {
   label: string
@@ -150,15 +148,15 @@ export function SonoWidget({ data, onChange, disabled }: WidgetEditorProps<SonoD
 
       <div className="grid gap-4 sm:grid-cols-2">
         <WidgetField label="Horas dormidas por noite" htmlFor={`${prefix}-horas`}>
-          <Input
+          <BoundedNumberInput
             id={`${prefix}-horas`}
-            type="number"
             min={0}
             max={14}
             step={0.5}
-            value={data.horasDormidas ?? ''}
+            value={data.horasDormidas}
+            optional
             disabled={disabled}
-            onChange={(event) => onChange({ ...data, horasDormidas: numberOrUndefined(event.target.value) })}
+            onCommit={(value) => onChange({ ...data, horasDormidas: value })}
           />
         </WidgetField>
         <WidgetField label="Despertares durante a noite">

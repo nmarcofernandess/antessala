@@ -20,6 +20,7 @@ import {
   createWidgetBlock,
   getAvailableWidgetTypes,
   type AnamneseContent,
+  type Bloco,
   type BlocoWidget,
   type WidgetType,
 } from '@shared/anamnese'
@@ -37,6 +38,22 @@ export interface AnamneseComposerProps {
   availableWidgetTypes?: readonly WidgetType[]
   catalogs?: WidgetCatalogs
   disabled?: boolean
+}
+
+/** Reordena somente widgets e mantém snapshots/resultados nos mesmos slots. */
+export function reorderWidgetsPreservingAnchors(
+  blocos: readonly Bloco[],
+  activeId: string,
+  overId: string,
+): Bloco[] {
+  const widgets = blocos.filter((bloco): bloco is BlocoWidget => bloco.type === 'widget')
+  const oldIndex = widgets.findIndex((bloco) => bloco.id === activeId)
+  const newIndex = widgets.findIndex((bloco) => bloco.id === overId)
+  if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return [...blocos]
+
+  const reordered = arrayMove(widgets, oldIndex, newIndex)
+  let widgetIndex = 0
+  return blocos.map((bloco) => bloco.type === 'widget' ? reordered[widgetIndex++] : bloco)
 }
 
 export function AnamneseComposer({
@@ -58,10 +75,14 @@ export function AnamneseComposer({
 
   const handleDragEnd = ({ active, over }: DragEndEvent): void => {
     if (!over || active.id === over.id) return
-    const oldIndex = value.blocos.findIndex((bloco) => bloco.id === active.id)
-    const newIndex = value.blocos.findIndex((bloco) => bloco.id === over.id)
-    if (oldIndex < 0 || newIndex < 0) return
-    onChange({ ...value, blocos: arrayMove(value.blocos, oldIndex, newIndex) })
+    onChange({
+      ...value,
+      blocos: reorderWidgetsPreservingAnchors(
+        value.blocos,
+        String(active.id),
+        String(over.id),
+      ),
+    })
   }
 
   const updateWidget = (next: BlocoWidget): void => {
