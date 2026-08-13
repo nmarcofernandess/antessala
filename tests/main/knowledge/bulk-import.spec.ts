@@ -43,7 +43,7 @@ describe('bulk RAG import', () => {
     vi.clearAllMocks()
     const { resetBulkRagImportRuntimeForTests } = await import('../../../src/main/knowledge/bulk-import')
     resetBulkRagImportRuntimeForTests()
-    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'flowkit-bulk-rag-'))
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'antessala-bulk-rag-'))
   })
 
   afterEach(async () => {

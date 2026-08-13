@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.get(1).map(String::as_str) != Some("transcribe") {
         return Err(anyhow!(
-            "usage: escalaflow-stt transcribe --model-dir <dir> --audio <wav> --json"
+            "usage: antessala-stt transcribe --model-dir <dir> --audio <wav> --json"
         ));
     }
 

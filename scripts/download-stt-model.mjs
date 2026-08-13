@@ -116,7 +116,7 @@ if (hasModel()) {
   process.exit(0)
 }
 
-const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'flowkit-stt-model-'))
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'antessala-stt-model-'))
 const archivePath = path.join(tmpDir, 'parakeet-v3-int8.tar.gz')
 
 try {

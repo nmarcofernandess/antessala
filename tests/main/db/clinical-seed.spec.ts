@@ -43,7 +43,7 @@ describe('primeiro boot clínico offline', () => {
       grupos: number
       met: number
       comorbidades: number
-      docs_flowkit: number
+      system_knowledge_rows: number
     }>(`
       SELECT
         (SELECT COUNT(*)::int FROM catalogo_cid10) AS cid,
@@ -52,7 +52,7 @@ describe('primeiro boot clínico offline', () => {
         (SELECT COUNT(*)::int FROM catalogo_grupos_risco) AS grupos,
         (SELECT COUNT(*)::int FROM catalogo_met) AS met,
         (SELECT COUNT(*)::int FROM catalogo_comorbidades) AS comorbidades,
-        (SELECT COUNT(*)::int FROM knowledge_sources WHERE tipo = 'sistema') AS docs_flowkit
+        (SELECT COUNT(*)::int FROM knowledge_sources WHERE tipo = 'sistema') AS system_knowledge_rows
     `)
 
     expect(counts).toEqual({
@@ -62,7 +62,7 @@ describe('primeiro boot clínico offline', () => {
       grupos: 12,
       met: 94,
       comorbidades: 14,
-      docs_flowkit: 0,
+      system_knowledge_rows: 0,
     })
   })
 
