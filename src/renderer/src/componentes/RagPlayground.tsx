@@ -232,7 +232,7 @@ export function RagPlayground() {
           <>
             <div className="flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground">
               <span>{results.length} chunks · {searchTime}ms · hybrid search</span>
-              <span className="text-green-500">Embedding: offline (e5-base ONNX)</span>
+              <span className="text-muted-foreground">Embedding: adaptador opcional</span>
             </div>
             <Separator />
           </>

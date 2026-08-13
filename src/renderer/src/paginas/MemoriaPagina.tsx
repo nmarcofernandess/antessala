@@ -50,11 +50,11 @@ import { useApiData } from '@/hooks/useApiData'
 import { servicoConhecimento } from '@/servicos/conhecimento'
 import { servicoMemorias } from '@/servicos/memorias'
 import { toast } from 'sonner'
-import { client } from '@/servicos/client'
 import { ENTITY_TYPE_COLORS } from '@/lib/cores'
 import { cn } from '@/lib/utils'
 import type { IaMemoria } from '@shared/types'
-import type { AiRouteResolution } from '@shared/index'
+
+type KnowledgeCloudStatus = Awaited<ReturnType<typeof servicoConhecimento.metadataStatus>>
 
 type FonteComChunks = {
   id: number
@@ -93,15 +93,15 @@ export function MemoriaPagina() {
   const [dialogAdicionarAberto, setDialogAdicionarAberto] = useState(false)
   const [fonteParaVer, setFonteParaVer] = useState<{ id: number; titulo: string } | null>(null)
   const [iaDisponivel, setIaDisponivel] = useState(false)
-  const [ragMetadataRoute, setRagMetadataRoute] = useState<AiRouteResolution | null>(null)
+  const [ragMetadataRoute, setRagMetadataRoute] = useState<KnowledgeCloudStatus | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    servicoConhecimento.obterIaRouteStatus('rag_metadata', { validateLocal: true })
-      .then((route) => {
+    servicoConhecimento.metadataStatus()
+      .then((status) => {
         if (cancelled) return
-        setRagMetadataRoute(route)
-        setIaDisponivel(route.ok === true)
+        setRagMetadataRoute(status)
+        setIaDisponivel(status.available)
       })
       .catch(() => {
         if (cancelled) return
@@ -211,7 +211,7 @@ export function MemoriaPagina() {
   const handleEnrichRag = async () => {
     setEnriching(true)
     try {
-      const result = await client['knowledge.enrich']({})
+      const result = await servicoConhecimento.enrich()
       if (result.chunks_enriquecidos === 0 && result.batches_failed > 0) {
         toast.error('Enrichment falhou', {
           description: `${result.batches_failed} batches falharam. Verifique API key e logs no terminal.`,
@@ -505,7 +505,7 @@ export function MemoriaPagina() {
                   <Lightbulb className="mt-0.5 size-4 shrink-0 text-warning" />
                   <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                     <p><strong>Minhas Memorias</strong> sao fatos que voce ensina a IA. Ela lembra em TODA conversa.</p>
-                    <p><strong>Memorias Automaticas</strong> sao extraidas das conversas quando voce troca de chat.</p>
+                    <p><strong>Memorias Automaticas</strong> permanecem dormentes e não rodam no chat atual.</p>
                     <p><strong>Documentos</strong> sao textos longos (PDFs, documentos, manuais) que a IA consulta quando relevante.</p>
                   </div>
                 </div>
@@ -573,7 +573,7 @@ export function MemoriaPagina() {
                     <EmptyState
                       icon={Database}
                       title="Nenhum documento de sistema"
-                      description="A base sera populada na primeira inicializacao."
+                      description="A base de sistema não é semeada no primeiro boot do Antessala."
                     />
                   )
                 ) : (
@@ -603,8 +603,7 @@ export function MemoriaPagina() {
                 <span className="text-sm font-semibold">RAG Playground</span>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>Modelo: <strong className="text-foreground">e5-base ONNX</strong></span>
-                <span>Embeddings: <strong className="text-foreground">768d</strong></span>
+                <span>Embeddings: <strong className="text-foreground">adaptador opcional</strong></span>
                 <Separator orientation="vertical" className="h-3" />
                 {(() => {
                   const enr = (data as any)?.enrichment as { enriched_count: number; pending_count: number; last_enriched_at: string | null } | undefined

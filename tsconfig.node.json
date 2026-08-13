@@ -24,11 +24,7 @@
     "tests/e2e/**/*.ts"
   ],
   "exclude": [
-    "src/main/knowledge/**",
-    "src/main/importers/**",
-    "src/main/jobs.ts",
     "src/main/ia/discovery.ts",
-    "src/main/ia/metadata-generator.ts",
     "src/main/ia/readiness.ts",
     "src/main/ia/route-config.ts",
     "src/main/ia/routing.ts",

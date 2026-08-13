@@ -66,7 +66,7 @@ describe('knowledge enrichment with real persistence', () => {
 
     const prompts: string[] = []
     const model: EnrichmentModel = {
-      provider: 'local',
+      provider: 'openrouter',
       modelo: 'fake-enrichment',
       async generate(prompt: string) {
         prompts.push(prompt)

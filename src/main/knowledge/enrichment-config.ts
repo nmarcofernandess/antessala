@@ -128,7 +128,7 @@ export async function buildKnowledgeEnrichmentModel(
     }
     // A model was chosen but no provider: don't silently route past the explicit model.
     if (baseConfig.modelo && baseConfig.modelo !== 'auto') {
-      throw new Error('Para escolher um modelo de enrichment, informe também o provider (local, gemini ou openrouter).')
+      throw new Error('Para escolher um modelo de enrichment, informe também o provider (gemini ou openrouter).')
     }
   }
 

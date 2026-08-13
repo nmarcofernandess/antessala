@@ -23,14 +23,7 @@
     "src/shared/**/*.ts"
   ],
   "exclude": [
-    "src/renderer/src/paginas/MemoriaPagina.tsx",
-    "src/renderer/src/componentes/AdicionarConhecimentoDialog.tsx",
-    "src/renderer/src/componentes/RagPlayground.tsx",
-    "src/renderer/src/componentes/VerConhecimentoDialog.tsx",
     "src/renderer/src/componentes/ai/AiRoutingSection.tsx",
-    "src/renderer/src/hooks/useImageBlobUrl.ts",
-    "src/renderer/src/servicos/conhecimento.ts",
-    "src/renderer/src/servicos/memorias.ts",
     "src/shared/ai-runtime-contract.ts",
     "src/shared/ia-routing-contract.ts"
   ]

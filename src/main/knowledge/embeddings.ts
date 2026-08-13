@@ -1,109 +1,80 @@
-import path from 'node:path'
-import { createRequire } from 'node:module'
-
-const require = createRequire(import.meta.url)
-
 /**
- * Embedding local via @huggingface/transformers (ONNX Runtime).
- * Modelo: multilingual-e5-base (768 dims, ~150-440MB quantizado).
+ * Fronteira de embeddings do repositório de conhecimento dormente.
  *
- * Funciona estritamente offline, sem API key e sem download automático.
- * Graceful degradation: retorna null se o modelo local estiver indisponível.
- *
- * e5 requer prefixes: "query: " para busca, "passage: " para indexação.
+ * O Antessala não empacota um modelo, não baixa artefatos e não escolhe um
+ * provider implicitamente. Uma implementação futura precisa ser registrada por
+ * uma ação explícita antes de usar esta API. Sem adaptador, a busca e a ingestão
+ * continuam em modo textual e estas funções retornam `null`.
  */
 
-let _extractor: any = null
+export type KnowledgeEmbeddingKind = 'query' | 'passage'
 
-function resolveModelPath(): string {
+export interface KnowledgeEmbeddingAdapter {
+  embed(text: string, kind: KnowledgeEmbeddingKind): Promise<number[] | null>
+  embedMany?(
+    texts: string[],
+    kind: KnowledgeEmbeddingKind,
+  ): Promise<Array<number[] | null> | null>
+}
+
+let registeredAdapter: KnowledgeEmbeddingAdapter | null = null
+
+export function registerKnowledgeEmbeddingAdapter(
+  adapter: KnowledgeEmbeddingAdapter,
+): () => void {
+  registeredAdapter = adapter
+  return () => {
+    if (registeredAdapter === adapter) registeredAdapter = null
+  }
+}
+
+export function hasKnowledgeEmbeddingAdapter(): boolean {
+  return registeredAdapter !== null
+}
+
+async function embed(
+  text: string,
+  kind: KnowledgeEmbeddingKind,
+): Promise<number[] | null> {
+  if (!registeredAdapter) return null
+
   try {
-    const electron = require('electron') as { app?: { isPackaged?: boolean } }
-    if (electron.app?.isPackaged) {
-      return path.join(process.resourcesPath, 'models', 'embeddings')
+    return await registeredAdapter.embed(text, kind)
+  } catch (error) {
+    console.warn('[knowledge:embeddings] Adaptador indisponível:', (error as Error).message)
+    return null
+  }
+}
+
+export function generateQueryEmbedding(text: string): Promise<number[] | null> {
+  return embed(text, 'query')
+}
+
+export function generatePassageEmbedding(text: string): Promise<number[] | null> {
+  return embed(text, 'passage')
+}
+
+export async function generatePassageEmbeddings(
+  texts: string[],
+): Promise<number[][] | null> {
+  if (!registeredAdapter) return null
+
+  try {
+    if (registeredAdapter.embedMany) {
+      const result = await registeredAdapter.embedMany(texts, 'passage')
+      if (!result || result.some((value) => value === null)) return null
+      return result as number[][]
     }
-  } catch {
-    // fallback para modo Node (test runner, scripts)
-  }
-  return path.join(__dirname, '../../models/embeddings')
-}
 
-async function getExtractor(): Promise<any> {
-  if (_extractor) return _extractor
-
-  const { pipeline, env } = await import('@huggingface/transformers')
-  const fs = require('fs')
-
-  const modelPath = resolveModelPath()
-
-  // Esta fronteira é deliberadamente fail-closed: o Antessala nunca baixa
-  // modelos em runtime, mesmo se o módulo dormente de Memória for chamado.
-  const hasLocalModel = fs.existsSync(path.join(modelPath, 'onnx'))
-    || fs.existsSync(path.join(modelPath, 'model.onnx'))
-    || fs.existsSync(path.join(modelPath, 'tokenizer.json'))
-
-  env.localModelPath = modelPath
-  env.allowRemoteModels = false
-  if (!hasLocalModel) throw new Error(`Modelo local não encontrado em ${modelPath}.`)
-
-  console.log('[embeddings] Usando modelo local:', modelPath)
-
-  _extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-base', {
-    dtype: 'q8' as any,
-  } as any)
-
-  console.log('[embeddings] Modelo carregado com sucesso (768 dims)')
-  return _extractor
-}
-
-/**
- * Gera embedding para uma query de busca (prefix "query: ").
- * Retorna null se modelo indisponível.
- * Graceful degradation: NUNCA lança erro — retorna null.
- */
-export async function generateQueryEmbedding(text: string): Promise<number[] | null> {
-  try {
-    const ext = await getExtractor()
-    const output = await ext(`query: ${text}`, { pooling: 'mean', normalize: true })
-    return Array.from(output.data as Float32Array)
-  } catch (err) {
-    console.warn('[knowledge:embeddings] Modelo local indisponível:', (err as Error).message)
-    return null
-  }
-}
-
-/**
- * Gera embedding para um passage/documento (prefix "passage: ").
- * Retorna null se modelo indisponível.
- * Graceful degradation: NUNCA lança erro — retorna null.
- */
-export async function generatePassageEmbedding(text: string): Promise<number[] | null> {
-  try {
-    const ext = await getExtractor()
-    const output = await ext(`passage: ${text}`, { pooling: 'mean', normalize: true })
-    return Array.from(output.data as Float32Array)
-  } catch (err) {
-    console.warn('[knowledge:embeddings] Modelo local indisponível:', (err as Error).message)
-    return null
-  }
-}
-
-/**
- * Gera embeddings em lote para passages (prefix "passage: ").
- * Retorna null se modelo indisponível.
- * Processa sequencialmente para controle de memória.
- * Graceful degradation: NUNCA lança erro — retorna null.
- */
-export async function generatePassageEmbeddings(texts: string[]): Promise<number[][] | null> {
-  try {
-    const ext = await getExtractor()
-    const results: number[][] = []
+    const result: number[][] = []
     for (const text of texts) {
-      const output = await ext(`passage: ${text}`, { pooling: 'mean', normalize: true })
-      results.push(Array.from(output.data as Float32Array))
+      const embedding = await registeredAdapter.embed(text, 'passage')
+      if (!embedding) return null
+      result.push(embedding)
     }
-    return results
-  } catch (err) {
-    console.warn('[knowledge:embeddings] Modelo local indisponível:', (err as Error).message)
+    return result
+  } catch (error) {
+    console.warn('[knowledge:embeddings] Adaptador indisponível:', (error as Error).message)
     return null
   }
 }

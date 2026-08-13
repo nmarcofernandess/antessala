@@ -35,7 +35,7 @@ vi.mock('sonner', () => ({
   },
 }))
 
-describe('AdicionarConhecimentoDialog AI metadata route readiness', () => {
+describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
   beforeEach(() => {
     mocks.escolherArquivo.mockReset()
     mocks.extrairTexto.mockReset()
@@ -45,7 +45,7 @@ describe('AdicionarConhecimentoDialog AI metadata route readiness', () => {
     mocks.toastSuccess.mockReset()
   })
 
-  it('explains unavailable rag_metadata route, keeps filename fallback, and still saves manually', async () => {
+  it('explains unavailable cloud metadata, keeps filename fallback, and still saves manually', async () => {
     mocks.escolherArquivo.mockResolvedValue('/tmp/plano-flowkit.md')
     mocks.extrairTexto.mockResolvedValue({
       nome_arquivo: 'plano-flowkit.md',
@@ -68,8 +68,8 @@ describe('AdicionarConhecimentoDialog AI metadata route readiness', () => {
         onOpenChange={onOpenChange}
         onSaved={onSaved}
         iaDisponivel={false}
-        iaRouteMessage="Modelo local baixado, mas ainda precisa passar em Testar conexao."
-        iaRouteAction="Valide o modelo local em IA e Modelos."
+        iaRouteMessage="OpenRouter ainda não tem um token configurado."
+        iaRouteAction="Revise as Configurações de IA."
       />,
     )
 
@@ -77,8 +77,8 @@ describe('AdicionarConhecimentoDialog AI metadata route readiness', () => {
 
     expect(await screen.findByDisplayValue('plano-flowkit.md')).toBeTruthy()
     expect(screen.getByText('Metadados automáticos indisponíveis')).toBeTruthy()
-    expect(screen.getByText('Modelo local baixado, mas ainda precisa passar em Testar conexao.')).toBeTruthy()
-    expect(screen.getByText('Valide o modelo local em IA e Modelos.')).toBeTruthy()
+    expect(screen.getByText('OpenRouter ainda não tem um token configurado.')).toBeTruthy()
+    expect(screen.getByText('Revise as Configurações de IA.')).toBeTruthy()
     expect((screen.getByRole('button', { name: /Gerar título com IA/i }) as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: /Gerar sugestão com IA/i }) as HTMLButtonElement).disabled).toBe(true)
     expect(mocks.gerarMetadataIa).not.toHaveBeenCalled()

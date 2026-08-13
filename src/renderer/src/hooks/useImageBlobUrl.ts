@@ -1,25 +1,49 @@
-import { useState, useEffect } from 'react'
-import { servicoGaleria } from '../servicos/galeria'
+import { useEffect, useState } from 'react'
 
-export function useImageBlobUrl(filePath: string | undefined, mimeType?: string | null): string | null {
+export type ImageBlobReader = (filePath: string) => Promise<string | null>
+
+let registeredReader: ImageBlobReader | null = null
+
+/** Registra a leitura de anexos quando uma superfície futura voltar a usá-la. */
+export function registerImageBlobReader(reader: ImageBlobReader): () => void {
+  registeredReader = reader
+  return () => {
+    if (registeredReader === reader) registeredReader = null
+  }
+}
+
+/**
+ * Hook dormente, sem vínculo com a galeria removida. Sem reader explícito ele
+ * falha fechado e não toca disco, rede ou IPC.
+ */
+export function useImageBlobUrl(
+  filePath: string | undefined,
+  mimeType?: string | null,
+): string | null {
   const [src, setSrc] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!filePath) { setSrc(null); return }
-    let revoked = false
-    let url: string | undefined
+    if (!filePath || !registeredReader) {
+      setSrc(null)
+      return
+    }
 
-    servicoGaleria.lerArquivo(filePath).then((base64) => {
-      if (revoked) return
-      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
-      const blob = new Blob([bytes], { type: mimeType ?? 'image/png' })
-      url = URL.createObjectURL(blob)
-      setSrc(url)
-    }).catch(() => { if (!revoked) setSrc(null) })
+    let cancelled = false
+    let objectUrl: string | undefined
+    registeredReader(filePath)
+      .then((base64) => {
+        if (cancelled || !base64) return
+        const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+        objectUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType ?? 'image/png' }))
+        setSrc(objectUrl)
+      })
+      .catch(() => {
+        if (!cancelled) setSrc(null)
+      })
 
     return () => {
-      revoked = true
-      if (url) URL.revokeObjectURL(url)
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [filePath, mimeType])
 
