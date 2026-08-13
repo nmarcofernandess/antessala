@@ -13,7 +13,7 @@ Thumbs.db
 # Internal docs archive (implementation specs, plans, prompts)
 .docsescalaflow
 docs/superpowers/
-specs/
+# specs/ NAO e ignorado no Antessala — e fonte canonica do produto (ver README)
 
 # Agent internals
 .agent/
