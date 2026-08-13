@@ -1,7 +1,7 @@
-import { FlowKitMark } from '@/componentes/FlowKitMark'
+import { AntessalaMark } from '@/componentes/AntessalaMark'
 import { APP_IDENTITY } from '@shared/app-identity'
 
 export const APP_NAME = APP_IDENTITY.appName
-export const APP_ICON = FlowKitMark
-export const APP_DESCRIPTION = 'Kit de IA + RAG + Knowledge Graph'
-export const APP_INITIALS = 'FK'
+export const APP_ICON = AntessalaMark
+export const APP_DESCRIPTION = 'Triagem pre-anestesica offline'
+export const APP_INITIALS = 'AS'

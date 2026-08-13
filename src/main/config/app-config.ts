@@ -1,12 +1,10 @@
 import { APP_IDENTITY } from '../../shared/app-identity'
 
 /**
- * FlowKit — Configuracao central do app.
+ * Antessala — Configuracao central do app.
  *
- * Para renomear o projeto:
- * 1. Mude name e icon aqui
- * 2. Mude name e productName em package.json
- * 3. Mude productName e appId em electron-builder.yml
+ * O nome vem de shared/app-identity.ts; nao duplicar aqui.
+ * Para renomear o projeto: app-identity.ts, package.json e electron-builder.yml.
  */
 
 export const APP_CONFIG = {
@@ -17,10 +15,10 @@ export const APP_CONFIG = {
   icon: 'Workflow',
 
   /** Descricao curta (wizard + about) */
-  description: 'Kit de IA + RAG + Knowledge Graph',
+  description: 'Triagem pre-anestesica offline',
 
   /** Nome do diretorio PGlite dentro de userData */
-  dbName: 'flowkit-pg',
+  dbName: 'antessala-pg',
 
   /** Tema default no primeiro boot */
   defaultTheme: 'dark' as const,
