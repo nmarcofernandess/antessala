@@ -1,0 +1,338 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  create-release:
+    needs: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Create published release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version="$(node -p "require('./package.json').version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+
+          if [ "$GITHUB_REF_NAME" != "v${version}" ] || [ "$tag_version" != "$version" ]; then
+            echo "Tag ${GITHUB_REF_NAME} must match package.json version ${version}." >&2
+            exit 1
+          fi
+
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Deleting existing release ${GITHUB_REF_NAME} before republishing assets."
+            gh release delete "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --yes
+          fi
+
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "FlowKit ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --verify-tag \
+            --latest
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            cmd: dist:mac
+            files: |
+              dist/*.dmg
+              dist/*.zip
+              dist/*.blockmap
+              dist/latest-mac.yml
+          - os: windows-latest
+            cmd: dist:win
+            files: |
+              dist/*.exe
+              dist/*.blockmap
+              dist/latest.yml
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_HTTP_MULTIPLEXING: false
+      CARGO_NET_RETRY: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fix platform-specific rollup binding (Windows)
+        if: runner.os == 'Windows'
+        run: npm install @rollup/rollup-win32-x64-msvc --no-save
+
+      - name: Package (${{ matrix.cmd }})
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in 1 2 3; do
+            npm run ${{ matrix.cmd }} && exit 0
+            status=$?
+
+            if [ "$attempt" -eq 3 ]; then
+              exit "$status"
+            fi
+
+            echo "::warning::Package attempt ${attempt} failed; retrying after transient-network backoff."
+            sleep $((attempt * 20))
+          done
+
+      - name: List release output
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const distDir = 'dist'
+          if (!fs.existsSync(distDir)) {
+            console.error('dist/ was not created.')
+            process.exit(1)
+          }
+
+          const entries = fs.readdirSync(distDir, { withFileTypes: true })
+            .sort((a, b) => a.name.localeCompare(b.name))
+
+          for (const entry of entries) {
+            const fullPath = path.join(distDir, entry.name)
+            const stat = fs.statSync(fullPath)
+            const kind = entry.isDirectory() ? 'dir ' : 'file'
+            console.log(`${kind} ${String(stat.size).padStart(12, ' ')} ${fullPath}`)
+          }
+          NODE
+
+      - name: Validate platform release assets
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const version = require('./package.json').version
+          const platform = process.env.RUNNER_OS
+          const expectedByPlatform = {
+            macOS: [
+              `FlowKit-${version}-arm64.dmg`,
+              `FlowKit-${version}-arm64.dmg.blockmap`,
+              `FlowKit-${version}-arm64.zip`,
+              `FlowKit-${version}-arm64.zip.blockmap`,
+              'latest-mac.yml',
+            ],
+            Windows: [
+              `FlowKit-Setup-${version}.exe`,
+              `FlowKit-Setup-${version}.exe.blockmap`,
+              'latest.yml',
+            ],
+          }
+
+          const expected = expectedByPlatform[platform]
+          if (!expected) {
+            console.error(`Unsupported runner platform: ${platform}`)
+            process.exit(1)
+          }
+
+          const maxBytes = 2n * 1024n * 1024n * 1024n
+          for (const fileName of expected) {
+            const filePath = path.join('dist', fileName)
+            if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+              console.error(`Missing release asset: ${fileName}`)
+              process.exit(1)
+            }
+
+            const size = BigInt(fs.statSync(filePath).size)
+            if (size >= maxBytes) {
+              console.error(`Release asset must be under 2 GiB: ${fileName} (${size} bytes)`)
+              process.exit(1)
+            }
+          }
+
+          if (platform === 'macOS') {
+            const latestMac = fs.readFileSync(path.join('dist', 'latest-mac.yml'), 'utf8')
+            if (!latestMac.includes(`FlowKit-${version}-arm64.dmg`) || !latestMac.includes(`FlowKit-${version}-arm64.zip`)) {
+              console.error('latest-mac.yml does not reference the expected macOS filenames.')
+              process.exit(1)
+            }
+          }
+
+          if (platform === 'Windows') {
+            const latestWin = fs.readFileSync(path.join('dist', 'latest.yml'), 'utf8')
+            if (!latestWin.includes(`FlowKit-Setup-${version}.exe`)) {
+              console.error('latest.yml does not reference the expected Windows filename.')
+              process.exit(1)
+            }
+          }
+
+          console.log(`Validated ${expected.length} ${platform} release assets.`)
+          NODE
+
+      - name: Upload release assets to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          files=()
+          while IFS= read -r pattern; do
+            [ -z "$pattern" ] && continue
+            matches=( $pattern )
+            if [ "${#matches[@]}" -eq 0 ]; then
+              echo "No files matched pattern: ${pattern}" >&2
+              exit 1
+            fi
+
+            for file in "${matches[@]}"; do
+              if [ -f "$file" ]; then
+                files+=("$file")
+              fi
+            done
+          done <<'EOF'
+          ${{ matrix.files }}
+          EOF
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release files found to upload." >&2
+            exit 1
+          fi
+
+          printf 'Uploading release asset: %s\n' "${files[@]}"
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+  verify-release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate published release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          release_json="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets,url)"
+          RELEASE_JSON="$release_json" TAG_VERSION="${GITHUB_REF_NAME#v}" node - <<'NODE'
+          const data = JSON.parse(process.env.RELEASE_JSON)
+          const version = process.env.TAG_VERSION
+
+          const expected = [
+            `FlowKit-${version}-arm64.dmg`,
+            `FlowKit-${version}-arm64.dmg.blockmap`,
+            `FlowKit-${version}-arm64.zip`,
+            `FlowKit-${version}-arm64.zip.blockmap`,
+            'latest-mac.yml',
+            `FlowKit-Setup-${version}.exe`,
+            `FlowKit-Setup-${version}.exe.blockmap`,
+            'latest.yml',
+          ]
+
+          if (data.isDraft !== false) {
+            console.error('Release must not be draft.')
+            process.exit(1)
+          }
+
+          if (data.isPrerelease !== false) {
+            console.error('Release must not be prerelease.')
+            process.exit(1)
+          }
+
+          const names = data.assets.map((asset) => asset.name).sort()
+          const missing = expected.filter((name) => !names.includes(name))
+          const extra = names.filter((name) => !expected.includes(name))
+
+          if (missing.length > 0 || extra.length > 0) {
+            console.error(`Missing assets: ${missing.join(', ') || '(none)'}`)
+            console.error(`Unexpected assets: ${extra.join(', ') || '(none)'}`)
+            process.exit(1)
+          }
+
+          const maxBytes = 2 * 1024 * 1024 * 1024
+          for (const asset of data.assets) {
+            if (typeof asset.size === 'number' && asset.size >= maxBytes) {
+              console.error(`Release asset must be under 2 GiB: ${asset.name} (${asset.size} bytes)`)
+              process.exit(1)
+            }
+          }
+
+          console.log(`Validated release ${data.url} with ${names.length} assets.`)
+          NODE
+
+  cleanup-release:
+    needs:
+      - create-release
+      - build
+      - verify-release
+    if: ${{ always() && needs.create-release.result == 'success' && (needs.build.result != 'success' || needs.verify-release.result != 'success') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete incomplete release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --yes || true

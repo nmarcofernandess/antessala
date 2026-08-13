@@ -1,0 +1,74 @@
+[
+  {
+    "id": "conv1",
+    "title": "Test Conversation 1",
+    "create_time": 1700000000,
+    "update_time": 1700000100,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": ["msg1"]
+      },
+      "msg1": {
+        "id": "msg1",
+        "message": {
+          "id": "msg1",
+          "author": { "role": "user" },
+          "content": { "parts": ["Hello"] },
+          "create_time": 1700000001
+        },
+        "parent": "root",
+        "children": ["msg2"]
+      },
+      "msg2": {
+        "id": "msg2",
+        "message": {
+          "id": "msg2",
+          "author": { "role": "assistant" },
+          "content": { "parts": ["Hi there!"] },
+          "create_time": 1700000002
+        },
+        "parent": "msg1",
+        "children": []
+      }
+    }
+  },
+  {
+    "id": "conv2",
+    "title": "Test Conversation 2",
+    "create_time": 1700001000,
+    "update_time": 1700001200,
+    "mapping": {
+      "root2": {
+        "id": "root2",
+        "message": null,
+        "parent": null,
+        "children": ["msg3"]
+      },
+      "msg3": {
+        "id": "msg3",
+        "message": {
+          "id": "msg3",
+          "author": { "role": "user" },
+          "content": { "parts": ["What is 2+2?"] },
+          "create_time": 1700001001
+        },
+        "parent": "root2",
+        "children": ["msg4"]
+      },
+      "msg4": {
+        "id": "msg4",
+        "message": {
+          "id": "msg4",
+          "author": { "role": "assistant" },
+          "content": { "parts": ["2+2 equals 4."] },
+          "create_time": 1700001002
+        },
+        "parent": "msg3",
+        "children": []
+      }
+    }
+  }
+]

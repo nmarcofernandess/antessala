@@ -1,0 +1,166 @@
+import { client } from './client'
+import type {
+  AppJob,
+  BulkRagImportInput,
+  KnowledgeEnrichmentConfig,
+  KnowledgeEnrichmentModelOption,
+} from '@shared/types'
+import type { AiRouteResolution, AiRouteTask, AiRoutingConfig } from '@shared/index'
+
+export const obterIaRouting = () =>
+  client['ia.routing.obter']() as Promise<AiRoutingConfig>
+
+export const salvarIaRouting = (config: AiRoutingConfig) =>
+  client['ia.routing.salvar'](config) as Promise<AiRoutingConfig>
+
+export const obterIaRouteStatus = (task: AiRouteTask, options: { validateLocal?: boolean } = {}): Promise<AiRouteResolution> =>
+  client['ia.routing.status']({ task, validateLocal: options.validateLocal === true })
+
+export const listarIaRouteStatus = (): Promise<AiRouteResolution[]> =>
+  client['ia.routing.statusAll']({ validateLocal: false })
+
+export const servicoConhecimento = {
+  stats: () =>
+    client['knowledge.stats']() as Promise<{
+      fontes: Array<{
+        id: number
+        tipo: string
+        titulo: string
+        importance: string
+        ativo: boolean
+        criada_em: string
+        atualizada_em: string
+        chunks_count: number
+      }>
+      totais: {
+        total_fontes: number
+        total_chunks: number
+        total_sistema: number
+        total_usuario: number
+      }
+    }>,
+
+  escolherArquivo: () => client['knowledge.escolherArquivo']() as Promise<string | null>,
+
+  escolherPasta: () => client['knowledge.escolherPasta']() as Promise<string | null>,
+
+  importar: (caminho_arquivo: string) =>
+    client['knowledge.importar']({ caminho_arquivo }) as Promise<{ source_id: number; chunks_count: number; entities_count: number }>,
+
+  iniciarBulkImport: (input: BulkRagImportInput) =>
+    client['knowledge.bulkImport.start'](input) as Promise<AppJob>,
+
+  listarJobs: () => client['jobs.list']() as Promise<{ jobs: AppJob[] }>,
+
+  obterJob: (id: string) => client['jobs.get']({ id }) as Promise<{ job: AppJob | null }>,
+
+  cancelarJob: (id: string) => client['jobs.cancel']({ id }) as Promise<{ job: AppJob }>,
+
+  pausarJob: (id: string) => client['jobs.pause']({ id }) as Promise<{ job: AppJob }>,
+
+  retomarJob: (id: string) => client['jobs.resume']({ id }) as Promise<{ job: AppJob }>,
+
+  removerFonte: (id: number) =>
+    client['knowledge.removerFonte']({ id }) as Promise<{ ok: boolean }>,
+
+  toggleAtivo: (id: number, ativo: boolean) =>
+    client['knowledge.toggleAtivo']({ id, ativo }) as Promise<{ ok: boolean }>,
+
+  obterTextoOriginal: (id: number) =>
+    client['knowledge.obterTextoOriginal']({ id }) as Promise<{ titulo: string; conteudo_original: string; context_hint: string | null }>,
+
+  extrairTexto: (caminho_arquivo: string) =>
+    client['knowledge.extrairTexto']({ caminho_arquivo }) as Promise<{ texto: string; nome_arquivo: string }>,
+
+  gerarMetadataIa: (texto: string, campo: 'titulo' | 'quando_consultar' | 'texto') =>
+    client['knowledge.gerarMetadataIa']({ texto, campo }) as Promise<{ resultado: string }>,
+
+  importarCompleto: (titulo: string, conteudo: string, quando_consultar: string) =>
+    client['knowledge.importarCompleto']({ titulo, conteudo, quando_consultar }) as Promise<{ source_id: number; chunks_count: number; entities_count: number }>,
+
+  enrichmentConfig: () =>
+    client['knowledge.enrichmentConfig.get']() as Promise<KnowledgeEnrichmentConfig>,
+
+  salvarEnrichmentConfig: (config: Partial<KnowledgeEnrichmentConfig>) =>
+    client['knowledge.enrichmentConfig.save'](config) as Promise<KnowledgeEnrichmentConfig>,
+
+  listarEnrichmentModels: () =>
+    client['knowledge.enrichmentModels.list']() as Promise<KnowledgeEnrichmentModelOption[]>,
+
+  obterIaRouting,
+
+  salvarIaRouting,
+
+  obterIaRouteStatus,
+
+  listarIaRouteStatus,
+
+  rebuildGraph: (origem: 'sistema' | 'usuario' = 'usuario') =>
+    client['knowledge.rebuildGraph']({ origem }) as Promise<{ entities_count: number; relations_count: number; chunks_processados: number }>,
+
+  graphStats: (origem?: 'sistema' | 'usuario') =>
+    client['knowledge.graphStats']({ origem }) as Promise<{
+      entities_count: number
+      relations_count: number
+      tipos: Array<{ tipo: string; count: number }>
+    }>,
+
+  /** DEV-ONLY: Rebuild sistema graph com LLM + export seed JSON */
+  rebuildAndExportSistema: () =>
+    client['knowledge.rebuildAndExportSistema']() as Promise<{
+      entities_count: number
+      relations_count: number
+      chunks_processados: number
+      seed_entities: number
+      seed_relations: number
+      exported_to: string
+    }>,
+
+  graphData: (origem?: 'sistema' | 'usuario', limite?: number) =>
+    client['knowledge.graphData']({ origem, limite }) as Promise<{
+      nodes: Array<{ id: number; nome: string; tipo: string }>
+      links: Array<{ source: number; target: number; tipo_relacao: string; peso: number }>
+    }>,
+
+  graphExplore: (entidade: string, profundidade?: number) =>
+    client['knowledge.graphExplore']({ entidade, profundidade }) as Promise<{
+      entidade_raiz: string | null
+      entidades: Array<{ nome: string; tipo: string; nivel: number }>
+      relacoes: Array<{ from_nome: string; to_nome: string; tipo_relacao: string; peso: number }>
+    }>,
+
+  async search(query: string, limite?: number) {
+    return (await client['knowledge.search']({ query, limite })) as {
+      chunks: Array<{
+        id: number
+        source_id: number
+        conteudo: string
+        importance: string
+        score: number
+        source_titulo: string
+        source_tipo: string
+        source_metadata: Record<string, unknown>
+        last_accessed_at: string | null
+        access_count: number
+      }>
+      relations: Array<{
+        from_nome: string
+        to_nome: string
+        tipo_relacao: string
+        peso: number
+      }>
+      total: number
+    }
+  },
+
+  async listarChunks(sourceId: number) {
+    return (await client['knowledge.listarChunks']({ source_id: sourceId })) as Array<{
+      id: number
+      source_id: number
+      conteudo: string
+      importance: string
+      last_accessed_at: string | null
+      access_count: number
+    }>
+  },
+}

@@ -1,0 +1,75 @@
+appId: com.antessala.triagem
+productName: Antessala
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - 'out/**/*'
+extraResources:
+  - from: 'models/'
+    to: 'models/'
+    filter:
+      - '**/*'
+  - from: 'knowledge/'
+    to: 'knowledge/'
+    filter:
+      - '**/*.md'
+      - '**/*.json'
+  - from: 'stt-bin/'
+    to: 'stt-bin/'
+    filter:
+      - '**/*'
+  - from: 'out/cli/'
+    to: 'cli/'
+    filter:
+      - '**/*'
+  - from: 'llama.cpp/'
+    to: 'llama.cpp/'
+    filter:
+      - '**/*'
+asarUnpack:
+  - '**/*.node'
+  - 'node_modules/node-llama-cpp/**/*'
+mac:
+  icon: icon.icns
+  category: public.app-category.business
+  identity: "-"
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  target:
+    - dmg
+    - zip
+  artifactName: '${productName}-${version}-${arch}.${ext}'
+  notarize: false
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: '/Applications'
+    - x: 270
+      y: 80
+win:
+  icon: icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: '${productName}-Setup-${version}.${ext}'
+linux:
+  icon: icon.png
+  target:
+    - AppImage
+  category: Office
+  artifactName: '${productName}-${version}.${ext}'
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: icon.ico
+  uninstallerIcon: icon.ico
+publish:
+  provider: github
+  owner: nmarcofernandess
+  repo: flowkit

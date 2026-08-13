@@ -1,0 +1,140 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Superpowers (plans, specs, brainstorm)
+.superpowers/
+
+# Internal docs archive (implementation specs, plans, prompts)
+.docsescalaflow
+docs/superpowers/
+specs/
+
+# Agent internals
+.agent/
+.agents/
+.auto-claude-security.json
+
+# Node
+node_modules/
+.npm
+
+# Build
+dist/
+out/
+output/
+*.tsbuildinfo
+
+# Electron distributables
+*.dmg
+*.exe
+*.AppImage
+*.snap
+*.deb
+*.rpm
+
+# Cache
+.cache/
+.eslintcache
+
+# Dados locais
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Solver build artifacts
+solver-bin/
+stt-bin/
+stt/target/
+
+# MCP server build artifacts
+mcp-bin/
+solver/build/
+solver/dist/
+
+# Embedding model (binário ~118MB, baixado via npm run model:download)
+models/embeddings/
+
+# STT model (binário ~640MB, baixado via npm run stt:model)
+models/stt/
+
+# Knowledge seed manifest (gerado por knowledge:seed)
+knowledge/.manifest.json
+
+# Playwright
+test-results/
+
+# Testes / artefatos temporários
+horario/teste/.venv/
+horario/teste/__pycache__/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+*.swp
+*.swo
+*.code-workspace
+# Bun cache
+*.bun-build
+
+# Misc
+*.log
+*.local
+*.bak
+*.tmp
+*.temp
+
+# Auto Claude data directory
+.auto-claude/
+
+# Auto Claude generated files
+.auto-claude-security.json
+.auto-claude-status
+.claude_settings.json
+.worktrees/
+.security-key
+logs/security/
+
+# Gemini / AI agent
+.gemini/
+
+# Skills CLI (shadcn/ui skills, agent configs)
+.agents/
+.agent/
+.factory/
+skills/
+skills-lock.json
+.claude/skills/
+
+# Temporários de dev
+tmp/
+agora.md
+dist-mac-verify/
+
+# Seed local (dados de dev, chaves API — nunca versionar)
+src/main/db/seed-local.ts
+src/main/db/seed2.ts
+.devtools
+.superpowers/
+AGENTS.md
+models/embeddings/onnx/
+models/embeddings/*.onnx
+models/embeddings/*.bin
+
+# Agent session artifacts
+.grok/
+.playwright-mcp/

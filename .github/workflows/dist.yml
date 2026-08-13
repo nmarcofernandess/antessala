@@ -1,0 +1,58 @@
+# Dist (mac + win) — empacotamento por OS, disparo manual (workflow_dispatch).
+#
+# VALIDADO em CI em 2026-06-17: run verde produzindo artefatos mac + win (DoD atingido).
+# - Cross-packaging do llama.cpp NÃO é suportado → cada OS baixa o seu binário
+#   (`npm run llama:bin`, já encadeado em dist:mac/dist:win).
+# - Build é AD-HOC (sem assinatura/notarização) — o .app/.exe roda, mas o usuário
+#   final veria aviso de Gatekeeper/SmartScreen (bypass em docs/certificados.md).
+#   Signing = gate futuro (cert Apple Developer ID + cert EV/OV Windows + secrets).
+# - dist:mac/dist:win exigem Rust (stt:build → cargo) + Node; setup abaixo cobre.
+# - dist:* usam --publish never (CI só gera artifacts; publicar release é outro fluxo).
+name: dist
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, cmd: 'dist:mac' }
+          - { os: windows-latest, cmd: 'dist:win' }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fix platform-specific rollup binding (Windows)
+        if: runner.os == 'Windows'
+        run: npm install @rollup/rollup-win32-x64-msvc --no-save
+
+      # dist:* já encadeia: build → stt:prepare (cargo) → llama:bin → electron-builder
+      - name: Package (${{ matrix.cmd }})
+        run: npm run ${{ matrix.cmd }}
+
+      - name: List dist output
+        shell: bash
+        run: ls -la dist/ || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          path: dist/*
+          if-no-files-found: warn
