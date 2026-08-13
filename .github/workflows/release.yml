@@ -74,7 +74,7 @@ jobs:
 
           gh release create "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "FlowKit ${GITHUB_REF_NAME}" \
+            --title "Antessala ${GITHUB_REF_NAME}" \
             --generate-notes \
             --verify-tag \
             --latest
@@ -176,15 +176,15 @@ jobs:
           const platform = process.env.RUNNER_OS
           const expectedByPlatform = {
             macOS: [
-              `FlowKit-${version}-arm64.dmg`,
-              `FlowKit-${version}-arm64.dmg.blockmap`,
-              `FlowKit-${version}-arm64.zip`,
-              `FlowKit-${version}-arm64.zip.blockmap`,
+              `Antessala-${version}-arm64.dmg`,
+              `Antessala-${version}-arm64.dmg.blockmap`,
+              `Antessala-${version}-arm64.zip`,
+              `Antessala-${version}-arm64.zip.blockmap`,
               'latest-mac.yml',
             ],
             Windows: [
-              `FlowKit-Setup-${version}.exe`,
-              `FlowKit-Setup-${version}.exe.blockmap`,
+              `Antessala-Setup-${version}.exe`,
+              `Antessala-Setup-${version}.exe.blockmap`,
               'latest.yml',
             ],
           }
@@ -212,7 +212,7 @@ jobs:
 
           if (platform === 'macOS') {
             const latestMac = fs.readFileSync(path.join('dist', 'latest-mac.yml'), 'utf8')
-            if (!latestMac.includes(`FlowKit-${version}-arm64.dmg`) || !latestMac.includes(`FlowKit-${version}-arm64.zip`)) {
+            if (!latestMac.includes(`Antessala-${version}-arm64.dmg`) || !latestMac.includes(`Antessala-${version}-arm64.zip`)) {
               console.error('latest-mac.yml does not reference the expected macOS filenames.')
               process.exit(1)
             }
@@ -220,7 +220,7 @@ jobs:
 
           if (platform === 'Windows') {
             const latestWin = fs.readFileSync(path.join('dist', 'latest.yml'), 'utf8')
-            if (!latestWin.includes(`FlowKit-Setup-${version}.exe`)) {
+            if (!latestWin.includes(`Antessala-Setup-${version}.exe`)) {
               console.error('latest.yml does not reference the expected Windows filename.')
               process.exit(1)
             }
@@ -281,13 +281,13 @@ jobs:
           const version = process.env.TAG_VERSION
 
           const expected = [
-            `FlowKit-${version}-arm64.dmg`,
-            `FlowKit-${version}-arm64.dmg.blockmap`,
-            `FlowKit-${version}-arm64.zip`,
-            `FlowKit-${version}-arm64.zip.blockmap`,
+            `Antessala-${version}-arm64.dmg`,
+            `Antessala-${version}-arm64.dmg.blockmap`,
+            `Antessala-${version}-arm64.zip`,
+            `Antessala-${version}-arm64.zip.blockmap`,
             'latest-mac.yml',
-            `FlowKit-Setup-${version}.exe`,
-            `FlowKit-Setup-${version}.exe.blockmap`,
+            `Antessala-Setup-${version}.exe`,
+            `Antessala-Setup-${version}.exe.blockmap`,
             'latest.yml',
           ]
 
