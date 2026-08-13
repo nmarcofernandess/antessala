@@ -62,10 +62,10 @@ type Comorbidade = {
 
 const ASSET_HASHES = {
   'cid10.json.gz': '24e646c92318c23ae9ba7803bd2df1961cb272d361055f94e44f6b75e1a80b20',
-  'medicamentos.json': '82710228c24915db14f3ba48819f4e3257de2abf2b6cb161b08afc4142f5d4b3',
+  'medicamentos.json': '69d119dc485a57eca755d701d594f9c47b7b519c280b74af757e63a4ddaa6fb0',
   'grupos-risco.json': '2f86cc6c7e5ab0ca1ba9ea397364a176cf90e0fc4e2412dd9796fbc6911593d9',
-  'met.json': '8ecbd5ff81fba218687abbcc6af589212cf0e347f4291598e10bd09be9334dad',
-  'comorbidades.json': '98b56c6239f3b26e74c5916b36995b46993249398b3fc1d6f66afa44c79958c3',
+  'met.json': 'c0dd4d1a2297b62be1e9868ac0a1945af6a63879542d6b3972dce6637e719205',
+  'comorbidades.json': '2577e127f9f8b4d239944a5b9fa4954d0141f84f1a263be16420ec07da66c99c',
 } as const
 
 const SEED_REVISION = createHash('sha256')

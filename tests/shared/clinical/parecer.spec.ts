@@ -56,6 +56,26 @@ describe('parecer em texto — paridade com o protótipo', () => {
     expect(texto).toMatch(/NÃO CONTROLADA/)
   })
 
+  it('usa os CIDs clínicos corrigidos no parecer', () => {
+    const entrada = {
+      paciente: { idade: 42, sexo: 'F' },
+      procedimento: { porte: 'baixo' },
+      comorbidades: [
+        { id: 'asma', controlado: true },
+        { id: 'apneia-do-sono', controlado: true },
+        { id: 'tabagismo', controlado: true },
+      ],
+      capacidade: { met: 5 },
+    } satisfies EntradaRisco
+    const resultado = classificarRisco(entrada, grupos)
+    const texto = gerarTextoParecer(entrada, resultado, { comorbidades })
+
+    expect(texto).toMatch(/asma \(CID J45\)/)
+    expect(texto).toMatch(/apnéia do sono \(CID G47\.3\)/)
+    expect(texto).toMatch(/uso do fumo \(CID F17\)/)
+    expect(texto).not.toContain('CID E42')
+  })
+
   it('quando a rota é sobreposta, registra a justificativa e a sugestão original', () => {
     const resultado = classificarRisco(grave, grupos)
     const texto = gerarTextoParecer(grave, resultado, {
