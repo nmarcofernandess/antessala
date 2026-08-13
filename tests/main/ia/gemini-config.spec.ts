@@ -4,9 +4,8 @@ import { PROVIDER_DEFAULTS, resolveProviderApiKey, shouldAutoSeedIaConfig } from
 import type { IaConfiguracao } from '../../../src/shared/types'
 
 const ORIGINAL_ANTESSALA_FLAG = process.env.ANTESSALA_GEMINI_ENABLE
-const ORIGINAL_LEGACY_FLAG = process.env.FLOWKIT_GEMINI_ENABLE
 
-function restoreEnv(name: 'ANTESSALA_GEMINI_ENABLE' | 'FLOWKIT_GEMINI_ENABLE', value: string | undefined) {
+function restoreEnv(name: 'ANTESSALA_GEMINI_ENABLE', value: string | undefined) {
   if (value === undefined) delete process.env[name]
   else process.env[name] = value
 }
@@ -34,7 +33,6 @@ function makeGeminiConfig(overrides?: Partial<IaConfiguracao>): IaConfiguracao {
 describe('Gemini cloud config', () => {
   afterEach(() => {
     restoreEnv('ANTESSALA_GEMINI_ENABLE', ORIGINAL_ANTESSALA_FLAG)
-    restoreEnv('FLOWKIT_GEMINI_ENABLE', ORIGINAL_LEGACY_FLAG)
   })
 
   it('uses Gemini 3.5 Flash as the direct Gemini default', () => {
@@ -43,25 +41,24 @@ describe('Gemini cloud config', () => {
 
   it('enables direct Gemini API by default and still allows explicit opt-out', () => {
     delete process.env.ANTESSALA_GEMINI_ENABLE
-    delete process.env.FLOWKIT_GEMINI_ENABLE
     expect(isGeminiCloudApiEnabled()).toBe(true)
 
     process.env.ANTESSALA_GEMINI_ENABLE = '0'
     expect(isGeminiCloudApiEnabled()).toBe(false)
   })
 
-  it('prefers the Antessala flag and accepts the FlowKit name only as fallback', () => {
+  it('does not inherit the removed FlowKit feature flag', () => {
     delete process.env.ANTESSALA_GEMINI_ENABLE
     process.env.FLOWKIT_GEMINI_ENABLE = '0'
-    expect(isGeminiCloudApiEnabled()).toBe(false)
+    expect(isGeminiCloudApiEnabled()).toBe(true)
 
     process.env.ANTESSALA_GEMINI_ENABLE = '1'
     expect(isGeminiCloudApiEnabled()).toBe(true)
+    delete process.env.FLOWKIT_GEMINI_ENABLE
   })
 
   it('resolves the Gemini provider token when the cloud API flag is unset', () => {
     delete process.env.ANTESSALA_GEMINI_ENABLE
-    delete process.env.FLOWKIT_GEMINI_ENABLE
     expect(resolveProviderApiKey(makeGeminiConfig())).toBe('test-gemini-token')
   })
 

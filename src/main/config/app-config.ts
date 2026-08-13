@@ -34,12 +34,9 @@ export const APP_CONFIG = {
 /**
  * API Gemini direta (Google Generative AI / @ai-sdk/google).
  * Fica ligada por padrão; use `ANTESSALA_GEMINI_ENABLE=0` para desligar.
- * O nome legado continua aceito apenas para não quebrar ambientes existentes.
  */
 export function isGeminiCloudApiEnabled(): boolean {
-  const v = (
-    process.env.ANTESSALA_GEMINI_ENABLE ?? process.env.FLOWKIT_GEMINI_ENABLE
-  )?.trim().toLowerCase()
+  const v = process.env.ANTESSALA_GEMINI_ENABLE?.trim().toLowerCase()
   if (v === '0' || v === 'false' || v === 'no') return false
   if (v === '1' || v === 'true' || v === 'yes') return true
   return true

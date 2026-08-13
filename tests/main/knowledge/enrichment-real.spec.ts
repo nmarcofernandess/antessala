@@ -19,15 +19,15 @@ describe('knowledge enrichment with real persistence', () => {
 
   beforeEach(async () => {
     await closeDb()
-    dbDir = await mkdtemp(path.join(os.tmpdir(), 'flowkit-enrichment-db-'))
-    process.env.FLOWKIT_DB_PATH = dbDir
+    dbDir = await mkdtemp(path.join(os.tmpdir(), 'antessala-enrichment-db-'))
+    process.env.ANTESSALA_DB_PATH = dbDir
     await initDb()
     await createTables()
   })
 
   afterEach(async () => {
     await closeDb()
-    delete process.env.FLOWKIT_DB_PATH
+    delete process.env.ANTESSALA_DB_PATH
     await rm(dbDir, { recursive: true, force: true })
   })
 
