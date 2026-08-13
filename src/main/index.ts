@@ -155,6 +155,7 @@ async function bootstrap(): Promise<void> {
   await initDb()
   await createTables()
   await maybeSeedIaConfig()
+  await seedData()
 
   await app.whenReady()
   installApplicationMenu(app)
@@ -163,9 +164,6 @@ async function bootstrap(): Promise<void> {
   const { router } = await import('./tipc')
   registerIpcMain(router)
   createWindow(app, BrowserWindow, shell)
-
-  // O seed lê somente src/data/catalogos (ou clinical-data no bundle).
-  void seedData().catch((error) => console.error('[SEED] Falha:', error))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(app, BrowserWindow, shell)

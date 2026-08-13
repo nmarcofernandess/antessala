@@ -7,8 +7,8 @@ const require = createRequire(import.meta.url)
  * Embedding local via @huggingface/transformers (ONNX Runtime).
  * Modelo: multilingual-e5-base (768 dims, ~150-440MB quantizado).
  *
- * ZERO deps externas: funciona offline, sem API key, sem internet.
- * Graceful degradation: retorna null se modelo indisponível.
+ * Funciona estritamente offline, sem API key e sem download automático.
+ * Graceful degradation: retorna null se o modelo local estiver indisponível.
  *
  * e5 requer prefixes: "query: " para busca, "passage: " para indexação.
  */
@@ -35,21 +35,17 @@ async function getExtractor(): Promise<any> {
 
   const modelPath = resolveModelPath()
 
-  // Se modelo existe localmente, usar offline. Senão, permitir download (dev/first run).
+  // Esta fronteira é deliberadamente fail-closed: o Antessala nunca baixa
+  // modelos em runtime, mesmo se o módulo dormente de Memória for chamado.
   const hasLocalModel = fs.existsSync(path.join(modelPath, 'onnx'))
     || fs.existsSync(path.join(modelPath, 'model.onnx'))
     || fs.existsSync(path.join(modelPath, 'tokenizer.json'))
 
-  if (hasLocalModel) {
-    env.localModelPath = modelPath
-    env.allowRemoteModels = false
-    console.log('[embeddings] Usando modelo local:', modelPath)
-  } else {
-    // Primeiro uso: baixa o modelo automaticamente (~400MB)
-    // Cached em ~/.cache/huggingface/hub/ para proximos usos
-    env.allowRemoteModels = true
-    console.log('[embeddings] Modelo local nao encontrado. Baixando na primeira execucao...')
-  }
+  env.localModelPath = modelPath
+  env.allowRemoteModels = false
+  if (!hasLocalModel) throw new Error(`Modelo local não encontrado em ${modelPath}.`)
+
+  console.log('[embeddings] Usando modelo local:', modelPath)
 
   _extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-base', {
     dtype: 'q8' as any,

@@ -21,5 +21,10 @@
     "src/renderer/src/**/*.ts",
     "src/renderer/src/**/*.tsx",
     "src/shared/**/*.ts"
+  ],
+  "exclude": [
+    "src/renderer/src/paginas/MemoriaPagina.tsx",
+    "src/shared/ai-runtime-contract.ts",
+    "src/shared/ia-routing-contract.ts"
   ]
 }

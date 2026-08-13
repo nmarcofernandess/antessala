@@ -15,11 +15,11 @@ const SYSTEM_PROMPT = [
 ].join('\n')
 
 function toModelMessages(historico: IaMensagem[], mensagem: string): ModelMessage[] {
-  const messages: ModelMessage[] = historico.flatMap((item) => {
-    if (item.papel === 'usuario') return [{ role: 'user' as const, content: item.conteudo }]
-    if (item.papel === 'assistente') return [{ role: 'assistant' as const, content: item.conteudo }]
-    return []
-  })
+  const messages: ModelMessage[] = []
+  for (const item of historico) {
+    if (item.papel === 'usuario') messages.push({ role: 'user', content: item.conteudo })
+    if (item.papel === 'assistente') messages.push({ role: 'assistant', content: item.conteudo })
+  }
   messages.push({ role: 'user', content: mensagem })
   return messages
 }

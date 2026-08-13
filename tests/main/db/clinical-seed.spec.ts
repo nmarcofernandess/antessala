@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { closeDb, initDb } from '../../../src/main/db/pglite'
 import { createTables } from '../../../src/main/db/schema'
 import { queryOne, execute } from '../../../src/main/db/query'
@@ -9,23 +9,33 @@ import { seedData } from '../../../src/main/db/seed'
 
 describe('primeiro boot clínico offline', () => {
   let dbDir: string
+  const fetchSpy = vi.fn(async () => {
+    throw new Error('rede bloqueada pelo teste de primeiro boot')
+  })
 
   beforeAll(async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = fetchSpy as typeof fetch
     await closeDb()
     dbDir = await mkdtemp(path.join(os.tmpdir(), 'antessala-clinical-seed-'))
-    process.env.FLOWKIT_DB_PATH = dbDir
-    await initDb()
-    await createTables()
-    await seedData()
+    process.env.ANTESSALA_DB_PATH = dbDir
+    try {
+      await initDb()
+      await createTables()
+      await seedData()
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   }, 60_000)
 
   afterAll(async () => {
     await closeDb()
-    delete process.env.FLOWKIT_DB_PATH
+    delete process.env.ANTESSALA_DB_PATH
     await rm(dbDir, { recursive: true, force: true })
   })
 
   it('carrega exclusivamente os assets clínicos versionados', async () => {
+    expect(fetchSpy).not.toHaveBeenCalled()
     const counts = await queryOne<{
       cid: number
       medicamentos: number
@@ -87,6 +97,20 @@ describe('primeiro boot clínico offline', () => {
       `SELECT COUNT(*)::int AS total FROM registros WHERE nome = 'Ana Ribeiro'`,
     )
     expect(count?.total).toBe(2)
+  })
+
+  it('preserva a memória dormente e não cria tabelas removidas', async () => {
+    const tables = await queryOne<{
+      knowledge: boolean
+      gallery: boolean
+      terminal: boolean
+    }>(`
+      SELECT
+        to_regclass('knowledge_sources') IS NOT NULL AS knowledge,
+        to_regclass('gallery_images') IS NOT NULL AS gallery,
+        to_regclass('terminal_command_log') IS NOT NULL AS terminal
+    `)
+    expect(tables).toEqual({ knowledge: true, gallery: false, terminal: false })
   })
 
   it('recusa mutação de um marco da jornada', async () => {
