@@ -126,12 +126,14 @@
 
   .aviso { border: 1.5px solid var(--signal); background: var(--signal-soft); padding: 12px 15px;
     font-size: 15px; color: var(--ink); max-width: 64ch; margin-top: 18px }
-  .aviso b { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  .aviso .rot { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
     text-transform: uppercase; color: var(--signal); margin-bottom: 6px }
+  .aviso b { font-weight: 700; color: var(--ink) }
 
   .pedido { border: 1.5px solid var(--ink); background: var(--paper-2); padding: 20px 22px; margin-top: 20px }
   .pedido h4 { font-size: 18px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px }
-  .pedido table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 14.5px }
+  .rolagem { overflow-x: auto; margin-top: 14px }
+  .pedido table { width: 100%; min-width: 460px; border-collapse: collapse; font-size: 14.5px }
   .pedido th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
     text-align: left; color: var(--ink-faint); border-bottom: 1px solid var(--rule); padding: 7px 8px;
     font-weight: 400 }
@@ -241,7 +243,7 @@
         </ul>
 
         <div class="aviso">
-          <b>por que isso é bom</b>
+          <span class="rot">por que isso é bom</span>
           O hospital não vai nos dar acesso ao cadastro real deles. Fingir que temos um
           seria a primeira coisa que a banca derrubaria.
         </div>
@@ -286,7 +288,7 @@
           que o hub também precisa do seu próprio contador.</p>
 
         <div class="aviso">
-          <b>fora do escopo, de propósito</b>
+          <span class="rot">fora do escopo, de propósito</span>
           O sistema <b>não</b> decide se a pessoa vai para o anestesista, para o
           cardiologista ou para um terceiro. Ele só mostra a ordem.
         </div>
@@ -366,6 +368,8 @@
 
     <div class="pedido">
       <h4>Formato sugerido</h4>
+      <div class="rolagem">
+
       <table>
         <thead>
           <tr><th>Bloco</th><th>O que pergunta</th><th>Já existe no DietFlow?</th><th>Obrigatório?</th></tr>
@@ -395,10 +399,11 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <div class="aviso">
-      <b>uma pergunta que trava o resto</b>
+      <span class="rot">uma pergunta que trava o resto</span>
       A <b>urgência</b> é marcada pela triagem na hora, ou sai automaticamente das
       respostas da anamnese? A resposta muda o que o motor da fila recebe.
     </div>
