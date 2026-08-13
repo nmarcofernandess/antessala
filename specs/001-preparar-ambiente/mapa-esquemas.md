@@ -152,10 +152,11 @@ Mapeamento dos campos:
 | `Patient.fullName` e demais dados do cadastro | `registros.nome/sexo/idade/plano` | snapshot descartável da pessoa, sem FK |
 | `Content.patientId` | — | removido, sem substituto |
 
-`prioridade` está reservada no registro, mas esta etapa não a calcula. A tabela
-`registro_jornada` guarda marcos append-only com horário; ela declara os estados
-do produto, mas não contém regra de transição nem ordenação. Essas decisões
-pertencem a `specs/002-motor-da-fila/`.
+Os campos e handlers de fila/jornada plantados nesta etapa são **provisórios**.
+Não são fonte canônica de estados, urgência, score, relógios, transições ou
+ordenação. Antes de qualquer integração de produto, eles precisam ser
+reconciliados conscientemente com a entrega da branch
+`codex/motor-fila-logica-v2`, guiada por `specs/002-motor-da-fila/`.
 
 ## 4. O contrato dos widgets
 
@@ -237,12 +238,12 @@ do DietFlow.
 | Arquivo | Conteúdo | Itens | Bytes no bundle | SHA-256 do arquivo |
 |---|---|---:|---:|---|
 | `cid10.json.gz` | CID-10 completo e hierárquico | 14.793 | 624.180 | `24e646c92318c23ae9ba7803bd2df1961cb272d361055f94e44f6b75e1a80b20` |
-| `medicamentos.json` | recorte perioperatório curado | 382 | 83.058 | `82710228c24915db14f3ba48819f4e3257de2abf2b6cb161b08afc4142f5d4b3` |
+| `medicamentos.json` | recorte perioperatório curado | 382 | 87.883 | `69d119dc485a57eca755d701d594f9c47b7b519c280b74af757e63a4ddaa6fb0` |
 | `grupos-risco.json` | grupos usados pelo classificador | 12 | 1.858 | `2f86cc6c7e5ab0ca1ba9ea397364a176cf90e0fc4e2412dd9796fbc6911593d9` |
-| `met.json` | atividades e faixa de equivalentes metabólicos | 94 | 10.878 | `8ecbd5ff81fba218687abbcc6af589212cf0e347f4291598e10bd09be9334dad` |
-| `comorbidades.json` | recorte de comorbidades do classificador | 14 | 2.063 | `98b56c6239f3b26e74c5916b36995b46993249398b3fc1d6f66afa44c79958c3` |
+| `met.json` | atividades e faixa de equivalentes metabólicos | 94 | 9.898 | `c0dd4d1a2297b62be1e9868ac0a1945af6a63879542d6b3972dce6637e719205` |
+| `comorbidades.json` | recorte de comorbidades do classificador | 14 | 2.147 | `2577e127f9f8b4d239944a5b9fa4954d0141f84f1a263be16420ec07da66c99c` |
 
-Total dos cinco assets: **722.037 bytes**, aproximadamente 705 KiB. O CID
+Total dos cinco assets: **725.966 bytes**, aproximadamente 709 KiB. O CID
 descompactado tem 11.135.026 bytes e SHA-256
 `9562faed57d7aa69d7dcce8dfbad91a53cea0fc2b2cab65004417127da0f6ef9`.
 
@@ -250,15 +251,16 @@ O CID completo se divide em 22 capítulos, 275 grupos, 2.045 categorias e
 12.451 subcategorias. Ele vai para `catalogo_cid10` preservando nível,
 parentesco, descrições, termos de busca e escores de relevância. O arquivo de
 **14 comorbidades não é um “CID reduzido”**: é apenas a lista do classificador
-de risco. Onze dessas comorbidades têm associações CID; `arritmia`,
-`apneia-do-sono` e `tabagismo` ainda não têm código nesse recorte.
+de risco. Todas têm ao menos uma associação CID validada contra o bundle, com
+17 referências no total.
 
-Os 382 medicamentos geram 35 classes terapêuticas distintas e trazem 1.113
-nomes comerciais. Eles são um recorte clínico curado, **não a base ANVISA
+Os 382 medicamentos geram 35 classes terapêuticas distintas e trazem 1.447
+aliases comerciais, deduplicados dentro de cada medicamento. Eles são um
+recorte clínico curado, **não a base ANVISA
 completa**. O golden do DietFlow contém 2.628 medicamentos e ocupa 2.125.171
 bytes; pode substituir ou ampliar o recorte mais tarde sem mudar o schema, após
-decisão clínica e revisão da redistribuição. Os 94 itens MET cobrem de 1 a 16
-MET e são o golden curado, não todo o compêndio bruto.
+decisão clínica e revisão da redistribuição. Os 94 itens MET usam os nomes
+canônicos do golden, cobrem de 1 a 16 MET e não representam todo o compêndio bruto.
 
 ### 5.3 Destino no PGlite
 

@@ -13,7 +13,8 @@ desta entrega.
 - Não existe busca, deduplicação ou aviso de nome repetido. Dois registros iguais são
   duas entradas válidas.
 - Não existe evolução, série temporal ou leitura que dependa de atendimento anterior.
-- A jornada é append-only: cada novo estado recebe seu próprio carimbo de horário.
+- O esqueleto provisório da jornada é append-only; o contrato canônico chegará pela
+  Spec 002.
 - O app não decide a especialidade de destino.
 
 A definição completa está em
@@ -37,7 +38,8 @@ A definição completa está em
 ### Esqueleto clínico
 
 - tabela `registros`, com a pessoa embutida e anamnese versionada em JSONB;
-- tabela `registro_jornada`, append-only, com os seis estados definidos pelo produto;
+- tabela provisória `registro_jornada`, append-only, reservada para reconciliação com a
+  Spec 002;
 - oito widgets portados do DietFlow: rotina alimentar, hidratação, sono, Bristol,
   problemas de saúde, medicações, adesão e observações gerais;
 - contrato de serialização `{ _v: 2, blocos: [...] }`, validação e renderização textual;
@@ -53,18 +55,19 @@ templates estão deliberadamente vazios. Essa decisão chega depois por
 
 ## O que foi escondido
 
-Memória, RAG, knowledge graph e importadores continuam no repositório, mas não têm rota,
-menu nem inicialização no boot. Eles são material de roadmap para uma futura base de
-conteúdo científico.
+Memória, RAG, knowledge graph e importadores continuam no repositório, compilam e mantêm
+seus contratos IPC registrados, mas não têm rota, menu, inicialização ou tarefa no boot.
+Eles são material de roadmap para uma futura base de conteúdo científico. Sem adaptador
+explícito, embeddings retornam `null`; metadata/enrichment cloud só rodam por ação do
+usuário.
 
 A gravação/transcrição de voz também foi preservada como código dormente, por decisão de
 produto posterior à spec: poderá alimentar transcrições e preenchimento assistido no
 futuro. Ela não está ligada à interface ativa, ao IPC, ao boot nem aos recursos do
 instalador desta etapa.
 
-Parte do código escondido está fora do `typecheck` ativo. Reativá-lo exige trazê-lo de
-volta às rotas, reconciliar seus contratos e recolocá-lo na validação TypeScript — não é
-apenas trocar uma flag.
+Reativar a página de Memória exige apenas recolocá-la nas rotas/menu e fazer a revisão de
+produto correspondente; a camada dormente já participa do `typecheck`.
 
 ## O que foi removido
 
@@ -77,7 +80,11 @@ apenas trocar uma flag.
 - galeria;
 - onboarding/wizard herdado;
 - orquestração antiga da IA, tool calling e dependências sem consumidor ativo;
-- seed da documentação do FlowKit.
+- backup legado do FlowKit, que só conhecia tabelas/documentos herdados e não
+  restaurava o banco clínico autônomo;
+- documentação operacional e seeds de conhecimento do FlowKit.
+- manuais de instalação e propostas de ícone do EscalaFlow/FlowKit que não eram
+  usados pelo empacotador.
 
 Essas peças aumentavam o boot, a superfície de permissões, o tamanho instalado e a
 manutenção sem participar da triagem.
@@ -126,6 +133,10 @@ banco. `ANTESSALA_HEADLESS=1` impede a exibição da janela sem mudar o bootstra
 
 Esses arquivos estão vazios de propósito. Não use o template legado dos oito widgets
 como decisão clínica e não implemente ordenação fora da spec do motor.
+
+Os tipos, tabelas e handlers de registro/jornada existentes nesta etapa são provisórios.
+Não construa integração sobre eles antes de reconciliá-los com a branch
+`codex/motor-fila-logica-v2`.
 
 ## Documentação
 

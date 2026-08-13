@@ -2,182 +2,244 @@
 
 ## Veredito
 
-A preparação seguiu o **caminho B**: o fork do FlowKit foi podado diretamente, e do
-Studio entraram apenas as peças genéricas úteis — editor rich text, contrato de contexto
-da IA e simplificação conceitual da navegação/configurações.
+A preparação seguiu o **caminho B**: o fork do FlowKit foi podado diretamente e,
+do Studio, entraram apenas o editor rich text, o contrato de contexto da IA e as
+ideias úteis de navegação/configuração.
 
-O resultado desta etapa é uma casca Antessala menor, com primeiro boot desenhado para
-usar somente dados locais e com o esqueleto clínico pronto. As quatro telas finais, a
-escolha dos widgets/templates da triagem e o motor de ordenação da fila não foram
-inventados aqui.
+O resultado é uma casca Antessala menor, com primeiro boot inteiramente local,
+três rotas coerentes, tema claro/escuro/sistema, IA cloud somente por ação
+explícita e o esqueleto autônomo da anamnese. A seleção clínica de
+widgets/templates e o motor da fila não foram inventados nesta lane.
 
 ## Por que o caminho B venceu
 
-A branch Studio não tinha merge-base útil com este fork. Aplicá-la inteira significaria
-absorver **46.865 linhas adicionadas** para, logo depois, remover a maior parte. A leitura
-do diff mostrou que aproximadamente **86,7%** da expansão era editorial ou ligada a
-gravação/transcrição. Ela também ainda carregava `phaser`, Hugging Face, llama e MCP — ou
-seja, não entregava por si só o boot magro e offline pedido.
+A branch Studio e este fork não têm merge-base. Aplicar o Studio inteiro seria
+transplantar **46.865 linhas adicionadas** para então remover a maior parte.
+Aproximadamente **86,7%** dessas adições eram editoriais ou ligadas a
+gravação/transcrição. A branch também continuava instalando `phaser`, Hugging
+Face, llama e MCP, portanto não entregava o boot magro/offline.
 
-As três partes genéricas desejáveis somavam cerca de **2.613 linhas** e tinham fronteiras
-claras. O custo e o risco de copiar essas partes seletivamente eram menores que os de
-integrar uma segunda árvore inteira sem ancestral comum e executar uma poda reversa.
+As três partes genéricas desejáveis somavam cerca de **2.613 linhas** e tinham
+fronteiras identificáveis. O porte seletivo reduziu risco, volume e retrabalho.
 
 ## O que foi entregue
 
-### Mapa e persistência clínica
+### Persistência e anamnese autônoma
 
-- `mapa-esquemas.md` documenta o envelope `{ _v: 2, blocos: [...] }`, os oito widgets,
-  catálogos e o corte estrutural de `patientId`.
-- `registros` guarda nome, sexo, idade e plano na própria linha, mais anamnese JSONB.
-- `registro_jornada` guarda marcos com horário e impede `UPDATE`/`DELETE`.
-- Os seis estados do analyst foram declarados, sem transições ou ordenação.
-- Não existe tabela de pacientes, FK, índice de deduplicação ou leitura por histórico.
+- `mapa-esquemas.md` documenta o envelope `{ _v: 2, blocos: [...] }`, os oito
+  widgets, os catálogos e o corte de `patientId`.
+- `registros` guarda nome, sexo, idade, plano e anamnese JSONB na própria linha.
+- Não existe tabela de pacientes, FK, busca, deduplicação ou leitura histórica.
+- Dois registros com o mesmo nome são independentes e válidos.
+- O esqueleto de jornada é append-only, mas seus tipos, campos e handlers são
+  **provisórios** até a reconciliação com `codex/motor-fila-logica-v2`.
 
 ### Widgets e encaixes
 
-- Os oito contratos do DietFlow foram portados com tipos, defaults, validação,
+- Os oito widgets do DietFlow foram portados com tipos, defaults, schemas,
   completude, serialização e `renderToText`.
-- O composer/drawer e o JSX dos widgets foram refeitos com shadcn/ui.
-- O registry técnico conhece os oito widgets, mas a seleção clínica e o catálogo ativo
-  de templates estão vazios.
+- Composer/drawer e JSX foram refeitos com shadcn/ui, sem HeroUI e sem vínculo
+  com paciente ou registro anterior.
+- IDs de bloco precisam ser não vazios e únicos; a versão do widget precisa ser
+  suportada; itens clínicos vazios não são publicados como completos.
+- O registry técnico conhece os oito widgets, mas o catálogo clínico ativo e os
+  templates ativos permanecem vazios.
 - `src/shared/extensions/catalogo-widgets.ts` aponta para
-  `hack/specs/02-quais-widgets/`.
-- `src/shared/extensions/motor-fila.ts` aponta para `specs/002-motor-da-fila/`.
+  `hack/specs/02-quais-widgets/`; `src/shared/extensions/motor-fila.ts` aponta
+  para `specs/002-motor-da-fila/`.
 
 ### Dados clínicos locais
-
-O bundle passa a trazer cinco snapshots versionados, com hash verificado no seed:
 
 | Conteúdo | Quantidade | Tamanho do arquivo |
 |---|---:|---:|
 | CID-10 hierárquico completo | 14.793 | 624.180 bytes, gzip |
-| Medicamentos | 382 | 83.058 bytes |
+| Medicamentos | 382 | 87.883 bytes |
 | Classes terapêuticas derivadas | 35 | carregadas dos medicamentos |
 | Grupos de risco | 12 | 1.858 bytes |
-| Atividades MET | 94 | 10.878 bytes |
-| Comorbidades | 14 | 2.063 bytes |
+| Atividades MET | 94 | 9.898 bytes |
+| Comorbidades | 14 | 2.147 bytes |
 
-São **15.330 linhas clínicas** após a carga. O primeiro boot lê os arquivos do checkout
-ou de `clinical-data/` no bundle, valida seus hashes e carrega o PGlite em transação.
-Não consulta o Postgres do DietFlow.
+Os cinco assets ocupam **725.966 bytes** e geram **15.330 linhas clínicas**.
+O seed confere SHA-256, lê os arquivos do checkout ou de `clinical-data/` no
+bundle e carrega o PGlite em transação. Não consulta DietFlow, Postgres remoto,
+embeddings ou LLM.
 
-O classificador de risco e o parecer foram portados de JavaScript para TypeScript como
-funções puras, preservando o comportamento da origem.
+As 14 comorbidades têm ao menos um CID válido (17 referências); os 382
+medicamentos preservam 1.447 aliases comerciais, deduplicados dentro de cada
+medicamento; os 94 itens MET usam os nomes canônicos do golden. O classificador
+e o parecer foram portados para TypeScript como funções puras.
 
 ### Casca e integrações
 
-- Rotas ativas reduzidas a Início, Assistente IA e Configurações.
-- Menu sem destinos mortos e seletor claro/escuro/sistema sempre visível.
-- Onboarding e painel herdado de “configure seu tema” removidos.
-- IA reduzida a chamada cloud direta, sem tools, RAG, memória automática ou runtime
-  local.
-- Editor TipTap genérico e contrato de contexto com modos `global`, `adaptive` e
-  `pinned`, escopos e orçamento de caracteres.
-- Exportação HTML → PDF pelo `printToPDF` do Electron, em partição efêmera e com rede
-  bloqueada.
+- Rotas ativas: Início, Assistente IA e Configurações.
+- Menu sem destino morto e seletor claro/escuro/sistema sempre disponível.
+- IA direta por Gemini ou OpenRouter, um ativo por vez, sem tools, streaming,
+  RAG automático, anexos, roteamento ou modelo local.
+- Editor TipTap genérico e contrato puro de contexto com modos `global`,
+  `adaptive` e `pinned`, escopos e orçamento de caracteres.
+- HTML → PDF pelo `printToPDF` do Electron, em sessão efêmera, JavaScript
+  desligado e rede bloqueada.
+- O renderer bloqueia egress remoto automático; imagens remotas em Markdown são
+  substituídas; links externos aceitam somente HTTPS e exigem clique.
 
 ## Removido versus escondido
 
 | Situação | Peças | Motivo/condição |
 |---|---|---|
-| **Removido** | terminal, harness de shell e CLI | não têm função clínica e ampliavam a superfície de execução |
+| **Removido** | terminal, harness de shell e CLI | sem função clínica e com superfície de execução local |
 | **Removido** | MCP e tool-server HTTP | integração sem consumidor nesta etapa |
-| **Removido** | cron | não existe trabalho periódico no produto atual |
-| **Removido** | modelo local, llama.cpp, download e readiness local | eliminam GB, subprocessos e boot dependente de modelo |
+| **Removido** | cron | não há trabalho periódico no produto atual |
+| **Removido** | modelo local, llama.cpp, downloader e readiness | eliminam GB, subprocessos e boot dependente de modelo |
 | **Removido** | Maiá | outro produto e permissões de sistema desnecessárias |
 | **Removido** | galeria | sem função clínica |
-| **Removido** | onboarding/wizard herdado | a casca não precisa fingir configuração obrigatória |
-| **Não importado** | editorial do Studio: aulas, cadernos, tradução, glossário e montador | o caminho B evitou introduzir outro produto para removê-lo depois |
-| **Escondido** | Memória, RAG, knowledge graph e importadores | fonte preservada para a futura base científica, sem rota, menu ou boot |
-| **Escondido** | gravação/STT | preservado para o roadmap de transcrição e autopreenchimento, sem rota, IPC, boot ou recurso de bundle ativo |
+| **Removido** | onboarding/wizard herdado | configuração fictícia na primeira abertura |
+| **Removido** | orquestração, routing, tool UI e contratos legados da IA | a superfície ativa é cloud direta |
+| **Removido** | backup, documentação operacional e seeds de conhecimento do FlowKit | descreviam/restauravam somente o produto herdado, sem contrato clínico válido |
+| **Removido** | manual de instalação e propostas de ícone EscalaFlow/FlowKit | recursos sem consumidor e com identidade errada; ficaram apenas os três ícones ativos |
+| **Não importado** | editorial do Studio: aulas, cadernos, tradução, glossário e montador | o caminho B evitou introduzir outro produto |
+| **Escondido** | Memória, RAG, grafo e importadores | compilam e mantêm IPC, mas não têm rota, menu, job ou boot |
+| **Escondido** | gravação/STT | código-fonte preservado para roadmap, sem rota, IPC, boot ou recurso empacotado |
 
-## Números
+Memória/RAG não dependem mais de Hugging Face ou LLM local. Sem adaptador
+explícito, embeddings retornam `null`; metadata/enrichment cloud só executam
+após comando do usuário. Reativar a página não exige ressuscitar dependências
+removidas nem tirar arquivos da exclusão do TypeScript.
 
-As medidas de `node_modules` usam `du -sk` e contagem de arquivos. O audit usa o lockfile
-da respectiva medição.
+## Números antes e depois
 
-| Medida | Antes | Após a poda atual | Variação |
+As medidas de `node_modules` usam `du -sk` e contagem de arquivos. A medida final
+foi feita imediatamente após `npm ci`, antes de gerar cache do Vite.
+
+| Medida | Antes (`main`) | Depois | Variação |
 |---|---:|---:|---:|
-| `node_modules` | 2.043.256 KiB | 1.158.544 KiB | −884.712 KiB (−43,3%) |
-| Arquivos em `node_modules` | 53.040 | 43.594 | −9.446 (−17,8%) |
+| `node_modules` | 2.043.256 KiB | 1.038.844 KiB | −1.004.412 KiB (−49,2%) |
+| Arquivos em `node_modules` | 53.040 | 38.260 | −14.780 (−27,9%) |
 | Vulnerabilidades `npm audit` | 51 | 40 | −11 |
 | Baixas | 4 | 3 | −1 |
 | Moderadas | 6 | 3 | −3 |
 | Altas | 37 | 31 | −6 |
 | Críticas | 4 | 3 | −1 |
 
-`npm install` concluiu em **5,17 s** e não executou download de modelo de IA. As 40
-vulnerabilidades restantes pertencem à árvore ainda instalada; este trabalho não usa
-`npm audit fix --force`, porque ele alteraria versões e contratos fora do objetivo da
-spec.
+O `npm ci` limpo concluiu em **22,44 s**, adicionou 1.050 pacotes e não baixou
+modelo de IA. O `npm install` no lock final também concluiu sem download de
+modelo. Hugging Face, `node-llama-cpp`, `phaser`, MCP, terminal e as dependências
+órfãs de form/chart/prompt não estão instalados.
 
-**TODO de fechamento:** repetir tamanho, contagem e audit no checkout/commit final para
-selar os números contra o SHA entregue.
+As 40 vulnerabilidades restantes vêm da árvore ainda necessária. Não foi usado
+`npm audit fix --force`, pois isso faria upgrades quebráveis fora do escopo.
 
-## Provas
+## Provas finais
 
-| Critério | Estado | Evidência/pendência |
+| Critério | Resultado | Evidência |
 |---|---|---|
-| Instalação sem download de modelo | **verde** | `npm install`, 5,17 s; nenhum script de modelo no lifecycle |
-| `npm run typecheck` | **verde** | main e renderer concluíram sem erro após a poda |
-| Seed clínico sem rede | **implementado, prova final pendente** | loader usa `readFileSync`; teste instrumentado bloqueia `fetch` |
-| `npm test` completo | **TODO** | executar a suíte final e registrar quantidade de arquivos/testes removidos ou adaptados |
-| `npm run build` | **TODO** | executar no SHA final |
-| Primeiro boot com banco limpo | **TODO** | usar diretório temporário, observar ausência de conexão externa e registrar o seed |
-| `npm run dev` / nome Antessala | **TODO** | abrir Electron real e registrar título/rota inicial |
-| Menu e seletor de tema | **TODO de prova E2E** | contratos/implementação presentes; validar claro, escuro e sistema no Electron |
-| Contagem final de testes | **TODO** | baseline: 409 passando e 4 ignorados; registrar resultado pós-remoção |
-| PR contra `main` | **TODO** | criar somente após todas as provas e árvore limpa |
+| Instalação limpa sem modelo | **verde** | `npm ci`: 22,44 s; postinstall executou apenas rebuild nativo do Electron |
+| Primeiro seed sem internet | **verde** | banco temporário limpo, `globalThis.fetch` substituído por função que falha; zero chamada e 15.330 linhas locais |
+| Boot Electron com banco limpo | **verde** | E2E abriu o build com diretório PGlite temporário; `npm run dev` também criou schema/seed local |
+| Nome Antessala | **verde** | título da janela e heading confirmados no Electron E2E |
+| Rotas/menu | **verde** | E2E confirmou exatamente `/`, `/ia`, `/configuracoes` e três itens de navegação |
+| Tema | **verde** | E2E alternou claro, escuro e sistema e conferiu `antessala-theme` |
+| `npm run typecheck` | **verde** | main e renderer, sem arquivos clínicos/knowledge escondidos por `exclude` |
+| `npm test` | **verde** | 51 arquivos, 216 testes, zero falha e zero skip, em 38,08 s |
+| `npm run build` | **verde** | main, preload e renderer produzidos em 12,92 s; apenas avisos de chunk estático/dinâmico |
+| `npm run test:e2e` | **verde** | 1/1 fluxo Electron em 11,3 s |
+| Workflows | **verde** | `actionlint` sem diagnóstico; expansão de assets provada no Bash 3.2 do macOS |
+| PDF isolado | **verde** | 7 testes de sandbox, bloqueio de rede, impressão e cleanup |
 
-O Mac não será colocado fisicamente offline: isso derrubaria a própria sessão de
-trabalho. Conforme autorizado pelo usuário, a prova de primeiro boot deve usar banco
-novo e instrumentação/observação de tráfego para demonstrar **zero conexão externa**,
-mantendo a rede da máquina disponível.
+O Mac não foi fisicamente desconectado, conforme autorizado pelo usuário. A
+prova combinou seed instrumentado fail-closed, boot real com banco temporário,
+política de sessão que bloqueia HTTP/HTTPS/WS/WSS no renderer e E2E do Electron.
+
+A cadeia `typecheck → test → build → E2E` foi executada no commit de código
+`3c747a9`; depois dela, `7fefa12` alterou somente o glob do workflow de release e
+removeu recursos gráficos/manuais sem consumidor. Esse delta foi validado por
+`actionlint` e por execução do glob no Bash 3.2 nativo do macOS. Por fim,
+`e244188` apenas concluiu a troca de nomes internos do STT dormente e de fixtures;
+nele, `typecheck`, 24 testes focados, `cargo metadata --locked --offline` e
+`actionlint` passaram.
+
+O baseline tinha 409 testes passando e 4 ignorados. O resultado final tem 216
+passando e nenhum ignorado: uma **redução líquida de 193**, não uma contagem
+forense de arquivos apagados. Saíram provas de produtos removidos — CLI,
+terminal, MCP/tool-server, modelo local/routing, Maiá, galeria, cron,
+onboarding, backup FlowKit e UI de tools/anexos — e E2Es de rotas agora
+escondidas foram aposentados ou substituídos por contratos da casca ativa.
+Testes unitários de Memória/RAG/importadores e do STT preservado continuam na
+suíte.
 
 ## O que quebrou e como foi resolvido
 
-- A IA antiga importava tool families, discovery, readiness e runtime local. Ela foi
-  substituída por um cliente cloud direto e por uma fronteira IPC menor.
-- A remoção dos runtimes deixou o código escondido de Memória/RAG com referências
-  antigas. Em vez de reescrever roadmap inativo, esses caminhos foram retirados dos
-  `tsconfig` ativos; a dívida de reativação ficou explícita.
-- Os testes herdados que provavam rotas removidas, CLI, terminal, MCP, Maiá, galeria e
-  modelo local deixaram de representar o produto. Eles foram removidos; os testes da
-  superfície ativa foram adaptados ou criados. O saldo final ainda depende do
-  `npm test` completo indicado acima.
-- O editor dos widgets precisava aceitar rascunhos numéricos transitórios sem desmontar
-  o componente, e o drag-and-drop não podia atravessar blocos de snapshot/resultado.
-  Esses dois limites foram corrigidos no porte.
+- A IA antiga importava tool families, routing, readiness e runtime local. Foi
+  reduzida a cliente cloud direto; contratos/UI órfãos foram apagados, e não
+  apenas escondidos do `tsconfig`.
+- A primeira poda deixou Memória/RAG com imports de Hugging Face e LLM local.
+  Foram introduzidos um adaptador de embedding opt-in e rotas cloud explícitas;
+  toda a superfície dormente voltou ao typecheck e ao router IPC.
+- A extração inicial dos catálogos tinha CID de asma errado, nomes MET trocados
+  e aliases de medicamentos truncados. Os snapshots foram regenerados e
+  ganharam testes semânticos contra o CID completo e os goldens.
+- Os endpoints dos catálogos devolviam `snake_case` incompatível com os widgets.
+  DTOs compartilhados e mappers tipados corrigiram a fronteira.
+- Sexo desconhecido era inferido como masculino. O parecer agora normaliza
+  valores reconhecidos e preserva o desconhecido sem inventar informação.
+- O composer publicava drafts inválidos, aceitava IDs duplicados/versões
+  incompatíveis e podia mover âncoras de snapshot/resultado. Os contratos e os
+  testes foram endurecidos.
+- Markdown da IA podia carregar imagem remota automaticamente ou abrir esquema
+  externo arbitrário. CSP, política de sessão, renderer seguro e allowlist HTTPS
+  fecharam os dois canais.
+- Testes herdados apontavam para rotas/produtos removidos. Foram substituídos por
+  contratos da casca Antessala e provas do boot clínico local.
+- O workflow de release ainda criava título e validava artefatos com o nome
+  FlowKit. Os nomes foram alinhados ao `productName: Antessala` já usado pelo
+  empacotador, e os jobs deixaram de preparar Rust/llama/STT que não participam
+  do bundle, evitando uma falha futura na publicação por tag.
 
 ## Divergências conscientes da spec
 
-1. **Caminho B em vez do A.** A ausência de merge-base e a proporção editorial/STT do
-   diff tornaram a integração integral do Studio mais cara e arriscada.
-2. **Rede da máquina não desligada.** Decisão explícita do usuário; a prova será por
-   instrumentação de boot, não por corte físico da conexão.
-3. **STT preservado, mas dormente.** A spec original mandava remover; o usuário alterou a
-   decisão por causa do roadmap de conversa → transcrição → autopreenchimento.
-4. **CID completo.** Em vez de limitar o seed às 14 comorbidades já extraídas, foi usado
-   o snapshot hierárquico de 14.793 itens do DietFlow. As 14 comorbidades permanecem como
-   recorte do classificador, não como substituto do catálogo CID.
-5. **Oito widgets portados, seleção ativa vazia.** O contrato técnico foi trazido por
-   inteiro, mas nenhum conjunto foi declarado “padrão da triagem” e nenhum template foi
-   ativado antes da entrega de `hack/specs/02-quais-widgets/`.
-6. **Código escondido fora do typecheck ativo.** A spec dizia manter os arquivos; isso foi
-   feito, mas compilar contratos dormentes obrigaria conservar runtimes removidos. A
-   reativação terá de recolocar esses caminhos no gate.
-7. **Nenhum dashboard clínico extra.** A home ficou neutra. Um painel de status pode ser
-   útil quando as quatro telas existirem, mas construí-lo agora anteciparia produto sem
-   requisito.
-8. **Dois conectores cloud, um ativo por vez.** A IA foi simplificada para chamada direta,
-   mas Gemini e OpenRouter foram mantidos por compatibilidade de configuração. Não há
-   modelo local, roteador automático ou orquestração de tools.
+1. **Caminho B em vez do A.** Não havia ancestral comum útil e a maior parte do
+   Studio era material que teria de ser removido.
+2. **Rede da máquina não desligada.** Decisão explícita do usuário; a prova foi
+   instrumentada e executada sobre banco novo.
+3. **STT preservado, mas dormente.** A spec original mandava remover; o usuário
+   alterou a decisão por causa do roadmap conversa → transcrição → widgets.
+4. **CID completo.** Em vez de limitar o seed às 14 comorbidades, foi usado o
+   snapshot hierárquico de 14.793 itens.
+5. **Oito widgets portados, seleção ativa vazia.** O contrato técnico veio
+   inteiro, mas nenhum conjunto foi declarado padrão antes da frente clínica.
+6. **Memória/RAG recompiláveis e com IPC registrado.** “Esconder” ficou mais
+   forte que somente conservar arquivos: basta recolocar a rota/menu para a
+   superfície voltar, sem ligar nada no boot.
+7. **Dois conectores cloud, um ativo por vez.** Gemini e OpenRouter foram
+   mantidos por compatibilidade; não existe seleção automática, local ou tools.
+8. **Nenhum dashboard clínico extra.** A home ficou neutra; construir painel de
+   status agora anteciparia uma quinta superfície sem requisito.
+9. **Contrato de fila explicitamente provisório.** Após o aviso de fronteira,
+   nenhum tipo, estado, score, relógio, transição ou handler dessa superfície foi
+   ampliado; a reconciliação com `codex/motor-fila-logica-v2` ficou registrada.
+10. **Backup, manuais e seeds FlowKit legados removidos.** A spec não nomeava
+    todos esses artefatos, mas eles ensinavam, restauravam ou semeavam apenas o
+    produto herdado; mantê-los sugeriria contratos de operação e recuperação
+    inexistentes no Antessala. `INVENTARIO.html` e `PLANO.html` foram preservados
+    por serem fontes desta transição.
+11. **Sobras visuais de outras bases removidas.** O manual de instalação dizia
+    EscalaFlow e as propostas de ícone FlowKit/EscalaFlow não eram consumidas.
+    Permaneceram somente `icon.png`, `icon.icns` e `icon.ico`, usados pelo build;
+    uma identidade visual própria continua fora desta spec.
 
 ## Limites desta entrega
 
-- Não define urgência, score, transições válidas, cálculo de espera ou ordenação.
-- Não escolhe os widgets clínicos específicos nem ativa templates.
+- Não define urgência, score, transições, relógios, espera ou ordenação.
+- Não escolhe widgets clínicos específicos nem ativa templates.
 - Não constrói as quatro telas finais.
-- Não valida licença de redistribuição dos datasets; antes de publicar instaladores fora
-  do projeto, CID/DATASUS, ANVISA e MET precisam de revisão própria de licença.
+- Não valida a licença de redistribuição dos datasets. Antes de publicar
+  instaladores, CID/DATASUS, ANVISA e MET exigem revisão própria de licença.
+- O extrator ad hoc que produziu os recortes iniciais não foi versionado; os
+  snapshots atuais são íntegros pelos hashes, mas uma futura regeneração deve
+  nascer com extrator reprodutível no repositório.
+- As vulnerabilidades restantes precisam de uma campanha de atualização de
+  dependências separada, com teste de regressão do Electron/PGlite.
+
+## Git
+
+O trabalho vive em `codex/preparar-ambiente-final`, com commits pequenos e PR
+contra `main` de `nmarcofernandess/antessala`. Nenhum push foi feito na `main`.

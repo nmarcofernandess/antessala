@@ -23,8 +23,8 @@ Nesta ordem e por completo:
    leitura que dependa de outro atendimento da mesma pessoa.
 3. **Primeiro boot offline.** Schema e seed devem usar somente assets locais. Não ligue
    download de modelo, telemetria, atualização automática ou chamada cloud ao bootstrap.
-4. **Jornada é append-only.** Toda entrada de estado recebe horário; marcos existentes
-   não são atualizados nem apagados.
+4. **O esqueleto provisório da jornada é append-only.** O contrato canônico será
+   reconciliado com a Spec 002; não amplie estados, relógios ou transições aqui.
 5. **A preparação não ordena a fila.** Urgência, tempo de espera, transições e ordenação
    pertencem a `specs/002-motor-da-fila/`.
 6. **A preparação não escolhe o formulário clínico.** Widgets/templates específicos
@@ -106,9 +106,10 @@ deve virar default do produto.
 
 ### Jornada e fila
 
-`registro_jornada` aceita os seis estados do analyst e bloqueia `UPDATE`/`DELETE` no
-banco. O tipo compartilhado também os enumera, mas não define transição, score, relógio
-ou ordem. O único encaixe autorizado para isso é
+`registro_jornada`, `src/shared/clinical/registro.ts` e os handlers clínicos desta etapa
+são provisórios. Eles não são fonte canônica de estados, urgência, score, relógio,
+transição ou ordem. Não construa integração sobre essa superfície antes da reconciliação
+com `codex/motor-fila-logica-v2`. O encaixe reservado continua em
 `src/shared/extensions/motor-fila.ts`, guiado pela spec 002.
 
 ## Offline e rede
@@ -116,8 +117,8 @@ ou ordem. O único encaixe autorizado para isso é
 - O boot lê os catálogos de `src/data/catalogos/` em desenvolvimento ou de
   `clinical-data/` no bundle.
 - O seed não usa `fetch`, embeddings, LLM ou banco remoto.
-- `src/main/knowledge/embeddings.ts` proíbe modelos remotos. Não reverta isso ao reativar
-  a Memória.
+- `src/main/knowledge/embeddings.ts` não registra adaptador implícito nem baixa modelo.
+  Não introduza download automático ao reativar a Memória.
 - Gemini/OpenRouter são opcionais. Rede só pode ocorrer após ação explícita do usuário
   para testar a configuração ou conversar.
 - O export PDF deve continuar bloqueando `http`, `https`, `ws` e `wss`.
@@ -125,9 +126,9 @@ ou ordem. O único encaixe autorizado para isso é
 
 ## Código escondido e código removido
 
-Memória, RAG, knowledge graph e importadores permanecem como fonte dormente, sem rota ou
-boot. Parte deles está explicitamente fora dos `tsconfig` ativos porque ainda referencia
-contratos retirados. Reativação exige reconciliação e retorno ao typecheck.
+Memória, RAG, knowledge graph e importadores permanecem compiláveis e com IPC registrado,
+mas sem rota, menu, tarefa automática ou boot. Embeddings exigem adaptador explícito; sem
+ele retornam `null`. Metadata/enrichment cloud só rodam após ação explícita.
 
 A base de gravação/STT também permanece dormente para o roadmap de
 transcrição → preenchimento assistido. Ela não deve entrar no menu, IPC, bootstrap ou
