@@ -1,4 +1,5 @@
 import { execDDL } from './query'
+import { createClinicalTables } from './clinical-schema'
 
 // ══════════════════════════════════════════
 // CORE
@@ -297,11 +298,12 @@ END $$;
 
 export async function createTables(): Promise<void> {
   await execDDL(DDL_CORE)
+  await createClinicalTables()
   await execDDL(DDL_KNOWLEDGE)
   await execDDL(DDL_IA_CHAT)
   await execDDL(DDL_GALLERY)
   await execDDL(DDL_TERMINAL)
   await execDDL(DDL_MIGRATIONS)
   await execDDL(DDL_INDEXES)
-  console.log('[DB] Tabelas criadas com sucesso (FlowKit v1)')
+  console.log('[DB] Tabelas criadas com sucesso (Antessala)')
 }
