@@ -6,30 +6,12 @@ directories:
 files:
   - 'out/**/*'
 extraResources:
-  - from: 'models/'
-    to: 'models/'
-    filter:
-      - '**/*'
-  - from: 'knowledge/'
-    to: 'knowledge/'
-    filter:
-      - '**/*.md'
-      - '**/*.json'
-  - from: 'stt-bin/'
-    to: 'stt-bin/'
-    filter:
-      - '**/*'
-  - from: 'out/cli/'
-    to: 'cli/'
-    filter:
-      - '**/*'
-  - from: 'llama.cpp/'
-    to: 'llama.cpp/'
+  - from: 'src/data/catalogos/'
+    to: 'clinical-data/'
     filter:
       - '**/*'
 asarUnpack:
   - '**/*.node'
-  - 'node_modules/node-llama-cpp/**/*'
 mac:
   icon: icon.icns
   category: public.app-category.business
@@ -72,4 +54,4 @@ nsis:
 publish:
   provider: github
   owner: nmarcofernandess
-  repo: flowkit
+  repo: antessala

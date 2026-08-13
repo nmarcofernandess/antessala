@@ -21,8 +21,6 @@
     "src/preload/**/*.ts",
     "src/shared/**/*.ts",
     "electron.vite.config.ts",
-    "tests/e2e/**/*.ts",
-    "src/cli/**/*.ts",
-    "src/mcp/**/*.ts"
+    "tests/e2e/**/*.ts"
   ]
 }

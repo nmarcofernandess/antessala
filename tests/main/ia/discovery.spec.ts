@@ -152,7 +152,6 @@ describe('discovery — buildContextBundle', () => {
             { pagina: 'dashboard', expected: 'painel principal' },
             { pagina: 'memoria', expected: 'gerenciando conhecimento' },
             { pagina: 'ia', expected: 'Chat dedicado' },
-            { pagina: 'galeria', expected: 'galeria de imagens' },
             { pagina: 'configuracoes', expected: 'configuracoes' },
         ]
 

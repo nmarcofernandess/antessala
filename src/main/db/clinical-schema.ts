@@ -1,0 +1,133 @@
+import { execDDL } from './query'
+
+/**
+ * Persistência do Antessala.
+ *
+ * O registro é autônomo: os quatro dados da pessoa vivem na própria linha.
+ * Não existe tabela Patient, FK de paciente, busca de identidade ou índice de
+ * deduplicação por nome. A jornada é uma trilha append-only separada.
+ *
+ * Este arquivo declara os estados persistidos, mas não decide transições nem
+ * ordenação. Esse motor pertence a specs/002-motor-da-fila/.
+ */
+const DDL_CLINICAL = `
+CREATE TABLE IF NOT EXISTS registros (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  sexo TEXT NOT NULL CHECK (length(trim(sexo)) > 0),
+  idade INTEGER NOT NULL CHECK (idade BETWEEN 0 AND 130),
+  plano TEXT NOT NULL CHECK (length(trim(plano)) > 0),
+  anamnese JSONB NOT NULL DEFAULT '{"_v":2,"blocos":[]}'::jsonb
+    CHECK (
+      anamnese->>'_v' = '2'
+      AND jsonb_typeof(anamnese->'blocos') = 'array'
+    ),
+  prioridade SMALLINT
+    CHECK (prioridade IS NULL OR prioridade BETWEEN 1 AND 4),
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS registro_jornada (
+  id BIGSERIAL PRIMARY KEY,
+  registro_id TEXT NOT NULL REFERENCES registros(id) ON DELETE RESTRICT,
+  estado TEXT NOT NULL CHECK (estado IN (
+    'aguardando_triagem',
+    'anamnese_em_andamento',
+    'na_fila',
+    'analisado_pelo_especialista',
+    'no_hub',
+    'encerrado'
+  )),
+  entrou_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION bloquear_mutacao_registro_jornada()
+RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'registro_jornada é append-only; grave um novo marco';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS registro_jornada_append_only ON registro_jornada;
+CREATE TRIGGER registro_jornada_append_only
+BEFORE UPDATE OR DELETE ON registro_jornada
+FOR EACH ROW EXECUTE FUNCTION bloquear_mutacao_registro_jornada();
+
+CREATE TABLE IF NOT EXISTS catalogo_seed_state (
+  catalogo TEXT PRIMARY KEY,
+  sha256 TEXT NOT NULL,
+  quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
+  carregado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_cid10 (
+  id TEXT PRIMARY KEY,
+  codigo TEXT NOT NULL,
+  descricao TEXT NOT NULL,
+  descricao_abreviada TEXT,
+  nivel TEXT NOT NULL CHECK (nivel IN ('CAPITULO', 'GRUPO', 'CATEGORIA', 'SUBCATEGORIA')),
+  parent_id TEXT,
+  capitulo_num INTEGER,
+  capitulo_descricao TEXT,
+  grupo_inicio TEXT,
+  grupo_fim TEXT,
+  grupo_descricao TEXT,
+  categoria_codigo TEXT,
+  relevancia INTEGER,
+  popularidade INTEGER,
+  search_text TEXT,
+  search_terms JSONB NOT NULL DEFAULT '[]'::jsonb,
+  UNIQUE (nivel, codigo)
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_classes_terapeuticas (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_grupos_risco (
+  id TEXT PRIMARY KEY,
+  rotulo TEXT NOT NULL,
+  conduta TEXT NOT NULL,
+  peso TEXT NOT NULL CHECK (peso IN ('alto', 'medio', 'baixo'))
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_medicamentos (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  principio_ativo TEXT NOT NULL,
+  nomes_comerciais JSONB NOT NULL DEFAULT '[]'::jsonb,
+  classe_id TEXT REFERENCES catalogo_classes_terapeuticas(id) ON DELETE RESTRICT,
+  grupo_risco_id TEXT REFERENCES catalogo_grupos_risco(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_met (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  met_min REAL NOT NULL CHECK (met_min >= 0),
+  met_max REAL NOT NULL CHECK (met_max >= met_min)
+);
+
+CREATE TABLE IF NOT EXISTS catalogo_comorbidades (
+  id TEXT PRIMARY KEY,
+  rotulo TEXT NOT NULL,
+  cid JSONB NOT NULL DEFAULT '[]'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_registros_criado_em
+  ON registros(criado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_registro_jornada_atual
+  ON registro_jornada(registro_id, entrou_em DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_cid10_codigo
+  ON catalogo_cid10(codigo);
+CREATE INDEX IF NOT EXISTS idx_cid10_busca
+  ON catalogo_cid10 USING gin(to_tsvector('portuguese', search_text));
+CREATE INDEX IF NOT EXISTS idx_medicamentos_nome
+  ON catalogo_medicamentos(nome);
+`
+
+export async function createClinicalTables(): Promise<void> {
+  await execDDL(DDL_CLINICAL)
+}

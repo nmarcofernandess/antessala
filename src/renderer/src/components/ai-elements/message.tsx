@@ -323,13 +323,50 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+export function isSafeMessageImageSource(src: string | undefined): boolean {
+  if (!src) return false;
+  const normalized = src.trim().toLowerCase();
+  if (normalized.startsWith("data:image/") || normalized.startsWith("blob:")) {
+    return true;
+  }
+  if (normalized.startsWith("//")) return false;
+
+  try {
+    // Uma URL absoluta tem protocolo. Recursos relativos do bundle não têm.
+    return !new URL(normalized).protocol;
+  } catch {
+    return true;
+  }
+}
+
+const SafeMessageImage = ({
+  src,
+  alt,
+  node: _node,
+  ...props
+}: ComponentProps<"img"> & { node?: unknown }) => {
+  if (!isSafeMessageImageSource(src)) {
+    return (
+      <span
+        className="text-muted-foreground text-xs italic"
+        data-message-remote-image="blocked"
+      >
+        Imagem remota bloqueada{alt ? `: ${alt}` : ""}
+      </span>
+    );
+  }
+
+  return <img {...props} alt={alt ?? ""} src={src} />;
+};
+
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
+  ({ className, components, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
+      components={{ ...components, img: SafeMessageImage }}
       plugins={streamdownPlugins}
       {...props}
     />

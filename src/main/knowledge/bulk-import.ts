@@ -238,8 +238,6 @@ async function metadataForImportedFile(
         ai_metadata_route: {
           provider: generated.route.provider,
           model: generated.route.model,
-          inherited: generated.route.inherited,
-          auto_selected: generated.route.auto_selected,
         },
       },
     }
@@ -531,13 +529,15 @@ export async function runBulkRagImport(
     }
 
     const config = await getKnowledgeEnrichmentConfig()
-    const shouldEnrich = input.auto_enrich ?? config.auto_enrich_after_import
+    // O módulo está dormente: só uma flag explícita no comando de importação
+    // autoriza a chamada cloud. Configuração histórica nunca dispara sozinha.
+    const shouldEnrich = input.auto_enrich === true
     let enrichmentError: string | null = null
     if (shouldEnrich && summary.imported_files > 0 && !(await isImportCancelled(importJob.id, jobId))) {
       if (jobId) updateJob(jobId, { metadata: { ...summary, phase: 'enriching' } })
       await updateKnowledgeImportJob(importJob.id, { status: 'enriching' })
       try {
-        const model = await buildKnowledgeEnrichmentModel(config)
+        const model = await buildKnowledgeEnrichmentModel(config, { explicitOverride: true })
         if (!model) {
           enrichmentError = 'Nenhum modelo de enrichment disponivel.'
           if (jobId) updateJob(jobId, { metadata: { ...summary, phase: 'enrichment_skipped', enrichment_error: enrichmentError } })

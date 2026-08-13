@@ -21,11 +21,11 @@ describe('STT status', () => {
 
   it('reports a missing explicit sidecar path clearly', async () => {
     await expect(transcribeWithSidecar({
-      sidecarPath: '/tmp/escalaflow-stt-does-not-exist',
+      sidecarPath: '/tmp/antessala-stt-does-not-exist',
       audioPath: '/tmp/audio.wav',
       modelPath: '/tmp/model',
       modelId: 'parakeet-v3-int8',
-    })).rejects.toThrow('/tmp/escalaflow-stt-does-not-exist')
+    })).rejects.toThrow('/tmp/antessala-stt-does-not-exist')
   })
 
   it('rejects oversized base64 audio before touching model or sidecar', async () => {

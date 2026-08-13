@@ -11,7 +11,6 @@ Thumbs.db
 .superpowers/
 
 # Internal docs archive (implementation specs, plans, prompts)
-.docsescalaflow
 docs/superpowers/
 # specs/ NAO e ignorado no Antessala — e fonte canonica do produto (ver README)
 
@@ -42,8 +41,9 @@ output/
 .cache/
 .eslintcache
 
-# Dados locais
-data/
+# Banco local gerado em runtime. O prefixo evita ignorar src/data/, que contém
+# os catálogos clínicos versionados e embarcados.
+/data/
 *.db
 *.db-wal
 *.db-shm

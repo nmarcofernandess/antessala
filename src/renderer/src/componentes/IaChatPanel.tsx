@@ -14,7 +14,10 @@ export function IaChatPanel() {
   useEffect(() => {
     if (aberto && !inicializadoRef.current) {
       inicializadoRef.current = true
-      inicializar()
+      void inicializar().catch((error) => {
+        inicializadoRef.current = false
+        console.error('[IA] Falha ao carregar conversas:', error)
+      })
     }
   }, [aberto, inicializar])
 

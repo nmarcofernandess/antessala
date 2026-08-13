@@ -191,7 +191,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "escalaflow-stt"
+name = "antessala-stt"
 version = "0.1.0"
 dependencies = [
  "anyhow",

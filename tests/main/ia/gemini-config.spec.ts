@@ -3,7 +3,12 @@ import { isGeminiCloudApiEnabled } from '../../../src/main/config/app-config'
 import { PROVIDER_DEFAULTS, resolveProviderApiKey, shouldAutoSeedIaConfig } from '../../../src/main/ia/config'
 import type { IaConfiguracao } from '../../../src/shared/types'
 
-const ORIGINAL_FLAG = process.env.FLOWKIT_GEMINI_ENABLE
+const ORIGINAL_ANTESSALA_FLAG = process.env.ANTESSALA_GEMINI_ENABLE
+
+function restoreEnv(name: 'ANTESSALA_GEMINI_ENABLE', value: string | undefined) {
+  if (value === undefined) delete process.env[name]
+  else process.env[name] = value
+}
 
 function makeGeminiConfig(overrides?: Partial<IaConfiguracao>): IaConfiguracao {
   return {
@@ -27,11 +32,7 @@ function makeGeminiConfig(overrides?: Partial<IaConfiguracao>): IaConfiguracao {
 
 describe('Gemini cloud config', () => {
   afterEach(() => {
-    if (ORIGINAL_FLAG === undefined) {
-      delete process.env.FLOWKIT_GEMINI_ENABLE
-    } else {
-      process.env.FLOWKIT_GEMINI_ENABLE = ORIGINAL_FLAG
-    }
+    restoreEnv('ANTESSALA_GEMINI_ENABLE', ORIGINAL_ANTESSALA_FLAG)
   })
 
   it('uses Gemini 3.5 Flash as the direct Gemini default', () => {
@@ -39,15 +40,25 @@ describe('Gemini cloud config', () => {
   })
 
   it('enables direct Gemini API by default and still allows explicit opt-out', () => {
-    delete process.env.FLOWKIT_GEMINI_ENABLE
+    delete process.env.ANTESSALA_GEMINI_ENABLE
     expect(isGeminiCloudApiEnabled()).toBe(true)
 
-    process.env.FLOWKIT_GEMINI_ENABLE = '0'
+    process.env.ANTESSALA_GEMINI_ENABLE = '0'
     expect(isGeminiCloudApiEnabled()).toBe(false)
   })
 
-  it('resolves the Gemini provider token when the cloud API flag is unset', () => {
+  it('does not inherit the removed FlowKit feature flag', () => {
+    delete process.env.ANTESSALA_GEMINI_ENABLE
+    process.env.FLOWKIT_GEMINI_ENABLE = '0'
+    expect(isGeminiCloudApiEnabled()).toBe(true)
+
+    process.env.ANTESSALA_GEMINI_ENABLE = '1'
+    expect(isGeminiCloudApiEnabled()).toBe(true)
     delete process.env.FLOWKIT_GEMINI_ENABLE
+  })
+
+  it('resolves the Gemini provider token when the cloud API flag is unset', () => {
+    delete process.env.ANTESSALA_GEMINI_ENABLE
     expect(resolveProviderApiKey(makeGeminiConfig())).toBe('test-gemini-token')
   })
 

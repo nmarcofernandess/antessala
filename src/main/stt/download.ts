@@ -55,7 +55,7 @@ export async function downloadSttModel(modelId: SttModelId): Promise<void> {
   fs.mkdirSync(baseDir, { recursive: true })
   if (isSttModelDownloaded(modelId)) return
 
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'escalaflow-stt-model-'))
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'antessala-stt-model-'))
   const archivePath = path.join(tmpDir, `${model.filename}.download`)
   try {
     const response = await fetch(model.url)
@@ -93,13 +93,13 @@ export async function transcribeWavBase64(input: {
     throw new Error('Audio muito longo para ditado local. Grave ate 60 segundos por vez.')
   }
   if (input.post_process) {
-    throw new Error('Ditado local do FlowKit é transcript-first: post_process ainda nao esta implementado.')
+    throw new Error('O ditado preservado é transcript-first: post_process ainda não está implementado.')
   }
   if (!isSttModelDownloaded(modelId)) {
     throw new Error(`Modelo de ditado local nao instalado: ${modelId}`)
   }
 
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'escalaflow-stt-'))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'antessala-stt-'))
   const audioPath = path.join(dir, 'audio.wav')
   fs.writeFileSync(audioPath, Buffer.from(input.wav_base64, 'base64'))
 

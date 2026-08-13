@@ -9,7 +9,7 @@ import { Toaster } from '@/components/ui/sonner'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider attribute="class" defaultTheme="system" storageKey="flowkit-theme">
+    <ThemeProvider attribute="class" defaultTheme="system" storageKey="antessala-theme">
       <TooltipProvider delayDuration={0}>
         <RouterProvider router={router} />
         <Toaster />

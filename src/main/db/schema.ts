@@ -1,4 +1,5 @@
 import { execDDL } from './query'
+import { createClinicalTables } from './clinical-schema'
 
 // ══════════════════════════════════════════
 // CORE
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS configuracao_ia (
   modelo TEXT NOT NULL DEFAULT 'gemini-3.5-flash',
   provider_configs_json TEXT NOT NULL DEFAULT '{}',
   ativo BOOLEAN NOT NULL DEFAULT FALSE,
-  memoria_automatica BOOLEAN NOT NULL DEFAULT TRUE,
+  memoria_automatica BOOLEAN NOT NULL DEFAULT FALSE,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -163,57 +164,6 @@ CREATE TABLE IF NOT EXISTS ia_memorias (
 `
 
 // ══════════════════════════════════════════
-// GALLERY
-// ══════════════════════════════════════════
-
-const DDL_GALLERY = `
-CREATE TABLE IF NOT EXISTS gallery_images (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  file_path TEXT NOT NULL,
-  thumbnail_path TEXT,
-  nome_original TEXT NOT NULL,
-  origem TEXT NOT NULL DEFAULT 'upload',
-  tipo TEXT NOT NULL DEFAULT 'image',
-  conversa_id TEXT REFERENCES ia_conversas(id) ON DELETE SET NULL,
-  source_id INTEGER REFERENCES knowledge_sources(id) ON DELETE SET NULL,
-  width INTEGER,
-  height INTEGER,
-  size_bytes INTEGER,
-  mime_type TEXT,
-  ai_descricao TEXT,
-  ai_tags TEXT[],
-  ai_confianca REAL,
-  ai_provider TEXT,
-  analisado BOOLEAN NOT NULL DEFAULT FALSE,
-  curtido BOOLEAN NOT NULL DEFAULT FALSE,
-  favorito BOOLEAN NOT NULL DEFAULT FALSE,
-  tags TEXT[] NOT NULL DEFAULT '{}',
-  criada_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  atualizada_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-`
-
-// ══════════════════════════════════════════
-// TERMINAL HARNESS
-// ══════════════════════════════════════════
-
-const DDL_TERMINAL = `
-CREATE TABLE IF NOT EXISTS terminal_command_log (
-  id SERIAL PRIMARY KEY,
-  source TEXT NOT NULL DEFAULT 'api',
-  command TEXT NOT NULL,
-  cwd TEXT NOT NULL,
-  status TEXT NOT NULL
-    CHECK (status IN ('executed', 'failed')),
-  exit_code INTEGER,
-  timed_out BOOLEAN NOT NULL DEFAULT FALSE,
-  output_preview TEXT,
-  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  finished_at TIMESTAMPTZ
-);
-`
-
-// ══════════════════════════════════════════
 // INDEXES
 // ══════════════════════════════════════════
 
@@ -252,15 +202,6 @@ CREATE INDEX IF NOT EXISTS idx_ia_mensagens_conversa
 CREATE INDEX IF NOT EXISTS idx_ia_conversas_status
   ON ia_conversas(status, atualizado_em DESC);
 
--- Gallery: common filters
-CREATE INDEX IF NOT EXISTS idx_gallery_origem
-  ON gallery_images(origem);
-CREATE INDEX IF NOT EXISTS idx_gallery_conversa
-  ON gallery_images(conversa_id);
-
--- Terminal: command audit
-CREATE INDEX IF NOT EXISTS idx_terminal_command_log_started
-  ON terminal_command_log(started_at DESC);
 `
 
 // ══════════════════════════════════════════
@@ -282,7 +223,7 @@ DO $$ BEGIN
 EXCEPTION WHEN others THEN NULL;
 END $$;
 
--- Allow 'decayed' importance for cron lazy-decay (Step 5)
+-- Allow 'decayed' importance for a future explicit decay policy.
 DO $$ BEGIN
   ALTER TABLE knowledge_chunks DROP CONSTRAINT IF EXISTS knowledge_chunks_importance_check;
   ALTER TABLE knowledge_chunks ADD CONSTRAINT knowledge_chunks_importance_check
@@ -297,11 +238,10 @@ END $$;
 
 export async function createTables(): Promise<void> {
   await execDDL(DDL_CORE)
+  await createClinicalTables()
   await execDDL(DDL_KNOWLEDGE)
   await execDDL(DDL_IA_CHAT)
-  await execDDL(DDL_GALLERY)
-  await execDDL(DDL_TERMINAL)
   await execDDL(DDL_MIGRATIONS)
   await execDDL(DDL_INDEXES)
-  console.log('[DB] Tabelas criadas com sucesso (FlowKit v1)')
+  console.log('[DB] Tabelas criadas com sucesso (Antessala)')
 }

@@ -23,7 +23,7 @@ const SidecarResultSchema = z.object({
 })
 
 export function getSttSidecarPath(): string {
-  const filename = process.platform === 'win32' ? 'escalaflow-stt.exe' : 'escalaflow-stt'
+  const filename = process.platform === 'win32' ? 'antessala-stt.exe' : 'antessala-stt'
   const packagedPath = path.join(process.resourcesPath ?? '', 'stt-bin', filename)
   if (process.resourcesPath && fs.existsSync(packagedPath)) return packagedPath
   return path.join(process.cwd(), 'stt-bin', filename)

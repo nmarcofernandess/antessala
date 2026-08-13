@@ -35,7 +35,7 @@ vi.mock('sonner', () => ({
   },
 }))
 
-describe('AdicionarConhecimentoDialog AI metadata route readiness', () => {
+describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
   beforeEach(() => {
     mocks.escolherArquivo.mockReset()
     mocks.extrairTexto.mockReset()
@@ -45,10 +45,10 @@ describe('AdicionarConhecimentoDialog AI metadata route readiness', () => {
     mocks.toastSuccess.mockReset()
   })
 
-  it('explains unavailable rag_metadata route, keeps filename fallback, and still saves manually', async () => {
-    mocks.escolherArquivo.mockResolvedValue('/tmp/plano-flowkit.md')
+  it('explains unavailable cloud metadata, keeps filename fallback, and still saves manually', async () => {
+    mocks.escolherArquivo.mockResolvedValue('/tmp/protocolo-cientifico.md')
     mocks.extrairTexto.mockResolvedValue({
-      nome_arquivo: 'plano-flowkit.md',
+      nome_arquivo: 'protocolo-cientifico.md',
       texto: 'Conteudo longo para importar no RAG com contexto suficiente para passar pela validacao.',
     })
     mocks.importarCompleto.mockResolvedValue({
@@ -68,29 +68,29 @@ describe('AdicionarConhecimentoDialog AI metadata route readiness', () => {
         onOpenChange={onOpenChange}
         onSaved={onSaved}
         iaDisponivel={false}
-        iaRouteMessage="Modelo local baixado, mas ainda precisa passar em Testar conexao."
-        iaRouteAction="Valide o modelo local em IA e Modelos."
+        iaRouteMessage="OpenRouter ainda não tem um token configurado."
+        iaRouteAction="Revise as Configurações de IA."
       />,
     )
 
     await user.click(screen.getByText(/Arraste um arquivo/i))
 
-    expect(await screen.findByDisplayValue('plano-flowkit.md')).toBeTruthy()
+    expect(await screen.findByDisplayValue('protocolo-cientifico.md')).toBeTruthy()
     expect(screen.getByText('Metadados automáticos indisponíveis')).toBeTruthy()
-    expect(screen.getByText('Modelo local baixado, mas ainda precisa passar em Testar conexao.')).toBeTruthy()
-    expect(screen.getByText('Valide o modelo local em IA e Modelos.')).toBeTruthy()
+    expect(screen.getByText('OpenRouter ainda não tem um token configurado.')).toBeTruthy()
+    expect(screen.getByText('Revise as Configurações de IA.')).toBeTruthy()
     expect((screen.getByRole('button', { name: /Gerar título com IA/i }) as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: /Gerar sugestão com IA/i }) as HTMLButtonElement).disabled).toBe(true)
     expect(mocks.gerarMetadataIa).not.toHaveBeenCalled()
 
-    await user.type(screen.getByLabelText(/Sobre o quê/i), 'Documentacao operacional do FlowKit')
+    await user.type(screen.getByLabelText(/Sobre o quê/i), 'Protocolo científico de avaliação pré-operatória')
     await user.click(screen.getByRole('button', { name: /^Salvar$/i }))
 
     await waitFor(() => {
       expect(mocks.importarCompleto).toHaveBeenCalledWith(
-        'plano-flowkit.md',
+        'protocolo-cientifico.md',
         'Conteudo longo para importar no RAG com contexto suficiente para passar pela validacao.',
-        'Documentacao operacional do FlowKit',
+        'Protocolo científico de avaliação pré-operatória',
       )
     })
     expect(onSaved).toHaveBeenCalledTimes(1)

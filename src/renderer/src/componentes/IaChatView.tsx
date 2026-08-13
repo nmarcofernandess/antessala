@@ -1,480 +1,187 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
-import { Bot, Settings, FileText, ImageIcon, AlertCircle } from 'lucide-react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { AlertCircle, Bot, Settings } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { MessageResponse } from '@/components/ai-elements/message'
-import { useIaStore } from '@/store/iaStore'
-import { useAppDataStore } from '@/store/appDataStore'
-import { useIaModelConfig } from '@/hooks/useIaModelConfig'
-import { IaMensagemBubble } from './IaMensagemBubble'
 import { IaChatInput } from './IaChatInput'
-import { IaToolCallsCollapsible } from './IaToolCallsCollapsible'
-import { buildStreamingAssistantUiMessage } from '@/lib/ai-elements-adapters'
-import type { IaMensagem, IaAnexo, IaContexto, ToolCall, IaStreamEvent, IaContextMeta } from '@shared/index'
-import { toast } from 'sonner'
+import { IaMensagemBubble } from './IaMensagemBubble'
+import { useIaModelConfig } from '@/hooks/useIaModelConfig'
+import { useIaStore } from '@/store/iaStore'
+import { client } from '@/servicos/client'
+import type { IaMensagem } from '@shared/index'
 
-// Token estimation constants
-const CHARS_PER_TOKEN = 4
-const SYSTEM_PROMPT_TOKENS = 2500
-const TOOL_CALL_TOKENS = 350
-
-function estimarTokens(mensagens: IaMensagem[]): number {
-  let total = SYSTEM_PROMPT_TOKENS
-  for (const m of mensagens) {
-    total += Math.ceil(m.conteudo.length / CHARS_PER_TOKEN)
-    if (m.tool_calls) total += m.tool_calls.length * TOOL_CALL_TOKENS
-  }
-  return total
-}
-
-function useIaContexto(): IaContexto {
-  const location = useLocation()
-  const snapshot = useAppDataStore((s) => s.snapshot)
-
-  return useMemo(() => {
-    const path = location.pathname
-
-    let pagina: IaContexto['pagina'] = 'outro'
-    if (path === '/') pagina = 'dashboard'
-    else if (path === '/memoria') pagina = 'memoria'
-    else if (path === '/ia') pagina = 'ia'
-    else if (path === '/galeria') pagina = 'galeria'
-    else if (path === '/terminal') pagina = 'terminal'
-    else if (path === '/configuracoes') pagina = 'configuracoes'
-
-    return {
-      rota: path, pagina,
-      store_snapshot: snapshot() ?? undefined,
-    }
-  }, [location.pathname, snapshot])
+function cleanErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  return message
+    .replace(/^Error invoking remote method '[^']+': Error:\s*/i, '')
+    .replace(/^Error:\s*/i, '')
+    .trim()
 }
 
 export function IaChatView() {
   const {
-    mensagens, carregando, conversa_ativa_id, adicionarMensagem,
-    texto_parcial, tool_calls_parciais, tools_em_andamento,
-    stream_id_ativo,
-    iniciarStream, processarStreamEvent, finalizarStream, cancelarStream,
+    mensagens,
+    carregando,
+    setCarregando,
+    conversa_ativa_id,
+    adicionarMensagem,
     editarEReenviar,
   } = useIaStore()
-  const [texto, setTexto] = useState('')
-  const [anexos, setAnexos] = useState<IaAnexo[]>([])
-  const msgEndRef = useRef<HTMLDivElement>(null)
-  const navigate = useNavigate()
-  const contexto = useIaContexto()
-
   const modelConfig = useIaModelConfig()
-
-  const tokensEstimados = useMemo(() => estimarTokens(mensagens), [mensagens])
-
-  // Turn metadata — tracks context-meta per assistant turn (keyed by stream_id)
-  const [turnMetaMap, setTurnMetaMap] = useState<Record<string, IaContextMeta>>({})
-  const pendingTurnMetaRef = useRef<IaContextMeta | null>(null)
-
-  // Clear turn metadata when conversation changes
-  useEffect(() => { setTurnMetaMap({}); pendingTurnMetaRef.current = null }, [conversa_ativa_id])
-
-  // Edit state
+  const navigate = useNavigate()
+  const [texto, setTexto] = useState('')
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
-
-  // Timeout banner
-  const [lastEventAt, setLastEventAt] = useState(Date.now())
-  const [showTimeoutBanner, setShowTimeoutBanner] = useState(false)
-
-  // Safety: if carregando is stuck without an active stream, reset it.
-  // This can happen if a stream event was lost during re-render.
-  useEffect(() => {
-    if (carregando && !stream_id_ativo) {
-      cancelarStream()
-    }
-  }, [carregando, stream_id_ativo, cancelarStream])
-
-  // Stream event listener
-  const processarStreamEventStable = useCallback(
-    (event: IaStreamEvent) => processarStreamEvent(event),
-    [processarStreamEvent]
-  )
-
-  useEffect(() => {
-    const handler = (...args: unknown[]) => {
-      const event = args[0] as IaStreamEvent
-      if (!event) return
-      if (event.type === 'context-meta') {
-        pendingTurnMetaRef.current = event.meta
-        return
-      }
-      processarStreamEventStable(event)
-    }
-    // .on() returns a disposer that removes only THIS handler (not all listeners)
-    const dispose = window.electron.ipcRenderer.on('ia:stream', handler)
-    return () => { dispose?.() }
-  }, [processarStreamEventStable])
-
-  // Reset lastEventAt on any stream activity
-  useEffect(() => {
-    setLastEventAt(Date.now())
-    setShowTimeoutBanner(false)
-  }, [texto_parcial, tools_em_andamento, tool_calls_parciais])
-
-  // Timeout banner — 15s sem atividade
-  useEffect(() => {
-    if (!carregando) { setShowTimeoutBanner(false); return }
-    const timer = setInterval(() => {
-      if (Date.now() - lastEventAt > 15_000) setShowTimeoutBanner(true)
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [carregando, lastEventAt])
-
-  // Auto-send pending message (advisory fallback → IA)
-  const pendingAutoMessage = useIaStore((s) => s.pendingAutoMessage)
-  useEffect(() => {
-    if (pendingAutoMessage && !carregando && conversa_ativa_id) {
-      useIaStore.getState().setPendingAutoMessage(null)
-      enviar(pendingAutoMessage)
-    }
-  }, [pendingAutoMessage, carregando, conversa_ativa_id])
-
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Scroll only the chat viewport, never ancestor containers (main/page).
     const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
-    if (viewport) {
-      viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
-    }
-  }, [mensagens, carregando, texto_parcial])
+    viewport?.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
+  }, [mensagens, carregando])
 
-  const inputDisabled = carregando || !conversa_ativa_id || modelConfig.isLoading || !modelConfig.canSendMessages
-  const activeProviderLabel = modelConfig.providerOptions.find((option) => option.provider === modelConfig.provider)?.label || 'Provider ativo'
-  const showAvailabilityCard = !modelConfig.isLoading && !modelConfig.canSendMessages && (!modelConfig.showUnconfiguredState || mensagens.length > 0)
+  const inputDisabled = carregando
+    || !conversa_ativa_id
+    || modelConfig.isLoading
+    || !modelConfig.canSendMessages
 
-  const isProviderAvailabilityError = (message?: string) => {
-    const normalized = (message || '').toLowerCase()
-    return normalized.includes('não configurad')
-      || normalized.includes('nao configurad')
-      || normalized.includes('token do openrouter')
-      || normalized.includes('api key do gemini')
-      || normalized.includes('modelo local')
-      || normalized.includes('erro ao carregar modelo local')
-      || normalized.includes('available vram')
-      || normalized.includes('context size')
-      || normalized.includes('memória insuficiente')
-      || normalized.includes('memoria insuficiente')
-      || normalized.includes('provider cloud')
-  }
+  async function enviar(conteudoOverride?: string) {
+    const conteudo = (conteudoOverride ?? texto).trim()
+    if (!conteudo || inputDisabled || !conversa_ativa_id) return
 
-  const cleanIpcErrorMessage = (message?: string) => {
-    return (message || 'Erro desconhecido.')
-      .replace(/^Error invoking remote method '[^']+': Error:\s*/i, '')
-      .replace(/^Error:\s*/i, '')
-      .trim()
-  }
+    const historico = conteudoOverride
+      ? useIaStore.getState().mensagens.slice(0, -1)
+      : useIaStore.getState().mensagens
 
-  const enviar = async (conteudoOverride?: string) => {
-    const conteudo = conteudoOverride ?? texto
-    if ((!conteudo.trim() && anexos.length === 0) || inputDisabled) return
-
-    const now = new Date().toISOString()
-    const msg: IaMensagem = {
-      id: crypto.randomUUID(),
-      timestamp: now,
-      papel: 'usuario',
-      conteudo,
-      anexos: anexos.length > 0 ? anexos : undefined,
-    }
-
-    // Se e override (edit+reenviar), nao persiste de novo — ja foi feito pelo store
     if (!conteudoOverride) {
-      await adicionarMensagem(msg)
-    }
-
-    const currentAnexos = conteudoOverride ? [] : [...anexos]
-    if (!conteudoOverride) {
-      setTexto('')
-      setAnexos([])
-    }
-
-    const streamId = crypto.randomUUID()
-    iniciarStream(streamId)
-
-    try {
-      const resp = await window.electron.ipcRenderer.invoke('ia.chat.enviar', {
-        mensagem: conteudo,
-        historico: conteudoOverride ? useIaStore.getState().mensagens.slice(0, -1) : mensagens,
-        contexto,
-        stream_id: streamId,
-        conversa_id: conversa_ativa_id,
-        anexos: currentAnexos,
+      await adicionarMensagem({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        papel: 'usuario',
+        conteudo,
       })
-      const toolCallsAoVivo = Array.isArray(resp?.acoes) ? (resp.acoes as ToolCall[]) : []
-      const timestamp = new Date().toISOString()
-      const mensagemId = crypto.randomUUID()
+      setTexto('')
+    }
 
-      const mensagemAssistente: IaMensagem = {
-        id: mensagemId,
-        timestamp,
-        papel: 'assistente',
-        conteudo: resp.resposta,
-        tool_calls: toolCallsAoVivo.length > 0 ? toolCallsAoVivo : undefined,
-      }
-
-      // Attach pending context-meta to this assistant message
-      if (pendingTurnMetaRef.current) {
-        setTurnMetaMap(prev => ({ ...prev, [mensagemId]: pendingTurnMetaRef.current! }))
-        pendingTurnMetaRef.current = null
-      }
-
-      await adicionarMensagem(mensagemAssistente)
-      finalizarStream()
-    } catch (err: any) {
-      const friendlyMessage = cleanIpcErrorMessage(err?.message)
-      if (isProviderAvailabilityError(err?.message)) {
-        await adicionarMensagem({
-          id: crypto.randomUUID(),
-          timestamp: new Date().toISOString(),
-          papel: 'assistente',
-          conteudo: `Não consegui iniciar a IA.\n\n${friendlyMessage}\n\nAbra Configurações > Assistente IA para testar o modelo ou escolher outra IA.`,
-        })
-        toast.error(friendlyMessage)
-        cancelarStream()
-        return
-      }
+    setCarregando(true)
+    try {
+      const resultado = await client['ia.chat.enviar']({
+        mensagem: conteudo,
+        historico,
+        conversa_id: conversa_ativa_id,
+      })
       await adicionarMensagem({
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         papel: 'assistente',
-        conteudo: `Erro: ${friendlyMessage}`,
+        conteudo: resultado.resposta,
       })
-      cancelarStream()
+    } catch (error) {
+      toast.error('Não foi possível responder', { description: cleanErrorMessage(error) })
+    } finally {
+      setCarregando(false)
     }
   }
 
-  // Edit handlers
-  const handleStartEdit = (msg: IaMensagem) => {
-    if (carregando || !modelConfig.canSendMessages) return
-    setEditingMsgId(msg.id)
-    setEditText(msg.conteudo)
-  }
-
-  const handleConfirmEdit = async () => {
-    if (!editingMsgId || !editText.trim() || carregando || !modelConfig.canSendMessages) return
-    const novoConteudo = await editarEReenviar(editingMsgId, editText.trim())
+  async function confirmarEdicao() {
+    if (!editingMsgId || !editText.trim() || carregando) return
+    const conteudo = await editarEReenviar(editingMsgId, editText.trim())
     setEditingMsgId(null)
     setEditText('')
-    if (novoConteudo) {
-      await enviar(novoConteudo)
-    }
+    if (conteudo) await enviar(conteudo)
   }
 
-  const handleCancelEdit = () => {
-    setEditingMsgId(null)
-    setEditText('')
+  async function regenerar(mensagem: IaMensagem) {
+    if (carregando) return
+    const index = mensagens.findIndex((item) => item.id === mensagem.id)
+    const usuario = mensagem.papel === 'usuario'
+      ? mensagem
+      : [...mensagens.slice(0, index)].reverse().find((item) => item.papel === 'usuario')
+    if (!usuario) return
+
+    const conteudo = await editarEReenviar(usuario.id, usuario.conteudo)
+    if (conteudo) await enviar(conteudo)
   }
-
-  // Regenerate: find last user msg up to (and including) this msg, re-send it
-  const handleRegenerate = async (msg: IaMensagem) => {
-    if (carregando || !modelConfig.canSendMessages) return
-    // For user msg: re-send that same msg. For assistant msg: find the user msg right before it.
-    let userMsg: IaMensagem | undefined
-    if (msg.papel === 'usuario') {
-      userMsg = msg
-    } else {
-      const idx = mensagens.findIndex((m) => m.id === msg.id)
-      for (let i = idx - 1; i >= 0; i--) {
-        if (mensagens[i].papel === 'usuario') {
-          userMsg = mensagens[i]
-          break
-        }
-      }
-    }
-    if (!userMsg) return
-    const novoConteudo = await editarEReenviar(userMsg.id, userMsg.conteudo)
-    if (novoConteudo) {
-      await enviar(novoConteudo)
-    }
-  }
-
-  const toolsEmAndamentoEntries = Object.entries(tools_em_andamento)
-  const hasStreamingContent = texto_parcial.length > 0 || toolsEmAndamentoEntries.length > 0 || tool_calls_parciais.length > 0
-
-  // Snapshot do turno em streaming como UIMessage do AI SDK (texto + tools).
-  const streamingMessage = stream_id_ativo
-    ? buildStreamingAssistantUiMessage({
-        streamId: stream_id_ativo,
-        text: texto_parcial,
-        runningTools: tools_em_andamento,
-        completedToolCalls: tool_calls_parciais,
-        turnMeta: pendingTurnMetaRef.current ?? undefined,
-      })
-    : null
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
         <div className="flex min-w-0 max-w-full flex-col gap-4 p-4">
-          {mensagens.length === 0 && modelConfig.showUnconfiguredState && (
-            <div className="flex flex-col items-center justify-center text-center gap-4 text-muted-foreground py-16">
+          {mensagens.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-4 py-16 text-center text-muted-foreground">
               <Bot className="size-12 opacity-20" />
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium text-foreground">Nenhuma IA disponível</p>
-                <p className="text-xs max-w-[260px] leading-relaxed">
-                  Configure Gemini/OpenRouter ou baixe um modelo local para liberar o assistente.
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  {modelConfig.canSendMessages ? 'Como posso ajudar?' : 'IA não configurada'}
+                </p>
+                <p className="max-w-sm text-xs leading-relaxed">
+                  {modelConfig.canSendMessages
+                    ? 'Conversa direta, sem memória automática, ferramentas ou busca em documentos.'
+                    : modelConfig.activeProviderReason}
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/configuracoes')}>
-                <Settings className="mr-1.5 size-3.5" />
-                Abrir configurações
-              </Button>
-            </div>
-          )}
-
-          {mensagens.length === 0 && !modelConfig.showUnconfiguredState && (
-            <div className="flex flex-col items-center justify-center text-center gap-3 text-muted-foreground py-16">
-              <Bot className="size-12 opacity-20" />
-              <div>
-                <p className="text-sm font-medium">Olá!</p>
-                <p className="text-xs mt-1 max-w-[240px] leading-relaxed">
-                  Posso gerar escalas, consultar dados, verificar conflitos e muito mais.
-                </p>
-              </div>
+              {!modelConfig.canSendMessages && !modelConfig.isLoading && (
+                <Button size="sm" variant="outline" onClick={() => navigate('/configuracoes')}>
+                  <Settings className="mr-1.5 size-3.5" />
+                  Abrir configurações
+                </Button>
+              )}
             </div>
           )}
 
           {mensagens
-            .filter((m) => m.papel !== 'tool_result')
-            .map((m) => {
-              const showAssistantToolCalls = m.papel === 'assistente' && m.tool_calls && m.tool_calls.length > 0
-              return (
-                <div
-                  key={m.id}
-                  data-testid={showAssistantToolCalls ? 'ia-assistant-turn-with-tool' : undefined}
-                  className="min-w-0 max-w-full"
-                >
-                  {showAssistantToolCalls && (
-                    <div className="mb-2 min-w-0 max-w-full">
-                      <IaToolCallsCollapsible toolCalls={m.tool_calls!} />
-                    </div>
-                  )}
-                  {editingMsgId === m.id ? (
-                    <div className="flex flex-col gap-2 w-full max-w-[88%] ml-auto">
-                      <Textarea
-                        value={editText}
-                        onChange={e => setEditText(e.target.value)}
-                        className="resize-none text-sm"
-                        rows={3}
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault()
-                            handleConfirmEdit()
-                          }
-                          if (e.key === 'Escape') handleCancelEdit()
-                        }}
-                      />
-                      <div className="flex gap-1 justify-end">
-                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancelar</Button>
-                        <Button size="sm" onClick={handleConfirmEdit} disabled={!editText.trim()}>Reenviar</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <IaMensagemBubble
-                      msg={m}
-                      onEdit={m.papel === 'usuario' ? handleStartEdit : undefined}
-                      onRegenerate={handleRegenerate}
-                      showActions={!carregando && modelConfig.canSendMessages}
-                      turnMeta={turnMetaMap[m.id]}
+            .filter((mensagem) => mensagem.papel === 'usuario' || mensagem.papel === 'assistente')
+            .map((mensagem) => (
+              <div key={mensagem.id} className="min-w-0 max-w-full">
+                {editingMsgId === mensagem.id ? (
+                  <div className="ml-auto flex w-full max-w-[88%] flex-col gap-2">
+                    <textarea
+                      value={editText}
+                      onChange={(event) => setEditText(event.target.value)}
+                      className="min-h-24 resize-none rounded-md border bg-background p-3 text-sm"
+                      autoFocus
                     />
-                  )}
-                  {m.papel === 'usuario' && m.anexos && m.anexos.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1 justify-end">
-                      {m.anexos.map(a => (
-                        <Badge key={a.id} variant="secondary" className="text-xs gap-1">
-                          {a.tipo === 'image' ? <ImageIcon className="size-2.5" /> : <FileText className="size-2.5" />}
-                          {a.nome}
-                        </Badge>
-                      ))}
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingMsgId(null)}>Cancelar</Button>
+                      <Button size="sm" onClick={confirmarEdicao}>Reenviar</Button>
                     </div>
-                  )}
-                </div>
-              )
-            })}
+                  </div>
+                ) : (
+                  <IaMensagemBubble
+                    msg={mensagem}
+                    onEdit={mensagem.papel === 'usuario' ? (item) => {
+                      setEditingMsgId(item.id)
+                      setEditText(item.conteudo)
+                    } : undefined}
+                    onRegenerate={regenerar}
+                    showActions={!carregando && modelConfig.canSendMessages}
+                  />
+                )}
+              </div>
+            ))}
 
           {carregando && (
-            <div className="flex min-w-0 max-w-full flex-col gap-2">
-              {/* Tools do stream (em andamento + concluídas) via AI Elements */}
-              {(toolsEmAndamentoEntries.length > 0 || tool_calls_parciais.length > 0) && (
-                <div className="min-w-0 max-w-full">
-                  <IaToolCallsCollapsible
-                    toolCalls={tool_calls_parciais}
-                    runningTools={tools_em_andamento}
-                  />
-                </div>
-              )}
-
-              {/* Texto parcial — markdown via AI Elements + cursor pulsante */}
-              {streamingMessage?.parts.map((part, index) => {
-                if (part.type === 'text' && part.text) {
-                  return (
-                    <div
-                      key={index}
-                      data-testid="ia-streaming-text"
-                      className="max-w-[88%] leading-relaxed text-sm"
-                    >
-                      <MessageResponse>{part.text}</MessageResponse>
-                      <span className="inline-block w-1.5 h-4 ml-0.5 bg-foreground/60 animate-pulse rounded-sm align-text-bottom" />
-                    </div>
-                  )
-                }
-                return null
-              })}
-
-              {/* Timeout banner */}
-              {showTimeoutBanner && (
-                <div className="text-xs text-muted-foreground text-center py-1 animate-pulse">
-                  Ainda processando... A IA esta trabalhando na resposta.
-                </div>
-              )}
-
-              {/* Fallback — pulsing dots quando nenhum indicador está ativo */}
-              {!hasStreamingContent && !showTimeoutBanner && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-2xl rounded-bl-sm bg-muted border text-muted-foreground text-sm max-w-[70%]">
-                  <div className="flex gap-1">
-                    <span className="size-1.5 rounded-full bg-current animate-pulse [animation-delay:0ms]" />
-                    <span className="size-1.5 rounded-full bg-current animate-pulse [animation-delay:150ms]" />
-                    <span className="size-1.5 rounded-full bg-current animate-pulse [animation-delay:300ms]" />
-                  </div>
-                  Pensando...
-                </div>
-              )}
+            <div className="flex max-w-[70%] items-center gap-2 rounded-2xl rounded-bl-sm border bg-muted px-3 py-2 text-sm text-muted-foreground">
+              <span className="size-1.5 animate-pulse rounded-full bg-current" />
+              <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
+              <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
+              Pensando...
             </div>
           )}
-          <div ref={msgEndRef} />
         </div>
       </ScrollArea>
 
       <Separator />
 
-      {showAvailabilityCard && (
+      {!modelConfig.isLoading && !modelConfig.canSendMessages && mensagens.length > 0 && (
         <div className="px-3 pt-3">
-          <Alert className="border-amber-200 bg-amber-50/60 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100 [&>svg]:text-amber-600 dark:[&>svg]:text-amber-400">
+          <Alert>
             <AlertCircle className="size-4" />
-            <AlertDescription className="flex items-center justify-between gap-3 text-xs leading-relaxed">
-              <span>
-                {modelConfig.showUnconfiguredState
-                  ? 'Nenhuma IA está disponível no momento.'
-                  : `${activeProviderLabel} indisponível: ${modelConfig.activeProviderReason || 'configure esta IA ou escolha outra.'}`}
-              </span>
-              {modelConfig.showUnconfiguredState ? (
-                <Button size="sm" variant="outline" onClick={() => navigate('/configuracoes')}>
-                  Configurar
-                </Button>
-              ) : null}
+            <AlertDescription className="flex items-center justify-between gap-3 text-xs">
+              <span>{modelConfig.activeProviderReason}</span>
+              <Button size="sm" variant="outline" onClick={() => navigate('/configuracoes')}>Configurar</Button>
             </AlertDescription>
           </Alert>
         </div>
@@ -483,22 +190,10 @@ export function IaChatView() {
       <IaChatInput
         value={texto}
         onChange={setTexto}
-        onEnviar={enviar}
+        onEnviar={() => { void enviar() }}
         disabled={inputDisabled}
-        conversaId={conversa_ativa_id}
-        provider={modelConfig.provider}
-        providerOptions={modelConfig.providerOptions}
-        modelo={modelConfig.modelo}
-        modeloLabel={modelConfig.modeloLabel}
-        modelOptions={modelConfig.modelOptions}
-        modelSelectDisabled={modelConfig.modelSelectDisabled}
-        onProviderChange={modelConfig.setProvider}
-        onModeloChange={modelConfig.setModelo}
-        tokensEstimados={tokensEstimados}
-        contextLength={modelConfig.contextLength}
-        supportsMultimodal={modelConfig.supportsMultimodal}
-        anexos={anexos}
-        onAnexosChange={setAnexos}
+        providerLabel={modelConfig.providerLabel}
+        modelo={modelConfig.config?.modelo}
       />
     </div>
   )

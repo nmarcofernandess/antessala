@@ -13,23 +13,6 @@ export function formatChatAsMarkdown(mensagens: IaMensagem[], titulo: string): s
     lines.push(`### ${role}`)
     lines.push(m.conteudo)
 
-    if (m.tool_calls?.length) {
-      lines.push('')
-      lines.push('<details><summary>Ferramentas utilizadas</summary>')
-      lines.push('')
-      for (const tc of m.tool_calls) {
-        lines.push(`- **${tc.name}**${tc.args ? `: \`${JSON.stringify(tc.args)}\`` : ''}`)
-      }
-      lines.push('</details>')
-    }
-
-    if (m.anexos?.length) {
-      lines.push('')
-      for (const a of m.anexos) {
-        lines.push(`> Anexo: ${a.nome} (${a.mime_type})`)
-      }
-    }
-
     lines.push('')
     lines.push('---')
     lines.push('')

@@ -86,7 +86,7 @@ ${chunkBlocks}`
 // =============================================================================
 
 export interface EnrichmentModel {
-  provider: 'gemini' | 'openrouter' | 'local'
+  provider: 'gemini' | 'openrouter'
   modelo: string
   generate: (prompt: string) => Promise<ChunkEnrichmentResult>
 }
@@ -186,29 +186,7 @@ export function extractJsonObject(raw: string): unknown {
         // Preserve the original parser error below; it is usually more precise.
       }
     }
-    throw new Error(`Modelo local nao retornou JSON valido: ${(err as Error).message}`)
-  }
-}
-
-export function createLocalEnrichmentModel(modelo: string): EnrichmentModel {
-  return {
-    provider: 'local',
-    modelo,
-    async generate(prompt: string) {
-      const { localLlmGenerateJson } = await import('../ia/local-llm')
-      const raw = await withTimeout(
-        localLlmGenerateJson(
-          `${prompt}
-
-Responda EXCLUSIVAMENTE com JSON valido neste formato:
-{"chunks":[{"index":0,"resumo":"...","tags":["..."],"entidades":[{"nome":"...","tipo":"..."}],"relacoes":[{"from":"...","to":"...","tipo_relacao":"...","peso":1}]}]}`,
-          { modelId: modelo as import('../ia/local-llm').LocalModelId, maxTokens: 4096 },
-        ),
-        TIMEOUT_MS,
-        `local enrichment ${modelo}`,
-      )
-      return ChunkEnrichmentSchema.parse(extractJsonObject(raw))
-    },
+    throw new Error(`Modelo nao retornou JSON valido: ${(err as Error).message}`)
   }
 }
 

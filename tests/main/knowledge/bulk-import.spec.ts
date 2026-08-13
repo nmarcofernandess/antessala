@@ -24,8 +24,8 @@ vi.mock('../../../src/main/knowledge/embeddings', () => ({
 vi.mock('../../../src/main/knowledge/enrichment-config', () => ({
   getKnowledgeEnrichmentConfig: vi.fn(async () => ({
     auto_enrich_after_import: false,
-    provider: 'local',
-    modelo: 'gemma-4-e2b-it-q4',
+    provider: 'openrouter',
+    modelo: 'openai/gpt-oss-20b:free',
     force_all_default: false,
   })),
   buildKnowledgeEnrichmentModel: vi.fn(async () => null),
@@ -43,7 +43,7 @@ describe('bulk RAG import', () => {
     vi.clearAllMocks()
     const { resetBulkRagImportRuntimeForTests } = await import('../../../src/main/knowledge/bulk-import')
     resetBulkRagImportRuntimeForTests()
-    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'flowkit-bulk-rag-'))
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'antessala-bulk-rag-'))
   })
 
   afterEach(async () => {
@@ -112,7 +112,7 @@ describe('bulk RAG import', () => {
     vi.mocked(generateRagMetadata).mockResolvedValue({
       titulo: 'Titulo gerado por IA',
       quando_consultar: 'Quando precisar deste documento.',
-      route: { provider: 'local', model: 'gemma-4-e2b-it-q4', inherited: false, auto_selected: false } as never,
+      route: { provider: 'openrouter', model: 'openai/gpt-oss-20b:free' },
     })
 
     await writeFile(path.join(tmpDir, 'doc.md'), 'Documento com texto suficiente para metadata e chunk.')
@@ -133,7 +133,7 @@ describe('bulk RAG import', () => {
   it('still imports and records a warning when AI metadata fails', async () => {
     const { runBulkRagImport } = await import('../../../src/main/knowledge/bulk-import')
     const { generateRagMetadata } = await import('../../../src/main/ia/metadata-generator')
-    vi.mocked(generateRagMetadata).mockRejectedValue(new Error('rota de metadata nao pronta'))
+    vi.mocked(generateRagMetadata).mockRejectedValue(new Error('provider cloud nao configurado'))
 
     await writeFile(path.join(tmpDir, 'doc.md'), 'Documento que importa mesmo sem metadata de IA.')
 
@@ -156,7 +156,7 @@ describe('bulk RAG import', () => {
     const enrichmentConfig = await import('../../../src/main/knowledge/enrichment-config')
 
     vi.mocked(enrichmentConfig.buildKnowledgeEnrichmentModel)
-      .mockRejectedValueOnce(new Error('Modelo local indisponivel.'))
+      .mockRejectedValueOnce(new Error('Provider cloud indisponivel.'))
 
     await writeFile(path.join(tmpDir, 'codex-history.jsonl'), '{"type":"turn","text":"Historico Codex importavel"}\n')
 
@@ -172,7 +172,7 @@ describe('bulk RAG import', () => {
     const storedJob = getJob(job.id)
     expect(storedJob?.status).toBe('done')
     expect(storedJob?.metadata.phase).toBe('done')
-    expect(storedJob?.metadata.enrichment_error).toBe('Modelo local indisponivel.')
+    expect(storedJob?.metadata.enrichment_error).toBe('Provider cloud indisponivel.')
   })
 
   it('controls the live AppJob when persistent RAG job actions are used', async () => {

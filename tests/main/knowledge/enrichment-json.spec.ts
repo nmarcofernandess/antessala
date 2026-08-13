@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { extractJsonObject } from '../../../src/main/knowledge/enrichment'
 
-describe('local enrichment JSON extraction', () => {
+describe('enrichment JSON extraction', () => {
   it('extracts a fenced JSON object and removes trailing commas', () => {
     expect(extractJsonObject(`
 \`\`\`json
@@ -29,8 +29,8 @@ texto extra
     })
   })
 
-  it('keeps invalid local JSON as an explicit error', () => {
+  it('keeps invalid model JSON as an explicit error', () => {
     expect(() => extractJsonObject('{"chunks":[{"index":0 "resumo":"sem virgula"}]}'))
-      .toThrow(/Modelo local nao retornou JSON valido/)
+      .toThrow(/Modelo nao retornou JSON valido/)
   })
 })

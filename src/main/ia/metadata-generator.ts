@@ -1,22 +1,33 @@
 import { generateText } from 'ai'
+import { queryOne } from '../db/query'
 import { buildModelFactory } from './config'
-import { assertIaRouteReady } from './routing'
-import { buildRouteBackedIaConfig, getActiveIaConfig, type ReadyAiRoute } from './route-config'
 import type { IaConfiguracao } from '../../shared/types'
-import type { AiRouteResolution } from '../../shared/ia-routing-contract'
 
 export interface RagMetadataSuggestion {
   titulo: string
   quando_consultar: string
 }
 
+export interface KnowledgeCloudRoute {
+  provider: 'gemini' | 'openrouter'
+  model: string
+}
+
+export interface KnowledgeCloudStatus {
+  available: boolean
+  provider: KnowledgeCloudRoute['provider'] | null
+  model: string | null
+  message: string
+  action?: string
+}
+
 export interface RagMetadataResult extends RagMetadataSuggestion {
-  route: AiRouteResolution
+  route: KnowledgeCloudRoute
 }
 
 export interface RagTextCorrectionResult {
   resultado: string
-  route: AiRouteResolution
+  route: KnowledgeCloudRoute
 }
 
 function capText(value: string, maxLength: number): string {
@@ -31,18 +42,6 @@ function extractJsonObject(raw: string): string {
     throw new Error('Resposta de metadata não contém JSON válido.')
   }
   return raw.slice(first, last + 1)
-}
-
-function assertCloudRoute(route: AiRouteResolution): asserts route is AiRouteResolution & {
-  provider: 'gemini' | 'openrouter'
-  model: string
-} {
-  if (route.provider !== 'gemini' && route.provider !== 'openrouter') {
-    throw new Error(`Rota ${route.label} não é cloud.`)
-  }
-  if (!route.model) {
-    throw new Error(`Rota ${route.label} não definiu modelo.`)
-  }
 }
 
 export function parseMetadataSuggestion(raw: unknown): RagMetadataSuggestion {
@@ -99,44 +98,77 @@ function buildCorrectionPrompt(texto: string): string {
   ].join('\n')
 }
 
-// Shared cloud generation path used by both metadata and text-correction.
-// route is already ready (provider/model present); assertCloudRoute guards against a local route.
+async function getActiveIaConfig(): Promise<IaConfiguracao | null> {
+  return await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1') ?? null
+}
+
+function resolveCloudFactory(config: IaConfiguracao | null) {
+  if (!config) throw new Error('Assistente IA não configurado para ação cloud.')
+  const factory = buildModelFactory(config)
+  if (!factory) {
+    throw new Error(`Provider ${config.provider} indisponível para ação cloud.`)
+  }
+  return {
+    factory,
+    route: { provider: config.provider, model: factory.modelo } satisfies KnowledgeCloudRoute,
+  }
+}
+
+export async function getKnowledgeCloudStatus(): Promise<KnowledgeCloudStatus> {
+  const config = await getActiveIaConfig()
+  if (!config) {
+    return {
+      available: false,
+      provider: null,
+      model: null,
+      message: 'Configure Gemini ou OpenRouter para usar metadados por IA.',
+      action: 'Abrir Configurações de IA',
+    }
+  }
+
+  try {
+    const { route } = resolveCloudFactory(config)
+    return {
+      available: true,
+      provider: route.provider,
+      model: route.model,
+      message: `${route.provider}/${route.model} disponível para ações explícitas.`,
+    }
+  } catch (error) {
+    return {
+      available: false,
+      provider: config.provider,
+      model: config.modelo,
+      message: (error as Error).message,
+      action: 'Revisar Configurações de IA',
+    }
+  }
+}
+
 async function generateCloudText(
   prompt: string,
-  route: ReadyAiRoute,
   configForCloud?: IaConfiguracao,
-): Promise<string> {
-  assertCloudRoute(route)
+): Promise<{ text: string; route: KnowledgeCloudRoute }> {
   const config = configForCloud ?? await getActiveIaConfig()
-  if (!config) throw new Error('Assistente IA não configurado para rota cloud.')
-  const cloudConfig = buildRouteBackedIaConfig(config, route)
-  const factory = buildModelFactory(cloudConfig)
-  if (!factory) throw new Error(`Provider ${route.provider}/${route.model} indisponível para gerar texto.`)
-
+  const { factory, route } = resolveCloudFactory(config)
   const result = await generateText({
     model: factory.createModel(factory.modelo),
     prompt,
   })
-  return result.text
+  return { text: result.text, route }
 }
 
 export async function generateRagMetadata(
   input: { texto: string; fileNameFallback: string },
   configForCloud?: IaConfiguracao,
 ): Promise<RagMetadataResult> {
-  const route = await assertIaRouteReady('rag_metadata', { validateLocal: true })
-  const prompt = buildMetadataPrompt(input.texto, input.fileNameFallback)
-
-  const raw = route.provider === 'local'
-    ? await (async () => {
-        const { localLlmGenerateJson, asLocalModelId } = await import('./local-llm')
-        return localLlmGenerateJson(prompt, { modelId: asLocalModelId(route.model), maxTokens: 512 })
-      })()
-    : await generateCloudText(prompt, route, configForCloud)
-
+  const generated = await generateCloudText(
+    buildMetadataPrompt(input.texto, input.fileNameFallback),
+    configForCloud,
+  )
   return {
-    ...parseMetadataSuggestion(raw),
-    route,
+    ...parseMetadataSuggestion(generated.text),
+    route: generated.route,
   }
 }
 
@@ -144,15 +176,6 @@ export async function generateRagTextCorrection(
   texto: string,
   configForCloud?: IaConfiguracao,
 ): Promise<RagTextCorrectionResult> {
-  const route = await assertIaRouteReady('rag_metadata', { validateLocal: true })
-  const prompt = buildCorrectionPrompt(texto)
-
-  if (route.provider === 'local') {
-    const { localLlmChat, asLocalModelId } = await import('./local-llm')
-    const result = await localLlmChat(prompt, [], `rag-text-correction-${Date.now()}`, undefined, undefined, undefined, { modelId: asLocalModelId(route.model) })
-    return { resultado: result.resposta.trim(), route }
-  }
-
-  const raw = await generateCloudText(prompt, route, configForCloud)
-  return { resultado: raw.trim(), route }
+  const generated = await generateCloudText(buildCorrectionPrompt(texto), configForCloud)
+  return { resultado: generated.text.trim(), route: generated.route }
 }

@@ -6,7 +6,7 @@ import process from 'node:process'
 
 const repoRoot = process.cwd()
 const sttDir = path.join(repoRoot, 'stt')
-const binaryName = process.platform === 'win32' ? 'escalaflow-stt.exe' : 'escalaflow-stt'
+const binaryName = process.platform === 'win32' ? 'antessala-stt.exe' : 'antessala-stt'
 const source = path.join(sttDir, 'target', 'release', binaryName)
 const outputDir = path.join(repoRoot, 'stt-bin')
 const target = path.join(outputDir, binaryName)

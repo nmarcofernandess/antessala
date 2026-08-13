@@ -1,12 +1,10 @@
 # Dist (mac + win) — empacotamento por OS, disparo manual (workflow_dispatch).
 #
-# VALIDADO em CI em 2026-06-17: run verde produzindo artefatos mac + win (DoD atingido).
-# - Cross-packaging do llama.cpp NÃO é suportado → cada OS baixa o seu binário
-#   (`npm run llama:bin`, já encadeado em dist:mac/dist:win).
+# Herdado do fork e reduzido ao empacotamento do Antessala.
 # - Build é AD-HOC (sem assinatura/notarização) — o .app/.exe roda, mas o usuário
-#   final veria aviso de Gatekeeper/SmartScreen (bypass em docs/certificados.md).
+#   final verá aviso de Gatekeeper/SmartScreen até existir uma frente de assinatura.
 #   Signing = gate futuro (cert Apple Developer ID + cert EV/OV Windows + secrets).
-# - dist:mac/dist:win exigem Rust (stt:build → cargo) + Node; setup abaixo cobre.
+# - STT permanece dormente e não entra neste bundle; os comandos usam somente Node.
 # - dist:* usam --publish never (CI só gera artifacts; publicar release é outro fluxo).
 name: dist
 
@@ -32,9 +30,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Install dependencies
         run: npm ci
 
@@ -42,7 +37,6 @@ jobs:
         if: runner.os == 'Windows'
         run: npm install @rollup/rollup-win32-x64-msvc --no-save
 
-      # dist:* já encadeia: build → stt:prepare (cargo) → llama:bin → electron-builder
       - name: Package (${{ matrix.cmd }})
         run: npm run ${{ matrix.cmd }}
 

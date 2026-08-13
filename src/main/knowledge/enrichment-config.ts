@@ -1,13 +1,11 @@
 import { queryOne, execute } from '../db/query'
-import { buildModelFactory } from '../ia/config'
+import { buildModelFactory, PROVIDER_DEFAULTS, resolveModel } from '../ia/config'
 import { isGeminiCloudApiEnabled } from '../config/app-config'
-import { assertIaRouteReady } from '../ia/routing'
-import { buildProviderBackedIaConfig, getActiveIaConfig, getRouteProviderModel, getRouteProviderToken } from '../ia/route-config'
 import {
   createAiSdkEnrichmentModel,
-  createLocalEnrichmentModel,
   type EnrichmentModel,
 } from './enrichment'
+import type { IaConfiguracao } from '../../shared/types'
 import type {
   KnowledgeEnrichmentConfig,
   KnowledgeEnrichmentModelOption,
@@ -34,7 +32,7 @@ function parseJsonValue<T>(value: unknown, fallback: T): T {
 }
 
 function normalizeConfig(input: Partial<KnowledgeEnrichmentConfig> | null | undefined): KnowledgeEnrichmentConfig {
-  const provider = input?.provider && ['auto', 'local', 'gemini', 'openrouter'].includes(input.provider)
+  const provider = input?.provider && ['auto', 'gemini', 'openrouter'].includes(input.provider)
     ? input.provider
     : DEFAULT_KNOWLEDGE_ENRICHMENT_CONFIG.provider
 
@@ -50,19 +48,10 @@ async function buildKnowledgeEnrichmentModelForProvider(
   provider: Exclude<KnowledgeEnrichmentProvider, 'auto'>,
   modelo: string,
 ): Promise<EnrichmentModel | null> {
-  if (provider === 'local') {
-    const options = await listKnowledgeEnrichmentModelOptions()
-    const option = options.find((entry) => entry.provider === 'local' && entry.modelo === modelo)
-    if (!option?.available) {
-      throw new Error(option?.reason || `Modelo local "${modelo}" indisponivel.`)
-    }
-    return createLocalEnrichmentModel(modelo)
-  }
-
   const iaConfig = await getActiveIaConfig()
   if (!iaConfig) return null
 
-  const cloudConfig = buildProviderBackedIaConfig(iaConfig, provider, modelo)
+  const cloudConfig = configForProvider(iaConfig, provider, modelo)
   const factory = buildModelFactory(cloudConfig)
   if (!factory) {
     throw new Error(`Modelo ${provider}/${modelo} indisponivel para enrichment.`)
@@ -91,52 +80,29 @@ export async function saveKnowledgeEnrichmentConfig(input: Partial<KnowledgeEnri
 }
 
 export async function listKnowledgeEnrichmentModelOptions(): Promise<KnowledgeEnrichmentModelOption[]> {
-  const [iaConfig, local] = await Promise.all([
-    getActiveIaConfig(),
-    import('../ia/local-llm'),
-  ])
-  const localStatus = local.getLocalStatus()
-
-  const localOptions = Object.entries(local.LOCAL_MODELS).map(([modelo, model]) => {
-    const status = localStatus.modelos[modelo]
-    const available = Boolean(status?.usable)
-    const reason = status?.load_error
-      ? `Modelo local falhou ao carregar: ${status.load_error}`
-      : status?.baixado
-        ? 'Modelo local baixado, mas precisa passar em Testar conexao antes do enrichment.'
-        : 'Modelo local nao baixado.'
-    return {
-      provider: 'local' as const,
-      modelo,
-      label: model.label,
-      available,
-      reason: available ? undefined : reason,
-    }
-  })
-
-  const geminiToken = getRouteProviderToken(iaConfig, 'gemini')
+  const iaConfig = await getActiveIaConfig()
+  const geminiToken = getProviderToken(iaConfig, 'gemini')
   const geminiEnabled = isGeminiCloudApiEnabled()
   const geminiAvailable = geminiEnabled && geminiToken.length > 0
   const geminiReason = !geminiEnabled
     ? 'Gemini API direta desativada nesta build.'
     : geminiAvailable ? undefined : 'API key Gemini nao configurada.'
 
-  const openrouterToken = getRouteProviderToken(iaConfig, 'openrouter')
+  const openrouterToken = getProviderToken(iaConfig, 'openrouter')
   const openrouterAvailable = openrouterToken.length > 0
 
   return [
-    ...localOptions,
     {
       provider: 'gemini',
-      modelo: getRouteProviderModel(iaConfig, 'gemini'),
-      label: getRouteProviderModel(iaConfig, 'gemini'),
+      modelo: getProviderModel(iaConfig, 'gemini'),
+      label: getProviderModel(iaConfig, 'gemini'),
       available: geminiAvailable,
       reason: geminiReason,
     },
     {
       provider: 'openrouter',
-      modelo: getRouteProviderModel(iaConfig, 'openrouter'),
-      label: getRouteProviderModel(iaConfig, 'openrouter'),
+      modelo: getProviderModel(iaConfig, 'openrouter'),
+      label: getProviderModel(iaConfig, 'openrouter'),
       available: openrouterAvailable,
       reason: openrouterAvailable ? undefined : 'API key OpenRouter nao configurada.',
     },
@@ -162,14 +128,59 @@ export async function buildKnowledgeEnrichmentModel(
     }
     // A model was chosen but no provider: don't silently route past the explicit model.
     if (baseConfig.modelo && baseConfig.modelo !== 'auto') {
-      throw new Error('Para escolher um modelo de enrichment, informe também o provider (local, gemini ou openrouter).')
+      throw new Error('Para escolher um modelo de enrichment, informe também o provider (gemini ou openrouter).')
     }
   }
 
-  const route = await assertIaRouteReady('rag_enrichment', { validateLocal: true })
-  if (!route.provider || !route.model) {
-    throw new Error('Rota de enriquecimento do RAG sem provider/modelo pronto.')
+  const iaConfig = await getActiveIaConfig()
+  if (!iaConfig || !getProviderToken(iaConfig, iaConfig.provider)) {
+    throw new Error('Enriquecimento do RAG requer um provider cloud configurado.')
   }
+  return buildKnowledgeEnrichmentModelForProvider(
+    iaConfig.provider,
+    getProviderModel(iaConfig, iaConfig.provider),
+  )
+}
 
-  return buildKnowledgeEnrichmentModelForProvider(route.provider, route.model)
+async function getActiveIaConfig(): Promise<IaConfiguracao | null> {
+  return await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia LIMIT 1') ?? null
+}
+
+type CloudProvider = IaConfiguracao['provider']
+
+function providerSettings(config: IaConfiguracao | null): Record<string, { token?: string; modelo?: string }> {
+  if (!config?.provider_configs_json) return {}
+  try {
+    const parsed = typeof config.provider_configs_json === 'string'
+      ? JSON.parse(config.provider_configs_json)
+      : config.provider_configs_json
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function getProviderToken(config: IaConfiguracao | null, provider: CloudProvider): string {
+  if (!config) return ''
+  const configured = providerSettings(config)[provider]?.token?.trim()
+  if (configured) return configured
+  return config.provider === provider ? config.api_key?.trim() ?? '' : ''
+}
+
+function getProviderModel(config: IaConfiguracao | null, provider: CloudProvider): string {
+  if (!config) return PROVIDER_DEFAULTS[provider]
+  return resolveModel({ ...config, provider }, provider)
+}
+
+function configForProvider(
+  config: IaConfiguracao,
+  provider: CloudProvider,
+  modelo: string,
+): IaConfiguracao {
+  return {
+    ...config,
+    provider,
+    modelo,
+    api_key: getProviderToken(config, provider),
+  }
 }

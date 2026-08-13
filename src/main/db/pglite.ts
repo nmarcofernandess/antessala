@@ -10,7 +10,7 @@ let _db: PGlite | null = null
 const require = createRequire(import.meta.url)
 
 export function getDataDir(): string {
-  const overridePath = process.env.FLOWKIT_DB_PATH?.trim()
+  const overridePath = process.env.ANTESSALA_DB_PATH?.trim()
   if (overridePath) return overridePath
 
   try {
