@@ -234,7 +234,8 @@ jobs:
           files=()
           while IFS= read -r pattern; do
             [ -z "$pattern" ] && continue
-            matches=( $pattern )
+            matches=()
+            mapfile -t matches < <(compgen -G "$pattern" || true)
             if [ "${#matches[@]}" -eq 0 ]; then
               echo "No files matched pattern: ${pattern}" >&2
               exit 1
