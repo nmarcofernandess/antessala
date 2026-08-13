@@ -45,6 +45,15 @@ export function shouldBlockRendererRequest(url: string, developmentRendererUrl?:
   return !isDevelopmentEndpoint(url, developmentRendererUrl)
 }
 
+/** Impede que Markdown da IA dispare handlers de outros aplicativos via URL customizada. */
+export function isAllowedExternalUrl(url: string): boolean {
+  try {
+    return new URL(url).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export function installRendererNetworkPolicy(
   session: Session,
   developmentRendererUrl?: string,

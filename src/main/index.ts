@@ -5,7 +5,7 @@ import { seedData } from './db/seed'
 import { initDb, closeDb } from './db/pglite'
 import { APP_CONFIG } from './config/app-config'
 import { shouldShowMainWindow } from './headless'
-import { installRendererNetworkPolicy } from './renderer-network-policy'
+import { installRendererNetworkPolicy, isAllowedExternalUrl } from './renderer-network-policy'
 
 process.stdout.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code !== 'EPIPE') console.error(err)
@@ -50,7 +50,7 @@ function createWindow(
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
+    if (isAllowedExternalUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
   })
 

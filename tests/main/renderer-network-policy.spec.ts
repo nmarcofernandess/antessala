@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   installRendererNetworkPolicy,
+  isAllowedExternalUrl,
   REMOTE_RENDERER_URLS,
   shouldBlockRendererRequest,
 } from '../../src/main/renderer-network-policy'
@@ -20,6 +21,15 @@ describe('renderer network policy', () => {
     expect(shouldBlockRendererRequest('ws://localhost:5173/', devUrl)).toBe(false)
     expect(shouldBlockRendererRequest('https://example.com/pixel', devUrl)).toBe(true)
     expect(shouldBlockRendererRequest('http://localhost:5174/pixel', devUrl)).toBe(true)
+  })
+
+  it('permite abrir externamente apenas URLs HTTPS', () => {
+    expect(isAllowedExternalUrl('https://example.com/artigo')).toBe(true)
+    expect(isAllowedExternalUrl('http://example.com/artigo')).toBe(false)
+    expect(isAllowedExternalUrl('file:///tmp/segredo')).toBe(false)
+    expect(isAllowedExternalUrl('custom-app://executar')).toBe(false)
+    expect(isAllowedExternalUrl('javascript:alert(1)')).toBe(false)
+    expect(isAllowedExternalUrl('não é uma url')).toBe(false)
   })
 
   it('installs a fail-closed webRequest hook once per session', () => {
