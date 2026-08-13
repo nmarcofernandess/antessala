@@ -1,121 +1,62 @@
-import { ChevronLeft, Plus, MoreVertical, Copy, FileDown, FileJson, History } from 'lucide-react'
+import { ChevronLeft, History, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useIaStore } from '@/store/iaStore'
-import { formatChatAsMarkdown } from '@/lib/chat-export'
 import { toast } from 'sonner'
 
 export function IaChatHeader() {
-  const { tela, setTela, conversa_ativa_id, conversa_ativa_titulo, mensagens, novaConversa, listarConversas } = useIaStore()
+  const { tela, setTela, conversa_ativa_titulo, novaConversa, listarConversas } = useIaStore()
 
-  const irParaHistorico = async () => {
-    await listarConversas()
-    setTela('historico')
-  }
-
-  const handleNovaConversa = async () => {
-    await novaConversa()
-  }
-
-  const handleCopiarChat = async () => {
-    if (mensagens.length === 0) return
-    const md = formatChatAsMarkdown(mensagens, conversa_ativa_titulo)
-    await navigator.clipboard.writeText(md)
-    toast.success('Chat copiado!')
-  }
-
-  const handleExportar = async (formato: 'md' | 'json') => {
-    if (!conversa_ativa_id || mensagens.length === 0) return
+  async function criarConversa() {
     try {
-      const result = await window.electron.ipcRenderer.invoke('ia.conversas.exportar', {
-        conversa_id: conversa_ativa_id,
-        formato,
-      }) as { exportado: boolean; caminho?: string }
-      if (result.exportado) {
-        toast.success(`Chat exportado como .${formato}`)
-      }
-    } catch (err: any) {
-      toast.error('Erro ao exportar', { description: err?.message })
+      await novaConversa()
+    } catch (error) {
+      toast.error('Não foi possível criar a conversa', {
+        description: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 
-  const hasMensagens = mensagens.length > 0
+  async function abrirHistorico() {
+    try {
+      await listarConversas()
+      setTela('historico')
+    } catch (error) {
+      toast.error('Não foi possível carregar o histórico', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
 
-  if (tela === 'chat') {
+  if (tela === 'historico') {
     return (
-      <div className="flex items-center gap-1 px-2 h-14 shrink-0 border-b">
-        <span
-          className="text-sm font-semibold flex-1 truncate pl-1"
-          title={conversa_ativa_titulo}
-        >
-          {conversa_ativa_titulo}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8 shrink-0"
-          onClick={handleNovaConversa}
-          title="Nova conversa"
-        >
-          <Plus />
+      <div className="flex h-14 shrink-0 items-center gap-1 border-b px-2">
+        <Button variant="ghost" size="sm" onClick={() => setTela('chat')}>
+          <ChevronLeft className="mr-1 size-4" /> Voltar
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 shrink-0">
-              <MoreVertical />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={irParaHistorico}>
-              <History />
-              Historico
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleCopiarChat} disabled={!hasMensagens}>
-              <Copy />
-              Copiar chat
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExportar('md')} disabled={!hasMensagens}>
-              <FileDown />
-              Exportar .md
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExportar('json')} disabled={!hasMensagens}>
-              <FileJson />
-              Exportar .json
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <span className="flex-1 text-center text-sm font-semibold">Histórico</span>
+        <Button variant="ghost" size="icon" className="size-8" onClick={() => { void criarConversa() }} title="Nova conversa">
+          <Plus className="size-4" />
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-1 px-2 h-14 shrink-0 border-b">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="gap-1 text-muted-foreground h-8 px-2 shrink-0"
-        onClick={() => setTela('chat')}
-        title="Voltar ao chat"
-      >
-        <ChevronLeft />
-        <span className="text-xs">Voltar</span>
-      </Button>
-      <span className="text-sm font-semibold flex-1 text-center">Histórico</span>
+    <div className="flex h-14 shrink-0 items-center gap-1 border-b px-2">
+      <span className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold" title={conversa_ativa_titulo}>
+        {conversa_ativa_titulo}
+      </span>
       <Button
         variant="ghost"
         size="icon"
-        className="size-8 shrink-0"
-        onClick={handleNovaConversa}
-        title="Nova conversa"
+        className="size-8"
+        title="Histórico"
+        onClick={() => { void abrirHistorico() }}
       >
-        <Plus />
+        <History className="size-4" />
+      </Button>
+      <Button variant="ghost" size="icon" className="size-8" onClick={() => { void criarConversa() }} title="Nova conversa">
+        <Plus className="size-4" />
       </Button>
     </div>
   )

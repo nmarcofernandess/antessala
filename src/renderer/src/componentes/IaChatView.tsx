@@ -25,6 +25,7 @@ export function IaChatView() {
   const {
     mensagens,
     carregando,
+    setCarregando,
     conversa_ativa_id,
     adicionarMensagem,
     editarEReenviar,
@@ -64,7 +65,7 @@ export function IaChatView() {
       setTexto('')
     }
 
-    useIaStore.setState({ carregando: true })
+    setCarregando(true)
     try {
       const resultado = await client['ia.chat.enviar']({
         mensagem: conteudo,
@@ -80,7 +81,7 @@ export function IaChatView() {
     } catch (error) {
       toast.error('Não foi possível responder', { description: cleanErrorMessage(error) })
     } finally {
-      useIaStore.setState({ carregando: false })
+      setCarregando(false)
     }
   }
 
@@ -131,7 +132,7 @@ export function IaChatView() {
           )}
 
           {mensagens
-            .filter((mensagem) => mensagem.papel !== 'tool_result')
+            .filter((mensagem) => mensagem.papel === 'usuario' || mensagem.papel === 'assistente')
             .map((mensagem) => (
               <div key={mensagem.id} className="min-w-0 max-w-full">
                 {editingMsgId === mensagem.id ? (

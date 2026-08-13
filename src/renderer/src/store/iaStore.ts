@@ -19,6 +19,7 @@ interface IaStore {
   conversa_ativa_titulo: string
   mensagens: IaMensagem[]
   carregando: boolean
+  setCarregando: (carregando: boolean) => void
   conversas: IaConversa[]
   busca_titulo: string
   setBuscaTitulo: (busca: string) => void
@@ -53,6 +54,7 @@ export const useIaStore = create<IaStore>((set, get) => ({
   conversa_ativa_titulo: 'Nova conversa',
   mensagens: [],
   carregando: false,
+  setCarregando: (carregando) => set({ carregando }),
   conversas: [],
   busca_titulo: '',
   setBuscaTitulo: (busca_titulo) => set({ busca_titulo }),
@@ -107,14 +109,18 @@ export const useIaStore = create<IaStore>((set, get) => ({
     const { conversa_ativa_id, mensagens } = get()
     if (!conversa_ativa_id) return
 
+    await client['ia.mensagens.salvar']({ conversa_id: conversa_ativa_id, mensagem })
+    set((state) => ({ mensagens: [...state.mensagens, mensagem] }))
+
     if (mensagem.papel === 'usuario' && !mensagens.some((item) => item.papel === 'usuario')) {
       const titulo = gerarTitulo(mensagem.conteudo)
-      await client['ia.conversas.renomear']({ id: conversa_ativa_id, titulo })
-      set({ conversa_ativa_titulo: titulo })
+      try {
+        await client['ia.conversas.renomear']({ id: conversa_ativa_id, titulo })
+        set({ conversa_ativa_titulo: titulo })
+      } catch (error) {
+        console.error('[IA] Mensagem salva, mas o título não foi atualizado:', error)
+      }
     }
-
-    set((state) => ({ mensagens: [...state.mensagens, mensagem] }))
-    await client['ia.mensagens.salvar']({ conversa_id: conversa_ativa_id, mensagem })
   },
 
   listarConversas: async () => {

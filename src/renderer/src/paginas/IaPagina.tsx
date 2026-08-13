@@ -1,14 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { PanelLeft, PanelLeftClose, Plus, MoreVertical, Copy, FileDown, FileJson } from 'lucide-react'
+import { PanelLeft, PanelLeftClose, Plus, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useIaStore } from '@/store/iaStore'
 import { PageHeader } from '@/componentes/PageHeader'
 import { IaChatView } from '@/componentes/IaChatView'
@@ -17,14 +11,19 @@ import { formatChatAsMarkdown } from '@/lib/chat-export'
 import { toast } from 'sonner'
 
 export function IaPagina() {
-  const { inicializar, novaConversa, conversa_ativa_id, conversa_ativa_titulo, mensagens } = useIaStore()
+  const { inicializar, novaConversa, conversa_ativa_titulo, mensagens } = useIaStore()
   const inicializadoRef = useRef(false)
   const [sidebarAberta, setSidebarAberta] = useState(true)
 
   useEffect(() => {
     if (!inicializadoRef.current) {
       inicializadoRef.current = true
-      inicializar()
+      void inicializar().catch((error) => {
+        inicializadoRef.current = false
+        toast.error('Não foi possível carregar as conversas', {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      })
     }
   }, [inicializar])
 
@@ -37,18 +36,13 @@ export function IaPagina() {
     toast.success('Chat copiado!')
   }
 
-  const handleExportar = async (formato: 'md' | 'json') => {
-    if (!conversa_ativa_id || !hasMensagens) return
+  const handleNovaConversa = async () => {
     try {
-      const result = await window.electron.ipcRenderer.invoke('ia.conversas.exportar', {
-        conversa_id: conversa_ativa_id,
-        formato,
-      }) as { exportado: boolean; caminho?: string }
-      if (result.exportado) {
-        toast.success(`Chat exportado como .${formato}`)
-      }
-    } catch (err: any) {
-      toast.error('Erro ao exportar', { description: err?.message })
+      await novaConversa()
+    } catch (error) {
+      toast.error('Não foi possível criar a conversa', {
+        description: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 
@@ -72,7 +66,7 @@ export function IaPagina() {
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">
-          {sidebarAberta ? 'Fechar historico' : 'Abrir historico'}
+          {sidebarAberta ? 'Fechar histórico' : 'Abrir histórico'}
         </TooltipContent>
       </Tooltip>
       <span
@@ -84,7 +78,7 @@ export function IaPagina() {
     </div>
   )
 
-  // Direita: + nova conversa, ... menu
+  // Direita: nova conversa e cópia local do texto.
   const headerActions = (
     <div className="flex items-center gap-0.5">
       <Tooltip>
@@ -93,7 +87,7 @@ export function IaPagina() {
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={() => novaConversa()}
+            onClick={() => { void handleNovaConversa() }}
           >
             <Plus />
           </Button>
@@ -101,27 +95,14 @@ export function IaPagina() {
         <TooltipContent side="bottom">Nova conversa</TooltipContent>
       </Tooltip>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-7">
-            <MoreVertical />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleCopiarChat} disabled={!hasMensagens}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" className="size-7" onClick={handleCopiarChat} disabled={!hasMensagens}>
             <Copy />
-            Copiar chat
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExportar('md')} disabled={!hasMensagens}>
-            <FileDown />
-            Exportar .md
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleExportar('json')} disabled={!hasMensagens}>
-            <FileJson />
-            Exportar .json
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Copiar chat</TooltipContent>
+      </Tooltip>
     </div>
   )
 

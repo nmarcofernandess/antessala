@@ -1,123 +1,84 @@
 /** @vitest-environment jsdom */
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IaMensagem } from '../../src/shared'
 
-const storeState = vi.hoisted(() => ({
-  mensagens: [
-    {
-      id: 'user-1',
-      timestamp: '2026-06-14T12:00:00.000Z',
-      papel: 'usuario',
-      conteudo: 'Pesquise e responda.',
-    },
-    {
-      id: 'assistant-1',
-      timestamp: '2026-06-14T12:00:01.000Z',
-      papel: 'assistente',
-      conteudo: 'Aqui esta a resposta final.',
-    },
-  ] as IaMensagem[],
-  carregando: true,
-  conversa_ativa_id: 'conversation-1',
+const mocks = vi.hoisted(() => ({
+  chatEnviar: vi.fn(),
   adicionarMensagem: vi.fn(),
-  texto_parcial: 'Pensando em voz alta...',
-  tool_calls_parciais: [],
-  tools_em_andamento: {
-    'tool-running-1': {
-      tool_name: 'consultar_contexto',
-      args: { consulta: 'flowkit' },
-      started_at: 1,
-    },
-  },
-  stream_id_ativo: 'stream-1',
-  iniciarStream: vi.fn(),
-  processarStreamEvent: vi.fn(),
-  finalizarStream: vi.fn(),
-  cancelarStream: vi.fn(),
+  setCarregando: vi.fn(),
   editarEReenviar: vi.fn(),
-  pendingAutoMessage: null,
-  setPendingAutoMessage: vi.fn(),
+  navigate: vi.fn(),
+  state: {
+    mensagens: [],
+    carregando: false,
+    conversa_ativa_id: 'conversation-1',
+  },
+}))
+
+vi.mock('@/servicos/client', () => ({
+  client: { 'ia.chat.enviar': mocks.chatEnviar },
 }))
 
 vi.mock('@/store/iaStore', () => {
-  const useIaStore = (selector?: (state: typeof storeState) => unknown) => (
-    selector ? selector(storeState) : storeState
-  )
-  useIaStore.getState = () => storeState
+  const store = {
+    ...mocks.state,
+    adicionarMensagem: mocks.adicionarMensagem,
+    setCarregando: mocks.setCarregando,
+    editarEReenviar: mocks.editarEReenviar,
+  }
+  const useIaStore = () => store
+  useIaStore.getState = () => store
   return { useIaStore }
 })
 
-vi.mock('@/store/appDataStore', () => ({
-  useAppDataStore: (selector: (state: { snapshot: () => null }) => unknown) => selector({ snapshot: () => null }),
-}))
-
 vi.mock('@/hooks/useIaModelConfig', () => ({
   useIaModelConfig: () => ({
-    provider: 'local',
-    providerOptions: [{ provider: 'local', label: 'IA local', disabled: false }],
-    modelo: 'gemma-4-e2b-it-q4',
-    modeloLabel: 'Gemma 4 E2B IT',
-    modelOptions: [{ id: 'gemma-4-e2b-it-q4', label: 'Gemma 4 E2B IT', disabled: false }],
-    contextLength: 8192,
-    supportsMultimodal: false,
+    config: { provider: 'gemini', modelo: 'gemini-3.5-flash', configurado: true },
+    providerLabel: 'Google Gemini',
     isLoading: false,
     canSendMessages: true,
-    showUnconfiguredState: false,
-    activeProviderReason: undefined,
-    modelSelectDisabled: false,
-    setProvider: vi.fn(),
-    setModelo: vi.fn(),
   }),
 }))
 
-vi.mock('@/hooks/useAudioRecorder', () => ({
-  useAudioRecorder: () => ({
-    recording: false,
-    start: vi.fn(),
-    stop: vi.fn(),
-    cancel: vi.fn(),
-  }),
+vi.mock('@/componentes/IaMensagemBubble', () => ({ IaMensagemBubble: () => null }))
+
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react-router-dom')>(),
+  useNavigate: () => mocks.navigate,
 }))
 
-vi.mock('@/servicos/stt', () => ({
-  servicoStt: { transcribe: vi.fn() },
-}))
-
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-router-dom')>()
-  return {
-    ...actual,
-    useNavigate: () => vi.fn(),
-    useLocation: () => ({ pathname: '/ia' }),
-  }
-})
-
-describe('IaChatView ai elements surface', () => {
+describe('IaChatView cloud direto', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.chatEnviar.mockResolvedValue({ resposta: 'Resposta direta.' })
     window.HTMLElement.prototype.scrollTo = vi.fn()
-    Object.assign(window, {
-      electron: {
-        ipcRenderer: {
-          invoke: vi.fn(),
-          on: vi.fn(() => vi.fn()),
-        },
-      },
-    })
-    Object.assign(navigator, {
-      clipboard: { writeText: vi.fn() },
-    })
   })
 
-  it('renders assistant message, streaming tool panel, running tool state and chat input', async () => {
+  it('envia somente mensagem, histórico e conversa, sem tools, RAG, anexo ou stream', async () => {
     const { IaChatView } = await import('../../src/renderer/src/componentes/IaChatView')
+    const user = userEvent.setup()
     render(<IaChatView />)
 
-    expect(screen.getByTestId('ia-assistant-message')).toBeInTheDocument()
-    expect(screen.getByTestId('ia-tool-calls-panel')).toBeInTheDocument()
-    expect(screen.getByTestId('ia-chat-input')).toBeInTheDocument()
-    expect(screen.getByText('Executando')).toBeInTheDocument()
-    expect(screen.getByTestId('ia-streaming-text')).toBeInTheDocument()
+    await user.type(screen.getByRole('textbox', { name: 'Mensagem' }), 'Avalie este caso')
+    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+
+    await waitFor(() => {
+      expect(mocks.chatEnviar).toHaveBeenCalledWith({
+        mensagem: 'Avalie este caso',
+        historico: [],
+        conversa_id: 'conversation-1',
+      })
+    })
+    expect(mocks.chatEnviar.mock.calls[0][0]).not.toHaveProperty('stream_id')
+    expect(mocks.chatEnviar.mock.calls[0][0]).not.toHaveProperty('contexto')
+    expect(mocks.chatEnviar.mock.calls[0][0]).not.toHaveProperty('anexos')
+    expect(mocks.setCarregando).toHaveBeenNthCalledWith(1, true)
+    expect(mocks.setCarregando).toHaveBeenLastCalledWith(false)
+    expect(mocks.adicionarMensagem).toHaveBeenCalledWith(expect.objectContaining({
+      papel: 'assistente',
+      conteudo: 'Resposta direta.',
+    }))
   })
 })

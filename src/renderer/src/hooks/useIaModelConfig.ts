@@ -5,8 +5,8 @@ export type CloudIaProvider = 'gemini' | 'openrouter'
 
 export interface CloudIaConfig {
   provider: CloudIaProvider
-  apiKey: string
   modelo: string
+  configurado: boolean
 }
 
 export const CLOUD_PROVIDER_DEFAULTS: Record<CloudIaProvider, string> = {
@@ -43,13 +43,15 @@ export function normalizeCloudIaConfig(raw: unknown): CloudIaConfig | null {
   const provider = row.provider
   const providerConfigs = parseProviderConfigs(row.provider_configs ?? row.provider_configs_json)
   const selected = providerConfigs[provider]
-  const legacyApiKey = typeof row.api_key === 'string' ? row.api_key : ''
   const legacyModel = typeof row.modelo === 'string' ? row.modelo : ''
+  const configurado = typeof row.configurado === 'boolean'
+    ? row.configurado
+    : Boolean(selected?.token?.trim() || (typeof row.api_key === 'string' && row.api_key.trim()))
 
   return {
     provider,
-    apiKey: selected?.token?.trim() || legacyApiKey.trim(),
     modelo: selected?.modelo?.trim() || legacyModel.trim() || CLOUD_PROVIDER_DEFAULTS[provider],
+    configurado,
   }
 }
 
@@ -97,7 +99,7 @@ export function useIaModelConfig(): IaModelConfigState {
     return () => window.removeEventListener('ia-config-changed', handleConfigChange)
   }, [reload])
 
-  const canSendMessages = Boolean(config?.apiKey.trim() && config?.modelo.trim())
+  const canSendMessages = Boolean(config?.configurado && config.modelo.trim())
 
   return {
     config,
