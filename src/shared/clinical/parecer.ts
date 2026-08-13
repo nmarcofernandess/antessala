@@ -18,12 +18,26 @@ export interface MetaParecer {
   comorbidades?: readonly ComorbidadeCatalogoParecer[]
 }
 
+function rotuloSexo(valor: string | null | undefined): string | null {
+  const original = valor?.trim()
+  if (!original) return null
+
+  const normalizado = original.toLocaleLowerCase('pt-BR')
+  if (['f', 'feminino', 'female'].includes(normalizado)) return 'feminino'
+  if (['m', 'masculino', 'male'].includes(normalizado)) return 'masculino'
+
+  // O contrato de captura ainda aceita texto livre. Valores não reconhecidos
+  // permanecem explícitos no parecer; nunca são inferidos como masculinos.
+  return `sexo: ${original}`
+}
+
 /** Parecer determinístico em texto puro; sem DOM, rede ou banco. */
 export function resumoPaciente(ficha: EntradaRisco): string {
   const paciente = ficha.paciente ?? {}
   const partes: string[] = []
   if (paciente.idade != null) partes.push(`${paciente.idade} anos`)
-  if (paciente.sexo) partes.push(paciente.sexo === 'F' ? 'feminino' : 'masculino')
+  const sexo = rotuloSexo(paciente.sexo)
+  if (sexo) partes.push(sexo)
   const porte = ficha.procedimento?.porte
   if (porte) partes.push(`procedimento de porte ${PORTE_ROTULO[porte] ?? porte}`)
   return partes.join(' · ') || 'sem identificação registrada'

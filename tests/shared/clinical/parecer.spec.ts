@@ -35,6 +35,14 @@ describe('parecer em texto — paridade com o protótipo', () => {
     expect(resumoPaciente({ paciente: {}, procedimento: {} })).toMatch(/sem identificação/i)
   })
 
+  it('normaliza os valores conhecidos de sexo sem inventar masculino para texto livre', () => {
+    expect(resumoPaciente({ paciente: { sexo: 'Feminino' } })).toBe('feminino')
+    expect(resumoPaciente({ paciente: { sexo: 'male' } })).toBe('masculino')
+    expect(resumoPaciente({ paciente: { sexo: 'não informado' } })).toBe(
+      'sexo: não informado',
+    )
+  })
+
   it('traz rota, regras nomeadas e conduta da medicação', () => {
     const resultado = classificarRisco(grave, grupos)
     const texto = gerarTextoParecer(grave, resultado, {
