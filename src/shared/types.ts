@@ -199,7 +199,7 @@ export interface KnowledgeRelation {
   valid_to: string | null
 }
 
-export type KnowledgeEnrichmentProvider = 'auto' | 'local' | 'gemini' | 'openrouter'
+export type KnowledgeEnrichmentProvider = 'auto' | 'gemini' | 'openrouter'
 
 export interface KnowledgeEnrichmentConfig {
   auto_enrich_after_import: boolean
