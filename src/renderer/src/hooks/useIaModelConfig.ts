@@ -1,314 +1,112 @@
-import { useState, useEffect, useCallback } from 'react'
-import type {
-  IaProviderId,
-  IaModelCatalogItem,
-  IaCapabilities,
-  IaCapabilityProvider,
-  IaCapabilityModel,
-  AiRouteResolution,
-} from '@shared/index'
+import { useCallback, useEffect, useState } from 'react'
+import { client } from '@/servicos/client'
 
-const ipc = window.electron.ipcRenderer
+export type CloudIaProvider = 'gemini' | 'openrouter'
 
-type UiProviderOption = {
-  provider: IaProviderId
-  label: string
-  disabled: boolean
-  reason?: string
-}
-
-type UiModelOption = {
-  id: string
-  label: string
-  disabled: boolean
-  reason?: string
-}
-
-interface IaModelConfig {
-  provider: IaProviderId
-  providerOptions: UiProviderOption[]
+export interface CloudIaConfig {
+  provider: CloudIaProvider
+  apiKey: string
   modelo: string
-  modeloLabel: string
-  modelOptions: UiModelOption[]
-  contextLength: number | null
-  supportsMultimodal: boolean
-  isLoading: boolean
-  canSendMessages: boolean
-  showUnconfiguredState: boolean
-  activeProviderReason?: string
-  modelSelectDisabled: boolean
-  setProvider: (p: IaProviderId) => Promise<void>
-  setModelo: (m: string) => Promise<void>
 }
 
-const DEFAULTS: Record<IaProviderId, string> = {
+export const CLOUD_PROVIDER_DEFAULTS: Record<CloudIaProvider, string> = {
   gemini: 'gemini-3.5-flash',
   openrouter: 'openai/gpt-oss-20b:free',
-  local: 'gemma-4-e2b-it-q4',
 }
 
-const MULTIMODAL_PATTERNS = ['claude-3', 'claude-sonnet-4', 'claude-opus-4', 'gpt-4o', 'gpt-4-turbo', 'gemini']
-
-function checkMultimodal(provider: IaProviderId, modelo: string, catalogItem?: IaModelCatalogItem): boolean {
-  if (provider === 'gemini') return true
-  if (catalogItem?.tags?.some(t => t === 'multimodal' || t === 'vision')) return true
-  return MULTIMODAL_PATTERNS.some(p => modelo.includes(p))
+export const CLOUD_PROVIDER_LABELS: Record<CloudIaProvider, string> = {
+  gemini: 'Google Gemini',
+  openrouter: 'OpenRouter',
 }
 
-function toProviderOptions(capabilities: IaCapabilities | null): UiProviderOption[] {
-  return capabilities?.providers.map((provider) => ({
-    provider: provider.provider,
-    label: provider.label,
-    disabled: false,
-    reason: provider.reason,
-  })) ?? []
-}
+type ProviderConfigMap = Partial<Record<CloudIaProvider, { token?: string; modelo?: string }>>
 
-function getProviderCapability(capabilities: IaCapabilities | null, provider: IaProviderId): IaCapabilityProvider | null {
-  return capabilities?.providers.find((entry) => entry.provider === provider) ?? null
-}
+function parseProviderConfigs(raw: unknown): ProviderConfigMap {
+  if (!raw) return {}
+  if (typeof raw === 'object') return raw as ProviderConfigMap
+  if (typeof raw !== 'string') return {}
 
-function buildCompatApiKey(provider: IaProviderId, providerConfigs: any): string {
-  if (provider === 'gemini') return providerConfigs?.gemini?.token || ''
-  return providerConfigs?.[provider]?.token || ''
-}
-
-function buildLocalModelOptions(providerCapability: IaCapabilityProvider | null): UiModelOption[] {
-  if (!providerCapability) return []
-  const source = providerCapability.available
-    ? providerCapability.models.filter((model) => model.available)
-    : providerCapability.models
-  return source.map((model) => ({
-    id: model.id,
-    label: model.label,
-    disabled: model.disabled,
-    reason: model.reason,
-  }))
-}
-
-function appendCurrentModelIfMissing(options: UiModelOption[], currentModel: string, providerCapability: IaCapabilityProvider | null): UiModelOption[] {
-  if (!currentModel || options.some((option) => option.id === currentModel)) return options
-  const capabilityModel = providerCapability?.models.find((model) => model.id === currentModel)
-  return [
-    ...options,
-    {
-      id: currentModel,
-      label: capabilityModel?.label || currentModel,
-      disabled: capabilityModel?.disabled ?? Boolean(providerCapability && !providerCapability.available),
-      reason: capabilityModel?.reason ?? providerCapability?.reason,
-    },
-  ]
-}
-
-function markRoutedModelAvailable(
-  options: UiModelOption[],
-  route: AiRouteResolution,
-  providerCapability: IaCapabilityProvider | null,
-): UiModelOption[] {
-  if (!route.ok || !route.model) return options
-  const capabilityModel = providerCapability?.models.find((model) => model.id === route.model)
-  const routedOption: UiModelOption = {
-    id: route.model,
-    label: capabilityModel?.label || route.model,
-    disabled: false,
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed as ProviderConfigMap : {}
+  } catch {
+    return {}
   }
-
-  const index = options.findIndex((option) => option.id === route.model)
-  if (index < 0) return [routedOption, ...options]
-
-  return options.map((option, i) => i === index ? { ...option, ...routedOption } : option)
 }
 
-export function useIaModelConfig(): IaModelConfig {
-  const [provider, setProviderState] = useState<IaProviderId>('gemini')
-  const [providerOptions, setProviderOptions] = useState<UiProviderOption[]>([])
-  const [modelo, setModeloState] = useState('')
-  const [modeloLabel, setModeloLabel] = useState('')
-  const [modelOptions, setModelOptions] = useState<UiModelOption[]>([])
-  const [contextLength, setContextLength] = useState<number | null>(null)
-  const [supportsMultimodal, setSupportsMultimodal] = useState(true)
-  const [isLoading, setIsLoading] = useState(true)
-  const [fullConfig, setFullConfig] = useState<any>(null)
-  const [canSendMessages, setCanSendMessages] = useState(false)
-  const [showUnconfiguredState, setShowUnconfiguredState] = useState(false)
-  const [activeProviderReason, setActiveProviderReason] = useState<string | undefined>(undefined)
-  const [modelSelectDisabled, setModelSelectDisabled] = useState(false)
+export function normalizeCloudIaConfig(raw: unknown): CloudIaConfig | null {
+  if (!raw || typeof raw !== 'object') return null
 
-  const loadConfig = useCallback(async () => {
+  const row = raw as Record<string, unknown>
+  if (row.provider !== 'gemini' && row.provider !== 'openrouter') return null
+
+  const provider = row.provider
+  const providerConfigs = parseProviderConfigs(row.provider_configs ?? row.provider_configs_json)
+  const selected = providerConfigs[provider]
+  const legacyApiKey = typeof row.api_key === 'string' ? row.api_key : ''
+  const legacyModel = typeof row.modelo === 'string' ? row.modelo : ''
+
+  return {
+    provider,
+    apiKey: selected?.token?.trim() || legacyApiKey.trim(),
+    modelo: selected?.modelo?.trim() || legacyModel.trim() || CLOUD_PROVIDER_DEFAULTS[provider],
+  }
+}
+
+interface IaModelConfigState {
+  config: CloudIaConfig | null
+  providerLabel: string
+  isLoading: boolean
+  canSendMessages: boolean
+  activeProviderReason?: string
+  reload: () => Promise<void>
+}
+
+export function useIaModelConfig(): IaModelConfigState {
+  const [config, setConfig] = useState<CloudIaConfig | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [activeProviderReason, setActiveProviderReason] = useState<string>()
+
+  const reload = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [config, nextCapabilities, chatRoute] = await Promise.all([
-        ipc.invoke('ia.configuracao.obter') as Promise<any>,
-        ipc.invoke('ia.capabilities.obter') as Promise<IaCapabilities>,
-        ipc.invoke('ia.routing.status', { task: 'chat_ui', validateLocal: true }) as Promise<AiRouteResolution>,
-      ])
-
-      setProviderOptions(toProviderOptions(nextCapabilities))
-      setShowUnconfiguredState(Boolean(nextCapabilities.show_unconfigured_state))
-
-      if (!config && !chatRoute.provider) {
-        setFullConfig(null)
-        setCanSendMessages(false)
-        setActiveProviderReason(nextCapabilities.message)
-        setModelOptions([])
-        setModeloState('')
-        setModeloLabel('')
-        setContextLength(null)
-        setSupportsMultimodal(false)
-        setIsLoading(false)
-        return
-      }
-
-      const p = (chatRoute.provider || config?.provider || nextCapabilities.active_provider || 'gemini') as IaProviderId
-      const providerConfigs = config?.provider_configs ?? {}
-      const providerCapability = getProviderCapability(nextCapabilities, p)
-      const modeloSalvo = chatRoute.model || providerConfigs[p]?.modelo?.trim() || config?.modelo || DEFAULTS[p]
-
-      setProviderState(p)
-      setFullConfig(config)
-      setCanSendMessages(Boolean(chatRoute.ok))
-      setActiveProviderReason(chatRoute.ok ? undefined : (chatRoute.message || providerCapability?.reason))
-
-      let nextModel = modeloSalvo
-      let nextOptions: UiModelOption[] = []
-      let nextContextLength: number | null = null
-      let nextSupportsMultimodal = p === 'gemini'
-
-      if (p === 'local') {
-        nextOptions = buildLocalModelOptions(providerCapability)
-        if (providerCapability?.available) {
-          if (!nextOptions.some((option) => option.id === nextModel)) {
-            nextModel = nextOptions[0]?.id || nextModel
-          }
-        } else {
-          nextOptions = appendCurrentModelIfMissing(nextOptions, nextModel, providerCapability)
-        }
-      } else {
-        const catalog = await ipc.invoke('ia.modelos.catalogo', {
-          provider: p,
-          provider_config: providerConfigs[p] || {},
-        }) as { models: IaModelCatalogItem[] }
-
-        let catalogOptions = catalog.models || []
-
-        if (p === 'openrouter') {
-          const defModel = catalogOptions.find((option) => option.id === DEFAULTS.openrouter)
-          const favs = providerConfigs.openrouter?.favoritos as string[] | undefined
-          if (favs && favs.length > 0) {
-            const favSet = new Set(favs)
-            const favModels = catalogOptions.filter((option) => favSet.has(option.id) && option.id !== DEFAULTS.openrouter)
-            catalogOptions = defModel ? [defModel, ...favModels] : favModels
-          } else {
-            catalogOptions = defModel ? [defModel] : []
-          }
-        }
-
-        nextOptions = catalogOptions.map((option) => ({
-          id: option.id,
-          label: option.label,
-          disabled: Boolean(providerCapability && !providerCapability.available),
-          reason: providerCapability?.reason,
-        }))
-
-        if (providerCapability?.available) {
-          if (!nextOptions.some((option) => option.id === nextModel) && nextOptions.length > 0) {
-            nextModel = nextOptions[0].id
-          }
-        } else {
-          nextOptions = appendCurrentModelIfMissing(nextOptions, nextModel, providerCapability)
-        }
-
-        const item = catalogOptions.find((option) => option.id === nextModel)
-        nextContextLength = item?.context_length ?? null
-        nextSupportsMultimodal = checkMultimodal(p, nextModel, item)
-      }
-
-      if (chatRoute.provider === p) {
-        nextOptions = markRoutedModelAvailable(nextOptions, chatRoute, providerCapability)
-      }
-
-      const resolvedModel = nextOptions.find((option) => option.id === nextModel)
-      setModeloState(nextModel)
-      setModelOptions(nextOptions)
-      setModeloLabel(resolvedModel?.label || nextModel)
-      setContextLength(nextContextLength)
-      setSupportsMultimodal(nextSupportsMultimodal)
-      setModelSelectDisabled(!chatRoute.ok && Boolean(providerCapability && !providerCapability.available))
-      setIsLoading(false)
-    } catch (err) {
-      // Don't swallow silently: leave the chat disabled WITH a real reason and log for debugging.
-      console.error('[useIaModelConfig] falha ao carregar config de IA:', err)
-      setCanSendMessages(false)
-      setActiveProviderReason(err instanceof Error ? err.message : 'Falha ao carregar a configuração de IA.')
+      const raw = await client['ia.configuracao.obter']()
+      const normalized = normalizeCloudIaConfig(raw)
+      setConfig(normalized)
+      setActiveProviderReason(
+        normalized
+          ? undefined
+          : 'Configure uma IA em Configurações antes de iniciar uma conversa.',
+      )
+    } catch (error) {
+      console.error('[IA] Falha ao carregar configuração:', error)
+      setConfig(null)
+      setActiveProviderReason(
+        error instanceof Error ? error.message : 'Não foi possível carregar a configuração de IA.',
+      )
+    } finally {
       setIsLoading(false)
     }
   }, [])
 
-  useEffect(() => { void loadConfig() }, [loadConfig])
-
   useEffect(() => {
-    const handler = () => { void loadConfig() }
-    window.addEventListener('ia-config-changed', handler)
-    const disposeLocalStatus = window.electron.ipcRenderer.on('ia:local:status-changed', handler)
-    return () => {
-      window.removeEventListener('ia-config-changed', handler)
-      if (typeof disposeLocalStatus === 'function') disposeLocalStatus()
-    }
-  }, [loadConfig])
+    void reload()
 
-  const setProvider = useCallback(async (p: IaProviderId) => {
-    if (!fullConfig) return
+    const handleConfigChange = () => { void reload() }
+    window.addEventListener('ia-config-changed', handleConfigChange)
+    return () => window.removeEventListener('ia-config-changed', handleConfigChange)
+  }, [reload])
 
-    const providerConfigs = fullConfig.provider_configs ?? {}
-    const modeloPorProvider = providerConfigs[p]?.modelo?.trim()
-    const newModelo = modeloPorProvider || DEFAULTS[p]
-
-    const updatedConfigs = { ...providerConfigs }
-    if (!updatedConfigs[p]) updatedConfigs[p] = {}
-    updatedConfigs[p].modelo = newModelo
-
-    await ipc.invoke('ia.configuracao.salvar', {
-      provider: p,
-      api_key: buildCompatApiKey(p, updatedConfigs),
-      modelo: newModelo,
-      provider_configs_json: JSON.stringify(updatedConfigs),
-    })
-    window.dispatchEvent(new Event('ia-config-changed'))
-  }, [fullConfig])
-
-  const setModelo = useCallback(async (m: string) => {
-    if (!fullConfig) return
-    const currentOption = modelOptions.find((option) => option.id === m)
-    if (currentOption?.disabled) return
-
-    const providerConfigs = fullConfig.provider_configs ?? {}
-    const updatedConfigs = { ...providerConfigs }
-    if (!updatedConfigs[provider]) updatedConfigs[provider] = {}
-    updatedConfigs[provider].modelo = m
-
-    await ipc.invoke('ia.configuracao.salvar', {
-      provider,
-      api_key: buildCompatApiKey(provider, updatedConfigs),
-      modelo: m,
-      provider_configs_json: JSON.stringify(updatedConfigs),
-    })
-    window.dispatchEvent(new Event('ia-config-changed'))
-  }, [fullConfig, modelOptions, provider])
+  const canSendMessages = Boolean(config?.apiKey.trim() && config?.modelo.trim())
 
   return {
-    provider,
-    providerOptions,
-    modelo,
-    modeloLabel,
-    modelOptions,
-    contextLength,
-    supportsMultimodal,
+    config,
+    providerLabel: config ? CLOUD_PROVIDER_LABELS[config.provider] : 'IA não configurada',
     isLoading,
     canSendMessages,
-    showUnconfiguredState,
-    activeProviderReason,
-    modelSelectDisabled,
-    setProvider,
-    setModelo,
+    activeProviderReason: canSendMessages
+      ? undefined
+      : activeProviderReason || 'Informe um token e um modelo em Configurações.',
+    reload,
   }
 }

@@ -95,7 +95,7 @@ export interface IaMensagem {
 
 export interface IaConfiguracao {
   id: number
-  provider: 'gemini' | 'openrouter' | 'local'
+  provider: 'gemini' | 'openrouter'
   api_key: string
   modelo: string
   // JSON string with provider-specific settings (auth mode, token/login state, local CLI paths, etc).
@@ -305,7 +305,7 @@ export interface KnowledgeImportFile {
 // CATÁLOGO DE MODELOS IA
 // ============================================================================
 
-export type IaProviderId = 'gemini' | 'openrouter' | 'local'
+export type IaProviderId = 'gemini' | 'openrouter'
 
 export interface IaLocalStatus {
   modelos: Record<string, {

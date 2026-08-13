@@ -3,10 +3,9 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import type { IaConfiguracao } from '../../shared/types'
 import { isGeminiCloudApiEnabled } from '../config/app-config'
 
-export const PROVIDER_DEFAULTS: Record<'gemini' | 'openrouter' | 'local', string> = {
+export const PROVIDER_DEFAULTS: Record<'gemini' | 'openrouter', string> = {
     gemini: 'gemini-3.5-flash',
     openrouter: 'openai/gpt-oss-20b:free',
-    local: 'gemma-4-e2b-it-q4',
 }
 
 /**
@@ -20,7 +19,7 @@ export const PROVIDER_DEFAULTS: Record<'gemini' | 'openrouter' | 'local', string
  * Validação extra para OpenRouter: exige formato 'namespace/model'.
  * Se o modelo não tiver '/', veio de outro provider e é descartado.
  */
-export function resolveModel(config: IaConfiguracao, providerLabel: 'gemini' | 'openrouter' | 'local'): string {
+export function resolveModel(config: IaConfiguracao, providerLabel: 'gemini' | 'openrouter'): string {
     // 1. Tenta ler do provider_configs_json[provider].modelo
     if (config.provider_configs_json) {
         try {
@@ -44,9 +43,8 @@ export function resolveModel(config: IaConfiguracao, providerLabel: 'gemini' | '
     return PROVIDER_DEFAULTS[providerLabel]
 }
 
-export function isValidModelForProvider(modelo: string, provider: 'gemini' | 'openrouter' | 'local'): boolean {
+export function isValidModelForProvider(modelo: string, provider: 'gemini' | 'openrouter'): boolean {
     if (!modelo) return false
-    if (provider === 'local') return true
     if (provider === 'openrouter') {
         // OpenRouter exige 'namespace/model' (ex: 'anthropic/claude-sonnet-4', 'google/gemini-2.5-flash')
         return modelo.includes('/')
@@ -70,11 +68,6 @@ export function buildModelFactory(config: IaConfiguracao): {
     const provider = config.provider
     const modelo = resolveModel(config, provider)
 
-    if (provider === 'local') {
-        // Local usa path próprio via local-llm.ts — não precisa de model factory
-        return null
-    }
-
     if (provider === 'gemini') {
         if (!isGeminiCloudApiEnabled()) return null
         const google = createGoogleGenerativeAI({ apiKey })
@@ -90,8 +83,6 @@ export function buildModelFactory(config: IaConfiguracao): {
 }
 
 export function resolveProviderApiKey(config: IaConfiguracao): string | undefined {
-    if (config.provider === 'local') return 'local-no-key'
-
     if (config.provider === 'gemini' && !isGeminiCloudApiEnabled()) return undefined
 
     // provider_configs_json tem prioridade — é onde a UI multi-provider salva tokens
@@ -109,8 +100,6 @@ export function resolveProviderApiKey(config: IaConfiguracao): string | undefine
 
 export function shouldAutoSeedIaConfig(config: Pick<IaConfiguracao, 'provider' | 'api_key' | 'provider_configs_json'> | null | undefined): boolean {
     if (!config) return true
-
-    if (config.provider === 'local') return false
 
     if (config.provider_configs_json) {
         try {
