@@ -4,6 +4,12 @@ import { execute, queryAll, queryOne } from './db/query'
 import { iaEnviarMensagem, iaTestarConexao } from './ia/cliente'
 import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import { exportHtmlToPdf } from './export/pdf'
+import {
+  mapCatalogoCidRow,
+  mapCatalogoMedicamentoRow,
+  type CatalogoCidRow,
+  type CatalogoMedicamentoRow,
+} from './catalogos/dto'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import { validateAnamneseContent } from '../shared/anamnese'
 
@@ -330,22 +336,23 @@ const jornadaAdicionar = t.procedure
 
 const catalogoCidBuscar = t.procedure
   .input<{ busca: string; limite?: number }>()
-  .action(async ({ input }) =>
-    queryAll(
-      `SELECT codigo, descricao, nivel, parent_id
+  .action(async ({ input }) => {
+    const rows = await queryAll<CatalogoCidRow>(
+      `SELECT id, codigo, descricao, capitulo_descricao
        FROM catalogo_cid10
        WHERE codigo ILIKE '%' || $1 || '%' OR descricao ILIKE '%' || $1 || '%'
        ORDER BY relevancia DESC NULLS LAST, codigo
        LIMIT $2`,
       input.busca.trim(),
       Math.min(Math.max(input.limite ?? 20, 1), 100),
-    ),
-  )
+    )
+    return rows.map(mapCatalogoCidRow)
+  })
 
 const catalogoMedicamentosBuscar = t.procedure
   .input<{ busca: string; limite?: number }>()
-  .action(async ({ input }) =>
-    queryAll(
+  .action(async ({ input }) => {
+    const rows = await queryAll<CatalogoMedicamentoRow>(
       `SELECT m.id, m.nome, m.principio_ativo, m.nomes_comerciais,
               c.nome AS classe_terapeutica, g.rotulo AS grupo_risco
        FROM catalogo_medicamentos m
@@ -358,8 +365,9 @@ const catalogoMedicamentosBuscar = t.procedure
        LIMIT $2`,
       input.busca.trim(),
       Math.min(Math.max(input.limite ?? 20, 1), 100),
-    ),
-  )
+    )
+    return rows.map(mapCatalogoMedicamentoRow)
+  })
 
 export const router = {
   'ia.configuracao.obter': iaConfiguracaoObter,
