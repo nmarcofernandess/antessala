@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
 import {
@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 
 import type { WidgetEditorProps } from '../types'
-import { WidgetField } from './WidgetFields'
+import { RequiredDraftInput, WidgetField } from './WidgetFields'
 
 export function MedicacoesWidget({
   data,
@@ -25,6 +25,7 @@ export function MedicacoesWidget({
 }: WidgetEditorProps<MedicacoesData>): React.JSX.Element {
   const prefix = useId()
   const listId = `${prefix}-medicamentos`
+  const [draft, setDraft] = useState<Medicacao | null>(null)
 
   const updateMedicacao = (id: string, patch: Partial<Medicacao>): void => {
     onChange({
@@ -37,17 +38,31 @@ export function MedicacoesWidget({
     onChange({ ...data, medicacoes: data.medicacoes.filter((medicacao) => medicacao.id !== id) })
   }
 
+  const commitDraft = (nome: string): void => {
+    if (!draft) return
+    onChange({
+      ...data,
+      medicacoes: [...data.medicacoes, { ...draft, nome }],
+    })
+    setDraft(null)
+  }
+
+  const rows = draft ? [...data.medicacoes, draft] : data.medicacoes
+
   return (
     <div className="space-y-4">
       <label className="flex items-center gap-2 text-sm font-medium">
         <Checkbox
           checked={data.naoUsaMedicamentos ?? false}
           disabled={disabled}
-          onCheckedChange={(checked) => onChange({
-            ...data,
-            naoUsaMedicamentos: checked === true || undefined,
-            medicacoes: checked === true ? [] : data.medicacoes,
-          })}
+          onCheckedChange={(checked) => {
+            if (checked === true) setDraft(null)
+            onChange({
+              ...data,
+              naoUsaMedicamentos: checked === true || undefined,
+              medicacoes: checked === true ? [] : data.medicacoes,
+            })
+          }}
         />
         Não utiliza medicamentos de uso contínuo
       </label>
@@ -63,8 +78,19 @@ export function MedicacoesWidget({
           </datalist>
 
           <div className="space-y-3">
-            {data.medicacoes.map((medicacao, index) => (
-              <div key={medicacao.id} className="space-y-3 rounded-lg border p-3">
+            {rows.map((medicacao, index) => {
+              const isDraft = draft?.id === medicacao.id
+              const patchMedicacao = (patch: Partial<Medicacao>): void => {
+                if (isDraft) {
+                  setDraft((current) => current ? { ...current, ...patch } : current)
+                } else {
+                  updateMedicacao(medicacao.id, patch)
+                }
+              }
+              const nameId = `${prefix}-medicacao-${index}-nome`
+
+              return (
+                <div key={medicacao.id} className="space-y-3 rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">Medicação {index + 1}</p>
                   <Button
@@ -73,18 +99,22 @@ export function MedicacoesWidget({
                     size="icon"
                     aria-label={`Remover medicação ${index + 1}`}
                     disabled={disabled}
-                    onClick={() => removeMedicacao(medicacao.id)}
+                    onClick={() => isDraft ? setDraft(null) : removeMedicacao(medicacao.id)}
                   >
                     <Trash2 />
                   </Button>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <WidgetField label="Nome">
-                    <Input
+                  <WidgetField label="Nome da medicação" htmlFor={nameId}>
+                    <RequiredDraftInput
+                      id={nameId}
                       list={listId}
                       value={medicacao.nome}
                       disabled={disabled}
-                      onChange={(event) => updateMedicacao(medicacao.id, { nome: event.target.value })}
+                      emptyError="Informe o nome da medicação."
+                      onCommit={(nome) => isDraft
+                        ? commitDraft(nome)
+                        : updateMedicacao(medicacao.id, { nome })}
                     />
                   </WidgetField>
                   <WidgetField label="Dose">
@@ -92,7 +122,7 @@ export function MedicacoesWidget({
                       value={medicacao.dose ?? ''}
                       disabled={disabled}
                       placeholder="Ex.: 850 mg"
-                      onChange={(event) => updateMedicacao(medicacao.id, { dose: event.target.value || undefined })}
+                      onChange={(event) => patchMedicacao({ dose: event.target.value || undefined })}
                     />
                   </WidgetField>
                   <WidgetField label="Frequência">
@@ -100,7 +130,7 @@ export function MedicacoesWidget({
                       className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                       value={medicacao.frequencia ?? ''}
                       disabled={disabled}
-                      onChange={(event) => updateMedicacao(medicacao.id, {
+                      onChange={(event) => patchMedicacao({
                         frequencia: (event.target.value || undefined) as MedicacaoFrequencia | undefined,
                       })}
                     >
@@ -115,25 +145,23 @@ export function MedicacoesWidget({
                       value={medicacao.motivo ?? ''}
                       disabled={disabled}
                       placeholder="Ex.: diabetes"
-                      onChange={(event) => updateMedicacao(medicacao.id, { motivo: event.target.value || undefined })}
+                      onChange={(event) => patchMedicacao({ motivo: event.target.value || undefined })}
                     />
                   </WidgetField>
                 </div>
                 {medicacao.frequencia ? (
                   <p className="text-xs text-muted-foreground">{FREQUENCIA_LABELS[medicacao.frequencia]}</p>
                 ) : null}
-              </div>
-            ))}
+                </div>
+              )
+            })}
           </div>
 
           <Button
             type="button"
             variant="outline"
-            disabled={disabled}
-            onClick={() => onChange({
-              ...data,
-              medicacoes: [...data.medicacoes, { id: createAnamneseId(), nome: '' }],
-            })}
+            disabled={disabled || draft !== null}
+            onClick={() => setDraft({ id: createAnamneseId(), nome: '' })}
           >
             <Plus /> Adicionar medicação
           </Button>

@@ -1,19 +1,10 @@
 import type { ComponentType } from 'react'
 
 import type { WidgetDefinition } from '@shared/anamnese'
+import type { CatalogoCidItem, CatalogoMedicamentoItem } from '@shared/catalogos-clinicos'
 
-export interface MedicacaoCatalogItem {
-  id?: string | number
-  nome: string
-  classeTerapeutica?: string
-}
-
-export interface ProblemaSaudeCatalogItem {
-  id?: string | number
-  codigo: string
-  nome: string
-  categoria?: string
-}
+export type MedicacaoCatalogItem = CatalogoMedicamentoItem
+export type ProblemaSaudeCatalogItem = CatalogoCidItem
 
 export interface WidgetCatalogs {
   medicacoes?: readonly MedicacaoCatalogItem[]

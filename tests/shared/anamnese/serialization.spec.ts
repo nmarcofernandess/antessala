@@ -45,6 +45,30 @@ describe('serialização da anamnese', () => {
       .toThrowError('JSON de anamnese inválido')
   })
 
+  it('recusa ids de bloco vazios ou duplicados', () => {
+    const first = createWidgetBlock('sono', 'bloco-repetido')
+    const second = createWidgetBlock('adesao', 'bloco-repetido')
+
+    expect(() => serializeAnamneseContent({ _v: 2, blocos: [first, second] }))
+      .toThrowError(/id duplicado.*bloco-repetido/i)
+
+    expect(() => serializeAnamneseContent({
+      _v: 2,
+      blocos: [{ ...first, id: '   ' }],
+    })).toThrowError(/envelope de widget inválido/i)
+  })
+
+  it('recusa versão incompatível do widget e aceita conteúdo legado sem _v', () => {
+    const bloco = createWidgetBlock('medicacoes', 'medicacoes-1')
+    bloco._v = 999
+
+    expect(() => serializeAnamneseContent({ _v: 2, blocos: [bloco] }))
+      .toThrowError(/medicacoes.*versão 999.*esperada 3/i)
+
+    delete bloco._v
+    expect(() => serializeAnamneseContent({ _v: 2, blocos: [bloco] })).not.toThrow()
+  })
+
   it('clona defaults ao criar blocos', () => {
     const first = createWidgetBlock('medicacoes', 'm1')
     const second = createWidgetBlock('medicacoes', 'm2')

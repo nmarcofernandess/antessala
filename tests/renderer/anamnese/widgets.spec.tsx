@@ -11,12 +11,16 @@ import {
   type AdesaoData,
   type AnamneseContent,
   type Bloco,
+  type MedicacoesData,
   type ObservacoesGeraisData,
+  type ProblemasSaudeData,
 } from '../../../src/shared/anamnese'
 import {
   AdesaoWidget,
   AnamneseComposer,
+  MedicacoesWidget,
   ObservacoesGeraisWidget,
+  ProblemasSaudeWidget,
   WIDGET_UI_REGISTRY,
   reorderWidgetsPreservingAnchors,
 } from '../../../src/renderer/src/anamnese'
@@ -53,6 +57,31 @@ function HydrationComposerHarness(): React.JSX.Element {
     blocos: [createWidgetBlock('hidratacao', 'hidratacao-1')],
   }))
   return <AnamneseComposer value={content} onChange={setContent} />
+}
+
+function DefaultComposerHarness(): React.JSX.Element {
+  const [content, setContent] = useState<AnamneseContent>(createEmptyAnamnese())
+  return <AnamneseComposer value={content} onChange={setContent} />
+}
+
+function MedicacoesHarness(): React.JSX.Element {
+  const [data, setData] = useState<MedicacoesData>({ medicacoes: [] })
+  return (
+    <>
+      <MedicacoesWidget data={data} onChange={setData} />
+      <output data-testid="medicacoes-data">{JSON.stringify(data)}</output>
+    </>
+  )
+}
+
+function ProblemasSaudeHarness(): React.JSX.Element {
+  const [data, setData] = useState<ProblemasSaudeData>({ problemas: [] })
+  return (
+    <>
+      <ProblemasSaudeWidget data={data} onChange={setData} />
+      <output data-testid="problemas-data">{JSON.stringify(data)}</output>
+    </>
+  )
 }
 
 describe('editores shadcn da anamnese', () => {
@@ -104,6 +133,46 @@ describe('editores shadcn da anamnese', () => {
 
     expect(await screen.findByText('Consumo de água em litros por dia')).toBeInTheDocument()
     expect(screen.getByLabelText('Litros por dia')).toHaveValue(2)
+  })
+
+  it('usa o ponto de extensão vazio como catálogo padrão do composer', async () => {
+    const user = userEvent.setup()
+    render(<DefaultComposerHarness />)
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar bloco' }))
+
+    expect(await screen.findByText('Nenhum bloco encontrado.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Hidratação/ })).not.toBeInTheDocument()
+  })
+
+  it('mantém nova medicação em draft local até existir um nome válido', async () => {
+    const user = userEvent.setup()
+    render(<MedicacoesHarness />)
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar medicação' }))
+    const nome = screen.getByLabelText('Nome da medicação')
+    expect(screen.getByTestId('medicacoes-data')).toHaveTextContent('{"medicacoes":[]}')
+
+    await user.type(nome, 'Metformina')
+    expect(screen.getByTestId('medicacoes-data')).toHaveTextContent('{"medicacoes":[]}')
+
+    await user.tab()
+    expect(screen.getByTestId('medicacoes-data')).toHaveTextContent('Metformina')
+  })
+
+  it('mantém nova condição em draft local até existir um nome válido', async () => {
+    const user = userEvent.setup()
+    render(<ProblemasSaudeHarness />)
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar condição' }))
+    const nome = screen.getByLabelText('Nome da condição')
+    expect(screen.getByTestId('problemas-data')).toHaveTextContent('{"problemas":[]}')
+
+    await user.type(nome, 'Asma')
+    expect(screen.getByTestId('problemas-data')).toHaveTextContent('{"problemas":[]}')
+
+    await user.tab()
+    expect(screen.getByTestId('problemas-data')).toHaveTextContent('Asma')
   })
 
   it('preserva o editor durante um número intermediário inválido e permite corrigi-lo', async () => {

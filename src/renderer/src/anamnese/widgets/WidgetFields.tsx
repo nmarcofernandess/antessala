@@ -38,6 +38,68 @@ interface BoundedNumberInputProps extends Omit<
   onCommit: (value: number | undefined) => void
 }
 
+interface RequiredDraftInputProps extends Omit<
+  ComponentProps<typeof Input>,
+  'value' | 'defaultValue' | 'onChange' | 'onBlur'
+> {
+  value: string
+  onCommit: (value: string) => void
+  emptyError?: string
+}
+
+/** Publica texto obrigatório somente no blur e nunca expõe um valor vazio ao schema pai. */
+export function RequiredDraftInput({
+  value,
+  onCommit,
+  emptyError = 'Informe um valor.',
+  onKeyDown,
+  ...props
+}: RequiredDraftInputProps): React.JSX.Element {
+  const [draft, setDraft] = useState(value)
+  const [showError, setShowError] = useState(false)
+
+  useEffect(() => {
+    setDraft(value)
+    setShowError(false)
+  }, [value])
+
+  const commit = (): void => {
+    const normalized = draft.trim()
+    if (!normalized) {
+      setShowError(true)
+      return
+    }
+    setDraft(normalized)
+    setShowError(false)
+    onCommit(normalized)
+  }
+
+  return (
+    <div className="space-y-1">
+      <Input
+        {...props}
+        value={draft}
+        aria-invalid={showError && !draft.trim()}
+        onChange={(event) => {
+          setDraft(event.target.value)
+          if (event.target.value.trim()) setShowError(false)
+        }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          onKeyDown?.(event)
+          if (!event.defaultPrevented && event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+          }
+        }}
+      />
+      {showError && !draft.trim() ? (
+        <p className="text-xs text-destructive" role="alert">{emptyError}</p>
+      ) : null}
+    </div>
+  )
+}
+
 /**
  * Mantém o texto transitório no renderer. Assim digitar "70" não publica o
  * primeiro "7" contra um schema com min(20) e não desmonta o widget.

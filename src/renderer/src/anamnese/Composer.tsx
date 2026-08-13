@@ -18,12 +18,12 @@ import { Plus } from 'lucide-react'
 
 import {
   createWidgetBlock,
-  getAvailableWidgetTypes,
   type AnamneseContent,
   type Bloco,
   type BlocoWidget,
   type WidgetType,
 } from '@shared/anamnese'
+import { CATALOGO_WIDGETS_ESPECIFICOS } from '@shared/extensions/catalogo-widgets'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -59,7 +59,7 @@ export function reorderWidgetsPreservingAnchors(
 export function AnamneseComposer({
   value,
   onChange,
-  availableWidgetTypes = getAvailableWidgetTypes(),
+  availableWidgetTypes = CATALOGO_WIDGETS_ESPECIFICOS.widgetTypes,
   catalogs,
   disabled,
 }: AnamneseComposerProps): React.JSX.Element {

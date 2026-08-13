@@ -89,6 +89,21 @@ describe('renderToText preservado', () => {
     expect(text).toContain('Metformina 850mg (2x ao dia)')
   })
 
+  it('recusa medicação vazia e a contradição entre lista e "não usa"', () => {
+    const itemVazio = { medicacoes: [{ id: 'm1', nome: '   ' }] }
+    const contraditorio = {
+      medicacoes: [{ id: 'm1', nome: 'Metformina' }],
+      naoUsaMedicamentos: true,
+    }
+
+    expect(MedicacoesWidgetDefinition.schema.safeParse(itemVazio).success).toBe(false)
+    expect(MedicacoesWidgetDefinition.isComplete(itemVazio)).toBe(false)
+    expect(MedicacoesWidgetDefinition.renderToText(itemVazio)).toBe('')
+    expect(MedicacoesWidgetDefinition.schema.safeParse(contraditorio).success).toBe(false)
+    expect(MedicacoesWidgetDefinition.isComplete(contraditorio)).toBe(false)
+    expect(MedicacoesWidgetDefinition.renderToText(contraditorio)).toBe('')
+  })
+
   it('renderiza observações rich text sem vazar HTML', () => {
     expect(ObservacoesGeraisWidgetDefinition.renderToText({
       texto: '<p><strong>Avaliar</strong> amanhã</p>',
@@ -101,6 +116,16 @@ describe('renderToText preservado', () => {
     })
     expect(text).toContain('• E11 - Diabetes mellitus')
     expect(text).toContain('Não controlado')
+  })
+
+  it('não trata condição vazia como conteúdo clínico', () => {
+    const itemVazio = { problemas: [{ id: 'p1', nome: '   ' }] }
+
+    expect(ProblemasSaudeWidgetDefinition.schema.safeParse(itemVazio).success).toBe(false)
+    expect(ProblemasSaudeWidgetDefinition.isComplete(itemVazio)).toBe(false)
+    expect(ProblemasSaudeWidgetDefinition.isEmpty(itemVazio)).toBe(true)
+    expect(ProblemasSaudeWidgetDefinition.renderToText(itemVazio)).toBe('')
+    expect(ProblemasSaudeWidgetDefinition.renderToSummary(itemVazio)).toBeNull()
   })
 
   it('renderiza a rotina agrupada por tipo', () => {

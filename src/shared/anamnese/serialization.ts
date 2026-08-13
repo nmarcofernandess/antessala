@@ -18,7 +18,7 @@ const ContentEnvelopeSchema = z.object({
 
 const WidgetBlockBaseSchema = z.object({
   _v: z.number().int().positive().optional(),
-  id: z.string().min(1),
+  id: z.string().trim().min(1),
   type: z.literal('widget'),
   widgetType: z.string(),
   data: z.unknown(),
@@ -28,7 +28,7 @@ const WidgetBlockBaseSchema = z.object({
 
 const SnapshotBlockSchema = z.object({
   _v: z.number().int().positive().optional(),
-  id: z.string().min(1),
+  id: z.string().trim().min(1),
   type: z.literal('snapshot'),
   dataCaptura: z.string(),
   dados: z.object({
@@ -59,7 +59,7 @@ const SnapshotBlockSchema = z.object({
 
 const ResultadoBlockSchema = z.object({
   _v: z.number().int().positive().optional(),
-  id: z.string().min(1),
+  id: z.string().trim().min(1),
   type: z.literal('resultado_protocolo'),
   protocoloTipo: z.string(),
   protocoloId: z.string(),
@@ -93,6 +93,11 @@ function parseBloco(raw: unknown, index: number): Bloco {
     }
 
     const definition = getWidgetDefinition(base.data.widgetType)
+    if (base.data._v !== undefined && base.data._v !== definition.version) {
+      throw new AnamneseValidationError(
+        `Bloco ${index + 1} (${base.data.widgetType}): versão ${base.data._v} incompatível; esperada ${definition.version}`,
+      )
+    }
     const widgetData = definition.schema.safeParse(base.data.data)
     if (!widgetData.success) {
       throw new AnamneseValidationError(
@@ -138,10 +143,16 @@ export function validateAnamneseContent(raw: unknown): AnamneseContent {
     throw new AnamneseValidationError('Envelope de anamnese inválido', envelope.error)
   }
 
-  return {
-    _v: 2,
-    blocos: envelope.data.blocos.map(parseBloco),
+  const blocos = envelope.data.blocos.map(parseBloco)
+  const ids = new Set<string>()
+  for (const bloco of blocos) {
+    if (ids.has(bloco.id)) {
+      throw new AnamneseValidationError(`ID duplicado de bloco: "${bloco.id}"`)
+    }
+    ids.add(bloco.id)
   }
+
+  return { _v: 2, blocos }
 }
 
 export function serializeAnamneseContent(content: AnamneseContent): string {
