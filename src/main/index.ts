@@ -5,6 +5,7 @@ import { seedData } from './db/seed'
 import { initDb, closeDb } from './db/pglite'
 import { APP_CONFIG } from './config/app-config'
 import { shouldShowMainWindow } from './headless'
+import { installRendererNetworkPolicy } from './renderer-network-policy'
 
 process.stdout.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code !== 'EPIPE') console.error(err)
@@ -52,6 +53,8 @@ function createWindow(
     void shell.openExternal(url)
     return { action: 'deny' }
   })
+
+  installRendererNetworkPolicy(mainWindow.webContents.session, process.env.ELECTRON_RENDERER_URL)
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
