@@ -4,6 +4,7 @@ import { execute, queryAll, queryOne } from './db/query'
 import { iaEnviarMensagem, iaTestarConexao } from './ia/cliente'
 import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import { exportHtmlToPdf } from './export/pdf'
+import { dormantKnowledgeRouter } from './knowledge/router'
 import {
   mapCatalogoCidRow,
   mapCatalogoMedicamentoRow,
@@ -370,6 +371,7 @@ const catalogoMedicamentosBuscar = t.procedure
   })
 
 export const router = {
+  ...dormantKnowledgeRouter,
   'ia.configuracao.obter': iaConfiguracaoObter,
   'ia.configuracao.salvar': iaConfiguracaoSalvar,
   'ia.configuracao.testar': iaConfiguracaoTestar,
