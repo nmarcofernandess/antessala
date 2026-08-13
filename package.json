@@ -3,6 +3,9 @@
   "productName": "Antessala",
   "version": "0.1.0",
   "description": "Triagem pre-anestesica offline: anamnese estruturada e fila por urgencia e espera",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "author": "Marco Fernandes",
   "private": true,
   "type": "module",
