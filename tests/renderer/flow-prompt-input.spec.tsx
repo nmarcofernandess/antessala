@@ -24,7 +24,7 @@ describe('FlowPromptInput', () => {
     expect(onEnviar).toHaveBeenCalledTimes(1)
   })
 
-  it('does not send when backend route disables chat', async () => {
+  it('does not send while the input is disabled', async () => {
     const user = userEvent.setup()
     const onEnviar = vi.fn()
 
