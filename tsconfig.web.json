@@ -21,10 +21,5 @@
     "src/renderer/src/**/*.ts",
     "src/renderer/src/**/*.tsx",
     "src/shared/**/*.ts"
-  ],
-  "exclude": [
-    "src/renderer/src/componentes/ai/AiRoutingSection.tsx",
-    "src/shared/ai-runtime-contract.ts",
-    "src/shared/ia-routing-contract.ts"
   ]
 }

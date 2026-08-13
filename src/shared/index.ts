@@ -1,5 +1,4 @@
 export * from './types'
-export * from './constants'
 export * from './anamnese'
 export * from './clinical/registro'
 export * from './extensions'

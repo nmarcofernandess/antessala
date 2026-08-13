@@ -22,15 +22,5 @@
     "src/shared/**/*.ts",
     "electron.vite.config.ts",
     "tests/e2e/**/*.ts"
-  ],
-  "exclude": [
-    "src/main/ia/discovery.ts",
-    "src/main/ia/readiness.ts",
-    "src/main/ia/route-config.ts",
-    "src/main/ia/routing.ts",
-    "src/main/ia/session-processor.ts",
-    "src/main/ia/system-prompt.ts",
-    "src/shared/ai-runtime-contract.ts",
-    "src/shared/ia-routing-contract.ts"
   ]
 }

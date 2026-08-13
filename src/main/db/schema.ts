@@ -223,7 +223,7 @@ DO $$ BEGIN
 EXCEPTION WHEN others THEN NULL;
 END $$;
 
--- Allow 'decayed' importance for cron lazy-decay (Step 5)
+-- Allow 'decayed' importance for a future explicit decay policy.
 DO $$ BEGIN
   ALTER TABLE knowledge_chunks DROP CONSTRAINT IF EXISTS knowledge_chunks_importance_check;
   ALTER TABLE knowledge_chunks ADD CONSTRAINT knowledge_chunks_importance_check

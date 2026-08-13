@@ -40,21 +40,21 @@ export function PageHeader({
     setCanGoBack(window.history.length > 1)
     // We can't reliably detect forward history in SPA,
     // but we track it via a session counter
-    const fwd = sessionStorage.getItem('ef-nav-forward')
+    const fwd = sessionStorage.getItem('antessala-nav-forward')
     setCanGoForward(fwd ? parseInt(fwd) > 0 : false)
   }, [location])
 
   const goBack = useCallback(() => {
     // Track that we went back (so forward becomes available)
-    const fwd = parseInt(sessionStorage.getItem('ef-nav-forward') ?? '0')
-    sessionStorage.setItem('ef-nav-forward', String(fwd + 1))
+    const fwd = parseInt(sessionStorage.getItem('antessala-nav-forward') ?? '0')
+    sessionStorage.setItem('antessala-nav-forward', String(fwd + 1))
     navigate(-1)
   }, [navigate])
 
   const goForward = useCallback(() => {
-    const fwd = parseInt(sessionStorage.getItem('ef-nav-forward') ?? '0')
+    const fwd = parseInt(sessionStorage.getItem('antessala-nav-forward') ?? '0')
     if (fwd > 0) {
-      sessionStorage.setItem('ef-nav-forward', String(fwd - 1))
+      sessionStorage.setItem('antessala-nav-forward', String(fwd - 1))
     }
     navigate(1)
   }, [navigate])
@@ -63,12 +63,12 @@ export function PageHeader({
   useEffect(() => {
     const handleClick = () => {
       // Any link click resets forward stack
-      sessionStorage.setItem('ef-nav-forward', '0')
+      sessionStorage.setItem('antessala-nav-forward', '0')
     }
     // Listen for popstate to differentiate back/forward from link clicks
     // We clear forward on regular navigations via a flag
-    window.addEventListener('flowkit:nav-link', handleClick)
-    return () => window.removeEventListener('flowkit:nav-link', handleClick)
+    window.addEventListener('antessala:nav-link', handleClick)
+    return () => window.removeEventListener('antessala:nav-link', handleClick)
   }, [])
 
   const iaStore = useIaStore()

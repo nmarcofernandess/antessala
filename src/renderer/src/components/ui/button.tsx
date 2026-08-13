@@ -26,7 +26,6 @@ const buttonVariants = cva(
         lg: "h-10 rounded-md px-8",
         icon: "h-9 w-9",
         // Additive: required by vendored ai-elements (message.tsx branch buttons).
-        // Purely new size; does not alter any existing FlowKit variant/size.
         "icon-sm": "size-8",
       },
     },

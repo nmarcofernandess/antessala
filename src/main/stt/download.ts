@@ -93,7 +93,7 @@ export async function transcribeWavBase64(input: {
     throw new Error('Audio muito longo para ditado local. Grave ate 60 segundos por vez.')
   }
   if (input.post_process) {
-    throw new Error('Ditado local do FlowKit é transcript-first: post_process ainda nao esta implementado.')
+    throw new Error('O ditado preservado é transcript-first: post_process ainda não está implementado.')
   }
   if (!isSttModelDownloaded(modelId)) {
     throw new Error(`Modelo de ditado local nao instalado: ${modelId}`)

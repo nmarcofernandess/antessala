@@ -188,7 +188,6 @@ const PAGE_HINTS: Record<string, string> = {
     'dashboard': '\nUsuario esta no painel principal.',
     'memoria': '\nUsuario esta gerenciando conhecimento e memorias.',
     'ia': '\nChat dedicado com IA.',
-    'galeria': '\nUsuario esta na galeria de imagens.',
     'configuracoes': '\nUsuario esta nas configuracoes.',
 }
 
@@ -208,6 +207,6 @@ export interface AlertaCore {
 }
 
 export async function coreAlerts(): Promise<AlertaCore[]> {
-    // No CLT-specific alerts in FlowKit generic mode
+    // Nenhum alerta de domínio é produzido por esta camada dormente.
     return []
 }

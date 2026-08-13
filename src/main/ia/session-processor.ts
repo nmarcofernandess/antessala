@@ -21,7 +21,7 @@ const SESSION_MAX_SOURCES = 50
 // =============================================================================
 
 /**
- * Extrai texto limpo das mensagens (só usuario + assistente, sem tool_calls JSON).
+ * Extrai texto limpo das mensagens de usuário e assistente.
  */
 export function sanitizeTranscript(mensagens: IaMensagem[]): string {
   const parts: string[] = []
@@ -29,10 +29,8 @@ export function sanitizeTranscript(mensagens: IaMensagem[]): string {
     if (m.papel === 'tool_result') continue
     const label = m.papel === 'usuario' ? 'Usuario' : 'Assistente'
     const textoBase = m.conteudo?.trim() ?? ''
-    const anexosMarcadores = m.anexos?.map(a => `[Anexo: ${a.nome} (${a.mime_type})]`).join(' ') ?? ''
-    const linha = [textoBase, anexosMarcadores].filter(Boolean).join(' ')
-    if (!linha) continue
-    parts.push(`${label}: ${linha}`)
+    if (!textoBase) continue
+    parts.push(`${label}: ${textoBase}`)
   }
   return parts.join('\n')
 }
