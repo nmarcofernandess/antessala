@@ -12,15 +12,14 @@
  * em ml por quilo conforme o perfil.
  */
 
+import type { ReactNode } from 'react'
 import {
   Annoyed,
-  Apple,
   Armchair,
   BatteryFull,
   BatteryLow,
   BatteryMedium,
   BatteryWarning,
-  Bed,
   Bike,
   Brain,
   CircleDot,
@@ -35,7 +34,6 @@ import {
   Laugh,
   Meh,
   Moon,
-  Pill,
   PlugZap,
   Scale,
   Smile,
@@ -44,26 +42,160 @@ import {
   Trophy,
   Utensils,
   Wind,
+  type LucideIcon,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import {
   BarraScore,
-  CartaoDado,
   ChipStatus,
   CorpoWidget,
   Escolha,
   EtiquetaSecao,
-  GradeDados,
   Metrica,
   Intensidade as BarrasIntensidade,
   Regua,
   SliderStatus,
+  STATUS,
   ValorHero,
   type Opcao,
   type Status,
 } from '../primitivos'
+
+/* ══════════════════════════════════════════════════════════
+   COMPOSIÇÃO — três formas que se repetem nos oito widgets
+
+   Uma seção rotulada, um painel de duas células com rodapé comum e um
+   fechamento de score. Repetir só essas três é o que dá ritmo vertical
+   constante ao conjunto: quem aprende a ler um widget já leu os oito.
+   ══════════════════════════════════════════════════════════ */
+
+/** Seção rotulada: etiqueta à esquerda, um aparte à direita, conteúdo abaixo. */
+function Secao({
+  icone: Icone,
+  titulo,
+  aparte,
+  children,
+  className,
+}: {
+  icone?: LucideIcon
+  titulo: string
+  aparte?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={className}>
+      <div className="flex min-h-5 items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-1.5">
+          {Icone && <Icone className="size-3.5 shrink-0 text-muted-foreground" />}
+          <EtiquetaSecao>{titulo}</EtiquetaSecao>
+        </span>
+        {aparte}
+      </div>
+      <div className="mt-2.5">{children}</div>
+    </section>
+  )
+}
+
+/**
+ * Duas células de naturezas diferentes sob um rodapé que vale para as duas.
+ *
+ * É a resposta ao degrau: dois cartões lado a lado com conteúdos de alturas
+ * diferentes nunca fecham na mesma linha. Um cartão só, dividido por dentro,
+ * fecha sempre — e o rodapé ganha a largura inteira em vez de espremer um
+ * chip que quebra linha.
+ *
+ * `classeGrade` chega como literal porque o Tailwind lê o código-fonte: uma
+ * classe montada em tempo de execução não existiria na folha de estilo.
+ */
+function PainelDuplo({
+  classeGrade,
+  principal,
+  lateral,
+  rodape,
+}: {
+  classeGrade: string
+  principal: ReactNode
+  lateral: ReactNode
+  rodape?: ReactNode
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <div className={cn('grid divide-y sm:divide-x sm:divide-y-0', classeGrade)}>
+        <div className="px-4 py-3.5">{principal}</div>
+        <div className="px-4 py-3.5">{lateral}</div>
+      </div>
+      {rodape && (
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t bg-muted/25 px-4 py-2.5">
+          {rodape}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** O número do score ao lado da escala inteira, para se ver onde ele caiu. */
+function LinhaScore({
+  score,
+  max,
+  faixas,
+  className,
+}: {
+  score: number
+  max: number
+  faixas: { ate: number; nome: string; status: Status }[]
+  className?: string
+}) {
+  const faixa = faixas.find((f) => score <= f.ate) ?? faixas[faixas.length - 1]
+  return (
+    <div className={cn('flex items-center gap-5', className)}>
+      <span
+        className={cn(
+          'font-mono text-[34px] font-light leading-none tabular-nums',
+          STATUS[faixa.status].texto,
+        )}
+      >
+        {score}
+      </span>
+      <BarraScore valor={score} max={max} faixas={faixas} className="min-w-0 flex-1" />
+    </div>
+  )
+}
+
+/** Fechamento de score quando ele não está grudado no bloco que o gerou. */
+function PainelScore({
+  titulo,
+  aparte,
+  score,
+  max,
+  faixas,
+  nota,
+}: {
+  titulo: string
+  aparte?: ReactNode
+  score: number
+  max: number
+  faixas: { ate: number; nome: string; status: Status }[]
+  nota: string
+}) {
+  const faixa = faixas.find((f) => score <= f.ate) ?? faixas[faixas.length - 1]
+  return (
+    <div className={cn('overflow-hidden rounded-xl border bg-card', STATUS[faixa.status].borda)}>
+      <div className="px-4 pb-3.5 pt-3">
+        <div className="flex items-center justify-between gap-3">
+          <EtiquetaSecao>{titulo}</EtiquetaSecao>
+          {aparte}
+        </div>
+        <LinhaScore score={score} max={max} faixas={faixas} className="mt-3" />
+      </div>
+      <p className="border-t bg-muted/25 px-4 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+        {nota}
+      </p>
+    </div>
+  )
+}
 
 /* ══════════════════════════════════════════════════════════
    SONO — Índice de Gravidade de Insônia, versão curta
@@ -110,6 +242,37 @@ const FAIXAS_ISI: { ate: number; nome: string; status: Status }[] = [
   { ate: 6, nome: 'Atenção', status: 'adequado' },
   { ate: 9, nome: 'Insônia provável', status: 'atencao' },
   { ate: 12, nome: 'Insônia clínica provável', status: 'critico' },
+]
+
+/** As três perguntas que somam o índice, na ordem em que são feitas. */
+const PERGUNTAS_ISI: {
+  chave: string
+  titulo: string
+  opcoes: Opcao<Likert>[]
+  ler: (d: DadosSono) => Likert
+  gravar: (d: DadosSono, v: Likert) => DadosSono
+}[] = [
+  {
+    chave: 'satisfacao',
+    titulo: 'Satisfação com o sono',
+    opcoes: SATISFACAO,
+    ler: (d) => d.satisfacao,
+    gravar: (d, v) => ({ ...d, satisfacao: v }),
+  },
+  {
+    chave: 'interferencia',
+    titulo: 'Quanto atrapalha o dia',
+    opcoes: INTERFERENCIA,
+    ler: (d) => d.interferenciaDiurna,
+    gravar: (d, v) => ({ ...d, interferenciaDiurna: v }),
+  },
+  {
+    chave: 'preocupacao',
+    titulo: 'Preocupação com o sono',
+    opcoes: PREOCUPACAO,
+    ler: (d) => d.preocupacao,
+    gravar: (d, v) => ({ ...d, preocupacao: v }),
+  },
 ]
 
 export function calcularIsi(d: DadosSono): number {
@@ -160,72 +323,58 @@ export function WidgetSono({
         />
       </ValorHero>
 
-      <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <EtiquetaSecao>Como ele avalia o próprio sono</EtiquetaSecao>
-          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+      {/*
+        As três perguntas e o índice que elas somam moram no mesmo cartão. O
+        score é o rodapé da conversa, não um cartão à parte — e cada pergunta
+        mostra quantos pontos entregou, então a soma se lê na vertical.
+      */}
+      <div className={cn('overflow-hidden rounded-xl border bg-card', STATUS[faixa.status].borda)}>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-4 py-3">
+          <span className="text-[13px] font-medium">Como ele avalia o próprio sono</span>
+          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             ISI-3 · três perguntas
           </span>
         </div>
 
-        <div className="mt-3 space-y-4">
-          <PerguntaLikert
-            titulo="Satisfação com o sono"
-            opcoes={SATISFACAO}
-            valor={dados.satisfacao}
-            onChange={(v) => onChange({ ...dados, satisfacao: v })}
-          />
-          <PerguntaLikert
-            titulo="Quanto atrapalha o dia"
-            opcoes={INTERFERENCIA}
-            valor={dados.interferenciaDiurna}
-            onChange={(v) => onChange({ ...dados, interferenciaDiurna: v })}
-          />
-          <PerguntaLikert
-            titulo="Preocupação com o sono"
-            opcoes={PREOCUPACAO}
-            valor={dados.preocupacao}
-            onChange={(v) => onChange({ ...dados, preocupacao: v })}
-          />
+        <div className="divide-y">
+          {PERGUNTAS_ISI.map((p) => {
+            const valor = p.ler(dados)
+            const opcao = p.opcoes.find((o) => o.valor === valor)
+            return (
+              <div key={p.chave} className="px-4 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <EtiquetaSecao>{p.titulo}</EtiquetaSecao>
+                  <span
+                    className={cn(
+                      'shrink-0 font-mono text-[11px] tabular-nums',
+                      STATUS[opcao?.status ?? 'neutro'].texto,
+                    )}
+                  >
+                    {valor} {valor === 1 ? 'ponto' : 'pontos'}
+                  </span>
+                </div>
+                <Escolha
+                  className="mt-2.5"
+                  opcoes={p.opcoes}
+                  valor={valor}
+                  onChange={(v) => onChange(p.gravar(dados, v))}
+                  colunas={5}
+                />
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="border-t bg-muted/25 px-4 py-3.5">
+          <LinhaScore score={score} max={12} faixas={FAIXAS_ISI} />
+          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            {score >= 7
+              ? 'A partir de sete pontos o DietFlow sugere aplicar o questionário completo, de sete itens.'
+              : 'Soma das três respostas acima. A versão completa, de sete itens, entra quando o score passa de seis.'}
+          </p>
         </div>
       </div>
-
-      <CartaoDado
-        icone={Bed}
-        titulo="Índice de gravidade da insônia"
-        valor={score}
-        unidade={`de 12 · ${faixa.nome.toLowerCase()}`}
-        status={faixa.status}
-        rodape={
-          score >= 7
-            ? 'A partir de sete pontos o DietFlow sugere aplicar o questionário completo, de sete itens.'
-            : 'Soma das três respostas acima. A versão completa, de sete itens, entra quando o score passa de seis.'
-        }
-      >
-        <BarraScore valor={score} max={12} faixas={FAIXAS_ISI} className="mt-1" />
-      </CartaoDado>
     </CorpoWidget>
-  )
-}
-
-function PerguntaLikert({
-  titulo,
-  opcoes,
-  valor,
-  onChange,
-}: {
-  titulo: string
-  opcoes: Opcao<Likert>[]
-  valor: Likert
-  onChange: (v: Likert) => void
-}) {
-  return (
-    <div>
-      <p className="text-[13px] font-medium">{titulo}</p>
-      <div className="mt-2">
-        <Escolha opcoes={opcoes} valor={valor} onChange={onChange} colunas={5} />
-      </div>
-    </div>
   )
 }
 
@@ -269,6 +418,9 @@ const SINTOMAS_GI = [
   { chave: 'dorAbdominal' as const, rotulo: 'Dor abdominal', icone: Flame, detalhe: 'Dor ou cólica' },
 ]
 
+/** Os mesmos quatro tons do primitivo de intensidade, para o ícone acompanhar. */
+const TONS_INTENSIDADE: Status[] = ['neutro', 'adequado', 'atencao', 'critico']
+
 const FAIXAS_GI: { ate: number; nome: string; status: Status }[] = [
   { ate: 3, nome: 'Normal', status: 'ideal' },
   { ate: 6, nome: 'Atenção', status: 'adequado' },
@@ -291,57 +443,48 @@ export function WidgetBristol({
   onChange: (d: DadosBristol) => void
 }) {
   const score = calcularGi(dados)
-  const faixa = FAIXAS_GI.find((f) => score <= f.ate)!
   const tipoAtual = BRISTOL.find((b) => b.valor === dados.tipo)!
 
   return (
-    <CorpoWidget>
-      <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <EtiquetaSecao>Escala de Bristol</EtiquetaSecao>
-          <ChipStatus status={tipoAtual.status}>{tipoAtual.rotulo}</ChipStatus>
-        </div>
-        <div className="mt-3">
-          <Regua
-            passos={BRISTOL}
-            valor={dados.tipo}
-            onChange={(v) => onChange({ ...dados, tipo: v })}
-          />
-        </div>
-      </div>
+    <CorpoWidget className="gap-5">
+      {/* O chip diz o julgamento; a régua, logo abaixo, diz o tipo e a descrição.
+          Repetir "Tipo 2" nos dois lugares seria gastar a linha à toa. */}
+      <Secao titulo="Escala de Bristol" aparte={<ChipStatus status={tipoAtual.status} />}>
+        <Regua
+          passos={BRISTOL}
+          valor={dados.tipo}
+          onChange={(v) => onChange({ ...dados, tipo: v })}
+        />
+      </Secao>
 
-      <div>
-        <EtiquetaSecao>Frequência</EtiquetaSecao>
-        <div className="mt-2">
-          <Escolha
-            opcoes={FREQUENCIA}
-            valor={dados.frequencia}
-            onChange={(v) => onChange({ ...dados, frequencia: v })}
-            colunas={3}
-          />
-        </div>
-      </div>
+      <Secao titulo="Frequência">
+        <Escolha
+          opcoes={FREQUENCIA}
+          valor={dados.frequencia}
+          onChange={(v) => onChange({ ...dados, frequencia: v })}
+          colunas={3}
+        />
+      </Secao>
 
-      <div>
-        <EtiquetaSecao>Sintomas associados</EtiquetaSecao>
-        <div className="mt-2 space-y-2">
+      {/* Uma linha por sintoma, com as barras todas na mesma coluna: três
+          medidas da mesma coisa se comparam de relance quando se alinham. */}
+      <Secao titulo="Sintomas associados">
+        <div className="divide-y overflow-hidden rounded-xl border bg-card">
           {SINTOMAS_GI.map((s) => {
             const nivel = dados.sintomas[s.chave]
+            const Icone = s.icone
             return (
               <div
                 key={s.chave}
-                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-xl border bg-card px-4 py-3"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-2.5"
               >
-                <span className="flex items-center gap-2.5">
-                  <s.icone
-                    className={cn(
-                      'size-4',
-                      nivel === 0 ? 'text-muted-foreground/60' : 'text-warning',
-                    )}
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Icone
+                    className={cn('size-4 shrink-0', STATUS[TONS_INTENSIDADE[nivel]].texto)}
                   />
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-medium leading-tight">{s.rotulo}</span>
-                    <span className="block text-[11px] text-muted-foreground">{s.detalhe}</span>
+                  <span className="min-w-0 truncate text-[13px] leading-tight">
+                    <span className="font-medium">{s.rotulo}</span>
+                    <span className="text-muted-foreground"> · {s.detalhe}</span>
                   </span>
                 </span>
                 <BarrasIntensidade
@@ -354,25 +497,25 @@ export function WidgetBristol({
             )
           })}
         </div>
-      </div>
+      </Secao>
 
-      <CartaoDado
+      <PainelScore
         titulo="GI Score"
-        valor={score}
-        unidade={`de 12 · ${faixa.nome.toLowerCase()}`}
-        status={faixa.status}
-        rodape="Tipo alterado da escala soma três pontos. Cada sintoma soma a própria intensidade, de zero a três."
-      >
-        <BarraScore valor={score} max={12} faixas={FAIXAS_GI} className="mt-1" />
-      </CartaoDado>
-
-      <Textarea
-        rows={2}
-        value={dados.observacao ?? ''}
-        placeholder="Observação livre"
-        onChange={(e) => onChange({ ...dados, observacao: e.target.value })}
-        className="text-[13px]"
+        score={score}
+        max={12}
+        faixas={FAIXAS_GI}
+        nota="Tipo alterado da escala soma três pontos. Cada sintoma soma a própria intensidade, de zero a três."
       />
+
+      <Secao titulo="Observação">
+        <Textarea
+          rows={2}
+          value={dados.observacao ?? ''}
+          placeholder="Observação livre"
+          onChange={(e) => onChange({ ...dados, observacao: e.target.value })}
+          className="text-[13px]"
+        />
+      </Secao>
     </CorpoWidget>
   )
 }
@@ -455,48 +598,50 @@ export function WidgetHidratacao({
         />
       </ValorHero>
 
-      <GradeDados>
-        <CartaoDado
-          icone={Droplet}
-          titulo="Perfil de atividade"
-          rodape={`${faixa.min} a ${faixa.max} ml por quilo`}
-        >
-          <Escolha
-            opcoes={(Object.keys(FAIXA_PERFIL) as Perfil[]).map((p) => ({
-              valor: p,
-              rotulo: FAIXA_PERFIL[p].nome,
-              icone: ICONE_PERFIL[p],
-            }))}
-            valor={dados.perfil}
-            onChange={(v) => onChange({ ...dados, perfil: v })}
-            colunas={3}
-          />
-        </CartaoDado>
-
-        <CartaoDado
-          icone={Scale}
-          titulo="Peso"
-          status={status}
-          rodape={
-            <span className="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                Meta: {metaMin.toFixed(1)} a {metaMax.toFixed(1)} L
-              </span>
-              <ChipStatus status={status}>{distancia}</ChipStatus>
-            </span>
-          }
-        >
-          <div className="flex items-baseline gap-1.5">
-            <Input
-              type="number"
-              value={dados.peso}
-              onChange={(e) => onChange({ ...dados, peso: Number(e.target.value) })}
-              className="h-9 w-24 font-mono text-lg tabular-nums"
+      {/* Perfil e peso são as duas entradas que produzem a meta — e a meta que
+          elas produzem é o rodapé das duas, não o rodapé de uma delas. */}
+      <PainelDuplo
+        classeGrade="sm:grid-cols-[minmax(0,1fr)_11rem]"
+        principal={
+          <Secao icone={Droplet} titulo="Perfil de atividade">
+            <Escolha
+              opcoes={(Object.keys(FAIXA_PERFIL) as Perfil[]).map((p) => ({
+                valor: p,
+                rotulo: FAIXA_PERFIL[p].nome,
+                icone: ICONE_PERFIL[p],
+              }))}
+              valor={dados.perfil}
+              onChange={(v) => onChange({ ...dados, perfil: v })}
+              colunas={3}
             />
-            <span className="text-xs text-muted-foreground">kg</span>
-          </div>
-        </CartaoDado>
-      </GradeDados>
+          </Secao>
+        }
+        lateral={
+          <Secao icone={Scale} titulo="Peso">
+            <div className="flex items-baseline gap-1.5">
+              <Input
+                type="number"
+                value={dados.peso}
+                onChange={(e) => onChange({ ...dados, peso: Number(e.target.value) })}
+                className="h-9 w-20 font-mono text-lg tabular-nums"
+              />
+              <span className="text-xs text-muted-foreground">kg</span>
+            </div>
+          </Secao>
+        }
+        rodape={
+          <>
+            <span className="text-[11.5px] text-muted-foreground">
+              Meta de{' '}
+              <span className="font-mono tabular-nums text-foreground">
+                {metaMin.toFixed(1)} a {metaMax.toFixed(1)} L
+              </span>{' '}
+              por dia · {faixa.min} a {faixa.max} ml por quilo
+            </span>
+            <ChipStatus status={status}>{distancia}</ChipStatus>
+          </>
+        }
+      />
     </CorpoWidget>
   )
 }
@@ -535,24 +680,25 @@ export function WidgetAdesao({
   const status: Status =
     dados.seguiu === 'sim' ? 'ideal' : dados.seguiu === 'parcial' ? 'atencao' : 'critico'
 
-  const impacto =
+  // Mesmo número de sempre, só separado da unidade: o valor fica em mono
+  // grande e o "g" recua, como em todo valor hero do repertório.
+  const absoluto = Math.abs(gramas)
+  const impactoValor =
     gramas === 0
-      ? 'Sem impacto'
-      : `${gramas > 0 ? '+' : '−'}${Math.abs(gramas) >= 1000 ? `${(Math.abs(gramas) / 1000).toFixed(1)} kg` : `${Math.abs(gramas)} g`}`
+      ? null
+      : `${gramas > 0 ? '+' : '−'}${absoluto >= 1000 ? (absoluto / 1000).toFixed(1) : absoluto}`
+  const impactoUnidade = absoluto >= 1000 ? 'kg' : 'g'
 
   return (
-    <CorpoWidget>
-      <div>
-        <p className="text-sm font-medium">O paciente seguiu o plano?</p>
-        <div className="mt-2.5">
-          <Escolha
-            opcoes={SEGUIU}
-            valor={dados.seguiu}
-            onChange={(v) => onChange({ ...dados, seguiu: v })}
-            colunas={3}
-          />
-        </div>
-      </div>
+    <CorpoWidget className="gap-5">
+      <Secao titulo="O paciente seguiu o plano?">
+        <Escolha
+          opcoes={SEGUIU}
+          valor={dados.seguiu}
+          onChange={(v) => onChange({ ...dados, seguiu: v })}
+          colunas={3}
+        />
+      </Secao>
 
       <ValorHero
         valor={`${dados.diferencaCalorica > 0 ? '+' : ''}${dados.diferencaCalorica}`}
@@ -576,24 +722,58 @@ export function WidgetAdesao({
         />
       </ValorHero>
 
-      <GradeDados>
-        <CartaoDado icone={Utensils} titulo="Período considerado" rodape="Janela do cálculo">
-          <Escolha
-            opcoes={[7, 14, 30].map((d) => ({ valor: d as 7 | 14 | 30, rotulo: `${d} dias` }))}
-            valor={dados.diasPeriodo}
-            onChange={(v) => onChange({ ...dados, diasPeriodo: v })}
-            colunas={3}
-          />
-        </CartaoDado>
+      {/* A janela escolhida e o resultado que ela produz, com a conta inteira
+          no rodapé — entrada e saída no mesmo cartão, sem degrau entre elas. */}
+      <PainelDuplo
+        classeGrade="sm:grid-cols-[minmax(0,1fr)_15rem]"
+        principal={
+          <Secao icone={Utensils} titulo="Período considerado">
+            <Escolha
+              opcoes={[7, 14, 30].map((d) => ({ valor: d as 7 | 14 | 30, rotulo: `${d} dias` }))}
+              valor={dados.diasPeriodo}
+              onChange={(v) => onChange({ ...dados, diasPeriodo: v })}
+              colunas={3}
+            />
+          </Secao>
+        }
+        lateral={
+          <Secao icone={Scale} titulo="Impacto estimado no peso">
+            {impactoValor ? (
+              <span className="flex items-baseline gap-1.5">
+                <span
+                  className={cn(
+                    'font-mono text-[26px] font-light leading-none tabular-nums',
+                    STATUS[status].texto,
+                  )}
+                >
+                  {impactoValor}
+                </span>
+                <span className="text-xs text-muted-foreground">{impactoUnidade}</span>
+              </span>
+            ) : (
+              <span className="text-[13px] text-muted-foreground">Sem impacto</span>
+            )}
+          </Secao>
+        }
+        rodape={
+          <span className="text-[11.5px] text-muted-foreground">
+            <span className="font-mono tabular-nums text-foreground">
+              {kcalTotal.toLocaleString('pt-BR')} kcal
+            </span>{' '}
+            no período, a {KCAL_POR_KG.toLocaleString('pt-BR')} kcal por quilo.
+          </span>
+        }
+      />
 
-        <CartaoDado
-          icone={Scale}
-          titulo="Impacto estimado no peso"
-          valor={impacto}
-          status={status}
-          rodape={`${kcalTotal.toLocaleString('pt-BR')} kcal no período, a ${KCAL_POR_KG.toLocaleString('pt-BR')} kcal por quilo.`}
+      <Secao titulo="Observação">
+        <Textarea
+          rows={2}
+          value={dados.observacao ?? ''}
+          placeholder="Observação livre"
+          onChange={(e) => onChange({ ...dados, observacao: e.target.value })}
+          className="text-[13px]"
         />
-      </GradeDados>
+      </Secao>
     </CorpoWidget>
   )
 }
@@ -620,42 +800,62 @@ export function WidgetRotina({
   dados: DadosRotina
   onChange: (d: DadosRotina) => void
 }) {
+  const horarios = dados.registros.map((r) => r.horario).filter((h): h is string => Boolean(h))
+  const janela =
+    horarios.length > 1 ? `${horarios[0]} às ${horarios[horarios.length - 1]}` : undefined
+
   return (
     <CorpoWidget>
-      <EtiquetaSecao>{dados.registros.length} momentos do dia</EtiquetaSecao>
-
-      <div className="relative space-y-2 pl-5">
-        <span className="absolute bottom-2 left-1.5 top-2 w-px bg-border" aria-hidden />
-        {dados.registros.map((r) => (
-          <div key={r.id} className="relative rounded-lg border bg-card px-4 py-3">
-            <span
-              className="absolute -left-[14px] top-5 size-2 rounded-full border-2 border-background bg-muted-foreground"
-              aria-hidden
-            />
-            <div className="flex flex-wrap items-baseline gap-x-3">
-              <span className="text-[13px] font-medium">{r.titulo}</span>
-              {r.horario && (
+      <Secao
+        titulo={`${dados.registros.length} momentos do dia`}
+        aparte={
+          janela && (
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              {janela}
+            </span>
+          )
+        }
+      >
+        {/*
+          Uma linha por momento: horário, nome e o que se come, tudo na mesma
+          altura. O campo perde a moldura e ganha a coluna — o dia se lê como
+          uma agenda, não como seis formulários empilhados.
+        */}
+        {/* A régua fica fora do cartão: `overflow-hidden` cortaria as bolinhas. */}
+        <div className="relative pl-5">
+          <span className="absolute bottom-5 left-[3px] top-5 w-px bg-border" aria-hidden />
+          <ul className="divide-y rounded-xl border bg-card">
+            {dados.registros.map((r) => (
+              <li
+                key={r.id}
+                className="relative grid items-center gap-x-3 gap-y-0.5 px-3 py-2 sm:grid-cols-[2.75rem_7.5rem_minmax(0,1fr)]"
+              >
+                <span
+                  className="absolute -left-[20px] top-1/2 size-2 -translate-y-1/2 rounded-full border-2 border-background bg-muted-foreground"
+                  aria-hidden
+                />
                 <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                   {r.horario}
                 </span>
-              )}
-            </div>
-            <Input
-              value={r.descricao}
-              placeholder="O que ele come nesse momento"
-              onChange={(e) =>
-                onChange({
-                  ...dados,
-                  registros: dados.registros.map((x) =>
-                    x.id === r.id ? { ...x, descricao: e.target.value } : x,
-                  ),
-                })
-              }
-              className="mt-2 h-8 text-[13px]"
-            />
-          </div>
-        ))}
-      </div>
+                <span className="truncate text-[13px] font-medium">{r.titulo}</span>
+                <Input
+                  value={r.descricao}
+                  placeholder="O que ele come nesse momento"
+                  onChange={(e) =>
+                    onChange({
+                      ...dados,
+                      registros: dados.registros.map((x) =>
+                        x.id === r.id ? { ...x, descricao: e.target.value } : x,
+                      ),
+                    })
+                  }
+                  className="h-8 rounded-md border-transparent bg-transparent px-2 text-[13px] shadow-none hover:border-input focus-visible:border-input"
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Secao>
     </CorpoWidget>
   )
 }
@@ -677,6 +877,37 @@ export type DadosProblemas = {
   observacao?: string
 }
 
+/**
+ * Cabeçalho de colunas da tabela. Existe para que o dado não precise carregar
+ * o próprio rótulo em cada linha: com a coluna nomeada, "desde 2018" vira
+ * "2018" e as três linhas passam a se comparar em vez de se repetir.
+ */
+function CabecalhoColunas({
+  classeGrade,
+  colunas,
+  alinharFim,
+}: {
+  classeGrade: string
+  colunas: string[]
+  /** A última coluna termina na direita — vale quando ela guarda um chip. */
+  alinharFim?: boolean
+}) {
+  return (
+    <div className={cn('hidden gap-x-4 border-b bg-muted/30 px-4 py-2 sm:grid', classeGrade)}>
+      {colunas.map((c, i) => (
+        <span
+          key={c}
+          className={alinharFim && i === colunas.length - 1 ? 'justify-self-end' : undefined}
+        >
+          <EtiquetaSecao>{c}</EtiquetaSecao>
+        </span>
+      ))}
+    </div>
+  )
+}
+
+const GRADE_PROBLEMAS = 'sm:grid-cols-[minmax(0,1fr)_5rem_5rem_9.5rem]'
+
 export function WidgetProblemas({
   dados,
   onChange,
@@ -687,55 +918,68 @@ export function WidgetProblemas({
   const controlados = dados.problemas.filter((p) => p.controlado).length
 
   return (
-    <CorpoWidget>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <EtiquetaSecao>{dados.problemas.length} condições relatadas</EtiquetaSecao>
-        <ChipStatus status={controlados === dados.problemas.length ? 'ideal' : 'atencao'}>
-          {controlados} de {dados.problemas.length} controladas
-        </ChipStatus>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border bg-card divide-y">
-        {dados.problemas.map((p) => (
-          <div key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
-            <Apple className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 text-[13px]">{p.nome}</span>
-            {p.codigo && (
-              <span className="rounded border px-1.5 font-mono text-[10.5px] text-muted-foreground">
-                {p.codigo}
-              </span>
-            )}
-            {p.desde && (
-              <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                desde {p.desde}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  ...dados,
-                  problemas: dados.problemas.map((x) =>
-                    x.id === p.id ? { ...x, controlado: !x.controlado } : x,
-                  ),
-                })
-              }
-            >
-              <ChipStatus status={p.controlado ? 'ideal' : 'atencao'}>
-                {p.controlado ? 'Controlada' : 'Não controlada'}
-              </ChipStatus>
-            </button>
+    <CorpoWidget className="gap-5">
+      <Secao
+        titulo="Condições relatadas"
+        aparte={
+          <ChipStatus status={controlados === dados.problemas.length ? 'ideal' : 'atencao'}>
+            {controlados} de {dados.problemas.length} controladas
+          </ChipStatus>
+        }
+      >
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <CabecalhoColunas
+            classeGrade={GRADE_PROBLEMAS}
+            colunas={['Condição', 'Código', 'Desde', 'Controle']}
+            alinharFim
+          />
+          <div className="divide-y">
+            {dados.problemas.map((p) => (
+              <div
+                key={p.id}
+                className={cn(
+                  'grid gap-x-4 gap-y-1.5 px-4 py-2.5 sm:items-center',
+                  GRADE_PROBLEMAS,
+                )}
+              >
+                <span className="min-w-0 truncate text-[13px]">{p.nome}</span>
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {p.codigo ?? '—'}
+                </span>
+                <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                  {p.desde ?? '—'}
+                </span>
+                <button
+                  type="button"
+                  className="justify-self-start sm:justify-self-end"
+                  onClick={() =>
+                    onChange({
+                      ...dados,
+                      problemas: dados.problemas.map((x) =>
+                        x.id === p.id ? { ...x, controlado: !x.controlado } : x,
+                      ),
+                    })
+                  }
+                >
+                  <ChipStatus status={p.controlado ? 'ideal' : 'atencao'}>
+                    {p.controlado ? 'Controlada' : 'Não controlada'}
+                  </ChipStatus>
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      </Secao>
 
-      <Textarea
-        rows={2}
-        value={dados.observacao ?? ''}
-        placeholder="Observação"
-        onChange={(e) => onChange({ ...dados, observacao: e.target.value })}
-        className="text-[13px]"
-      />
+      <Secao titulo="Observação">
+        <Textarea
+          rows={2}
+          value={dados.observacao ?? ''}
+          placeholder="Observação"
+          onChange={(e) => onChange({ ...dados, observacao: e.target.value })}
+          className="text-[13px]"
+        />
+      </Secao>
     </CorpoWidget>
   )
 }
@@ -753,33 +997,40 @@ export type DadosMedicacoesDietFlow = {
   naoUsa?: boolean
 }
 
+const GRADE_MEDICACOES = 'sm:grid-cols-[minmax(0,1.5fr)_5rem_6.5rem_minmax(0,1fr)]'
+
+/** A lista é somente leitura, como no DietFlow — `onChange` existe para o
+ *  registro de widgets tipar todos os oito da mesma forma. */
 export function WidgetMedicacoesDietFlow({
   dados,
-  onChange,
 }: {
   dados: DadosMedicacoesDietFlow
   onChange: (d: DadosMedicacoesDietFlow) => void
 }) {
   return (
     <CorpoWidget>
-      <EtiquetaSecao>{dados.medicacoes.length} em uso</EtiquetaSecao>
-
-      <div className="overflow-hidden rounded-lg border bg-card divide-y">
-        {dados.medicacoes.map((m) => (
-          <div key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
-            <Pill className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="min-w-[140px] flex-1 text-[13px] font-medium">{m.nome}</span>
-            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-              {m.dose}
-            </span>
-            <span className="text-[11px] text-muted-foreground">{m.frequencia}</span>
-            {m.motivo && (
-              <span className="w-full text-[11px] text-muted-foreground sm:w-auto">
-                para {m.motivo}
+      {/* Sem etiqueta de seção: o cabeçalho do cartão já nomeia a lista e as
+          colunas se explicam sozinhas. Uma etiqueta aqui só repetiria. */}
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <CabecalhoColunas
+          classeGrade={GRADE_MEDICACOES}
+          colunas={['Medicação', 'Dose', 'Frequência', 'Motivo']}
+        />
+        <div className="divide-y">
+          {dados.medicacoes.map((m) => (
+            <div
+              key={m.id}
+              className={cn('grid gap-x-4 gap-y-1.5 px-4 py-2.5 sm:items-center', GRADE_MEDICACOES)}
+            >
+              <span className="min-w-0 truncate text-[13px] font-medium">{m.nome}</span>
+              <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                {m.dose ?? '—'}
               </span>
-            )}
-          </div>
-        ))}
+              <span className="text-[11px] text-muted-foreground">{m.frequencia ?? '—'}</span>
+              <span className="truncate text-[11px] text-muted-foreground">{m.motivo ?? '—'}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </CorpoWidget>
   )
