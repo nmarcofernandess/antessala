@@ -451,13 +451,23 @@ stateDiagram-v2
 - MUST: cada conta possui um e-mail normalizado único, uma função e um estado.
 - MUST: o processo principal resolve o usuário pela sessão; o renderer nunca informa
   `actorId` confiável.
-- MUST: senhas usam salt aleatório e hash `scrypt`; DTO algum retorna hash ou salt.
+- MUST: senha nunca é persistida em claro nem atravessa DTO, log ou auditoria; a escolha e
+  prova do verificador pertencem ao Build.
 - MUST: o seed reconcilia uma conta sintética `FIXTURE` ativa por função; a administração
   gerencia somente contas `origin=ADMIN`.
 - MUST NOT: alterar por UI/IPC uma conta `FIXTURE` nem desativar ou trocar a função do último
   ADMIN ativo.
 - MUST NOT: paciente ou médico solicitante autenticar no MVP.
 - IF a conta estiver inativa, THEN login e toda sessão anterior falham.
+- MUST: revogação de conta, credencial, papel ou serviço impede commit e resposta protegida
+  ainda em voo sob a autoridade anterior.
+- MUST: qualquer concorrência administrativa preserva ao menos um `ADMIN` ativo.
+- MUST: lista, busca, contagem, paginação, detalhe, erro e identificador restrito não revelam
+  existência ou cardinalidade de outro serviço.
+- MUST: auditoria administrativa usa allowlist por ação e motivo categórico; não recebe
+  texto, field path, hash correlacionável ou conteúdo clínico.
+- MUST: append-only vale nas operações normais do aplicativo, não contra acesso direto ao
+  diretório local do PGlite.
 - IF uma função tentar comando proibido, THEN o handler retorna `FORBIDDEN` e registra a
   tentativa sem incluir dado clínico no log.
 
@@ -553,7 +563,10 @@ stateDiagram-v2
 - MUST: solicitante não acompanha o caso completo antes do resultado; lê apenas pendência
   explicitamente atribuída ao próprio serviço, resultado final e estado da entrega.
 - MUST: mudança do serviço solicitante revoga futuras leituras e comandos do serviço
-  anterior e replay algum devolve projeção antiga.
+  anterior, expira stores/worklists e impede resposta em voo ou replay de devolver projeção
+  antiga.
+- MUST: recepção lê somente status e opera entrega selada; PDF legível fica restrito ao
+  anestesiologista e ao solicitante do serviço correto.
 - MUST NOT: ADMIN herdar acesso clínico por ser administrador.
 - IF houver pendência aberta, THEN a avaliação não conclui.
 - IF o solicitante confirmar recebimento, THEN o caso chega a
@@ -592,11 +605,14 @@ stateDiagram-v2
 
 - MUST: boot, login, fixtures, catálogos e fluxo clínico funcionam sem rede.
 - MUST: renderer bloqueia carregamento remoto por padrão.
-- MUST: uso cloud ocorre somente por ação explícita, com propósito e destino informados.
+- MUST: uso cloud ocorre somente por ação explícita, finalidade fechada, categorias mínimas
+  informadas e dados sintéticos; chat livre e histórico integral não são capacidades.
 - MUST: backend legado de knowledge não permanece genericamente alcançável; o Build futuro
   deverá expor apenas as capacidades aprovadas pelo novo Analyst.
 - MUST: dados, logs e provas usam somente pessoas sintéticas.
 - MUST NOT: token de IA ou senha aparecer em log, exportação ou auditoria.
+- MUST NOT: path arbitrário do renderer compor leitura local e egress cloud.
+- MUST: erro público usa código opaco e correlação, sem stack, SQL, path ou mensagem externa.
 
 ## Architecture Risks
 
@@ -667,6 +683,8 @@ as dependências. Nenhum deles substitui Spec, Plan ou primeiro teste TDD.
 - [ ] ADMIN cria, desativa, reativa, troca função e redefine senha de uma conta
   `origin=ADMIN`; contas `FIXTURE` rejeitam mutação direta.
 - [ ] O último ADMIN ativo não pode ser desativado nem movido para outro papel.
+- [ ] Duas mutações administrativas concorrentes não removem todos os administradores.
+- [ ] Revogar conta/papel/serviço durante chamada impede commit e resposta protegida antiga.
 - [ ] Uma chamada IPC proibida falha mesmo sem passar pela interface.
 - [ ] `RECEPCAO` abre dois casos com o mesmo nome e protocolos distintos.
 - [ ] `ENFERMAGEM` finaliza a anamnese somente quando todos os campos bloqueantes foram tratados.
@@ -684,9 +702,11 @@ as dependências. Nenhum deles substitui Spec, Plan ou primeiro teste TDD.
 - [ ] `ReturnRequest` contém o requisito operacional completo e o início do retorno fecha o
   encontro de origem como `COMPLETED/RETURN_STARTED`.
 - [ ] `SOLICITANTE` lê apenas resultados do próprio serviço e confirma recebimento.
+- [ ] Solicitante não infere outro serviço por contagem, busca, paginação, código ou erro.
 - [ ] Resultado `FINAL` não muda e uma segunda finalização é rejeitada.
 - [ ] Resultado e PDF apresentam autoria, horário e hash como proveniência; nenhuma tela ou
   exportação os chama de assinatura digital.
+- [ ] Recepção não visualiza ou salva PDF clínico; opera somente status e entrega selada.
 - [ ] ADMIN não lê conteúdo clínico.
 - [ ] Primeiro boot, seed, login e jornada sintética funcionam sem acesso à internet.
 - [ ] Uma sugestão real de IA mostra origem e explicação, permanece draft e só entra após decisão humana.

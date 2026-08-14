@@ -12,7 +12,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `hack/ANALYST.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Reconciliar somente depois dos oito Analysts. |
 | `hack/analysis.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Ressintetizar depois das rodadas dos oito domínios; a integração de IA ainda é provisória. |
 | `ANALYST-caso-e-encaminhamento.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADJUSTED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 18 cenários após reconciliar anamnese, agenda, avaliação, acesso, IA e superfícies. |
-| `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `7b8cdc4` | Separar semântica de criptografia/DDL e atacar sessão e escopo. |
+| `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADJUSTED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 24 cenários após reconciliar caso, avaliação, superfícies, arquitetura e IA. |
 | `ANALYST-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar widgets, campos, completude, catálogos e licenças. |
 | `ANALYST-classificacao-e-agenda.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Atacar abstenção da regra, supersessão, redaction, retorno e falhas de capacidade após reconciliar a criticidade campo a campo da anamnese. |
 | `ANALYST-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar avaliação, pendência, retorno, resultado e entrega. |
@@ -21,10 +21,10 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `ANALYST-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar privacidade, consentimento, proveniência e promoção de conhecimento. |
 | `hack/BUILD.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Ressintetizar somente depois dos oito pares e Surface Blueprints. |
 | `BUILD-caso-e-encaminhamento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar novo adversarial e assinatura do Analyst; depois refazer contratos físicos. |
-| `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Validar segurança local, fixtures e guards IPC. |
+| `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar novo adversarial e assinatura do Analyst; depois refazer fronteira física. |
 | `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar pesquisa clínica; depois provar schema e round-trip. |
 | `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar Analyst corrigido, adversarial e assinatura; depois reconciliar contratos físicos e provar o PGlite. |
-| `BUILD-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar research; depois provar transações e isolamento por serviço. |
+| `BUILD-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar research e Analyst assinado; refazer PDF/entrega e isolamento por serviço. |
 | `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Corrigir após os domínios; então criar Surface Blueprints. |
 | `BUILD-arquitetura-offline-e-prova.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Refazer política IPC/rede/IA e provar o runtime PGlite. |
 | `BUILD-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Permanecer DRAFT/BLOCKED até o Analyst fechar e Marco assinar. |
@@ -53,6 +53,11 @@ Adversarial de caso/encaminhamento incorporado: referência externa deixou de bl
 corridas e impacto de correção foram fechados, revisão pré-publicação ganhou invalidação,
 check-in ganhou recuperação e o solicitante foi restrito a pendência própria e resultado.
 O artefato continua `ADVERSARIAL_REQUIRED` até repetir os 18 cenários no novo SHA.
+
+Adversarial de acesso/RBAC incorporado: revogação em voo, último admin concorrente,
+não interferência por serviço, auditoria allowlisted, limite append-only, erro opaco,
+capabilities de IA e fronteiras de arquivo/cloud/PDF foram fechados semanticamente. O
+artefato continua `ADVERSARIAL_REQUIRED` até repetir os 24 cenários no novo SHA.
 
 Nenhum estado nesta página substitui assinatura. Somente Marco pode produzir
 `APPROVED_BY_MARCO`.

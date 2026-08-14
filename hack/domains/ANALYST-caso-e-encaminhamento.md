@@ -135,7 +135,7 @@ ao próprio serviço e o resultado final; não acompanha o caso inteiro por infe
 ### `PreopCase`
 
 Unidade autônoma aberta por um encaminhamento. Possui identidade local inequívoca, código
-humano, revisão corrente do contexto, status, histórico e relações com anamnese, agenda,
+humano opaco, revisão corrente do contexto, status, histórico e relações com anamnese, agenda,
 avaliação e entrega. Não possui relação longitudinal com outro caso.
 
 ### `PersonSnapshot`
@@ -205,7 +205,8 @@ consulta e destino operacional explícito.
 
 ## Contrato de identidade
 
-1. A identidade canônica é local ao caso; o código humano serve somente à conferência.
+1. A identidade canônica é local ao caso; o código humano serve somente à conferência, é
+   opaco e não revela sequência ou cardinalidade global a um escopo restrito.
 2. Cada abertura lógica nova produz um caso novo, ainda que todos os snapshots coincidam.
 3. `sourceReference` é proveniência opcional, não identidade universal.
 4. A forma original da referência é preservada. Normalização serve somente à busca e ao
@@ -376,7 +377,9 @@ Sem alterar o PRD, aplica-se a opção de menor privilégio:
 - corrigir o serviço revoga futuras leituras/comandos do serviço anterior, redireciona o
   handoff final e impede replay de devolver projeção antiga;
 - acesso ocorrido antes da correção permanece apenas como auditoria histórica; cache já
-  exibido não é tratado como revogável pelo contrato de nova leitura.
+  exibido não pode ser “desvisto”, mas perde validade para nova leitura ou ação;
+- nenhuma resposta protegida iniciada sob o serviço anterior pode ser emitida depois da
+  correção; worklists, contagens, telas e stores vinculados à revisão antiga expiram.
 
 ## Glossário canônico
 
@@ -431,6 +434,8 @@ Sem alterar o PRD, aplica-se a opção de menor privilégio:
 16. MUST NOT expor anamnese ou avaliação ao solicitante antes do resultado.
 17. MUST preservar autoria de check-in, anulação, comparecimento e interrupção.
 18. MUST NOT inventar resultado anestésico quando o encontro não começou.
+19. MUST NOT revelar volume global por código, busca, contagem, paginação, vazio ou erro.
+20. MUST invalidar projeção efêmera quando autoridade ou serviço do caso mudar.
 
 ## Acceptance Scenarios
 
@@ -454,6 +459,8 @@ Sem alterar o PRD, aplica-se a opção de menor privilégio:
 | 16 | replay após mudança de papel ou serviço | autorização revalidada; nenhuma projeção antiga vaza |
 | 17 | idade, sexo ou encaminhamento muda com draft existente | consumidores afetados ficam obsoletos e exigem revisão |
 | 18 | comando chega antes do predecessor e depois é repetido | primeira tentativa falha sem efeito; nova tentativa é reavaliada |
+| 19 | leitura do serviço antigo concorre com correção para outro serviço | nenhuma resposta nova usa o vínculo anterior; projeções antigas expiram |
+| 20 | solicitante compara códigos e páginas do próprio serviço | não infere quantidade ou ritmo global de outros serviços |
 
 ## Boundary With Build
 

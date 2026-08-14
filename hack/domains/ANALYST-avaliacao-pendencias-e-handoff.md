@@ -128,7 +128,7 @@ append-only, para impedir check-in, retomada, retorno, conclusão ou handoff inv
 | registrar documento e cumprir pendência | `pendency:evidence:register` | `ownerRole` e, se aplicável, serviço |
 | ler status de resultado | `result:status:read` | `RECEPCAO`, `ANESTESIOLOGISTA` ou `SOLICITANTE`; solicitante exige `requireServiceScope` |
 | ler conteúdo de resultado | `result:content:read` | somente `ANESTESIOLOGISTA` ou `SOLICITANTE`; solicitante exige `requireServiceScope` |
-| exportar PDF | `result:export` | somente `RECEPCAO` ou `ANESTESIOLOGISTA`; resultado `FINAL` |
+| exportar PDF legível | `result:export` | `ANESTESIOLOGISTA` ou `SOLICITANTE` do serviço correto; resultado `FINAL` |
 | enviar entrega | `delivery:manage` | `RECEPCAO` |
 | confirmar recebimento | `delivery:acknowledge` | serviço da sessão |
 
@@ -405,10 +405,13 @@ sequenceDiagram
 
   ANE->>MAIN: results.finalize()
   MAIN->>DB: FINAL imutável + READY_FOR_HANDOFF
-  REC->>MAIN: results.exportPdf()
+  ANE->>MAIN: results.exportPdf()
   MAIN->>PDF: DTO autorizado
+  MAIN->>DB: entrega selada disponível à recepção
   REC->>MAIN: deliveries.send()
   MAIN->>DB: SENT
+  SOL->>MAIN: results.exportPdf()
+  MAIN->>PDF: DTO do próprio serviço
   SOL->>MAIN: deliveries.acknowledge()
   MAIN->>DB: RECEIVED + DELIVERED_TO_REQUESTER
 ```
@@ -418,7 +421,7 @@ sequenceDiagram
 | Papel | Encontro | Pendência | Resultado | Entrega |
 |---|---|---|---|---|
 | `ANESTESIOLOGISTA` | conteúdo completo | pedido/cumprimento completos | status + conteúdo completo | recibo/status |
-| `RECEPCAO` | status sem conteúdo | status, dono, prazo; payload só se owner | somente status/metadados; PDF por export interno | gerenciamento |
+| `RECEPCAO` | status sem conteúdo | status, dono, prazo; payload só se owner | somente status/metadados; entrega selada sem bytes/preview/path | gerenciamento |
 | `ENFERMAGEM` | status | pedido/formulário somente se owner | nenhum | nenhum |
 | `SOLICITANTE` | nenhum | pedido/formulário do próprio serviço | status + conteúdo do próprio serviço | confirmar recebimento |
 | `ADMIN` | nenhum | nenhum | nenhum | nenhum |
@@ -459,6 +462,8 @@ autorizado; nenhum papel recebe bytes/path, e `ADMIN` não recebe nem os metadad
     encontro; nenhum caso permanece em `WAITING_ANESTHESIA` sem owner.
 25. Solicitante acessa somente pendência própria, resultado final e entrega do próprio
     serviço; não recebe navegação geral do caso antes do resultado.
+26. Recepção não exporta, visualiza ou salva PDF clínico; apenas acompanha status e dispara
+    uma entrega selada sem receber conteúdo, bytes, preview, filename ou path.
 
 ## Architecture Risks
 
@@ -522,7 +527,8 @@ cumprimento.
 - [ ] `results.getStatus` usa `result:status:read` e seu DTO não possui `content`, nem nulo.
 - [ ] `results.getCurrent` usa `result:content:read`, nega recepção e exige
       `requireServiceScope` do solicitante.
-- [ ] `results.exportPdf` aceita somente recepção/anestesiologista com `result:export`.
+- [ ] `results.exportPdf` aceita somente anestesiologista ou solicitante do serviço correto;
+      recepção recebe status e entrega selada, nunca documento legível.
 - [ ] `deliveries.send` carrega o `FINAL` internamente sob `delivery:manage` sem conceder
       leitura genérica do conteúdo.
 - [ ] PDF continua offline.

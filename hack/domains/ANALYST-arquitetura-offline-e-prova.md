@@ -34,9 +34,9 @@ Fontes normativas:
 
 - `hack/PRD.md:133-168` exige contratos e restringe o MVP a uma demonstração local sem integração inventada.
 - `hack/PRD.md:211-239` exige estados, aceite verificável e fluxo ponta a ponta.
-- `hack/domains/ANALYST-acesso-e-auditoria.md` e
-  `hack/domains/BUILD-acesso-e-auditoria.md` são a fonte canônica de autenticação local,
-  contas fixture, `CurrentSession`, `ActorContext`, guards, sessões e auditoria.
+- `hack/domains/ANALYST-acesso-e-auditoria.md` é a fonte semântica de autenticação local,
+  contas fixture, autoridade, escopo, revogação e auditoria. Detalhes físicos só poderão
+  vir do Build depois da assinatura.
 - `src/main/db/pglite.ts:12-48` define a persistência embarcada e o diretório do banco.
 - `src/main/db/schema.ts:8-24` e `src/main/db/schema.ts:31-164` mostram DDL atual para configuração, IA, RAG e chat.
 - `src/main/db/schema.ts:239-246` mostra a criação sequencial de tabelas por `CREATE TABLE IF NOT EXISTS`.
@@ -76,9 +76,10 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 - **CONFIRMADO:** `src/main/ia/cliente.ts:52-107` pode chamar Gemini/OpenRouter no main quando solicitado.
 - **CONFIRMADO:** `src/main/tipc.ts:265-335` ainda não possui validação runtime e autorização canônicas para writes clínicos.
 - **CONFIRMADO:** não há mecanismo canônico de backup/restore/reset nas superfícies auditadas; ele não será criado no MVP.
-- **DECISÃO DO MVP:** esconder a página não basta. Canais cloud ficam fora do router ativo
-  ou retornam `FEATURE_DISABLED` antes de alcançar o cliente; o grafo ativo do main não
-  importa transporte externo.
+- **DECISÃO DO MVP:** esconder a página não basta. Chat cloud genérico e handlers legados
+  ficam indisponíveis. A única exceção futura da prova é uma intenção cloud fechada,
+  explícita e sintética definida pelos Analysts de acesso e IA; falha dela não bloqueia o
+  fluxo-base e nenhuma saída generativa entra automaticamente no conhecimento ativo.
 - **UNPROVEN:** segurança para dados reais, conformidade institucional, criptografia em repouso e recuperação após corrupção física. Não podem ser alegadas.
 
 ## Evidence Matrix
@@ -92,7 +93,7 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 | Refresh atômico | `src/main/db/seed.ts:157-279` | Confirmado | Reusar padrão transacional. |
 | Limites dos catálogos | `src/data/catalogos/README.md:13-38` | Confirmado | Mostrar versão/cobertura; não prometer base completa. |
 | Renderer sem rede | `src/main/renderer-network-policy.ts:3-69` | Confirmado | Manter teste fail-closed. |
-| Main ainda pode chamar nuvem | `src/main/ia/cliente.ts:52-107` | Lacuna bloqueante | Retirar canais cloud do router ativo e bloquear import do cliente no grafo do MVP. |
+| Main ainda pode chamar nuvem | `src/main/ia/cliente.ts:52-107` | Lacuna bloqueante | Retirar chat/egress genéricos; permitir somente intenção cloud sintética, explícita e autorizada. |
 | Segurança da janela | `src/main/index.ts:32-63` | Parcial | Provar sandbox/preload antes de mudar; não declarar hardening completo. |
 | PDF offline | `src/main/export/pdf.ts:16-91` | Confirmado | Reusar implementação endurecida. |
 | Autorização clínica | `src/main/tipc.ts:265-335` | Lacuna | ActorContext e guard central no main. |
@@ -105,10 +106,10 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 | Schema | `src/main/db/migrations/*` | migrations ordenadas e expand-only |
 | Runner | `src/main/db/migrate.ts` | lock, checksum, ledger e transação |
 | Catálogos | `src/main/db/seed.ts`, `src/data/catalogos/*` | seed por hash e manifesto de versão |
-| Acesso canônico | `hack/domains/BUILD-acesso-e-auditoria.md` | owner único de `usuarios`, `sessoes`, `auditoria_eventos`, `auth.login`, `CurrentSession`, `ActorContext` e guards |
+| Acesso canônico | `hack/domains/ANALYST-acesso-e-auditoria.md` | consumir autoridade, escopo, revogação e auditoria sem inventar contrato físico |
 | Integração de boot | hook do domínio de acesso | inicia sem sessão, encerra recibos abertos e semeia as cinco contas fixture locais |
 | IPC | routers clínicos + `src/main/tipc.ts` | Zod, errors tipados e services |
-| Rede | `src/main/network/network-intent.ts` | choke point sem canal público; allowlist vazia no MVP |
+| Rede | fronteira futura de intenção | nenhuma chamada implícita; allowlist fechada por finalidade da prova |
 | Auditoria | serviço canônico do domínio de acesso | consumir `auditoria_eventos`; esta fatia não cria DDL nem writer paralelo |
 | Boot | `src/main/index.ts` | migrate → seed → acesso sem sessão → routers → window |
 | Prova | `tests/main/*`, `tests/e2e/*`, `scripts/proof/*` | offline, migrations, guards, persistência e fluxo |
@@ -134,8 +135,9 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 
 ### `CurrentSession` e `ActorContext` canônicos
 
-- O contrato e a implementação pertencem exclusivamente a
-  `hack/domains/BUILD-acesso-e-auditoria.md`; esta fatia somente os consome.
+- O comportamento pertence semanticamente a
+  `hack/domains/ANALYST-acesso-e-auditoria.md`; representação física só poderá vir do Build
+  assinado, e esta fatia não a inventa.
 - `auth.login` valida e-mail e senha contra `usuarios`, cria a `CurrentSession` em memória
   no main e devolve a `SessaoPublica` redigida.
 - O `ActorContext` entregue aos serviços é uma projeção imutável da `CurrentSession`;
@@ -147,8 +149,9 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 
 ### Auditoria consumida
 
-- `auditoria_eventos`, seu DDL, índices, trigger e writer pertencem exclusivamente a
-  `hack/domains/BUILD-acesso-e-auditoria.md`.
+- A semântica da auditoria pertence exclusivamente ao
+  `hack/domains/ANALYST-acesso-e-auditoria.md`; DDL, índices, trigger e writer só serão
+  definidos pelo Build posterior.
 - `schema_migrations` é o recibo das migrations, inclusive das que rodam antes de existir o
   domínio de acesso. Depois da migration de acesso, seed e falhas de segurança usam o
   writer canônico de auditoria, sem replay artificial dos passos anteriores.
@@ -198,9 +201,10 @@ flowchart TD
 10. Migrations aplicadas são imutáveis e verificadas por checksum antes da abertura da UI; `schema_migrations` é o ledger único.
 11. Falha de migration ou seed bloqueia o boot com diagnóstico local; nunca tenta reparar pela internet.
 12. Catálogo guarda hash, versão e contagem. A UI não afirma cobertura que o asset não possui.
-13. IA em nuvem não participa de classificação, anamnese, agenda, resultado, boot, seed
-    ou PDF. Seus canais não pertencem ao router ativo; chamada futura exige novo ciclo de
-    produto e alteração explícita da allowlist.
+13. IA em nuvem não participa de boot, seed, agenda, resultado ou PDF. Na prova, pode ser
+    chamada somente por ação humana explícita para proposta assistiva ou consulta autorizada,
+    usando dados sintéticos mínimos, finalidade fechada e confirmação prévia. Chat livre,
+    histórico integral e egress em background permanecem fora do router público.
 14. Logs contêm ids técnicos, ação, resultado e duração; não contêm conteúdo clínico, snapshots completos ou credenciais.
 15. Backup, restore e reset não possuem rota, menu ou handler no MVP.
 16. O harness pode apagar somente o seu próprio diretório temporário e recriá-lo por seed; nunca toca o diretório real do usuário.
@@ -215,7 +219,7 @@ flowchart TD
 | Handler confiar no renderer | Crítica | `src/main/tipc.ts:265-335` | Zod, ActorContext e guard no main. |
 | Sessão persistida virar login automático | Crítica | Contrato canônico de acesso | Autoridade somente em memória; boot encerra recibos abertos e exige novo login. |
 | Auditoria fragmentar em tabelas concorrentes | Alta | Contrato canônico de acesso | Usar somente `auditoria_eventos`. |
-| IA no main escapar da policy do renderer | Crítica | `src/main/ia/cliente.ts:52-107` | Router ativo allowlisted, `FEATURE_DISABLED` no legado e teste do grafo/egress do processo inteiro. |
+| IA no main escapar da policy do renderer | Crítica | `src/main/ia/cliente.ts:52-107` | Legado indisponível, intenção explícita allowlisted e teste do grafo/egress do processo inteiro. |
 | `sandbox: false` ampliar impacto do preload | Alta | `src/main/index.ts:32-63` | Threat model e teste antes de habilitar sandbox; não alegar isolamento total. |
 | Token persistido como texto | Alta | `src/main/tipc.ts:42-129` | Ocultar/desabilitar IA no MVP ou migrar segredo para armazenamento seguro antes de uso real. |
 | Harness apagar dados reais | Alta | Prova precisa de estado limpo | Diretório temporário obrigatório + guard que rejeita o userData real. |
@@ -231,8 +235,8 @@ O Build deve fechar:
 - integração com `auth.login`, `CurrentSession`, `ActorContext`, fixtures e matriz de capabilities do domínio de acesso, sem contrato paralelo;
 - envelope de erro TIPC, validação e limites de payload;
 - isolamento do diretório temporário usado por provas repetíveis;
-- composição allowlisted do router, `FEATURE_DISABLED` no legado cloud e negação de cada
-  intenção de rede do main e renderer;
+- composição allowlisted do router, indisponibilidade do legado cloud e contrato fechado
+  para cada intenção sintética permitida no main;
 - hardening incremental da janela e do preload;
 - matriz de testes unitários, integração e E2E com prova negativa de rede;
 - reuso do Antessala/DietFlow/EscalaFlow e rejeições explícitas;

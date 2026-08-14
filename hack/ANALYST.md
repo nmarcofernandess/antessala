@@ -64,6 +64,11 @@ ADMIN | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE
 - `SOLICITANTE` enxerga somente pendências atribuídas e resultado/entrega do serviço ao
   qual sua conta está vinculada; não possui acompanhamento geral do caso.
 - Autorização é aplicada no processo principal; esconder botão não é controle de acesso.
+- Revogar conta, papel, serviço ou vínculo impede novo commit/resposta protegida e invalida
+  projeções efêmeras sob a autoridade anterior.
+- `RECEPCAO` opera status e entrega selada; não lê nem salva PDF clínico.
+- Auditoria administrativa é sanitizada e append-only nas operações normais do app; não é
+  promessa de inviolabilidade contra acesso direto ao dispositivo.
 
 ### Estado canônico do caso
 

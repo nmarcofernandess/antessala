@@ -1,9 +1,11 @@
 # BUILD — Avaliação, pendências e handoff
 
+> **DRAFT INVALIDADO: O ANALYST RETIROU PDF LEGÍVEL DA RECEPÇÃO E ALTEROU A FRONTEIRA DE ENTREGA.**
+
 ## State
 
 - Documento: blueprint; **não é Plan nem autorização para código**.
-- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`.
+- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE — ASSINATURA PENDENTE`.
 - Pré-requisito: `ANALYST-avaliacao-pendencias-e-handoff.md` aprovado por Marco.
 - Dependências: caso canônico, acesso/capabilities e agenda/booking reconciliados no Build principal.
 
@@ -1393,7 +1395,7 @@ Este arquivo não cria MiniSpec, Spec, Plan, teste ou código.
 
 - Artefato: `hack/domains/BUILD-avaliacao-pendencias-e-handoff.md`
 - Próxima fase autorizada: revisão humana
-- Status: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
+- Status: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE — ASSINATURA PENDENTE`
 - Assinatura do Analyst por Marco: `PENDENTE`
 - Assinatura deste Build por Marco: `PENDENTE`
 - Data: `PENDENTE`

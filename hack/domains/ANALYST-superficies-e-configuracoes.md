@@ -130,9 +130,9 @@ Como renderer, preciso derivar rota, navegação, componente e ação da sessão
 |---|---|---|---|
 | Context / entry | `src/renderer/src/main.tsx` | Providers globais. | Inserir AuthProvider; preservar ThemeProvider/Tooltip/Toaster. |
 | Routes | `src/renderer/src/App.tsx` | Router/casca. | Substituir lista de três rotas pelo mapa canônico deste Analyst. |
-| Auth contracts | `hack/domains/BUILD-acesso-e-auditoria.md` | `SessaoPublica`, capability e escopo. | Renderer consome `SessaoPublica.capabilities`; `CurrentSession`/`ActorContext` ficam main-only. |
-| Agenda contracts | `hack/domains/BUILD-classificacao-e-agenda.md` | Requirement, booking, slots e capacidade. | Importar `SchedulingRequirementDTO`, `BookingDTO` e DTOs/actions administrativos; não redefinir estados ou commands. |
-| Assessment contracts | `hack/domains/BUILD-avaliacao-pendencias-e-handoff.md` | Encontro, pendência atribuída, documento, retorno, resultado e entrega. | Importar DTOs/queries canônicos; a superfície só compõe projeções autorizadas. |
+| Auth contracts | `hack/domains/ANALYST-acesso-e-auditoria.md` | autoridade, capability, escopo, revogação e redaction; DTO físico aguarda Build assinado |
+| Agenda contracts | `hack/domains/ANALYST-classificacao-e-agenda.md` | requisito, booking, slots e capacidade sem inventar DTO físico |
+| Assessment contracts | `hack/domains/ANALYST-avaliacao-pendencias-e-handoff.md` | encontro, pendência, documento, retorno, resultado e entrega sem depender de Build não assinado |
 | Backend projections | `src/main/tipc.ts` | Dados para telas. | Compor routers de casos, agenda, avaliação, configuração; DTO mínimo por papel. |
 | Local fetch state | `src/renderer/src/hooks/useApiData.ts` | Loading/error simples. | Reusar só em reads simples; criar `useMutationState` e resource hooks de domínio. |
 | Shell | `src/renderer/src/componentes/AppSidebar.tsx` | Menu e tema. | Derivar menu das capabilities específicas da sessão; manter tema; não publicar o chat genérico como superfície clínica. |
@@ -412,7 +412,8 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 ### S10 — Resultados do serviço (`/resultados`)
 
 - Actor/projeção: `RECEPCAO` com `result:status:read` vê somente status operacional; `ANESTESIOLOGISTA` com `result:content:read` vê conteúdo clínico; `SOLICITANTE` vê conteúdo/entrega somente do `serviceId` da sessão.
-- Rows: protocol, patient, procedure, current status, new-result indicator, completed date.
+- Rows: identificador opaco no escopo, pessoa mínima, procedimento, status atual,
+  indicador de novo resultado e data de conclusão; sem sequência ou total global.
 - Groups: em avaliação, pendência que requires requester, resultado disponível, recebido.
 - Output: navigate to authorized result.
 - States: loading, no cases, no new results, filter empty, error.
@@ -422,9 +423,9 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 - Actor: `SOLICITANTE` for matching service; anesthesiologist can review; reception only sees operational status.
 - Content: final/pendence summary authorized for requester, timestamps, author and delivery receipt.
 - Actions: recepção abre status com `result:status:read`, registra o envio da entrega com
-  `delivery:manage` e exporta com `result:export`; anestesiologista lê conteúdo com
-  `result:content:read` e exporta com `result:export`; solicitante lê conteúdo do próprio
-  serviço com `result:content:read` e confirma recebimento com `delivery:acknowledge`.
+  `delivery:manage` sem receber bytes, preview, path ou documento legível;
+  anestesiologista lê conteúdo e exporta com permissões próprias; solicitante lê e pode
+  exportar conteúdo do próprio serviço e confirma recebimento separadamente.
 - States: loading, pending/not final, available, confirming, received, and forbidden. Authorized
   exporter additionally has PDF generating/error states.
 - Rule: `ResultDelivery` segue somente `SENT → RECEIVED`; não existe cancelamento. Autoria,
@@ -549,6 +550,12 @@ Case detail is reached from worklists and need not become a permanent menu item.
 25. `SOLICITANTE` não possui query geral de casos. Pendência e resultado exigem `serviceId`
     da sessão no main e retornam payload redigido; mudança de serviço revoga leituras e
     replay não devolve projeção antiga.
+25a. Logout, revogação, troca de papel/serviço ou mudança do serviço do caso desmontam a
+     projeção protegida e limpam store/cache correspondente; resposta em voo revalida o
+     escopo antes de aparecer.
+25b. Lista, busca, contagem, paginação, vazio, erro e identificador restrito não revelam
+     existência ou cardinalidade de outro serviço. Erro inesperado mostra somente código
+     opaco e correlação, nunca stack, SQL, path ou mensagem do provedor.
 26. S05 não publica na submissão: revisão final efetiva + resultado classificatório são uma
     unidade; apenas `confirm/override` de proposta vigente publica a necessidade.
 27. S09 cria pendência e registra `requiresReturn`; somente o service cria `ReturnRequest`
@@ -662,10 +669,12 @@ Case detail is reached from worklists and need not become a permanent menu item.
       filtrado também por `serviceId`, e owner incorreto falha mesmo por chamada direta.
 - [ ] Documento de evidência persiste somente metadados e SHA-256 do mesmo caso/pendência;
       bytes e path local não entram no payload nem no banco.
-- [ ] Handoff pode ser confirmado pelo solicitante; recepção/anestesiologista exportam somente a versão final em PDF.
+- [ ] Handoff pode ser confirmado pelo solicitante; anestesiologista e solicitante do
+      serviço correto exportam somente a versão final; recepção nunca recebe PDF legível.
 - [ ] S11 permite `deliveries.send` e `deliveries.acknowledge`, não cancelamento; tela e PDF
       chamam autoria/horário/hash de proveniência e declaram ausência de assinatura digital.
-- [ ] Resultado de recepção é status-only; conteúdo exige `result:content:read`; delivery, export e acknowledge têm guards independentes.
+- [ ] Resultado de recepção é status-only; delivery selado, conteúdo, export e acknowledge
+      têm autorizações independentes.
 - [ ] Serviços e procedimentos aparecem com source/revision e sem controles de mutação; profissional solicitante permanece snapshot do encaminhamento.
 - [ ] Admin prepara recursos, janelas datadas e bloqueios pelos contratos do domínio agenda; classes/durações/buffers permanecem read-only e a agenda mostra materialização derivada.
 - [ ] Catálogos/widgets/regras aparecem com versão e integridade, sem editor clínico.

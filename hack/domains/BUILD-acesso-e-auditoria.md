@@ -1,10 +1,12 @@
 # BUILD — Acesso, papéis e auditoria
 
+> **DRAFT INVALIDADO POR MUDANÇA MATERIAL NO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+
 ## State
 
 - Tipo: blueprint técnico; não é Spec, Plan ou autorização de código.
 - Fonte: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Conteúdo: `DRAFT — RESEARCH_REQUIRED + RECON_REQUIRED + ADVERSARIAL_REQUIRED`.
+- Conteúdo: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE + RECON_REQUIRED`.
 - Estado de governança: `BLOQUEADO PELO ANALYST E PELA REVISÃO TÉCNICA`.
 - Risco: alto, porque define autenticação, autorização e auditoria transversal.
 - Próxima fase material depois das assinaturas: Critic; somente depois, Warlog e o restante do fluxo forense.
@@ -545,7 +547,7 @@ autorizada enquanto a anterior não estiver fechada e assinada.
 
 - Artefato: `hack/domains/BUILD-acesso-e-auditoria.md`.
 - Analyst de origem: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Estado: `DRAFT_RESEARCH_REQUIRED`.
+- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE`.
 - Autoriza implementação: `NÃO`.
 - Assinatura de Marco no Analyst: `PENDENTE`.
 - Assinatura de Marco neste Build: `PENDENTE`.

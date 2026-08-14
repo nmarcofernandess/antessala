@@ -1,452 +1,446 @@
-# Analyst: Acesso, papéis e auditoria
+# Analyst — Acesso, papéis e auditoria
 
 ## State
 
-- Source: `hack/PRD.md`, decisão explícita de Marco em 14/08/2026 e recon do código atual.
-- Route: `analyst_prd`.
-- Phase budget: `forensic`.
-- Confidence: `medium`; as leis da demo estão definidas, mas segurança e escopo ainda exigem adversarial.
-- Created: `2026-08-14`.
-- Review state: `ADVERSARIAL_REQUIRED`.
-- Content verdict: `EM REVISÃO`; não está pronto para assinatura.
-- Governance state: `BLOQUEADO`.
-- Build correspondente: `hack/domains/BUILD-acesso-e-auditoria.md`.
+- Source: `hack/PRD.md`, decisões explícitas de Marco e Analysts relacionados
+- Route: `analyst_prd`
+- Phase budget: `forensic`
+- Adversarial reviewed: SHA `9f501a9d67806d3511ebdb9b0a560cd564c27dee`
+- Confidence: `high` nos papéis e no menor privilégio; `medium` no contrato corrigido até novo adversarial
+- Verdict: `ADVERSARIAL_REQUIRED`; assinatura de Marco pendente
+- Head reality: autenticação, RBAC e auditoria canônicos ainda não existem no produto executável
 
 ## TL;DR
 
-O MVP terá autenticação local, sem cadastro público: o administrador cria `nome + e-mail + senha + função`, e cada pessoa entra com essa credencial. Cinco papéis executam o fluxo — `RECEPCAO`, `ENFERMAGEM`, `ANESTESIOLOGISTA`, `SOLICITANTE` e `ADMIN` — com autorização aplicada no processo principal antes de qualquer leitura ou escrita. As contas da apresentação serão fixtures sintéticas, senhas serão armazenadas somente como hash `scrypt`, sessões não sobreviverão ao reinício do aplicativo e toda mutação relevante produzirá auditoria append-only sem copiar conteúdo clínico ou segredos.
+O MVP usa login local, sem cadastro público. O `ADMIN` cria contas com nome, e-mail, senha e
+função; cinco contas sintéticas permitem demonstrar `ADMIN`, `RECEPCAO`, `ENFERMAGEM`,
+`ANESTESIOLOGISTA` e `SOLICITANTE`. Identidade, papel, serviço e autorização são resolvidos
+na fronteira confiável do aplicativo, nunca aceitos do payload.
 
-As cinco funções e o login local são `PRODUCT_LAW`. Parâmetros de senha, sessão, fixture e
-auditoria são `DEMO_DECISION` ou decisão técnica sujeita a adversarial. Este Analyst não
-está fechado.
+Menor privilégio vale também para resposta, erro, contagem, busca, cache, PDF, auditoria,
+IA e conhecimento. Revogar conta, credencial, papel, serviço ou vínculo de um caso impede
+qualquer novo commit ou resposta protegida baseada na autoridade anterior. A recepção não
+lê nem salva PDF clínico; opera somente status e entrega selada. IA cloud pode existir na
+prova apenas por intenção explícita e limitada a dados sintéticos, nunca como chat genérico.
+
+O HEAD auditado possui handlers diretamente chamáveis, preload genérico, tokens cloud no
+PGlite e backend de conhecimento alcançável. Isso é terreno legado, não contrato autorizado.
+Até existir a fronteira canônica, o produto não pode alegar autenticação, RBAC, privacidade
+por serviço ou auditoria e não pode receber dado real.
 
 ## Phase 0 Grill
 
-| Signal | Verdict | Notes |
+| Pergunta | Estado | Resposta |
 |---|---|---|
-| Action clear | `PASS` | Definir quem entra, como entra, o que pode fazer e como provar autoria. |
-| Persona clear | `PASS` | Recepção, enfermagem, anestesiologista, solicitante e administrador. |
-| Input/output clear | `PASS` | Credencial entra; sessão, autorização e evento de auditoria saem. |
-| Scope clear | `PASS` | Login local e RBAC do protótipo; sem confirmação de e-mail, recuperação, SSO ou cadastro público. |
-| Objective criteria clear | `PASS` | Uma conta por papel entra, só enxerga suas superfícies e recebe negação também no TIPC quando tenta ação proibida. |
+| Quem autentica? | `PRODUCT_LAW` | Uma conta local criada pelo admin ou uma das cinco fixtures sintéticas. |
+| Quem decide o ator? | `PRODUCT_LAW` | A autoridade corrente no processo confiável; nunca o renderer. |
+| Admin é superusuário clínico? | `PRODUCT_LAW` | Não. Admin gerencia operação e auditoria sanitizada. |
+| Solicitante acompanha o caso inteiro? | `PRODUCT_LAW` | Não. Cumpre pendência própria e recebe resultado/entrega do próprio serviço. |
+| Revogação vale para chamada em voo? | `DEMO_DECISION` | Sim. Nenhum novo commit ou resposta protegida pode usar autoridade revogada. |
+| A auditoria prova inviolabilidade local? | `PRODUCT_LAW` | Não. É append-only nas operações normais do app, não tamper-evident contra acesso ao dispositivo. |
+| O adversarial foi encerrado? | `UNRESOLVED` | Não. Os 24 cenários precisam ser repetidos no SHA reconciliado. |
 
 ## Source And Scope
 
-### Input source
+### Dentro
 
-- O PRD exige separação de responsabilidade, autoria e sequência reconstruível (`hack/PRD.md`, seções **Story Técnica**, **System Pattern / Contract** e **Acceptance Criteria**).
-- Marco decidiu: “os logins podem ser criados pelo admin”; para o hack, contas são fixtures e não haverá fluxo de confirmação, convite, recuperação ou cadastro por e-mail.
-- O executável atual não possui entidade de usuário, sessão, papel, guard de autorização ou auditoria; os handlers TIPC acessam banco diretamente.
+- login, logout e autoridade local não restaurável;
+- contas administrativas e cinco fixtures sintéticas;
+- cinco papéis, capabilities semânticas e escopo por serviço;
+- não interferência em listas, buscas, contagens, detalhes, erros e identificadores;
+- revogação, mudança de escopo, concorrência e último administrador;
+- projeções protegidas e descarte de estado efêmero;
+- auditoria sanitizada, autoria e limites de integridade;
+- autorização de áudio, IA, rede e conhecimento;
+- indisponibilidade de handlers legados até serem guardados.
 
-### In scope
+### Fora
 
-- login e logout locais;
-- criação, listagem, edição controlada, desativação e redefinição de senha pelo administrador;
-- cinco papéis canônicos e seus escopos;
-- conta sintética fixture para cada papel;
-- hash local de senha;
-- sessão única ativa no processo Electron;
-- guard obrigatório no processo principal;
-- trilha de auditoria append-only;
-- menu, rota e ação condicionados ao papel;
-- invalidação de sessão após desativação, mudança de papel ou redefinição de senha.
-
-### Out of scope
-
-- cadastro público, convite por e-mail, confirmação de e-mail e recuperação automática;
-- OAuth, SSO institucional, LDAP, Active Directory, certificado profissional ou MFA;
-- acesso remoto, múltiplos dispositivos e sincronização de sessões;
-- conta de paciente;
-- autorização do prontuário hospitalar;
-- uso de dados ou identidades reais;
-- política institucional definitiva de retenção e LGPD.
-
-### Assumptions fixed for the MVP
-
-- O aplicativo roda em um único Mac e uma pessoa usa a sessão por vez.
-- Um usuário tem exatamente um papel no MVP. Se a mesma pessoa precisar demonstrar duas funções, usa duas contas sintéticas.
-- Toda conta `SOLICITANTE` pertence a exatamente um serviço solicitante; os demais papéis não têm escopo de serviço.
-- A sessão termina no logout ou ao fechar/reiniciar o app. Não existe “lembrar de mim”.
-- `ADMIN` administra acesso e configuração, mas não recebe acesso clínico implícito.
-
-## Product Promise
-
-Cada integrante da demonstração entra com uma credencial simples preparada localmente e vê apenas o trabalho que lhe pertence. A recepção não lê respostas clínicas; a enfermagem não agenda; o anestesiologista não reescreve a entrevista de enfermagem; o solicitante enxerga somente pendências atribuídas e o resultado autorizado do próprio serviço; o administrador gerencia contas e configuração sem virar um superusuário clínico. Depois, a apresentação consegue reconstruir quem fez cada mudança, em qual papel, quando e sobre qual objeto.
-
-## Story de Usuario
-
-- Como administrador, quero criar uma conta com nome, e-mail, senha e função, para preparar a equipe da demonstração sem depender de e-mail externo.
-- Como integrante da recepção, quero entrar e ver somente entradas e agendamentos, para cumprir meu trabalho sem interpretar dados clínicos.
-- Como enfermeiro, quero abrir as triagens atribuídas ao meu setor e registrar a anamnese, para produzir a necessidade operacional da vaga.
-- Como anestesiologista, quero ver a anamnese preservada e registrar minha própria avaliação, para tomar e explicar uma decisão médica sem apagar autoria anterior.
-- Como integrante do serviço solicitante, quero cumprir pedidos atribuídos ao meu serviço e
-  receber o resultado final, sem acessar o restante do caso.
-- Como apresentador, quero trocar de papel de forma previsível, para demonstrar o handoff ponta a ponta no mesmo Mac.
-
-## Story Tecnica
-
-Como sistema local, preciso manter usuários, hashes e eventos de auditoria no PGlite; conservar a sessão corrente somente no processo principal; negar no TIPC qualquer ação incompatível com o papel; filtrar também as leituras por escopo; invalidar a sessão quando a credencial mudar; e registrar mutações na mesma transação do dado de domínio, sem persistir senha, token, texto integral de anamnese ou parecer na auditoria.
+- cadastro público, convite, confirmação ou recuperação por e-mail;
+- OAuth, SSO, LDAP, Active Directory, MFA ou identidade profissional institucional;
+- conta de paciente, prontuário ou dados reais;
+- sincronização remota e operação hospitalar multiestação;
+- escolha de hash, parâmetros criptográficos, schema físico, locks, DTOs, IPC, componentes,
+  migrations e testes;
+- política institucional definitiva de LGPD, retenção ou não repúdio.
 
 ## Current Terrain
 
-1. A casca ativa possui apenas três rotas e nenhuma tela de login ou provider de sessão (`src/renderer/src/App.tsx:13-56`).
-2. A navegação atual é global e idêntica para qualquer pessoa (`src/renderer/src/componentes/AppSidebar.tsx:28-32`, `115-132`).
-3. O preload expõe `ipcRenderer.invoke` para qualquer canal recebido do renderer; ele não acrescenta identidade ou papel (`src/preload/index.ts:3-16`).
-4. O client TIPC apenas encaminha chamadas ao preload (`src/renderer/src/servicos/client.ts:1-6`).
-5. Os handlers atuais executam queries sem sessão e sem guard, inclusive configuração de IA, registros legados, jornada e catálogos (`src/main/tipc.ts:56-129`, `303-370`, `373-399`).
-6. O schema atual não contém usuário, credencial, sessão ou auditoria. O core contém somente `config` e `configuracao_ia` antes dos módulos herdados (`src/main/db/schema.ts:8-25`).
-7. A tabela `registro_jornada` já demonstra um trigger append-only, mas pertence à hipótese clínica invalidada e não pode ser promovida como auditoria canônica (`src/main/db/clinical-schema.ts:3-9`, `28-52`).
-8. O banco e os catálogos já nascem localmente; o seed lê assets versionados e não chama rede (`src/main/db/seed.ts:128-150`).
+Recon do HEAD examinado pelo adversarial:
 
-## Evidence Matrix
+- não há usuário, login, sessão, papel, capability ou guard canônico;
+- o preload aceita canais genéricos e não estabelece identidade;
+- handlers clínicos, configuração cloud, chat, PDF, arquivos, memória, RAG e grafo são
+  diretamente alcançáveis pelo renderer;
+- o cliente cloud envia mensagem e histórico e a configuração duplica token em texto no
+  banco local;
+- importadores podem ler arquivos locais e devolver texto; combinados ao chat, formam um
+  caminho de exfiltração;
+- rebuild de grafo pode persistir inferência generativa sem promoção humana;
+- exportação atual aceita HTML do renderer, sem vínculo com resultado canônico;
+- erros técnicos podem atravessar para a interface;
+- PGlite fica no diretório local da aplicação e não resiste a adulteração por quem controla
+  o sistema operacional.
 
-| Path | Lines | Fact | Confidence |
-|---|---:|---|---|
-| `hack/PRD.md` | seção `Users / Actors` | O produto tem recepção, enfermagem, anestesiologista e serviço solicitante como responsáveis distintos. | high |
-| `hack/PRD.md` | seção `Story Tecnica` | O produto deve impedir alteração por papel indevido e registrar autoria, horário e motivo. | high |
-| `src/renderer/src/App.tsx` | 13-56 | Não há `/login`, gate de sessão nem rotas por papel. | high |
-| `src/renderer/src/componentes/AppSidebar.tsx` | 28-32, 115-132 | Menu é estático e não considera sessão ou autorização. | high |
-| `src/preload/index.ts` | 3-16 | Bridge atual encaminha canal/args sem identidade. | high |
-| `src/renderer/src/servicos/client.ts` | 1-6 | O client TIPC não cria contexto de usuário. | high |
-| `src/main/tipc.ts` | 56-129 | Configuração de IA pode ser lida, salva e testada sem guard. | high |
-| `src/main/tipc.ts` | 303-370 | Mutação legada e busca de catálogo também não passam por autorização. | high |
-| `src/main/tipc.ts` | 373-399 | Router exporta handlers diretamente; não existe wrapper central. | high |
-| `src/main/db/schema.ts` | 8-25 | Core atual não persiste usuários, sessões ou auditoria. | high |
-| `src/main/db/clinical-schema.ts` | 42-52 | Existe precedente técnico de append-only via trigger, mas só para jornada legada. | high |
-| `src/main/db/seed.ts` | 128-150 | Seed local versionado é padrão existente e serve às contas sintéticas. | high |
+Esses fatos são `EVIDENCE_BACKED` sobre o terreno atual. Nenhum vira capacidade do produto
+por estar escondido no menu. “Dormente” só é seguro quando não é chamável por um ator sem a
+capability correspondente.
 
-## Implementation Map
+## Product Promise
 
-| Area | Path | Role | Decision |
-|---|---|---|---|
-| Context / entry | `src/renderer/src/main.tsx` | Monta providers globais. | Adicionar `AuthProvider` dentro de tema e antes do router. |
-| Context / routes | `src/renderer/src/App.tsx` | Declara casca e rotas. | Separar `/login` público de `ProtectedAppLayout`; redirecionar por sessão/papel. |
-| Backend migration | `src/main/db/migrations/NNN_access_audit.sql` | Migração numerada consumida pelo runner da arquitetura. | Entregar somente o DDL de `usuarios`, `sessoes` e `auditoria_eventos`; este domínio não cria runner. |
-| Backend bootstrap | `src/main/db/schema.ts` | Bootstrap legado a conter. | Não receber o novo DDL nem ganhar segunda ordem de migrations. |
-| Backend seed | `src/main/db/seed.ts` | Primeiro boot local idempotente. | Garantir exatamente cinco contas `origin=FIXTURE`, uma por papel. A conta `SOLICITANTE` referencia o serviço fixture já semeado pelo domínio de anamnese/catálogos; contas `origin=ADMIN` não são removidas pelo seed. |
-| Backend auth | `src/main/auth/*` | Área inexistente. | Criar hash, sessão em memória, validação de credencial e guards. |
-| Backend IPC | `src/main/tipc.ts` | Router tipado e handlers. | Expor auth/admin/auditoria; envolver handlers de produto com `requireRole`. |
-| Shared contracts | `src/shared/auth.ts` | Área inexistente. | Declarar `Papel`, DTOs públicos e matriz de capacidade. |
-| Renderer state | `src/renderer/src/auth/*` | Área inexistente. | Provider, hook e gates de rota/ação baseados em `auth.sessao.obter`. |
-| Shell | `src/renderer/src/componentes/AppSidebar.tsx` | Menu e tema. | Gerar menu a partir do papel; exibir usuário/papel/logout. |
-| Frontend login | `src/renderer/src/paginas/LoginPagina.tsx` | Área inexistente. | Formulário e estados de autenticação, sem links de cadastro/recuperação. |
-| Frontend admin | `src/renderer/src/paginas/configuracoes/UsuariosPagina.tsx` | Área inexistente. | CRUD mínimo de contas e reset de senha. |
-| Frontend audit | `src/renderer/src/paginas/configuracoes/AuditoriaPagina.tsx` | Área inexistente. | Lista filtrável somente para admin, sem payload clínico. |
-| Tests | `tests/main/auth/*`, `tests/renderer/auth/*`, `tests/e2e/*` | Cobertura inexistente. | Provar hash, guards, escopo, fixtures, sessão e cinco jornadas de papel. |
+Cada integrante entra com uma credencial local e executa somente sua responsabilidade. A
+autorização vale antes de carregar dados, no momento de produzir o efeito e antes de devolver
+uma projeção. O administrador consegue preparar a demo e reconstruir autoria sem receber uma
+segunda cópia clínica na auditoria. Trocar de usuário ou escopo limpa o contexto protegido.
 
-## Entities And State
+## Verdades por classificação
 
-### ENTITY: Papel
+### `PRODUCT_LAW`
 
-- Attributes: valor imutável entre `ADMIN`, `RECEPCAO`, `ENFERMAGEM`, `ANESTESIOLOGISTA`, `SOLICITANTE`.
-- Actions: autoriza uma capacidade; não carrega dados pessoais.
-- Relations: um usuário possui um papel; a sessão guarda um snapshot do papel.
-- Source of truth: enum compartilhado + `usuarios.papel` com `CHECK` no PGlite.
-- Runtime states: ativo como parte de uma sessão ou sem sessão.
-- Invalid states to prevent: papel livre em string; múltiplos papéis na mesma conta; solicitante sem serviço; admin herdando dados clínicos por omissão.
+- existem exatamente cinco papéis canônicos;
+- uma conta tem um papel na PoC; `SOLICITANTE` pertence a um serviço;
+- ator, papel, serviço, autoria e capabilities nunca vêm do payload;
+- esconder rota ou botão não autoriza nem desautoriza handler;
+- `ADMIN` não herda leitura clínica;
+- dados são minimizados antes de atravessar a fronteira de confiança;
+- solicitante não recebe listagem ou detalhe geral do caso;
+- recepção não lê resultado clínico nem recebe documento legível;
+- sugestão de IA e conhecimento não promovido nunca produzem efeito por autorização implícita;
+- auditoria não replica conteúdo clínico ou segredo;
+- sessão não é restaurada após reinício;
+- primeiro boot e fluxo-base funcionam offline.
 
-### ENTITY: Capability
+### `DEMO_DECISION`
 
-- Attributes: identificador literal compartilhado, papéis autorizados.
-- Actions: derivar capacidades de um papel; autorizar guard e projetar ações da interface.
-- Relations: `SessaoPublica` carrega uma lista derivada; `CurrentSession` usa a mesma fonte no main.
-- Source of truth: union `Capability` e mapa exaustivo em `src/shared/auth.ts`.
-- Invalid states to prevent: capability livre em string; mapa incompleto; renderer inventando capacidade; divergência entre botão e handler.
+- cinco contas fixture, uma por papel;
+- uma pessoa opera a instalação por vez na apresentação;
+- contas fixtures são imutáveis pela administração;
+- ausência de self-service, recuperação, expiração e bloqueio progressivo;
+- autoridade corrente fica somente durante a execução da instalação;
+- IA cloud, quando usada, recebe apenas dados sintéticos numa intenção explícita;
+- identificador exibido ao solicitante é opaco e não revela sequência global;
+- auditoria administrativa usa códigos e categorias fechadas.
 
-### ENTITY: Usuario
+### `UNRESOLVED`
 
-- Attributes: `id`, `nome_exibicao`, `email`, `email_normalizado`, `senha_hash`, `papel`, `servico_solicitante_id`, `ativo`, `origem`, `credencial_versao`, `criado_por_usuario_id`, timestamps.
-- Actions: criar, listar, alterar nome, alterar papel/escopo, desativar, reativar, redefinir senha.
-- Relations: pode ter várias sessões e vários eventos de auditoria; solicitante referencia um serviço.
-- Source of truth: `usuarios` no PGlite.
-- Runtime states: `ATIVO` ou `INATIVO`.
-- Invalid states to prevent: e-mail duplicado sem considerar caixa; hash vazio; papel fora do enum; `SOLICITANTE` sem serviço; outro papel com serviço; remoção física; desativação do último admin ativo; auto-desativação da sessão corrente.
-  Também são inválidas a troca de função do último `ADMIN` ativo e qualquer mutação
-  administrativa de conta `origem=FIXTURE`.
+- IdP, MFA, expiração, lockout, retenção e segregação institucional;
+- execução em múltiplas estações/processos numa implantação real;
+- proteção do segredo cloud no ambiente de produção;
+- fornecedor, região, base legal e tratamento de dados reais;
+- resistência a adulteração e não repúdio fora das operações normais do app.
 
-### ENTITY: Sessao
+## Atores e fronteiras
 
-- Attributes: `id`, `usuario_id`, `papel_snapshot`, `servico_snapshot`, `credencial_versao`, `iniciada_em`, `ultimo_uso_em`, `encerrada_em`, `motivo_encerramento`; a projeção pública inclui `capabilities: Capability[]` derivadas do papel.
-- Actions: abrir após login, consultar, tocar último uso, encerrar, invalidar.
-- Relations: pertence a um usuário; autoria de eventos referencia sessão quando disponível.
-- Source of truth: sessão corrente em memória no processo main; `sessoes` é o registro auditável, não um token reutilizável. `CurrentSession` e `ActorContext` são main-only e nunca são importados pelo renderer.
-- Runtime states: `ATIVA`, `ENCERRADA_LOGOUT`, `ENCERRADA_APP`, `INVALIDADA_CREDENCIAL`.
-- Invalid states to prevent: sessão ativa para usuário inativo; versão divergente; renderer escolher papel; restauração automática após reinício; duas sessões correntes no mesmo processo.
+| Ator | Responsabilidade autorizada | Proibição central |
+|---|---|---|
+| `ADMIN` | contas, capacidade, inventários, saúde técnica e auditoria sanitizada | conteúdo de caso, transcript, prompt, resultado ou conhecimento clínico |
+| `RECEPCAO` | intake, handoff inicial, agenda, check-in, status e entrega selada | anamnese, avaliação, explicação clínica, transcript e PDF legível |
+| `ENFERMAGEM` | handoff recebido, anamnese, requisito operacional e propostas dos campos que coleta | avaliação médica e promoção de regra global |
+| `ANESTESIOLOGISTA` | avaliação, pendência, retorno, resultado, consulta e curadoria de conhecimento | reescrever anamnese final ou escolher vaga |
+| `SOLICITANTE` | cumprir pendência atribuída e receber resultado/entrega do próprio serviço | caso geral, outro serviço, anamnese, avaliação, IA e memória |
+| Sistema | resolver autoridade, filtrar, redigir, auditar e revogar | inferir papel, clínica ou escopo a partir do renderer |
 
-### ENTITY: EventoAuditoria
+## Entidades semânticas
 
-- Attributes: `id`, `ocorrido_em`, `correlation_id`, `sessao_id`, `usuario_id`, `usuario_nome_snapshot`, `papel_snapshot`, `acao`, `entidade_tipo`, `entidade_id`, `resultado`, `motivo`, `mudancas_json` sanitizado.
-- Actions: inserir e consultar; nunca editar ou excluir.
-- Relations: pode apontar para usuário e sessão; usa tipo/ID genéricos para objetos de domínio.
-- Source of truth: `auditoria_eventos` append-only no PGlite.
-- Runtime states: somente `REGISTRADO`.
-- Invalid states to prevent: evento sem ação/resultado; UPDATE/DELETE; senha/token/hash/conteúdo clínico integral em `mudancas_json`; auditoria de sucesso fora da transação da mutação.
+### `Account`
 
-## Runtime / Data Flow
+Identidade local de demonstração: nome, e-mail normalizado, papel, serviço quando
+solicitante, estado ativo/inativo, origem fixture/admin e revisão da autoridade. Senha é
+segredo verificável, nunca informação retornável. Conta não é identidade institucional.
 
-### Login e sessão
+### `SessionAuthority`
 
-```mermaid
-sequenceDiagram
-  actor Pessoa
-  participant Login as "Tela de login"
-  participant IPC as "TIPC auth.login"
-  participant Auth as "AuthService no main"
-  participant DB as "PGlite"
-  Pessoa->>Login: informa e-mail e senha
-  Login->>IPC: login(email, senha)
-  IPC->>Auth: normaliza e busca usuário
-  Auth->>DB: SELECT usuário por email_normalizado
-  DB-->>Auth: usuário + hash + versão
-  Auth->>Auth: scrypt + comparação constante
-  alt credencial válida e usuário ativo
-    Auth->>DB: cria sessão + auditoria LOGIN_SUCESSO
-    Auth-->>IPC: SessaoPublica
-    IPC-->>Login: usuário, papel e escopo
-    Login-->>Pessoa: abre home do papel
-  else inválida ou inativa
-    Auth->>DB: auditoria LOGIN_FALHA sem senha
-    IPC-->>Login: erro genérico
-    Login-->>Pessoa: "E-mail ou senha inválidos"
-  end
-```
+Autoridade efêmera derivada após login válido. Conhece conta, papel, serviço, revisão e
+capabilities. Não é restaurada pelo recibo de uma sessão antiga e não pode ser escolhida,
+editada ou ampliada pelo renderer.
 
-### Guard de uma ação
+### `CapabilityGrant`
 
-```mermaid
-sequenceDiagram
-  actor Pessoa
-  participant UI as "Superfície autorizada"
-  participant IPC as "Handler TIPC"
-  participant Guard as "requireRole + requireScope"
-  participant DB as "Transação PGlite"
-  Pessoa->>UI: solicita ação
-  UI->>IPC: DTO tipado
-  IPC->>Guard: valida sessão, versão, papel e escopo
-  alt negado
-    Guard->>DB: registra AUTORIZACAO_NEGADA
-    Guard-->>UI: FORBIDDEN
-  else permitido
-    Guard->>DB: inicia transação
-    DB->>DB: grava domínio
-    DB->>DB: grava auditoria sanitizada
-    DB-->>UI: resultado público
-  end
-```
+Permissão semântica para uma ação e uma classe de informação. Capability não substitui
+estado, ownership ou escopo: todas as condições precisam ser verdadeiras na mesma decisão.
 
-### Invalidação
+### `ProtectedProjection`
+
+Resposta mínima criada depois do filtro de escopo. Possui validade ligada à autoridade e à
+revisão de vínculo usadas para produzi-la. Lista, contagem, busca, paginação, detalhe, arquivo,
+erro e estado vazio são projeções e obedecem à mesma regra.
+
+### `AuditEvent`
+
+Fato append-only sobre quem tentou qual ação, sobre qual alvo técnico, quando e com qual
+resultado. Usa categorias e valores seguros por ação. Não é jornada clínica, cópia do
+agregado, assinatura digital nem prova contra adulteração local.
+
+### `CloudIntent`
+
+Pedido explícito de uso externo que declara ator, finalidade fechada, caso/revisão, categorias
+mínimas de dados sintéticos, provedor/modelo e confirmação. Não existe intenção de chat livre,
+leitura arbitrária de arquivo ou promoção automática de conhecimento.
+
+## Sessão, revogação e concorrência
 
 ```mermaid
 stateDiagram-v2
-  [*] --> SemSessao
-  SemSessao --> Ativa: login válido
-  Ativa --> Encerrada: logout
-  Ativa --> Encerrada: app fechado
-  Ativa --> Invalidada: usuário desativado
-  Ativa --> Invalidada: senha redefinida
-  Ativa --> Invalidada: papel ou escopo alterado
-  Invalidada --> SemSessao: próxima chamada ou retorno à UI
-  Encerrada --> SemSessao
+  [*] --> SEM_SESSAO
+  SEM_SESSAO --> ATIVA: login válido
+  ATIVA --> ENCERRADA: logout ou fechamento
+  ATIVA --> INVALIDADA: conta, credencial, papel ou serviço alterado
+  INVALIDADA --> SEM_SESSAO: contexto protegido descartado
+  ENCERRADA --> SEM_SESSAO
 ```
+
+| Evento | Resultado obrigatório |
+|---|---|
+| boot ou reabertura | começa sem autoridade; recibo antigo não autentica |
+| login ausente, inativo ou senha errada | mesma resposta pública; motivo interno sanitizado |
+| logout | autoridade e projeções protegidas deixam de ser utilizáveis antes do sucesso |
+| reset de senha, troca de papel/serviço ou desativação | nenhuma mutação confirma e nenhuma nova resposta protegida usa a autoridade anterior |
+| mudança do serviço vinculado ao caso | nenhuma resposta nova é emitida ao serviço anterior; worklists e projeções antigas expiram |
+| resposta já exibida antes da mudança | não pode ser “desvista”; não autoriza nova leitura, ação ou cache persistente |
+| duas ações reduzem administradores | decisão global garante pelo menos um admin ativo após todos os commits válidos |
+| duas instâncias tentam escrever | o invariante de autorização e último admin continua valendo; PoC não aceita dois writers sem coordenação |
+| replay de comando | revalida autoridade e escopo atuais; recibo não é credencial |
+
+Para mutação, autoridade, estado do alvo e efeito pertencem a uma única decisão lógica: se
+qualquer um mudar antes da confirmação, não existe commit parcial. Para leitura, filtro de
+escopo e conteúdo projetado pertencem a uma visão consistente; a autoridade é revalidada
+antes da resposta. A forma física de serialização pertence ao Build.
+
+## Matriz semântica de capabilities
+
+| Ação ou informação | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE | ADMIN |
+|---|:---:|:---:|:---:|:---:|:---:|
+| abrir/corrigir/cancelar intake | sim | não | não | não | não |
+| ler identidade e encaminhamento necessários | sim | sim | sim | mínimo da pendência própria | não |
+| aceitar handoff inicial | não | sim | não | não | não |
+| criar/editar/submeter anamnese | não | sim | não | não | não |
+| ler anamnese final | não | sim | sim | não | não |
+| confirmar/alterar requisito operacional | não | sim | não | não | não |
+| ler classe, duração e status operacionais | sim | sim | sim | não | não |
+| reservar/reagendar/cancelar/check-in | sim | não | não | não | capacidade, não booking clínico |
+| iniciar/salvar/finalizar avaliação | não | não | sim | não | não |
+| abrir/cancelar/decidir pendência | não | não | sim | não | não |
+| registrar evidência de pendência atribuída | se owner | se owner | se owner | próprio serviço | não |
+| ler status do resultado | sim | não | sim | próprio serviço | não |
+| ler conteúdo do resultado | não | não | sim | próprio serviço | não |
+| exportar PDF legível | não | não | sim | próprio serviço | não |
+| disparar/acompanhar entrega selada | sim | não | sim | confirmar próprio serviço | não |
+| iniciar/parar captura consentida | não | sim | não | não | não |
+| revisar transcript do caso | não | sim | sim, após confirmação humana | não | não |
+| gerar proposta de campo | não | sim | não | não | não |
+| aceitar/rejeitar/corrigir proposta | não | responsável humano pelo campo | responsável humano pelo campo | não | não |
+| consultar conhecimento aprovado | não | somente para o campo em trabalho | sim | não | estado técnico, sem conteúdo |
+| criar relação candidata | não | não | sim | não | não |
+| aprovar/versionar/desativar relação | não | não | sim, ação separada | não | não |
+| iniciar intenção cloud autorizada | não | para proposta sintética | para consulta sintética | não | não |
+| configurar capacidade técnica de IA | não | não | não | não | sim, sem conteúdo clínico |
+| gerenciar usuários e auditoria sanitizada | não | não | não | não | sim |
+
+Cada linha representa permissão diferente. “Acesso clínico”, “IA” ou “configuração” não são
+guards genéricos. O Build pode escolher identificadores físicos, mas não fundir essas
+fronteiras nem ampliar papel.
+
+## Redação e não interferência
+
+| Classe | ADMIN | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE |
+|---|---|---|---|---|---|
+| identidade do caso | nenhuma | mínima operacional | necessária | necessária | mínima da pendência/resultado próprio |
+| encaminhamento | nenhum | operacional | necessário à entrevista | completo | resumo mínimo próprio |
+| anamnese | nenhuma | nenhuma | completa | final completa | nenhuma |
+| explicação da classificação | nenhuma | classe/duração sem causas | completa | completa | nenhuma |
+| avaliação | nenhuma | status | status | completa | nenhuma |
+| pendência | nenhuma | status/pedido se owner | pedido se owner | completa | pedido próprio |
+| resultado | nenhuma | status | nenhum | completo | completo do próprio serviço |
+| PDF | nenhum | nenhum | nenhum | legível | legível do próprio serviço |
+| áudio/transcript | nenhum | nenhum | caso corrente | confirmado | nenhum |
+| IA/conhecimento | saúde/contagem técnica | nenhum | propostas e consulta autorizada | consulta/curadoria | nenhum |
+| auditoria | eventos sanitizados | nenhuma | nenhuma | nenhuma | nenhuma |
+
+Não interferência por serviço exige:
+
+- filtrar antes de carregar e projetar, nunca buscar todos e esconder na interface;
+- aplicar o mesmo escopo a lista, busca, contagem, paginação, detalhe, pendência, resultado,
+  entrega, loading, vazio, erro e existência;
+- responder de forma indistinguível para alvo inexistente e alvo de outro serviço;
+- não mostrar totais, posições ou códigos que revelem cardinalidade global;
+- usar identificador opaco e não sequencial na projeção restrita;
+- invalidar store, cache, tela aberta e trabalho em voo quando autoridade ou vínculo mudar;
+- impedir que replay devolva projeção histórica não mais autorizada.
+
+## Contrato de auditoria sanitizada
+
+| Categoria | Registra | Valores seguros | Nunca registra |
+|---|---|---|---|
+| login/logout/revogação | ação, resultado, conta técnica quando conhecida, revisão | código fechado de resultado/motivo | e-mail tentado, senha, hash, token |
+| autorização negada | capability tentada, tipo/ID técnico seguro, correlação | `UNAUTHENTICATED`, `FORBIDDEN`, `SCOPE_CHANGED` | payload, existência protegida, conteúdo |
+| administração de conta | alvo técnico e categoria alterada | papel, estado, serviço técnico, revisão anterior/nova | senha, hash, nome clínico, texto livre |
+| intake/caso | ação, caso técnico, segmentos alterados, estado/revisão | categorias como `PERSON_CONTEXT`, `REQUESTER`, `PROCEDURE` | nome, encaminhamento, field path clínico, motivo livre |
+| anamnese/classificação | ação, revisão, contagens e estados | `DRAFT`, `FINAL`, `PROPOSED`, `CONFIRMED`, `OVERRIDDEN` | respostas, diagnóstico, medicamento, alergia, sinal |
+| agenda | ação, IDs técnicos, intervalo, classe e transição | estados/códigos operacionais | explicação clínica |
+| avaliação/pendência | ação, ownerRole, tipo operacional, contagem, estado | códigos fechados | pedido, evidência, conclusão, documento, hash correlacionável |
+| resultado/entrega/PDF | ação, IDs, versão, horário e resultado | estado da entrega/exportação | conteúdo, HTML, PDF, filename, path |
+| IA cloud | finalidade, provedor/modelo, categorias e contagens, resultado | códigos de consentimento/rede | prompt, resposta, transcript, token, trecho recuperado |
+| conhecimento | relação/fonte técnica, versão, estado, autor/aprovador | `SUGGESTED`, `APPROVED`, `INACTIVE`, `SUPERSEDED` | texto-fonte integral ou narrativa de caso |
+
+O motivo administrativo é código fechado por ação. Justificativa clínica livre permanece no
+agregado clínico e só aparece em sua projeção autorizada. A auditoria informa que a ação
+ocorreu; não explica a clínica que a motivou.
+
+## Rede, arquivos, PDF e handlers legados
+
+1. O fluxo-base e o boot não usam rede.
+2. Uma intenção cloud da PoC é explícita, usa somente dado sintético mínimo, informa
+   provedor/finalidade/categorias e exige confirmação humana.
+3. Chat livre, envio de histórico integral e egress em background não são capacidades do
+   produto.
+4. Leitura arbitrária de path fornecido pelo renderer não pode compor uma intenção cloud.
+5. Token cloud não integra banco clínico, DTO, log, auditoria ou exportação. Sem fronteira de
+   segredo aceita, a capacidade permanece indisponível.
+6. Conteúdo generativo de grafo ou memória nasce inativo e exige promoção humana separada.
+7. PDF final nasce de resultado canônico autorizado. Renderer não fornece HTML clínico.
+8. Recepção opera status e entrega selada sem receber bytes, preview, path ou documento
+   legível; anestesiologista e solicitante do serviço correto podem exportar conteúdo.
+9. Handler herdado sem sessão, capability, escopo e projeção redigida não pertence ao router
+   público do produto, mesmo que tenha arquivo, teste ou tela oculta.
+10. Erro público usa código opaco e correlação. Stack, SQL, path, provedor e mensagem interna
+    não atravessam para a interface.
+
+## Limite da auditoria local
+
+“Append-only” significa que as operações normais do aplicativo não atualizam nem excluem o
+evento e que sucesso e mutação pertencem ao mesmo resultado lógico. Não significa
+criptografia em repouso, assinatura, não repúdio ou resistência a um usuário, malware ou
+processo com acesso direto ao diretório do PGlite. A PoC não pode alegar essas propriedades.
+
+## Failure And Recovery Matrix
+
+| Falha ou ataque | Resultado obrigatório |
+|---|---|
+| renderer envia papel, ator ou serviço | campo rejeitado/ignorado; autoridade vem da sessão |
+| rota escondida chama handler legado | indisponível ou negado antes de tocar recurso |
+| conta muda durante mutação | nenhuma confirmação com autoridade antiga; operação sem efeito |
+| serviço do caso muda durante leitura | nenhuma resposta nova ao serviço antigo; projeções expiram |
+| dois admins tentam remover um ao outro | no máximo uma redução confirma; sempre sobra admin ativo |
+| solicitante consulta outro serviço | resposta indistinguível de inexistente e sem cardinalidade |
+| cache contém projeção antiga | descartado; não autoriza ação ou nova leitura |
+| login inexistente/inativo/senha errada | mesma resposta pública |
+| renderer envia HTML para PDF | rejeitado; documento é derivado do resultado canônico |
+| recepção tenta abrir/exportar resultado | recebe somente status; conteúdo negado |
+| arquivo local é combinado com cloud | intenção inválida; nenhum arquivo arbitrário é lido/enviado |
+| LLM produz relação | permanece candidata inativa até promoção humana |
+| erro inesperado | código opaco e correlação; detalhe fica no main sanitizado |
+| mutação falha | nenhum evento de sucesso; falha auditada sem payload quando seguro |
+| PGlite é alterado externamente | fora da garantia append-only; produto não alega integridade contra host |
 
 ## Rules And Invariants
 
-### Credenciais e fixtures
+1. MUST resolver ator, papel, serviço e capability fora do payload.
+2. MUST aplicar autorização a leitura, mutação, arquivo, PDF, rede, IA e conhecimento.
+3. MUST NOT considerar menu, rota ou tipo TypeScript como fronteira de segurança.
+4. MUST NOT confirmar mutação se conta, revisão, papel ou escopo deixarem de corresponder.
+5. MUST NOT emitir resposta protegida usando serviço ou vínculo anterior.
+6. MUST invalidar estado efêmero protegido em logout, revogação ou mudança de escopo.
+7. MUST manter pelo menos um `ADMIN` ativo sob qualquer concorrência válida.
+8. MUST NOT permitir que `ADMIN` leia clínica por auditoria, contagem ou erro.
+9. MUST aplicar não interferência a todas as formas de consulta e existência.
+10. MUST usar identificador restrito que não revele sequência global.
+11. MUST restringir recepção a status e entrega selada, sem PDF legível.
+12. MUST derivar PDF de resultado canônico e autorizado.
+13. MUST registrar somente allowlist sanitizada por categoria de ação.
+14. MUST usar motivo administrativo categórico, nunca justificativa clínica livre.
+15. MUST revalidar autorização em replay; recibo nunca é credencial.
+16. MUST manter sugestão de IA/conhecimento inativa até decisão humana própria.
+17. MUST NOT expor caminho genérico de arquivo para cloud.
+18. MUST NOT persistir ou duplicar token cloud no banco clínico.
+19. MUST apresentar erro público opaco e estável.
+20. MUST limitar a promessa append-only às operações normais do aplicativo.
+21. MUST começar todo boot sem sessão autenticada.
+22. MUST preservar fixtures e contas administrativas extras sem permitir mutação das fixtures.
 
-1. `email_normalizado = trim(email).toLowerCase()`; unicidade é aplicada sobre esse valor.
-2. Senha aceita entre 8 e 128 caracteres no MVP. Campo vazio, espaços isolados e senha fora do intervalo falham antes do hash.
-3. Senha jamais é retornada, auditada, logada ou persistida em texto claro.
-4. Hash canônico: `scrypt$16384$8$1$<salt-base64>$<hash-base64>`, salt aleatório de 16 bytes e saída de 64 bytes; verificação usa comparação de tempo constante. Usuário ausente, inativo e senha incorreta percorrem verificação `scrypt` contra hash dummy antes do mesmo erro público.
-5. O seed reconcilia exatamente cinco contas sintéticas estáveis e ativas com `origem = FIXTURE`, uma por papel: `admin@antessala.demo`, `recepcao@antessala.demo`, `enfermagem@antessala.demo`, `anestesio@antessala.demo` e `solicitante.gastro@antessala.demo`. A senha de apresentação pode ser `Demo@2026`, mas o banco recebe somente hashes com salts distintos.
-6. Contas `FIXTURE` são imutáveis pela administração: a lista mostra badge “Conta da demo” e não oferece editar, trocar papel/escopo/status, redefinir senha, ativar ou desativar. Toda tentativa direta por IPC falha `FIXTURE_IMMUTABLE` sem incrementar versão. O seed é o único writer dessas cinco linhas e as reconcilia no boot.
-7. Contas criadas pela administração têm `origem = ADMIN`. O seed não as conta entre as cinco fixtures, não as altera e não as remove; todas as provas de criar, editar, resetar senha, ativar e desativar usam contas `ADMIN`. Não existe botão ou endpoint de cadastro público, confirmação, recuperação ou “esqueci minha senha”.
+## Acceptance Scenarios
 
-### Sessão
+| # | Cenário | Resultado obrigatório |
+|---:|---|---|
+| 1 | renderer envia ator/papel falsos | identidade ignorada; autorização corrente aplicada |
+| 2 | solicitante lista/busca/conta casos de outro serviço | zero inferência de existência ou cardinalidade |
+| 3 | solicitante tenta detalhe de outro serviço | resposta opaca e nenhum dado |
+| 4 | serviço errado confirma entrega | falha sem mutação |
+| 5 | serviço da conta muda durante chamada | nenhum commit/resposta com autoridade antiga |
+| 6 | conta é desativada entre leitura e escrita | mutação não confirma |
+| 7 | usuário comum tenta alterar papel ou senha fora do contrato | negado |
+| 8 | dois admins tentam remover o outro | sempre resta ao menos um admin ativo |
+| 9 | fixture recebe mutação direta | negado sem alterar revisão |
+| 10 | segundo boot após conta administrativa extra | cinco fixtures reconciliadas; conta extra preservada |
+| 11 | login ausente, inativo e senha errada | mesma mensagem e forma pública |
+| 12 | app reinicia | exige novo login |
+| 13 | recepção tenta ler ou exportar PDF clínico | somente status; conteúdo negado |
+| 14 | enfermagem tenta editar após final vigente | negado |
+| 15 | solicitante cumpre pendência própria | recebe somente projeção suficiente do pedido |
+| 16 | admin consulta auditoria | nenhum nome clínico, field path, texto, hash correlacionável ou segredo |
+| 17 | writer falha depois de iniciar mutação | não existe sucesso auditado ou efeito parcial |
+| 18 | renderer chama handler herdado diretamente | indisponível/negado antes de DB, arquivo ou rede |
+| 19 | intenção cloud tenta histórico ou arquivo arbitrário | rejeitada; somente categorias sintéticas allowlisted |
+| 20 | usuário com acesso ao host altera PGlite | limitação é declarada; nenhuma alegação de tamper evidence |
+| 21 | mudança de serviço do caso concorre com leitura | nenhuma resposta nova ao serviço antigo; cache expira |
+| 22 | payload inclui HTML, path, estado ou horário confiável | dados sensíveis derivados no main ou rejeitados |
+| 23 | erro contém SQL/path/provedor | renderer recebe código opaco e correlação |
+| 24 | LLM sugere relação de conhecimento | fica inativa até aprovação humana separada |
 
-8. O renderer não envia papel nem escolhe identidade. O main resolve a sessão corrente.
-9. Todo boot começa em `SemSessao`, mesmo que existam linhas antigas em `sessoes`.
-10. Login válido encerra qualquer sessão corrente antes de abrir outra.
-11. Logout limpa a sessão em memória e carimba `encerrada_em`.
-12. Cada ação protegida compara `sessao.credencial_versao` com `usuario.credencial_versao` e verifica `ativo = true`.
-13. Alterar senha, papel, escopo ou status incrementa `credencial_versao`; a sessão afetada deixa de autorizar imediatamente.
+## Boundary With Build
 
-### RBAC e escopo
+Este Analyst define atores, informação, capabilities, escopo, concorrência, revogação,
+não interferência, redaction, falhas e limites. O Build será owner de:
 
-| Capacidade | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE | ADMIN |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Criar encaminhamento/caso | sim | não | não | não | não |
-| Ler identidade e encaminhamento operacional | sim | sim | sim | não; somente projeção mínima de pendência própria | não |
-| Ler respostas clínicas da anamnese | não | sim | sim | não | não |
-| Criar/editar rascunho da anamnese | não | sim | não | não | não |
-| Abrir fila de triagem | não | sim | não | não | não |
-| Submeter triagem | não | sim | não | não | não |
-| Ler categoria operacional da vaga | sim | sim | sim | não | não |
-| Criar/reagendar/cancelar reserva | sim | não | não | não | não |
-| Registrar check-in da consulta | sim | não | não | não | não |
-| Criar/editar avaliação anestésica | não | não | sim | não | não |
-| Criar pendência/retorno/conclusão médica | não | não | sim | não | não |
-| Registrar evidência em pendência atribuída | sim | sim | sim | apenas próprio serviço | não |
-| Ler resultado final autorizado | projeção operacional | não | sim | apenas próprio serviço | não |
-| Exportar versão final em PDF | sim | não | sim | não | não |
-| Registrar envio/handoff local | sim | não | não | não | não |
-| Confirmar recebimento do handoff | não | não | não | apenas próprio serviço | não |
-| Gerenciar usuários, recursos, janelas e bloqueios | não | não | não | não | sim |
-| Ver inventário versionado de serviços/procedimentos/catálogos | não | não | não | não | sim |
-| Ler auditoria de segurança sanitizada | não | não | não | não | sim |
+- armazenamento e verificação de segredo/senha;
+- schema, migrations, constraints, transações, coordenação e prova de dois writers;
+- sessão em memória e representação de recibos;
+- allowlist do preload, canais IPC, DTOs, errors e guards;
+- composição do router público e isolamento de handlers legados;
+- descarte de stores/caches e projeções da interface;
+- derivação do PDF canônico e entrega selada;
+- testes de chamadas diretas, concorrência, rollback e egress.
 
-14. Permissão de interface e permissão de handler precisam concordar; ocultar um botão nunca substitui o guard.
-15. `SOLICITANTE` não possui listagem ou detalhe geral do caso. Lê somente pendência
-    explicitamente atribuída ao próprio serviço, resultado final e entrega; toda projeção
-    exige que o serviço corrente coincida com o alvo.
-16. `ADMIN` não lê anamnese, avaliação ou resultado clínico por ser administrador.
-17. A recepção recebe apenas identificador operacional, classe demonstrativa, duração,
-    ocupação, capabilities, data-alvo, status/autoria da decisão, motivo operacional
-    genérico, vagas e falhas de capacidade. Não recebe comorbidades, medicamentos,
-    alergias, sintomas, exames, respostas, recusa/desconhecimento, field paths, transcript,
-    sinal clínico bruto ou saída de IA.
-18. Somente a enfermagem usa `clinical:anamnesis:edit` enquanto a anamnese está `DRAFT` e
-    executa `submitFinal` para `COMPLETE`. Depois disso não existe escrita na anamnese; o
-    anestesiologista apenas lê o snapshot submetido e registra informação própria por
-    `assessment:write`.
-19. Corrigir o serviço solicitante revoga imediatamente futuras leituras e comandos do
-    serviço anterior, redireciona destinos correntes e impede replay de devolver projeção
-    antiga. Acesso anterior permanece apenas como auditoria histórica.
-20. Idempotência nunca substitui autorização: toda repetição revalida sessão, papel e
-    escopo; recibo prova efeito, não concede leitura. Mesma chave com intenção divergente
-    falha, e falha sem mutação não é memorizada como efeito concluído.
+O Build atual antecede estas correções e permanece invalidado. Parâmetro criptográfico,
+nome de tabela, path, componente ou lock não completa lacuna semântica.
 
-### Administração de usuários
+## Dependencies And Open Questions
 
-21. Somente `ADMIN` chama `usuarios.*` e `auditoria.*`.
-22. O sistema impede desativar o próprio usuário da sessão e impede desativar **ou trocar a
-    função** do último `ADMIN` ativo; o guard conta admins ativos dentro da mesma transação.
-23. Usuário nunca é apagado fisicamente; desativação preserva referências e auditoria.
-24. Troca para `SOLICITANTE` exige `servico_solicitante_id`; troca para outro papel limpa esse campo.
-25. Redefinir senha exige uma nova senha completa; não existe leitura do valor anterior.
-26. E-mail de usuário existente não pode ser reutilizado, mesmo se a conta estiver inativa.
+Antes de novo adversarial:
 
-### Auditoria
-
-27. Mutação de domínio e evento de sucesso são gravados na mesma transação.
-28. Login, logout, falha de login, negação, criação/desativação de usuário, redefinição de senha, alteração de papel e todas as mutações clínicas/operacionais são auditáveis.
-29. `mudancas_json` contém nomes de campos e valores operacionais seguros; senha, hash, token, HTML/PDF, anamnese integral, parecer integral e anexos são proibidos.
-30. UPDATE e DELETE de `auditoria_eventos` falham por trigger.
-31. A consulta de auditoria pagina por `(ocorrido_em, id)` e filtra período, ator, papel, ação, entidade e resultado.
-32. A linha de auditoria não substitui a jornada clínica do caso; são trilhas diferentes com consumidores diferentes.
-
-## Architecture Risks
-
-| Severity | Risk | Evidence | Fix direction |
-|---|---|---|---|
-| critical | Proteger só rotas deixa qualquer handler chamável pelo renderer. | `src/preload/index.ts:3-16`; `src/main/tipc.ts:373-399`. | Guard no main para toda leitura/mutação ativa. |
-| high | Sessão persistida no renderer permitiria forjar papel. | Client atual é apenas transporte (`src/renderer/src/servicos/client.ts:1-6`). | Identidade corrente existe somente no main. |
-| high | `ADMIN` virar superusuário clínico viola minimização. | PRD separa responsabilidade por setor. | Capacidade explícita; admin sem leitura clínica. |
-| high | Auditorar payload integral cria segunda cópia de dados clínicos. | O produto contém anamnese e parecer. | Diffs sanitizados e allowlist por ação. |
-| high | Auditoria fora da transação pode afirmar sucesso de escrita que falhou. | Queries atuais são diretas. | Helper transacional único para mutação + evento. |
-| medium | Conta fixture com senha conhecida não serve a produção. | Decisão expressa do hackathon. | Rotular fixtures e limitar alegação ao protótipo. |
-| medium | Uma sessão por processo não representa estações simultâneas. | Aplicativo Electron local. | Assumir troca sequencial no pitch; IdP/servidor é futuro. |
-| medium | DDL clínico legado pode ser confundido com fonte canônica. | `src/main/db/clinical-schema.ts:3-9`. | Novas tabelas e tipos; não ampliar `registros`. |
-
-## Blueprint Handoff
-
-| Path/Area | Action | Reason | Validation |
-|---|---|---|---|
-| `src/shared/auth.ts` | criar enum, DTOs e capabilities | Uma fonte tipada para main e renderer. | testes de contrato e typecheck. |
-| `src/main/db/migrations/NNN_access_audit.sql` | entregar migration numerada | Persistir identidade e prova local pelo runner da arquitetura. | teste de DDL, constraints e append-only. |
-| `src/main/db/schema.ts` | conter | Não duplicar DDL nem runner no bootstrap legado. | teste de arquitetura/imports. |
-| `src/main/db/seed.ts` | reconciliar cinco usuários fixture | Demo reproduzível sem e-mail sem apagar contas administrativas. | primeiro e segundo boot; cinco `FIXTURE`, extras `ADMIN` preservadas, hashes distintos. |
-| `src/main/auth/password.ts` | hash/verificação scrypt | Senha nunca em claro. | vetores, senha incorreta e formato inválido. |
-| `src/main/auth/session.ts` | sessão em memória e invalidação | Main é a fronteira de confiança. | boot, login, logout, troca de papel. |
-| `src/main/auth/authorize.ts` | `requireSession`, `requireRole`, `requireScope` | RBAC não depende da UI. | matriz positiva e negativa. |
-| `src/main/audit/service.ts` | escrita sanitizada transacional | Autoria reconstruível. | payload proibido e rollback. |
-| `src/main/tipc.ts` | auth/admin/audit + guards nos domínios | Aplicar contrato a toda chamada. | chamada direta proibida retorna `FORBIDDEN`. |
-| `src/renderer/src/auth/*` | provider e gates | Shell reage a sessão, não inventa papel. | testes loading/unauth/invalidated. |
-| `src/renderer/src/paginas/LoginPagina.tsx` | login local | Entrada única do app. | E2E das cinco fixtures. |
-| `src/renderer/src/paginas/configuracoes/UsuariosPagina.tsx` | administração mínima | Criação exigida por Marco; fixtures são somente leitura. | criar/editar/resetar/desativar conta `ADMIN`; fixture sem controles. |
-| `src/renderer/src/paginas/configuracoes/AuditoriaPagina.tsx` | leitura admin | Provar autoria no pitch. | filtros, paginação e ausência de segredo. |
-
-### Contratos que o Build deve preservar
-
-- `LoginInput = { email: string; senha: string }`.
-- `Capability` é uma union compartilhada e exaustiva; nenhum consumidor usa capability livre em string.
-- `SessaoPublica = { sessaoId; usuario: { id; nome; email; papel; servicoSolicitanteId? }; capabilities: Capability[] }`, sempre derivada do papel pelo main.
-- `CurrentSession` e `ActorContext` são contratos main-only; nunca atravessam preload nem são importados pelo renderer.
-- `CriarUsuarioInput = { nome; email; senha; papel; servicoSolicitanteId? }`.
-- `AtualizarUsuarioInput = { id; nome; papel; servicoSolicitanteId?; ativo; expectedVersion }`.
-- `ResetarSenhaInput = { id; novaSenha; expectedVersion }`.
-- Nenhum DTO público contém `senha_hash`, hash de sessão ou credenciais de IA.
-- Login público retorna somente `INVALID_CREDENTIALS` para usuário ausente, inativo ou senha incorreta. `USER_INACTIVE` existe apenas como motivo interno sanitizado da auditoria e não pertence à union pública.
-- Demais erros públicos estáveis: `UNAUTHENTICATED`, `FORBIDDEN`, `EMAIL_IN_USE`,
-  `FIXTURE_IMMUTABLE`, `LAST_ADMIN`, `VERSION_CONFLICT`, `VALIDATION_ERROR`.
-
-## Acceptance Criteria
-
-- [ ] Primeiro boot deixa exatamente cinco linhas `origin=FIXTURE`, uma conta ativa por papel, sem senha em claro no banco.
-- [ ] Conta extra criada pelo admin usa `origin=ADMIN` e sobrevive ao segundo boot sem ser alterada ou removida pelo seed.
-- [ ] Conta `origin=FIXTURE` aparece como conta da demo, não expõe controles de mutação e
-      qualquer chamada direta de update/reset/status falha `FIXTURE_IMMUTABLE` sem efeito.
-- [ ] Cada fixture entra com a credencial da demo e abre a home correta.
-- [ ] Reiniciar o app exige novo login.
-- [ ] O administrador cria uma conta com nome, e-mail, senha e função sem enviar e-mail.
-- [ ] E-mail duplicado, papel inválido e solicitante sem serviço são recusados.
-- [ ] Admin redefine senha e a senha anterior deixa de funcionar.
-- [ ] Desativação, troca de papel, troca de escopo ou reset de senha invalidam a sessão afetada.
-- [ ] O último administrador ativo não pode ser desativado nem movido para outro papel; o
-      administrador corrente não pode ser desativado.
-- [ ] Cada papel vê somente sua navegação.
-- [ ] Chamada TIPC proibida falha mesmo quando disparada fora da interface.
-- [ ] Solicitante nunca recebe caso de outro serviço.
-- [ ] Recepção nunca recebe respostas clínicas da anamnese em DTO.
-- [ ] Somente enfermagem edita anamnese `DRAFT`; `submitFinal` publica `COMPLETE` e toda
-  escrita posterior é negada, mantendo leitura para anestesiologia.
-- [ ] Administrador não recebe conteúdo clínico por padrão.
-- [ ] Toda mutação crítica registra autor, papel, horário, ação, objeto e resultado.
-- [ ] Auditoria não contém senha, hash, token nem conteúdo clínico integral.
-- [ ] UPDATE/DELETE de auditoria falham.
-- [ ] Testes unitários, de integração, renderer e E2E cobrem caminhos positivos e negativos da matriz.
-
-## Open Questions
-
-Permanecem abertas a revisão adversarial de credenciais, sessão, escopo, capabilities e
-auditoria, além da separação entre semântica de produto e escolha técnica.
-
-Decisões futuras, explicitamente fora do hack:
-
-- qual IdP e protocolo institucional substituem a sessão local;
-- como identidade profissional e lotação serão sincronizadas;
-- política institucional de expiração, bloqueio, MFA e retenção;
-- se uma pessoa poderá acumular papéis em produção;
-- como estações simultâneas compartilham estado e revogação.
+1. caso deve adotar não interferência e validade de projeção após mudança de serviço;
+2. avaliação e superfícies devem retirar PDF legível da recepção;
+3. arquitetura deve permitir somente intenção cloud explícita e sintética da prova;
+4. IA deve consumir esta matriz e deixar de adiar a separação autorizativa ao Build;
+5. síntese deve incorporar revogação em voo, auditoria allowlisted e limites do PGlite;
+6. Builds de acesso e avaliação permanecem invalidados até os Analysts serem assinados;
+7. os 24 cenários precisam de novo ataque no SHA reconciliado.
 
 ## Grill Verdict
 
-- Verdict: `ADVERSARIAL_REQUIRED`.
-- Why: atores e fronteiras estão definidos, mas segurança, sessão, escopo e mistura com decisões de Build ainda precisam ser atacados.
-- Governance constraint: o Build correspondente existe como blueprint, mas não está autorizado até a assinatura de Marco.
-- Next stage: revisar e assinar este Analyst; produzir/revisar o Build correspondente e submetê-lo ao Critic, jamais saltar direto para Spec, Plan ou código.
+- Verdict: `ADVERSARIAL_REQUIRED`
+- Adversarial result: findings confirmados foram incorporados semanticamente; o HEAD ainda
+  não implementa autenticação, RBAC ou auditoria canônicos.
+- Remaining blockers: reconciliação transversal, novo adversarial, research/recon dos
+  domínios dependentes e assinatura de Marco.
+- Next stage: nenhum Build, Warlog, Sprint, Spec, Plan, TDD ou código.
 
 ## Recommended Next Phase
 
-Após a assinatura, consumir este Analyst em `BUILD-acesso-e-auditoria.md` e submeter o Build
-ao Critic. O fluxo forense literal é `PRD → Analyst → Build → Critic → Warlog →
-Sprints/Minispecs → Spec → Plan → primeiro teste TDD → implementação → QA`. O Build deve
-ser reconciliado com os Builds de fluxo, dados clínicos e superfícies antes do Critic, porque
-todos chamam o mesmo guard e produzem auditoria.
+Reconciliar caso, avaliação, superfícies, arquitetura, IA e `hack/analysis.md`; depois repetir
+os 24 cenários. Somente novo review sem blocker pode levar este artefato a
+`READY_FOR_MARCO`.
 
 ---
 
 ## Contrato de encerramento deste arquivo
 
-- Artefato: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Conteúdo MVP: `EM REVISÃO`.
-- Próxima fase material: `hack/domains/BUILD-acesso-e-auditoria.md`.
-- Próxima fase autorizada: `NENHUMA SEM ASSINATURA`.
-- Estado: `ADVERSARIAL_REQUIRED`.
-- Assinatura de Marco: `PENDENTE`.
-- Data: `PENDENTE`.
-- Revisão Git examinada: `PENDENTE`.
-- Declaração: `PENDENTE`.
+- Artefato: `hack/domains/ANALYST-acesso-e-auditoria.md`
+- Gate: Analyst de acesso e auditoria → Build do domínio
+- Estado: `ADVERSARIAL_REQUIRED`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
 
-Declaração exigida: “Aprovo o Analyst de acesso e auditoria e autorizo seu Build correspondente.”
-
-Sem essa assinatura, o artefato não terminou e não autoriza Spec, Plan, teste ou código.
+Declaração futura exigida: “Aprovo o Analyst de acesso e auditoria e autorizo seu consumo
+pelo Build.”

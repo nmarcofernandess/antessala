@@ -342,9 +342,18 @@ Toda saída assistiva deve permitir reconstruir:
 - Somente quem possui a responsabilidade do campo pode aplicar uma proposta nesse campo.
 - Aprovação de conhecimento e aceitação de campo são capacidades diferentes.
 - Auditoria registra metadados e decisões; não replica conteúdo clínico integral.
+- Enfermagem pode capturar áudio consentido, revisar transcript, gerar e decidir propostas
+  apenas dos campos sob sua responsabilidade.
+- Anestesiologista pode ler transcript confirmado, consultar conhecimento aprovado, criar
+  relação candidata e, em ação separada, aprovar, versionar ou desativar relação.
+- Uma intenção cloud autorizada é diferente de captura, revisão, proposta, decisão de campo,
+  consulta de conhecimento e curadoria; nenhuma capability agrega essas ações.
+- Admin pode configurar disponibilidade técnica e ver saúde/contagens, mas não iniciar uma
+  intenção com conteúdo clínico nem aprovar significado.
 
-Os nomes finais das capabilities pertencem ao Build depois da assinatura do Analyst de
-acesso; este Analyst define apenas a separação de responsabilidades.
+A matriz semântica exaustiva de capabilities e redação vive no
+`ANALYST-acesso-e-auditoria.md`. O Build poderá nomear contratos físicos, mas não fundir,
+redistribuir ou ampliar essas fronteiras.
 
 ## Regras e invariantes
 
