@@ -298,7 +298,7 @@ export function WidgetSono({
   const tomHoras = statusHoras(dados.horasDormidas)
 
   return (
-    <CorpoWidget>
+    <CorpoWidget className="gap-5">
       <ValorHero
         valor={dados.horasDormidas.toFixed(1).replace('.0', '')}
         unidade="h por noite"
@@ -578,7 +578,7 @@ export function WidgetHidratacao({
         : 'Dentro da faixa'
 
   return (
-    <CorpoWidget>
+    <CorpoWidget className="gap-5">
       <ValorHero
         valor={dados.litrosDia.toFixed(1)}
         unidade="L por dia"
@@ -805,7 +805,7 @@ export function WidgetRotina({
     horarios.length > 1 ? `${horarios[0]} às ${horarios[horarios.length - 1]}` : undefined
 
   return (
-    <CorpoWidget>
+    <CorpoWidget className="gap-5">
       <Secao
         titulo={`${dados.registros.length} momentos do dia`}
         aparte={
