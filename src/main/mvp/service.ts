@@ -59,6 +59,27 @@ export type MvpBooking = {
   status: 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'
 }
 
+export type MvpPendency = {
+  id: string
+  caseId: string
+  description: string
+  impact: 'BLOCKS_CURRENT_RESULT' | 'DOES_NOT_BLOCK_CURRENT_RESULT'
+  ownerRole: Exclude<DemoRole, 'ADMIN'>
+  requiresReturn: boolean
+  status: 'OPEN' | 'EVIDENCE_SUBMITTED' | 'RESOLVED' | 'CANCELLED'
+}
+
+export type MvpResult = {
+  id: string
+  caseId: string
+  version: number
+  kind: 'FINAL' | 'CORRECTION' | 'ADDENDUM'
+  summary: string
+  conclusion: string
+  reason: string | null
+  createdAt: string
+}
+
 let currentSession: MvpSession | null = null
 
 const FIXTURE_USERS: Array<{
@@ -406,6 +427,182 @@ export async function bookCompatibleSlot(caseId: string, slotId: string): Promis
     await audit('BOOKING_CONFIRM', 'CASE', caseId)
   })
   return { id, caseId, slotId, kind: 'INITIAL', status: 'CONFIRMED' }
+}
+
+export async function checkInBooking(caseId: string): Promise<MvpBooking> {
+  requireSession('RECEPCAO')
+  const booking = await queryOne<{
+    id: string; case_id: string; slot_id: string; kind: MvpBooking['kind']; status: MvpBooking['status']
+  }>(`SELECT * FROM scheduling_bookings WHERE case_id=$1 AND status='CONFIRMED' ORDER BY created_at DESC LIMIT 1`, caseId)
+  if (!booking) throw new Error('BOOKING_NOT_FOUND')
+  await transaction(async () => {
+    await execute(`UPDATE scheduling_bookings SET status='CHECKED_IN' WHERE id=$1`, booking.id)
+    await moveCase(caseId, 'WAITING_ANESTHESIA', 'BOOKING_CHECKED_IN')
+    await audit('BOOKING_CHECK_IN', 'CASE', caseId)
+  })
+  return { id: booking.id, caseId, slotId: booking.slot_id, kind: booking.kind, status: 'CHECKED_IN' }
+}
+
+export async function startAssessment(caseId: string): Promise<{ id: string; caseId: string; status: 'OPEN' }> {
+  const session = requireSession('ANESTESIOLOGISTA')
+  const id = randomUUID()
+  await transaction(async () => {
+    await execute(
+      `INSERT INTO anesthesia_encounters (id,case_id,kind,status,started_by)
+       VALUES ($1,$2,'INITIAL','OPEN',$3)`,
+      id, caseId, session.userId,
+    )
+    await moveCase(caseId, 'IN_ASSESSMENT', 'ASSESSMENT_STARTED')
+    await audit('ASSESSMENT_START', 'CASE', caseId)
+  })
+  return { id, caseId, status: 'OPEN' }
+}
+
+export async function openPendency(
+  caseId: string,
+  input: {
+    description: string
+    impact: MvpPendency['impact']
+    ownerRole: MvpPendency['ownerRole']
+    requiresReturn: boolean
+  },
+): Promise<MvpPendency> {
+  const session = requireSession('ANESTESIOLOGISTA')
+  if (!input.description.trim()) throw new Error('Descrição obrigatória.')
+  const id = randomUUID()
+  await transaction(async () => {
+    await execute(
+      `INSERT INTO case_pendencies
+       (id,case_id,description,impact,owner_role,requires_return,status,opened_by)
+       VALUES ($1,$2,$3,$4,$5,$6,'OPEN',$7)`,
+      id, caseId, input.description.trim(), input.impact, input.ownerRole,
+      input.requiresReturn, session.userId,
+    )
+    if (input.impact === 'BLOCKS_CURRENT_RESULT') {
+      await moveCase(caseId, 'PENDING', 'PENDENCY_OPENED')
+    }
+    await audit('PENDENCY_OPEN', 'CASE', caseId)
+  })
+  return { id, caseId, ...input, description: input.description.trim(), status: 'OPEN' }
+}
+
+function mapResult(row: {
+  id: string; case_id: string; version: number; kind: MvpResult['kind']; summary: string
+  conclusion: string; reason: string | null; created_at: string
+}): MvpResult {
+  return {
+    id: row.id, caseId: row.case_id, version: row.version, kind: row.kind,
+    summary: row.summary, conclusion: row.conclusion, reason: row.reason, createdAt: row.created_at,
+  }
+}
+
+export async function getCurrentResult(caseId: string): Promise<MvpResult | null> {
+  const session = requireSession('ANESTESIOLOGISTA', 'RECEPCAO', 'SOLICITANTE')
+  const row = await queryOne<{
+    id: string; case_id: string; version: number; kind: MvpResult['kind']; summary: string
+    conclusion: string; reason: string | null; created_at: string; requester_service: string
+  }>(
+    `SELECT r.*, c.requester_service FROM preop_result_heads h
+     JOIN preop_results r ON r.id=h.result_id JOIN preop_cases c ON c.id=r.case_id
+     WHERE h.case_id=$1`, caseId,
+  )
+  if (!row) return null
+  if (session.role === 'SOLICITANTE' && row.requester_service !== session.requesterService) throw new Error('NOT_FOUND')
+  return mapResult(row)
+}
+
+export async function finalizeResult(
+  caseId: string,
+  input: { summary: string; conclusion: string },
+): Promise<MvpResult> {
+  const session = requireSession('ANESTESIOLOGISTA')
+  if (!input.summary.trim() || !input.conclusion.trim()) throw new Error('Resultado incompleto.')
+  const current = await queryOne<CaseRow>('SELECT * FROM preop_cases WHERE id=$1', caseId)
+  if (!current || current.status !== 'IN_ASSESSMENT') throw new Error('INVALID_TRANSITION')
+  const blocker = await queryOne<{ id: string }>(
+    `SELECT id FROM case_pendencies WHERE case_id=$1 AND impact='BLOCKS_CURRENT_RESULT'
+     AND status NOT IN ('RESOLVED','CANCELLED') LIMIT 1`, caseId,
+  )
+  if (blocker) throw new Error('BLOCKING_PENDENCY')
+  const id = randomUUID()
+  await transaction(async () => {
+    await execute(
+      `INSERT INTO preop_results
+       (id,case_id,version,kind,summary,conclusion,authored_by)
+       VALUES ($1,$2,1,'FINAL',$3,$4,$5)`,
+      id, caseId, input.summary.trim(), input.conclusion.trim(), session.userId,
+    )
+    await execute(`INSERT INTO preop_result_heads (case_id,result_id) VALUES ($1,$2)`, caseId, id)
+    await execute(`UPDATE anesthesia_encounters SET status='CLOSED',closed_at=NOW() WHERE case_id=$1 AND status='OPEN'`, caseId)
+    await execute(`UPDATE scheduling_bookings SET status='COMPLETED' WHERE case_id=$1 AND status='CHECKED_IN'`, caseId)
+    await moveCase(caseId, 'READY_FOR_HANDOFF', 'RESULT_FINALIZED')
+    await audit('RESULT_FINALIZE', 'CASE', caseId)
+  })
+  return { id, caseId, version: 1, kind: 'FINAL', summary: input.summary.trim(), conclusion: input.conclusion.trim(), reason: null, createdAt: new Date().toISOString() }
+}
+
+export async function reviseResult(
+  caseId: string,
+  input: { kind: 'CORRECTION' | 'ADDENDUM'; reason: string; summary: string; conclusion: string },
+): Promise<MvpResult> {
+  const session = requireSession('ANESTESIOLOGISTA')
+  const previous = await getCurrentResult(caseId)
+  if (!previous) throw new Error('RESULT_NOT_FOUND')
+  if (!input.reason.trim()) throw new Error('Motivo obrigatório.')
+  const id = randomUUID()
+  const version = previous.version + 1
+  await transaction(async () => {
+    await execute(
+      `INSERT INTO preop_results
+       (id,case_id,version,kind,summary,conclusion,reason,authored_by,supersedes_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      id, caseId, version, input.kind, input.summary.trim(), input.conclusion.trim(),
+      input.reason.trim(), session.userId, previous.id,
+    )
+    await execute(`UPDATE preop_result_heads SET result_id=$2 WHERE case_id=$1`, caseId, id)
+    await execute(
+      `INSERT INTO case_events (case_id,event_type,actor_id,payload)
+       VALUES ($1,'RESULT_REVISED',$2,$3::jsonb)`,
+      caseId, session.userId, JSON.stringify({ kind: input.kind, version }),
+    )
+    await audit('RESULT_REVISE', 'CASE', caseId)
+  })
+  return { id, caseId, version, kind: input.kind, summary: input.summary.trim(), conclusion: input.conclusion.trim(), reason: input.reason.trim(), createdAt: new Date().toISOString() }
+}
+
+export async function sendResultToRequester(caseId: string): Promise<{ id: string; status: 'SENT' }> {
+  const session = requireSession('RECEPCAO')
+  const current = await queryOne<CaseRow>('SELECT * FROM preop_cases WHERE id=$1', caseId)
+  const result = await queryOne<{ result_id: string }>('SELECT result_id FROM preop_result_heads WHERE case_id=$1', caseId)
+  if (!current || current.status !== 'READY_FOR_HANDOFF' || !result) throw new Error('RESULT_NOT_READY')
+  const id = randomUUID()
+  await transaction(async () => {
+    await execute(
+      `INSERT INTO result_deliveries (id,case_id,result_id,requester_service,status,sent_by)
+       VALUES ($1,$2,$3,$4,'SENT',$5)`,
+      id, caseId, result.result_id, current.requester_service, session.userId,
+    )
+    await execute(`INSERT INTO case_events (case_id,event_type,actor_id) VALUES ($1,'RESULT_SENT',$2)`, caseId, session.userId)
+    await audit('RESULT_SEND', 'CASE', caseId)
+  })
+  return { id, status: 'SENT' }
+}
+
+export async function acknowledgeDelivery(caseId: string): Promise<{ id: string; status: 'ACKNOWLEDGED' }> {
+  const session = requireSession('SOLICITANTE')
+  const delivery = await queryOne<{ id: string; requester_service: string; status: string }>(
+    `SELECT id,requester_service,status FROM result_deliveries WHERE case_id=$1`, caseId,
+  )
+  if (!delivery || delivery.requester_service !== session.requesterService || delivery.status !== 'SENT') throw new Error('NOT_FOUND')
+  await transaction(async () => {
+    await execute(
+      `UPDATE result_deliveries SET status='ACKNOWLEDGED',acknowledged_by=$2,acknowledged_at=NOW() WHERE id=$1`,
+      delivery.id, session.userId,
+    )
+    await moveCase(caseId, 'DELIVERED_TO_REQUESTER', 'RESULT_ACKNOWLEDGED')
+    await audit('RESULT_ACKNOWLEDGE', 'CASE', caseId)
+  })
+  return { id: delivery.id, status: 'ACKNOWLEDGED' }
 }
 
 export async function listFixtureUsers(): Promise<Array<Omit<MvpSession, 'userId'> & { userId: string }>> {

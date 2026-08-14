@@ -8,15 +8,23 @@ import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
 import type { SemanticAnswer } from '../shared/mvp/workflow'
 import {
   bookCompatibleSlot,
+  acknowledgeDelivery,
+  checkInBooking,
   confirmRequirement,
   createCase,
+  finalizeResult,
   getCurrentSession,
+  getCurrentResult,
   listCasesForCurrentRole,
   listCompatibleSlots,
   listFixtureUsers,
   login,
   logout,
+  openPendency,
+  reviseResult,
   saveAndSubmitTriage,
+  sendResultToRequester,
+  startAssessment,
   startNursing,
 } from './mvp/service'
 
@@ -306,6 +314,42 @@ export const router = {
   'mvp.bookings.confirm': t.procedure
     .input<{ caseId: string; slotId: string }>()
     .action(async ({ input }) => bookCompatibleSlot(input.caseId, input.slotId)),
+  'mvp.bookings.checkIn': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => checkInBooking(input.caseId)),
+  'mvp.assessments.start': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => startAssessment(input.caseId)),
+  'mvp.pendencies.open': t.procedure
+    .input<{
+      caseId: string
+      description: string
+      impact: 'BLOCKS_CURRENT_RESULT' | 'DOES_NOT_BLOCK_CURRENT_RESULT'
+      ownerRole: 'RECEPCAO' | 'ENFERMAGEM' | 'ANESTESIOLOGISTA' | 'SOLICITANTE'
+      requiresReturn: boolean
+    }>()
+    .action(async ({ input }) => openPendency(input.caseId, input)),
+  'mvp.results.current': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => getCurrentResult(input.caseId)),
+  'mvp.results.finalize': t.procedure
+    .input<{ caseId: string; summary: string; conclusion: string }>()
+    .action(async ({ input }) => finalizeResult(input.caseId, input)),
+  'mvp.results.revise': t.procedure
+    .input<{
+      caseId: string
+      kind: 'CORRECTION' | 'ADDENDUM'
+      reason: string
+      summary: string
+      conclusion: string
+    }>()
+    .action(async ({ input }) => reviseResult(input.caseId, input)),
+  'mvp.deliveries.send': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => sendResultToRequester(input.caseId)),
+  'mvp.deliveries.acknowledge': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => acknowledgeDelivery(input.caseId)),
   'mvp.users.list': t.procedure.action(async () => listFixtureUsers()),
   'ia.configuracao.obter': iaConfiguracaoObter,
   'ia.configuracao.salvar': iaConfiguracaoSalvar,

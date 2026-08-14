@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CalendarCheck, ClipboardPlus, LogOut, Play, RefreshCw, ShieldCheck } from 'lucide-react'
+import { CalendarCheck, ClipboardPlus, FileCheck2, LogOut, Play, RefreshCw, Send, ShieldCheck, Stethoscope } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -74,8 +74,8 @@ export function OperacaoPagina() {
         {session.role === 'RECEPCAO' && <ReceptionPanel cases={cases} refresh={refresh} />}
         {session.role === 'ENFERMAGEM' && <NursingPanel cases={cases} refresh={refresh} />}
         {session.role === 'ADMIN' && <AdminPanel />}
-        {session.role === 'ANESTESIOLOGISTA' && <PlaceholderPanel title="Avaliações" cases={cases} />}
-        {session.role === 'SOLICITANTE' && <PlaceholderPanel title="Resultados do serviço" cases={cases} />}
+        {session.role === 'ANESTESIOLOGISTA' && <AssessmentPanel cases={cases} refresh={refresh} />}
+        {session.role === 'SOLICITANTE' && <RequesterPanel cases={cases} refresh={refresh} />}
       </div>
     </div>
   )
@@ -124,6 +124,18 @@ function ReceptionPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => 
     await refresh()
   }
 
+  async function checkIn(caseId: string) {
+    await client['mvp.bookings.checkIn']({ caseId })
+    toast.success('Chegada confirmada. O caso já está com o anestesiologista.')
+    await refresh()
+  }
+
+  async function send(caseId: string) {
+    await client['mvp.deliveries.send']({ caseId })
+    toast.success('Resultado enviado ao serviço solicitante.')
+    await refresh()
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
       <Card>
@@ -147,6 +159,8 @@ function ReceptionPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => 
             <Button variant="outline" onClick={() => void loadSlots(item.id)}><CalendarCheck className="size-4" /> Encontrar vagas compatíveis</Button>
             {(slots[item.id] ?? []).map((slot) => <Button key={slot.id} variant="secondary" onClick={() => void book(item.id, slot.id)}>{new Date(slot.startsAt).toLocaleString('pt-BR')} · {slot.slotClass}</Button>)}
           </div>}
+          {item.status === 'SCHEDULED' && <Button onClick={() => void checkIn(item.id)}><CalendarCheck className="size-4" /> Confirmar chegada</Button>}
+          {item.status === 'READY_FOR_HANDOFF' && <Button onClick={() => void send(item.id)}><Send className="size-4" /> Enviar resultado</Button>}
         </CaseCard>)}
       </section>
     </div>
@@ -189,6 +203,65 @@ function AdminPanel() {
   return <section className="grid gap-3"><h2 className="font-semibold">Contas da demonstração</h2>{users.map((user) => <Card key={user.userId}><CardContent className="flex items-center justify-between p-4"><div><p className="font-medium">{user.name}</p><p className="text-sm text-muted-foreground">{user.email}</p></div><Badge variant="outline">{user.role}</Badge></CardContent></Card>)}</section>
 }
 
-function PlaceholderPanel({ title, cases }: { title: string; cases: CaseItem[] }) {
-  return <section className="grid gap-3"><h2 className="font-semibold">{title}</h2>{cases.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum caso exige sua ação agora.</p> : cases.map((item) => <CaseCard key={item.id} item={item} />)}</section>
+function AssessmentPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => Promise<void> }) {
+  const [draft, setDraft] = useState({
+    summary: 'Avaliação pré-anestésica realizada pelo profissional responsável.',
+    conclusion: 'Resultado demonstrativo registrado após revisão humana.',
+  })
+
+  async function start(caseId: string) {
+    await client['mvp.assessments.start']({ caseId })
+    toast.success('Avaliação iniciada.')
+    await refresh()
+  }
+
+  async function addPendency(caseId: string) {
+    await client['mvp.pendencies.open']({
+      caseId,
+      description: 'Apresentar hemograma recente',
+      impact: 'DOES_NOT_BLOCK_CURRENT_RESULT',
+      ownerRole: 'SOLICITANTE',
+      requiresReturn: false,
+    })
+    toast.success('Pendência registrada sem substituir o julgamento clínico.')
+  }
+
+  async function finalize(caseId: string) {
+    await client['mvp.results.finalize']({ caseId, ...draft })
+    toast.success('Resultado finalizado e liberado para entrega.')
+    await refresh()
+  }
+
+  return <section className="grid gap-3">
+    <div><h2 className="font-semibold">Consultas pré-anestésicas</h2><p className="text-sm text-muted-foreground">Somente você conclui a avaliação; o sistema não atribui ASA nem aptidão.</p></div>
+    {cases.length === 0 && <p className="text-sm text-muted-foreground">Nenhum caso exige sua ação agora.</p>}
+    {cases.map((item) => <CaseCard key={item.id} item={item}>
+      {item.status === 'WAITING_ANESTHESIA' && <Button onClick={() => void start(item.id)}><Stethoscope className="size-4" /> Iniciar consulta</Button>}
+      {item.status === 'IN_ASSESSMENT' && <div className="grid gap-3">
+        <div className="grid gap-1.5"><Label>Resumo profissional</Label><Input value={draft.summary} onChange={(event) => setDraft({ ...draft, summary: event.target.value })} /></div>
+        <div className="grid gap-1.5"><Label>Conclusão</Label><Input value={draft.conclusion} onChange={(event) => setDraft({ ...draft, conclusion: event.target.value })} /></div>
+        <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => void addPendency(item.id)}>Registrar pendência</Button><Button onClick={() => void finalize(item.id)}><FileCheck2 className="size-4" /> Finalizar resultado</Button></div>
+      </div>}
+    </CaseCard>)}
+  </section>
+}
+
+function RequesterPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => Promise<void> }) {
+  const [results, setResults] = useState<Record<string, Awaited<ReturnType<typeof client['mvp.results.current']>>>>({})
+  async function load(caseId: string) {
+    const result = await client['mvp.results.current']({ caseId })
+    setResults((current) => ({ ...current, [caseId]: result }))
+  }
+  async function acknowledge(caseId: string) {
+    await client['mvp.deliveries.acknowledge']({ caseId })
+    toast.success('Recebimento confirmado. A marcação da cirurgia continua fora do Antessala.')
+    await refresh()
+  }
+  return <section className="grid gap-3"><h2 className="font-semibold">Resultados do serviço</h2>
+    {cases.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum resultado disponível para o seu serviço.</p> : cases.map((item) => <CaseCard key={item.id} item={item}>
+      <div className="grid gap-2"><Button variant="outline" onClick={() => void load(item.id)}>Ver resultado</Button>
+        {results[item.id] && <div className="rounded-md border p-3 text-sm"><p className="font-medium">Versão {results[item.id]!.version}</p><p>{results[item.id]!.summary}</p><p className="text-muted-foreground">{results[item.id]!.conclusion}</p></div>}
+        {item.status === 'READY_FOR_HANDOFF' && <Button onClick={() => void acknowledge(item.id)}><FileCheck2 className="size-4" /> Confirmar recebimento</Button>}
+      </div>
+    </CaseCard>)}</section>
 }
