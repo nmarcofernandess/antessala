@@ -345,7 +345,7 @@ export function Escolha<T extends string | number>({
   opcoes: Opcao<T>[]
   valor: T | undefined
   onChange: (v: T) => void
-  colunas?: 2 | 3 | 4
+  colunas?: 2 | 3 | 4 | 5
   className?: string
 }) {
   return (
@@ -355,6 +355,7 @@ export function Escolha<T extends string | number>({
         colunas === 2 && 'sm:grid-cols-2',
         colunas === 3 && 'sm:grid-cols-3',
         colunas === 4 && 'sm:grid-cols-2 lg:grid-cols-4',
+        colunas === 5 && 'sm:grid-cols-3 lg:grid-cols-5',
         className,
       )}
     >

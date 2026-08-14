@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from 'next-themes'
 import {
+  Blocks,
   BrainCircuit,
   CalendarDays,
   ClipboardPlus,
@@ -34,6 +35,7 @@ export const ACTIVE_NAV_ITEMS = [
   { label: 'Novo encaminhamento', to: '/casos/novo', icon: ClipboardPlus },
   { label: 'Triagem', to: '/triagem', icon: Stethoscope },
   { label: 'Agenda', to: '/agenda', icon: CalendarDays },
+  { label: 'Repertório', to: '/repertorio', icon: Blocks },
   { label: 'Assistente', to: '/assistente', icon: BrainCircuit },
   { label: 'Memória', to: '/memoria', icon: Network },
   { label: 'Configurações', to: '/configuracoes', icon: Settings },

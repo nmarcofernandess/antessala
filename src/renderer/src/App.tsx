@@ -10,12 +10,14 @@ import { ConfiguracoesPagina } from './paginas/ConfiguracoesPagina'
 import { IaPagina } from './paginas/IaPagina'
 import { MemoriaPagina } from './paginas/MemoriaPagina'
 import { NaoEncontrado } from './paginas/NaoEncontrado'
+import { RepertorioPagina } from './paginas/RepertorioPagina'
 
 export const ACTIVE_ROUTE_PATHS = [
   '/',
   '/casos/novo',
   '/triagem',
   '/agenda',
+  '/repertorio',
   '/assistente',
   '/memoria',
   '/configuracoes',
@@ -46,6 +48,7 @@ export const router = createHashRouter([
       { path: '/casos/novo', element: <CadastroPagina /> },
       { path: '/triagem', element: <AnamnesePagina /> },
       { path: '/agenda', element: <AgendaPagina /> },
+      { path: '/repertorio', element: <RepertorioPagina /> },
       { path: '/assistente', element: <IaPagina /> },
       { path: '/memoria', element: <MemoriaPagina /> },
       { path: '/configuracoes', element: <ConfiguracoesPagina /> },
