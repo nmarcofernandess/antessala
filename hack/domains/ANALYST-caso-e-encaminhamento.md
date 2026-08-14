@@ -5,9 +5,9 @@
 - Source: `hack/PRD.md`, ordem de Marco e recon do Antessala/DietFlow
 - Route: `analyst_prd`
 - Phase budget: `forensic`
-- Confidence: `high` para a demonstração local; integrações hospitalares ficam fora
+- Confidence: `medium`; as leis de caso são estáveis, mas o contrato operacional ainda exige adversarial
 - Created: `2026-08-14`
-- Verdict: `ready for human review`; assinatura de Marco pendente
+- Verdict: `ADVERSARIAL_REQUIRED`; assinatura de Marco pendente
 
 ## TL;DR
 
@@ -15,6 +15,10 @@ O Antessala identifica um **caso pré-anestésico**, não mantém cadastro longi
 paciente. Cada encaminhamento abre um caso novo com snapshots da pessoa, do procedimento e
 do solicitante. Homônimos e dois casos da mesma pessoa são válidos; nenhuma busca tenta
 deduplicá-los. O `patientId` e a jornada legada não entram no contrato novo.
+
+Caso autônomo, ausência de deduplicação longitudinal e snapshots descartáveis são
+`PRODUCT_LAW`. Formato de referência, normalização, janela de check-in, correção e matriz
+de cancelamento são `DEMO_DECISION` até revisão adversarial.
 
 ## Phase 0 Grill
 
@@ -465,14 +469,13 @@ nome jamais substituem o ID na autorização.
 
 ## Open Questions
 
-Nenhuma decisão de produto permanece aberta nesta lente. Os nomes finais das permissões e a
-alocação por minispec devem ser reconciliados na síntese principal, sem mudar os invariantes
-deste documento.
+Os invariantes de identidade estão definidos. Intake, correção, cancelamento e handoff
+ainda precisam de adversarial antes de qualquer assinatura.
 
 ## Grill Verdict
 
-- Verdict: `ready for human review`
-- Why: promessa, identidade, entidades, invariantes e terreno estão fechados com evidência.
+- Verdict: `ADVERSARIAL_REQUIRED`
+- Why: promessa e identidade estão definidas; os contratos operacionais ainda precisam ser atacados.
 - Next stage: revisão humana; depois, Build técnico.
 
 ## Recommended Next Phase
@@ -486,7 +489,7 @@ rascunho e nenhuma Spec, Plan, teste ou implementação começa.
 
 - Artefato: `domains/ANALYST-caso-e-encaminhamento.md`
 - Próxima fase autorizada após aprovação: Build do domínio
-- Estado: `AGUARDANDO_ASSINATURA`
+- Estado: `ADVERSARIAL_REQUIRED`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`

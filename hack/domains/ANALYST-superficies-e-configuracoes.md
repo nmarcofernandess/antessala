@@ -5,17 +5,21 @@
 - Source: `hack/PRD.md`, decisão de Marco sobre acesso local e recon do renderer atual.
 - Route: `analyst_prd`.
 - Phase budget: `forensic`.
-- Confidence: `high` para o MVP demonstrável.
+- Confidence: `low` enquanto IA/memória e os demais domínios não forem reconciliados.
 - Created: `2026-08-14`.
-- Content verdict: `ready for human review`.
-- Governance state: `AGUARDANDO ASSINATURA DE MARCO`.
+- Review state: `INVALIDATED_BY_CHANGE`.
+- Content verdict: `EM REVISÃO`; o catálogo de superfícies está incompleto.
+- Governance state: `BLOQUEADO`.
 - Build correspondente: `hack/domains/BUILD-superficies-e-configuracoes.md`.
 
 ## TL;DR
 
 O produto não cabe nas três rotas herdadas. O MVP exige uma casca autenticada e superfícies explícitas para entrada do encaminhamento, fila de triagem, anamnese, casos prontos para agendar, agenda, avaliação anestésica, pendências/retornos, entrega do resultado e administração. Cada papel recebe uma home e uma navegação próprias; o detalhe do caso é compartilhado, mas compõe seções e ações conforme autorização.
 
-`Configurações` permanece, porém deixa de ser uma página de token de IA. No MVP ela é exclusiva do administrador e contém usuários, capacidade de agenda, inventário dos cadastros versionados, versões dos catálogos/formulários e auditoria. Só usuários, recursos/janelas/bloqueios operacionais são mutáveis na demo; serviços, procedimentos, classes de slot, catálogos clínicos, widgets e regras são fixtures versionadas e somente leitura. Assistente cloud, memória/RAG, transcrição/autopreenchimento e edição de regras clínicas ficam fora da rota ativa; tema continua no rodapé da casca como preferência local.
+`Configurações` permanece e o catálogo futuro precisa incorporar o uso assistivo de IA,
+transcrição e memória aprovado no novo Analyst. O catálogo S00–S16 e seus viewports são
+`DEMO_DECISION`; não constituem Surface Blueprints. Esses blueprints só nascem durante o
+fechamento do Build, em `hack/surfaces/`.
 
 ## Phase 0 Grill
 
@@ -45,7 +49,7 @@ O produto não cabe nas três rotas herdadas. O MVP exige uma casca autenticada 
 - configurações administrativas;
 - inventários versionados de serviços/procedimentos e configuração da capacidade da demo;
 - componentes, estados vazios/erro/loading/conflito, responsividade e acessibilidade;
-- separação explícita entre produto ativo e IA herdada.
+- incorporação futura de IA/memória somente pelos contratos assistivos do domínio canônico.
 
 ### Out of scope
 
@@ -53,8 +57,8 @@ O produto não cabe nas três rotas herdadas. O MVP exige uma casca autenticada 
 - portal/totem do paciente;
 - marcação da cirurgia e mapa cirúrgico;
 - prontuário completo e evolução longitudinal;
-- chat/assistente cloud na jornada clínica;
-- gravação/transcrição/autopreenchimento no MVP;
+- chat genérico sem vínculo com a entrevista ou com um caso;
+- gravação invisível, transcrição sem consentimento ou autopreenchimento sem confirmação;
 - editor administrativo de widgets, regras clínicas ou parecer;
 - integração com e-mail, WhatsApp, agenda externa ou API do HC;
 - backup, restore ou reset como função do produto; limpeza de dados existe apenas no harness de teste;
@@ -94,7 +98,7 @@ Como renderer, preciso derivar rota, navegação, componente e ação da sessão
 3. A sidebar expõe três itens globais e um seletor de tema acessível (`src/renderer/src/componentes/AppSidebar.tsx:28-38`, `40-83`, `110-141`).
 4. O Dashboard afirma ser um esqueleto neutro e não contém papéis, widgets ou agenda (`src/renderer/src/paginas/Dashboard.tsx:13-17`, `38-48`).
 5. A página chamada Configurações gerencia somente provider cloud, token, modelo, teste e save (`src/renderer/src/paginas/ConfiguracoesPagina.tsx:40-47`, `83-125`, `128-225`).
-6. A própria página avisa que mensagens do assistente saem do computador (`src/renderer/src/paginas/ConfiguracoesPagina.tsx:205-209`), portanto não pertence ao caminho offline clínico do MVP.
+6. A própria página avisa que mensagens do assistente saem do computador (`src/renderer/src/paginas/ConfiguracoesPagina.tsx:205-209`); ela não prova consentimento, minimização ou fallback e não pode ser adotada como contrato clínico.
 7. O chat herdado possui página, histórico, criação/cópia e painel lateral (`src/renderer/src/paginas/IaPagina.tsx:13-47`, `81-130`; `src/renderer/src/componentes/IaChatPanel.tsx:8-43`).
 8. A casca e o tema têm testes reais, mas esses testes congelam as três rotas herdadas e precisarão ser substituídos (`tests/renderer/app-sidebar.spec.tsx:59-105`; `tests/e2e/app-flow.spec.ts:4-30`).
 9. O repositório já tem shadcn/Radix para botões, cards, dialogs, tabelas, tabs, forms, sheets, skeletons e alerts (`src/renderer/src/components/ui/`).
@@ -131,13 +135,13 @@ Como renderer, preciso derivar rota, navegação, componente e ação da sessão
 | Assessment contracts | `hack/domains/BUILD-avaliacao-pendencias-e-handoff.md` | Encontro, pendência atribuída, documento, retorno, resultado e entrega. | Importar DTOs/queries canônicos; a superfície só compõe projeções autorizadas. |
 | Backend projections | `src/main/tipc.ts` | Dados para telas. | Compor routers de casos, agenda, avaliação, configuração; DTO mínimo por papel. |
 | Local fetch state | `src/renderer/src/hooks/useApiData.ts` | Loading/error simples. | Reusar só em reads simples; criar `useMutationState` e resource hooks de domínio. |
-| Shell | `src/renderer/src/componentes/AppSidebar.tsx` | Menu e tema. | Derivar menu das capabilities específicas da sessão; manter tema; remover IA ativa. |
+| Shell | `src/renderer/src/componentes/AppSidebar.tsx` | Menu e tema. | Derivar menu das capabilities específicas da sessão; manter tema; não publicar o chat genérico como superfície clínica. |
 | Header | `src/renderer/src/componentes/PageHeader.tsx` | Breadcrumb/actions. | Reusar sem toggle IA; adicionar identificação do caso quando aplicável. |
 | UI primitives | `src/renderer/src/components/ui/*` | shadcn/Radix. | Reusar; não criar segundo design system. |
 | Anamnese | `src/renderer/src/anamnese/*` | Composer e oito editors. | Reusar dentro da triagem após contratos de widgets. |
 | Home | `src/renderer/src/paginas/Dashboard.tsx` | Placeholder. | Substituir por `RoleHomePage`. |
-| IA | `src/renderer/src/paginas/IaPagina.tsx`, `IaChatPanel.tsx` | Chat cloud herdado. | Dormant/roadmap; fora do router e shell ativos. |
-| Config atual | `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | Token/modelo IA. | Não reutilizar como Configurações do produto; mover para superfície dev inativa ou manter sem rota. |
+| IA | `src/renderer/src/paginas/IaPagina.tsx`, `IaChatPanel.tsx` | Chat cloud herdado. | Não reutilizar como solução clínica; as superfícies assistivas serão compostas depois que o Analyst de IA fechar. |
+| Config atual | `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | Token/modelo IA. | Não é contrato canônico; sua permanência ou substituição depende do Build de IA e da política de rede aprovada. |
 | Tests | `tests/renderer/*`, `tests/e2e/app-flow.spec.ts` | Congelam casca atual. | Reescrever para mapa por papel e jornada ponta a ponta. |
 
 ## Entities And State
@@ -149,7 +153,7 @@ Como renderer, preciso derivar rota, navegação, componente e ação da sessão
 - Relations: o renderer avalia `SessaoPublica.capabilities`; `routeAccess` protege montagem e `navAccess` controla apenas o menu. A página consome um ou mais view DTOs já guardados/redigidos no main.
 - Source of truth: `src/renderer/src/navigation/surfaces.ts` tipado.
 - Runtime states: `ACTIVE`, `DORMANT`, `REMOVED`.
-- Invalid states to prevent: rota ativa sem menu/entrada deliberada; item de menu sem rota; capability só no JSX; IA marcada ativa no MVP.
+- Invalid states to prevent: rota ativa sem menu/entrada deliberada; item de menu sem rota; capability só no JSX; chat herdado tratado como superfície clínica sem contrato do domínio de IA.
 
 ### ENTITY: ViewState
 
@@ -214,7 +218,7 @@ flowchart LR
   config --> catalogs["Catálogos e formulários — leitura"]
   config --> audit["Auditoria — leitura"]
   theme["Tema claro/escuro/sistema"] --> shell["Rodapé da casca — preferência local"]
-  ai["IA cloud e memória"] --> dormant["Dormant / roadmap, sem rota MVP"]
+  ai["IA, memória e conhecimento"] --> unresolved["Superfícies pendentes do Analyst e do Build do domínio"]
 ```
 
 ### Estados do caso que dirigem as superfícies
@@ -489,15 +493,15 @@ Case detail is reached from worklists and need not become a permanent menu item.
 | Users, roles, status, password reset | only `origin=ADMIN`; fixtures read-only | Required to prepare extra demo accounts without drifting the five boot fixtures. |
 | Services and procedures | no, read-only fixtures | Required as stable synthetic snapshots; changing them needs seed/version review. |
 | Requester professionals | no master cadastro | Name/specialty/contact are captured in the referral snapshot. |
-| Slot classes/durations/buffers | no, read-only fixtures | `QUICK 20+5`, `STANDARD 35+5`, `EXTENDED 50+10` are the approved demo contract. |
+| Slot classes/durations/buffers | no, read-only fixtures | `QUICK 20+5`, `STANDARD 35+5`, `EXTENDED 50+10` são `DEMO_DECISION`, ainda sujeitas a pesquisa, adversarial e assinatura. |
 | Resources, dated availability windows and blocks | yes | Admin prepares capacity without changing classification semantics or exposing a recurrence editor. |
 | CID, medications, MET, comorbidities | no, read-only integrity | Versioned clinical catalogs must not drift through ad-hoc UI. |
 | Widget definitions/templates | no, read-only version/link | Clinical form changes require versioned artifact and tests. |
 | Classification rules | no | Rule editing is unsafe and outside hack; fixture/version is displayed. |
 | Institution/location | no | Single synthetic facility fixture. |
 | Theme | local shell selector | Preference of workstation, no business persistence. |
-| IA provider/token/model | no active surface | Cloud assistant is inherited roadmap, not MVP. |
-| Memory/RAG/import | no active surface | Dormant foundation, unrelated to canonical workflow. |
+| IA provider/token/model | `UNRESOLVED` | Rede opcional faz parte da prova, mas configuração, segredo e permissões dependem do Analyst/Build de IA. |
+| Memory/RAG/import | `UNRESOLVED` | A prova exige recuperação de conhecimento aprovado; a superfície e a allowlist ainda não estão fechadas. |
 | Backup/reset/retention | no | Operational tooling outside pitch; reset is test harness only. |
 
 ## Rules And Invariants
@@ -517,14 +521,14 @@ Case detail is reached from worklists and need not become a permanent menu item.
 13. Agenda offers a keyboard-operable list view equivalent to the visual week.
 14. Target viewports: 1024×640 minimum functional, 1280×720 proof, 1440×900 comfort. Mobile below 768 is not an acceptance target.
 15. Theme selector remains `Claro/Escuro/Sistema`; no clinical meaning depends on theme.
-16. `Assistente IA`, cloud Config, Memory/RAG and chat panel have zero active route/menu/toggle in the MVP shell.
+16. Chat genérico, Memory legado e painel global não viram produto por reuso automático; somente superfícies assistivas fechadas pelo domínio de IA entram no shell.
 17. Patient is not a cadastro. Creating a case embeds a patient snapshot; equal names are allowed.
 18. A fixture retired in a new version remains renderable in historical case snapshots but cannot be selected for new cases.
 19. Configurations with clinical meaning are versioned/read-only; admin does not edit JSON.
 20. Admin settings never expose clinical case content.
 21. Reception projections omit anamnese; requester projections omit anamnese and other services; admin projections omit cases.
 22. `WeeklyAgendaGrid` and its accessible table display backend-provided `SlotCardDTO[]`; neither derives slot validity.
-23. A route named `Configurações` cannot contain inherited cloud IA controls in the active MVP.
+23. A rota `Configurações` não expõe controles cloud herdados sem contrato aprovado de segredo, rede, permissão e falha segura.
 24. Menus são derivados de `SessaoPublica.capabilities` e `navAccess`; `CurrentSession`/`ActorContext` nunca chegam ao renderer, e papel é fixture de concessões, não atalho de autorização.
 25. Toda query do `SOLICITANTE` exige `serviceId` da sessão no main e retorna payload já redigido; nunca busca todos os serviços para esconder linhas no JSX.
 26. S05 não publica na submissão: `FINAL + CALCULATED` são atômicos e apenas `confirm/override` publica o requirement.
@@ -556,8 +560,8 @@ Case detail is reached from worklists and need not become a permanent menu item.
 |---|---|---|---|
 | critical | Construir só triagem/fila encerra produto antes do anestesiologista e handoff. | PRD flow `hack/PRD.md:56-73`; current router has no screens (`App.tsx:49-56`). | Implement surface catalog end-to-end before visual polish. |
 | critical | Router/sidebar can expose same UI to every role. | `AppSidebar.tsx:28-32`. | Typed surface registry + ProtectedRoute + main guard. |
-| high | `Configurações` atuais enviam conteúdo/token cloud e confundem MVP offline. | `ConfiguracoesPagina.tsx:205-209`. | Remove active route; replace with admin configuration. |
-| high | IA panel consumes layout and can receive clinical text por acidente. | `App.tsx:42`; `IaChatPanel.tsx:8-43`. | Zero mount/toggle/route in MVP. |
+| high | `Configurações` atuais enviam conteúdo/token cloud sem o contrato de privacidade do novo domínio. | `ConfiguracoesPagina.tsx:205-209`. | Não adotar como está; substituir ou adaptar somente depois do Build de IA. |
+| high | Painel global de IA pode receber texto clínico por acidente. | `App.tsx:42`; `IaChatPanel.tsx:8-43`. | Remover o mount global; futuras superfícies precisam ser delimitadas por caso, ator e finalidade. |
 | high | Grade semanal criada antes do contrato pode virar fonte de verdade. | No agenda exists in current code. | `SlotCardDTO[]` do backend; grade fina + lista acessível, sem engine. |
 | high | Uma tela de caso genérica pode vazar campos entre papéis. | Current app has no role projections. | DTO-specific projections; component sections gated by data/capability. |
 | high | Pendência atribuída sem worklist compartilhada fica invisível para recepção, enfermagem ou solicitante. | Quatro papéis podem ser owner pelo contrato de avaliação. | `/pendencias` + query filtrada no main + ownership no command. |
@@ -570,7 +574,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 | Path/Area | Action | Reason | Validation |
 |---|---|---|---|
 | `src/renderer/src/navigation/surfaces.ts` | new registry | One map for paths/nav/capabilities. | registry uniqueness/coverage test. |
-| `src/renderer/src/App.tsx` | rebuild route composition | Cover canonical catalog and remove IA shell. | per-role router tests. |
+| `src/renderer/src/App.tsx` | rebuild route composition | Cobrir o catálogo canônico e retirar o painel global herdado; superfícies assistivas entram por contrato próprio. | per-role router tests. |
 | `src/renderer/src/componentes/AppSidebar.tsx` | role-aware nav | Only work of current actor. | accessible role matrix test. |
 | `src/renderer/src/paginas/Dashboard.tsx` | role home | Replace placeholder. | five home fixtures. |
 | `src/renderer/src/paginas/casos/*` | new | Intake/detail/timeline. | form, DTO redaction, not found/forbidden. |
@@ -580,8 +584,8 @@ Case detail is reached from worklists and need not become a permanent menu item.
 | `src/renderer/src/paginas/avaliacoes/*` | new | Medical workflow. | pending/return/complete. |
 | `src/renderer/src/paginas/resultados/*` | new | Requester handoff. | service scoping and PDF. |
 | `src/renderer/src/paginas/configuracoes/*` | new | Admin users, fixture inventories, capacity, catalog status and audit. | write/read-only boundaries. |
-| `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | retire from active product | It is cloud IA, not settings MVP. | no token/provider text in active routes. |
-| `src/renderer/src/componentes/IaChatPanel.tsx` | keep dormant, no mount | Roadmap without clinical leak. | active route/menu scan. |
+| `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | reavaliar após o Build de IA | Provider, segredo e finalidade de rede ainda não têm contrato aprovado. | nenhum controle cloud herdado sem guard, aviso e fallback. |
+| `src/renderer/src/componentes/IaChatPanel.tsx` | não montar globalmente | Não equivale às futuras superfícies assistivas vinculadas ao caso. | scan de mount global + teste de escopo futuro. |
 | `tests/renderer/*` | update/new | Component/state matrix. | Vitest. |
 | `tests/e2e/app-flow.spec.ts` | replace | Current contract is obsolete. | five-role end-to-end. |
 
@@ -637,7 +641,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 - [ ] Serviços e procedimentos aparecem com source/revision e sem controles de mutação; profissional solicitante permanece snapshot do encaminhamento.
 - [ ] Admin prepara recursos, janelas datadas e bloqueios pelos contratos do domínio agenda; classes/durações/buffers permanecem read-only e a agenda mostra materialização derivada.
 - [ ] Catálogos/widgets/regras aparecem com versão e integridade, sem editor clínico.
-- [ ] IA cloud, memória/RAG e painel de chat não têm rota, menu ou toggle ativos.
+- [ ] Uso assistivo de IA, memória e transcrição possui superfície, permissão e fallback definidos pelo novo Analyst.
 - [ ] Tema claro/escuro/sistema continua acessível no rodapé.
 - [ ] Todas as superfícies têm loading, vazio, erro e forbidden pertinentes.
 - [ ] Teclado completa login, formulários, dialogs, listas e reserva via list view.
@@ -647,11 +651,12 @@ Case detail is reached from worklists and need not become a permanent menu item.
 
 ## Open Questions
 
-Nenhuma decisão de superfície do MVP permanece aberta.
+As superfícies de captura, revisão de sugestão e gestão mínima de conhecimento estão
+abertas; todas as demais dependem dos contratos de domínio e dos futuros Surface Blueprints.
 
 Futuro, fora do hack:
 
-- qual parte da IA/transcrição volta e em qual consentimento;
+- operação institucional da IA/transcrição além da prova de conceito;
 - portal do paciente e notificações;
 - configuração multiunidade e calendário institucional;
 - editor versionado de formulários/regras clínicas;
@@ -660,24 +665,26 @@ Futuro, fora do hack:
 
 ## Grill Verdict
 
-- Verdict: `ready for human review` quanto ao conteúdo.
-- Why: todas as etapas do fluxo possuem ator, rota, entrada, saída, componente, estados, configuração consumida e limite de informação.
+- Verdict: `INVALIDATED_BY_CHANGE`.
+- Why: IA, memória, gravação e transcrição passaram a integrar a prova de conceito e ainda não estão compostas nas superfícies.
 - Governance constraint: o Build correspondente não pode ser aprovado antes da assinatura deste Analyst.
-- Next stage: revisar `BUILD-superficies-e-configuracoes.md`, reconciliar seus DTOs com Builds de domínio e somente depois decompor em Spec/Plan.
+- Next stage: aguardar os Analysts de domínio, inclusive IA/memória, fecharem campos, regras e permissões; então reconciliar este Analyst. Nenhuma Spec ou Plan nasce agora.
 
 ## Recommended Next Phase
 
-Consumir este documento em `BUILD-superficies-e-configuracoes.md`. A implementação futura deve ocorrer por slices verticais do fluxo, mas a casca, o acesso e os contratos de projeção precisam vir antes de qualquer tela clínica.
+Executar primeiro a rodada indicada no tracker. Depois dos Analysts fecharem, este documento
+define quais trabalhos precisam de superfície; o Build correspondente e os Surface
+Blueprints só nascem no momento previsto pelo workflow.
 
 ---
 
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `hack/domains/ANALYST-superficies-e-configuracoes.md`.
-- Conteúdo MVP: `FECHADO`.
+- Conteúdo MVP: `EM REVISÃO`.
 - Próxima fase material: `hack/domains/BUILD-superficies-e-configuracoes.md`.
 - Próxima fase autorizada: `NENHUMA SEM ASSINATURA`.
-- Estado: `AGUARDANDO_ASSINATURA`.
+- Estado: `INVALIDATED_BY_CHANGE`.
 - Assinatura de Marco: `PENDENTE`.
 - Data: `PENDENTE`.
 - Revisão Git examinada: `PENDENTE`.

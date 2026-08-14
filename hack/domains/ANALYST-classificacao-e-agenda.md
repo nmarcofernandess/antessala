@@ -5,10 +5,10 @@
 - Source: `hack/PRD.md`, Analyst de anamnese e código Antessala
 - Route: `analyst_prd`
 - Phase budget: `forensic`
-- Confidence: `high` para a mecânica da demo; `low` para SLA/capacidade institucional
+- Confidence: `low` para alegações clínicas ou operacionais; a mecânica é uma decisão de demo
 - Created: `2026-08-14`
 - Mode: `construction` com isolamento explícito do motor legado
-- Verdict: `ready for human review`; assinatura de Marco pendente
+- Verdict: `RESEARCH_REQUIRED`; assinatura de Marco pendente
 
 ## TL;DR
 
@@ -18,6 +18,10 @@ versionadas e explicáveis, permite override justificado e produz uma necessidad
 separada dos dados clínicos. A agenda usa janelas datadas, slots materializados por 30 dias,
 ocupação exclusiva de recursos e reserva atômica/idempotente. Nenhuma lógica atual de fila
 ou risco é reaproveitada.
+
+`QUICK | STANDARD | EXTENDED`, durações, sinais, pesos, limites, horizonte, calendário,
+recursos e SLA são `DEMO_DECISION`, não protocolo institucional. A separação entre
+gravidade, urgência, prioridade cirúrgica e duração necessária é `PRODUCT_LAW`.
 
 ## Phase 0 Grill
 
@@ -683,15 +687,14 @@ stateDiagram-v2
 
 ## Open Questions
 
-Nenhuma decisão estrutural do MVP permanece aberta. Recursos, SLAs e disponibilidade são
-fixtures sintéticas. Um piloto precisará substituí-los por capacidade, escala e política
-validadas pela instituição.
+Recursos, SLAs, duração e disponibilidade são fixtures sintéticas. Sua adequação à prova
+de conceito e qualquer relação clínica usada pelo motor ainda exigem pesquisa e
+adversarial.
 
 ## Grill Verdict
 
-- Verdict: `ready for human review`
-- Why: classes, regra, explicação, versionamento, override, agenda, concorrência, falhas e
-  superfície estão fechados para a demo.
+- Verdict: `RESEARCH_REQUIRED`
+- Why: motor e capacidade são demonstrativos; precisam ser separados de evidência e revisados antes da assinatura.
 - Next stage: Build do domínio após assinatura de Marco.
 
 ## Recommended Next Phase
@@ -705,7 +708,7 @@ implementação.
 
 - Artefato: `hack/domains/ANALYST-classificacao-e-agenda.md`
 - Gate: Analyst de classificação e agenda → Build do domínio
-- Estado: `AGUARDANDO_ASSINATURA`
+- Estado: `RESEARCH_REQUIRED`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`

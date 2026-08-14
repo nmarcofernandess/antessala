@@ -4,8 +4,8 @@
 
 - Sources consumed: `hack/PRD.md`, `domains/ANALYST-caso-e-encaminhamento.md`,
   recon do Antessala e referência de JSON versionado do DietFlow
-- Blueprint status: `DRAFT — BLOCKED BY ANALYST SIGNATURE`
-- Architecture verdict: `GO` técnico; `NO-GO` de execução sem assinatura de Marco
+- Blueprint status: `DRAFT — RESEARCH_REQUIRED + RECON_REQUIRED + ADVERSARIAL_REQUIRED`
+- Architecture verdict: `UNRESOLVED`; os contratos físicos ainda não foram provados no PGlite
 - This is not Plan: este arquivo fecha contratos e sequência de dependências, não cria
   subtarefas executáveis.
 
@@ -769,9 +769,8 @@ This is dependency order for Build. Plan must later split it into signed executa
 
 ## Go / No-Go Verdict
 
-- Technical design: `GO`.
-- Plan or execution: `NO-GO` until Marco signs both the corresponding Analyst and this
-  blueprint, and the main Build reconciles it with actors, widgets, agenda and evaluation.
+- Technical design: `UNRESOLVED`; requer research, recon PGlite e adversarial.
+- Plan or execution: `NO-GO` até as revisões e assinaturas exigidas.
 
 ---
 
@@ -779,7 +778,7 @@ This is dependency order for Build. Plan must later split it into signed executa
 
 - Artefato: `domains/BUILD-caso-e-encaminhamento.md`
 - Próxima fase autorizada após aprovação conjunta: inclusão no Build canônico
-- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_ANALYST_E_DE_MARCO`
+- Estado: `DRAFT_RESEARCH_REQUIRED`
 - Assinatura do Analyst por Marco: `PENDENTE`
 - Assinatura deste Build por Marco: `PENDENTE`
 - Data: `PENDENTE`

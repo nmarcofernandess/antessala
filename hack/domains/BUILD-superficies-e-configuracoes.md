@@ -4,14 +4,16 @@
 
 - Tipo: blueprint técnico; não é Spec, Plan ou autorização de código.
 - Fonte: `hack/domains/ANALYST-superficies-e-configuracoes.md`.
-- Conteúdo: `COMPLETE PARA REVISÃO`.
-- Estado de governança: `DRAFT — BLOQUEADO PELA ASSINATURA DO ANALYST`.
+- Conteúdo: `INVALIDATED_BY_CHANGE`; falta integrar IA, memória e futuros Surface Blueprints.
+- Estado de governança: `DRAFT — BLOQUEADO PELOS DOMÍNIOS`.
 - Risco: alto, porque conecta todos os domínios e define projeções de dados por papel.
 - Build dependente: `hack/domains/BUILD-acesso-e-auditoria.md` e Builds dos contratos clínicos/agenda.
 
 ## Goal
 
-Transformar o esqueleto Electron atual em um produto navegável de ponta a ponta: login, home por papel, entrada, triagem, agendamento, avaliação, handoff e configuração administrativa. A implementação deve usar um registry tipado de superfícies/capabilities, DTOs explícitos por consumidor, componentes shadcn existentes e estados de interface fechados. IA cloud e memória continuam no repositório como código dormente, sem rota, menu, toggle ou montagem no shell do MVP.
+Transformar o esqueleto Electron atual em um produto navegável de ponta a ponta. O catálogo
+de superfícies precisa ser refeito depois que o novo Analyst de IA/memória e os demais
+domínios fecharem seus contratos. Este arquivo não substitui os futuros Surface Blueprints.
 
 ## Inputs Consumed
 
@@ -872,7 +874,7 @@ These are topological dependencies, not executable Plan items.
 
 - Artefato: `hack/domains/BUILD-superficies-e-configuracoes.md`.
 - Analyst de origem: `hack/domains/ANALYST-superficies-e-configuracoes.md`.
-- Estado: `DRAFT_BLOQUEADO_POR_ASSINATURA`.
+- Estado: `INVALIDATED_BY_CHANGE`.
 - Autoriza implementação: `NÃO`.
 - Assinatura de Marco no Analyst: `PENDENTE`.
 - Assinatura de Marco neste Build: `PENDENTE`.

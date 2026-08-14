@@ -5,17 +5,17 @@
 - Source: `hack/PRD.md`, código Antessala e código DietFlow
 - Route: `analyst_prd`
 - Phase budget: `forensic`
-- Confidence: `high` para o contrato do MVP; `low` para uso institucional sem validação do HC
+- Confidence: `low` para o conteúdo clínico até pesquisa de fontes e licenças
 - Created: `2026-08-14`
 - Mode: `hybrid` — recon do legado e construção do contrato do protótipo
-- Verdict: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Verdict: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
 
 ## TL;DR
 
 O envelope versionado, o registry, a validação Zod, o composer e os catálogos offline do
 Antessala podem ser reutilizados. Os oito widgets herdados do DietFlow não formam uma
 anamnese pré-anestésica: três são adaptáveis, um fornece apenas um recorte reaproveitável e
-quatro são excluídos. O MVP terá 14 widgets canônicos, respostas semânticas, proveniência por
+quatro são excluídos. A proposta atual contém 14 widgets, respostas semânticas, proveniência por
 campo e um snapshot por caso; nenhum paciente será cadastrado. Este contrato é somente para
 a demonstração com dados sintéticos e não constitui protocolo assistencial do HC.
 
@@ -873,15 +873,14 @@ sequenceDiagram
 
 ## Open Questions
 
-Nenhuma decisão que altere o Build permanece aberta. Validação institucional, licença para
-redistribuição e integração com prontuário são condições de um piloto futuro, não perguntas
-do MVP.
+As leis de ausência de resposta, proveniência e confirmação humana são `PRODUCT_LAW`. A
+seleção dos 14 widgets, campos obrigatórios, condicionais, faixas e cobertura/licença dos
+catálogos permanece `UNRESOLVED` e exige pesquisa antes do Build formal.
 
 ## Grill Verdict
 
-- Verdict: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
-- Why: promessa, terreno, widgets, DTOs, catálogos, estados, invariantes e handoff estão
-  fechados para o protótipo.
+- Verdict: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
+- Why: matriz clínica, completude e fontes/licenças ainda não foram pesquisadas.
 - Next stage: Build do domínio, somente após assinatura de Marco.
 
 ## Recommended Next Phase
@@ -895,7 +894,7 @@ de minispec é autorizada por este artefato.
 
 - Artefato: `hack/domains/ANALYST-anamnese-e-catalogos.md`
 - Gate: Analyst de anamnese e catálogos → Build do domínio
-- Estado: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
 - Assinatura de Marco: `PENDENTE`
 - Data da revisão humana: `PENDENTE`
 - Revisão Git examinada por Marco: `PENDENTE`

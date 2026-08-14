@@ -5,13 +5,14 @@
 - Documento analítico ativo: [analysis.md](analysis.md)
 - Fonte congelável após assinatura: [PRD.md](PRD.md)
 - Profundidade: `forensic`
-- Conteúdo: `READY FOR HUMAN REVIEW`
+- Estado de revisão: `INVALIDATED_BY_CHANGE`
+- Tracker único: [`.context/review/STATUS.md`](../.context/review/STATUS.md)
 - Transição formal: bloqueada até as assinaturas anteriores do Taskgen e do PRD, além da
   assinatura deste conjunto por Marco
 
 Este arquivo é o índice estável para ferramentas e leitores que procuram
 `hack/ANALYST.md`. A análise consolidada vive em `analysis.md`; os contratos completos
-vivem nos sete dossiês abaixo. Nenhum Build pode compensar uma lacuna do Analyst.
+vivem nos oito dossiês abaixo. Nenhum Build pode compensar uma lacuna do Analyst.
 
 ## Sistema coberto
 
@@ -30,7 +31,8 @@ encaminhamento na recepção
 
 Também fecha os domínios transversais sem os quais essa jornada não funciona: login
 local, papéis e permissões, auditoria, cadastros, configurações, navegação, estados de UI,
-persistência PGlite, fixtures, funcionamento offline, segurança e prova ponta a ponta.
+persistência PGlite, fixtures, funcionamento offline, segurança, IA assistiva, memória
+aprovada e prova ponta a ponta. “Descreve” não significa pesquisado, revisado ou aprovado.
 
 ## Dossiês e BUILDs correspondentes
 
@@ -43,12 +45,13 @@ persistência PGlite, fixtures, funcionamento offline, segurança e prova ponta 
 | 5 | Avaliação, pendências e handoff | [ANALYST-avaliacao-pendencias-e-handoff](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | [BUILD-avaliacao-pendencias-e-handoff](domains/BUILD-avaliacao-pendencias-e-handoff.md) |
 | 6 | Superfícies e configurações | [ANALYST-superficies-e-configuracoes](domains/ANALYST-superficies-e-configuracoes.md) | [BUILD-superficies-e-configuracoes](domains/BUILD-superficies-e-configuracoes.md) |
 | 7 | Arquitetura offline e prova | [ANALYST-arquitetura-offline-e-prova](domains/ANALYST-arquitetura-offline-e-prova.md) | [BUILD-arquitetura-offline-e-prova](domains/BUILD-arquitetura-offline-e-prova.md) |
+| 8 | IA, memória e conhecimento | [ANALYST-ia-memoria-e-conhecimento](domains/ANALYST-ia-memoria-e-conhecimento.md) | [BUILD-ia-memoria-e-conhecimento](domains/BUILD-ia-memoria-e-conhecimento.md) |
 
 Um dossiê responde o que o domínio significa e como se comporta. O BUILD de mesmo nome
 traduz somente essas decisões em tabelas, DTOs, serviços, comandos, queries, componentes e
 testes. BUILD não é Spec, Plan nem autorização para código.
 
-## Contratos globais fechados
+## Leis globais estáveis
 
 ### Papéis
 
@@ -94,32 +97,31 @@ o estado do caso.
 
 ## Matriz de suficiência do Analyst
 
-| Pergunta que o código exigirá | Fonte que deve respondê-la | Estado de conteúdo |
-|---|---|---|
-| Quem entra, como entra e o que pode fazer? | acesso e auditoria | coberto |
-| O que chega à recepção e qual identidade nasce? | caso e encaminhamento | coberto |
-| Quais perguntas existem, campos, DTOs e completude? | anamnese e catálogos | coberto |
-| Como a triagem vira requisito e como a vaga é reservada? | classificação e agenda | coberto |
-| Como o anestesiologista conclui, pede algo e devolve? | avaliação, pendências e handoff | coberto |
-| Quais telas, rotas, estados e configurações existem? | superfícies e configurações | coberto |
-| Como persiste, funciona offline e prova o fluxo? | arquitetura offline e prova | coberto |
-| Como tudo se conecta? | `analysis.md` | coberto |
+| Pergunta que o código exigirá | Fonte que deve respondê-la |
+|---|---|
+| Quem entra, como entra e o que pode fazer? | acesso e auditoria |
+| O que chega à recepção e qual identidade nasce? | caso e encaminhamento |
+| Quais perguntas existem, campos, DTOs e completude? | anamnese e catálogos |
+| Como a triagem vira requisito e como a vaga é reservada? | classificação e agenda |
+| Como o anestesiologista conclui, pede algo e devolve? | avaliação, pendências e handoff |
+| Quais telas, rotas, estados e configurações existem? | superfícies e configurações |
+| Como persiste, funciona offline e prova o fluxo? | arquitetura offline e prova |
+| Como IA propõe, humano confirma e conhecimento é promovido? | IA, memória e conhecimento |
+| Como tudo se conecta? | `analysis.md` |
 
-“Coberto” significa que existe decisão verificável no pacote. Não significa aprovação de
-Marco, implementação ou validação clínica institucional.
+O estado autoritativo de pesquisa, recon e adversarial está somente no
+[tracker](../.context/review/STATUS.md). Esta tabela mapeia ownership; não declara readiness.
 
 ## Gate semântico antes do BUILD formal
 
-- [x] Fluxo ponta a ponta possui ator, entrada, ação, saída e próximo responsável.
-- [x] Entidades, estados, transições inválidas e fonte de verdade estão descritos.
-- [x] Cada papel tem capacidade, escopo de leitura e proibição explícitos.
-- [x] Cada widget clínico tem campos, semântica de resposta, DTO, validação e consumo.
-- [x] Cadastros, fixtures e configurações mínimas têm dono e persistência.
-- [x] Agenda define capacidade, slot, compatibilidade, reserva, conflito e recuperação.
-- [x] Telas definem rota, papel, dados, ações, estados vazios, erro e conflito.
-- [x] Segurança, offline, auditoria, migração e provas estão mapeados.
-- [x] Cada Analyst de domínio possui BUILD de mesmo nome.
-- [ ] Marco assinou o Analyst consolidado e os sete dossiês.
+- [x] Oito domínios possuem Analyst e Build pareados; o novo Build de IA está explicitamente bloqueado.
+- [ ] Alegações clínicas, regulatórias e operacionais passaram por pesquisa.
+- [ ] Recon técnico distingue capacidade existente de arquitetura proposta.
+- [ ] Cada domínio passou por adversarial e corrigiu seus achados.
+- [ ] Analysts contêm semântica; detalhes físicos pertencem aos Builds.
+- [ ] Surface Blueprints e reconstrução cega fecharam a experiência durante a fase Build.
+- [ ] A síntese ponta a ponta foi reconciliada depois dessas correções.
+- [ ] Marco assinou o Analyst consolidado e os oito dossiês.
 
 ## Ordem obrigatória
 
@@ -143,9 +145,9 @@ não promoveu a fase, não criou Plan e não autorizou uma linha de implementaç
 
 ## Contrato de encerramento deste arquivo
 
-- Artefato: `ANALYST.md`, `analysis.md` e sete `ANALYST-*.md`
+- Artefato: `ANALYST.md`, `analysis.md` e oito `ANALYST-*.md`
 - Próxima fase autorizada após assinatura: BUILD formal e Critic
-- Estado: `AGUARDANDO_ASSINATURA`
+- Estado: `INVALIDATED_BY_CHANGE`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`

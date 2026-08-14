@@ -1,13 +1,13 @@
 # Build — Classificação operacional e agenda
 
-> **BLUEPRINT COMPLETO, SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+> **DRAFT BLOQUEADO; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
 
 ## State
 
 - Source: `hack/domains/ANALYST-classificacao-e-agenda.md`
-- Status: `BLOCKED BY ANALYST SIGNATURE`
+- Status: `RESEARCH_REQUIRED + RECON_REQUIRED`
 - Scope: arquitetura do domínio; não é Plan nem catálogo de tarefas
-- Confidence: `high` para a demo local
+- Confidence: `low`; regras e capacidade são `DEMO_DECISION` e os locks ainda não foram provados
 
 ## Goal
 
@@ -1221,13 +1221,12 @@ A sequência é topológica, não um Plan executável.
 
 ## Definition of Complete for Build
 
-- [x] Produto, backend, frontend, validação e operações estão contratados.
-- [x] Regra v1, classes, DTOs, tabelas, constraints e erros estão fechados.
-- [x] Concorrência, idempotência, pausa por incompletude e rollback estão definidos.
-- [x] Janelas datadas, administração de capacidade, ocupação de recursos e bookings
-      `INITIAL | RETURN` estão definidos.
-- [x] Topologia agenda base → assessment → integração elimina o ciclo de FKs.
-- [x] Superfície semanal simples está escolhida.
+- [x] Produto, backend, frontend, validação e operações estão descritos como proposta.
+- [ ] Regra v1 pesquisada e rotulada sem confundir demo com evidência.
+- [ ] DTOs, tabelas, constraints, concorrência e rollback provados no PGlite.
+- [ ] Janelas, capacidade, recursos e bookings validados como `DEMO_DECISION`.
+- [ ] Topologia agenda base → assessment → integração provada no PGlite.
+- [ ] Superfície semanal confirmada pelos futuros Surface Blueprints.
 - [ ] Analyst do domínio assinado por Marco.
 - [ ] Critic revisar este blueprint.
 - [ ] Marco assinar Build + Critic antes do Warlog.
@@ -1238,7 +1237,7 @@ A sequência é topológica, não um Plan executável.
 
 - Artefato: `hack/domains/BUILD-classificacao-e-agenda.md`
 - Próxima fase autorizada: Critic do domínio
-- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_ANALYST`
+- Estado: `DRAFT_RESEARCH_REQUIRED`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`

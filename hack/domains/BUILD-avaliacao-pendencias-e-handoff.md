@@ -3,7 +3,7 @@
 ## State
 
 - Documento: blueprint; **não é Plan nem autorização para código**.
-- Estado: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`.
+- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`.
 - Pré-requisito: `ANALYST-avaliacao-pendencias-e-handoff.md` aprovado por Marco.
 - Dependências: caso canônico, acesso/capabilities e agenda/booking reconciliados no Build principal.
 
@@ -1374,16 +1374,16 @@ destrutiva não pertence ao MVP.
 
 ## Grill Verdict
 
-`READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`.
+`RESEARCH_REQUIRED — ASSINATURA PENDENTE`.
 
 ## Definition Of Build Complete
 
-- [x] Check-in, encontro, pendência, retorno, resultado e entrega fechados.
-- [x] Tabelas, constraints, unions, inputs e outputs declarados.
-- [x] Capabilities consumidas e row/service guards definidos.
-- [x] Transações, idempotência, redaction e testes definidos.
-- [x] Resultado `DRAFT` e promessa de adendo removidos.
-- [x] Ordem agenda base → assessment → integração fecha as FKs sem ciclo.
+- [ ] Check-in, encontro, pendência, retorno, resultado e entrega pesquisados.
+- [ ] Tabelas, constraints, unions, inputs e outputs provados no runtime.
+- [ ] Capabilities e row/service guards reconciliados com acesso e superfícies.
+- [ ] Transações, idempotência, redaction e testes provados no runtime.
+- [x] Resultado `DRAFT` e promessa de adendo removidos da proposta.
+- [ ] Ordem agenda base → assessment → integração provada sem ciclo no PGlite.
 - [ ] Analyst assinado por Marco.
 - [ ] Build revisado e assinado por Marco.
 
@@ -1393,7 +1393,7 @@ Este arquivo não cria MiniSpec, Spec, Plan, teste ou código.
 
 - Artefato: `hack/domains/BUILD-avaliacao-pendencias-e-handoff.md`
 - Próxima fase autorizada: revisão humana
-- Status: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Status: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
 - Assinatura do Analyst por Marco: `PENDENTE`
 - Assinatura deste Build por Marco: `PENDENTE`
 - Data: `PENDENTE`

@@ -1,13 +1,13 @@
 # Build — Anamnese pré-anestésica e catálogos
 
-> **BLUEPRINT COMPLETO, SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+> **DRAFT BLOQUEADO; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
 
 ## State
 
 - Source: `hack/domains/ANALYST-anamnese-e-catalogos.md`
-- Status: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Status: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
 - Scope: arquitetura do domínio; não é Plan nem catálogo de tarefas
-- Confidence: `high` para o protótipo local
+- Confidence: `low` até pesquisa clínica, licença e recon PGlite
 
 ## Goal
 
@@ -738,10 +738,10 @@ Build, Warlog, Sprints e Spec assinados.
 
 ## Definition of Complete for Build
 
-- [x] Produto, backend, frontend, validação e operações estão contratados.
-- [x] Tabelas, DTOs, commands, queries e constraints estão nomeados.
-- [x] Estados de UI e falhas estão descritos.
-- [x] Sequência e rollback estão definidos.
+- [x] Produto, backend, frontend, validação e operações estão descritos como proposta.
+- [ ] Contratos clínicos pesquisados e validados.
+- [ ] Tabelas, DTOs, commands, queries e constraints provados no runtime.
+- [ ] Estados, sequência e rollback aprovados pelo adversarial.
 - [ ] Analyst do domínio assinado por Marco.
 - [ ] Critic revisar este blueprint.
 - [ ] Marco assinar Build + Critic antes do Warlog.
@@ -752,7 +752,7 @@ Build, Warlog, Sprints e Spec assinados.
 
 - Artefato: `hack/domains/BUILD-anamnese-e-catalogos.md`
 - Próxima fase após assinatura do Analyst: Critic do domínio
-- Estado: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
 - Assinatura de Marco: `PENDENTE`
 - Data da revisão humana: `PENDENTE`
 - Revisão Git examinada por Marco: `PENDENTE`

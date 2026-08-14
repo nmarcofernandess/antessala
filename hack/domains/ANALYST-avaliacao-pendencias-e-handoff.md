@@ -3,7 +3,7 @@
 ## State
 
 - Documento: `ANALYST-avaliacao-pendencias-e-handoff.md`
-- Estado: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
 - Escopo: check-in, encontro anestésico, pendências, retorno, resultado, PDF e entrega.
 - Fora deste domínio: classificação inicial, motor de fila, protocolo institucional, integração com o HC e prontuário longitudinal.
 
@@ -15,6 +15,11 @@ cumprimento tipados, responsável, prazo e decisão explícita sobre retorno. O 
 bloqueio libera a retomada do mesmo encontro ou cria um `ReturnRequest` para a recepção
 agendar. O rascunho vive no encontro. O único resultado persistido é `FINAL`, imutável e
 entregue apenas ao serviço solicitante correto.
+
+Autoria humana, isolamento por serviço e proibição de decisão automática são
+`PRODUCT_LAW`. Campos da avaliação, tipos de pendência, retorno, prazo, imutabilidade sem
+adendo e canais de entrega são `DEMO_DECISION` ou `UNRESOLVED` até pesquisa clínica,
+operacional e regulatória.
 
 ## Phase 0 Grill
 
@@ -516,12 +521,12 @@ cumprimento.
 
 ## Open Questions
 
-Nenhuma decisão do MVP permanece aberta. Integração, protocolo oficial, retenção, adendo e
-correção pós-entrega exigem outro PRD.
+O fluxo demonstrativo está descrito, mas sua matéria clínica, pendências, retorno,
+resultado e entrega ainda exigem pesquisa antes de poderem ser assinados.
 
 ## Grill Verdict
 
-`READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`.
+`RESEARCH_REQUIRED — ASSINATURA PENDENTE`.
 
 ## Recommended Next Phase
 
@@ -530,13 +535,13 @@ usar este contrato antes dessa assinatura.
 
 ## Contrato de conclusão
 
-- [x] Atores, estados, payloads, regras e redaction descritos.
-- [x] Check-in, encontro, pendência, retorno, resultado e handoff fechados.
+- [x] Atores, estados, payloads, regras e redaction descritos como proposta.
+- [ ] Check-in, encontro, pendência, retorno, resultado e handoff pesquisados e revisados.
 - [ ] Revisado e assinado por Marco.
 
 - Artefato: `hack/domains/ANALYST-avaliacao-pendencias-e-handoff.md`
 - Próxima fase autorizada: revisão humana
-- Status: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Status: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`

@@ -2,85 +2,63 @@
 
 ## Estado atual
 
-- Rota: `analyst_prd` com orçamento `forensic`.
-- Fase formal: `taskgen_review_and_signature`; os artefatos posteriores são rascunhos de revisão.
-- Conteúdo: PRD v5, Analyst integrado, sete Analysts de domínio e sete BUILDs
-  correspondentes redigidos.
-- Autoridade: somente revisão documental; teste e código continuam proibidos.
-- Gate imediato: assinatura de Marco no contrato de aprovação, em `status.json` e neste
-  `progress.md`. Depois vêm, separadamente, a assinatura do PRD e a do conjunto do Analyst.
+- Rota: `analyst_prd`, orçamento `forensic`.
+- Fase formal: `taskgen_review_and_signature`.
+- Autoridade: revisão documental; teste e código continuam proibidos.
+- Decisão: `needs_analysis`.
+- Assinaturas de Marco: nenhuma.
+- Tracker único de research/review: [`.context/review/STATUS.md`](../.context/review/STATUS.md).
 
-Marco autorizou diretamente a redação antecipada dos BUILDs de domínio. Isso permitiu
-verificar se cada decisão analítica realmente chega a tabela, DTO, ação, tela, componente e
-teste. Não promoveu BUILD, não autorizou Critic/Warlog e não substituiu assinatura.
+O PRD permanece intocado nesta rodada. O pacote agora possui oito pares
+Analyst/Build, mas nenhum deles está aprovado. O Build de IA, memória e conhecimento é
+somente `DRAFT/BLOCKED`.
 
-## Cobertura produzida
+## O que esta rodada estabeleceu
 
-| Domínio | Analyst | BUILD | Estado formal |
-|---|---:|---:|---|
-| Caso e encaminhamento | redigido | redigido | aguardando assinatura |
-| Acesso e auditoria | redigido | redigido | aguardando assinatura |
-| Anamnese e catálogos | redigido | redigido | aguardando assinatura |
-| Classificação e agenda | redigido | redigido | aguardando assinatura |
-| Avaliação, pendências e handoff | redigido | redigido | aguardando assinatura |
-| Superfícies e configurações | redigido | redigido | aguardando assinatura |
-| Arquitetura offline e prova | redigido | redigido | aguardando assinatura |
+- [x] `.context/` mínimo com produto, workflow, arquitetura e tracker.
+- [x] README humano e instruções Antessala em `CLAUDE.md` e `AGENTS.md`.
+- [x] Recon do HEAD separando `ACTIVE`, `DORMANT`, `INCOMPLETE` e `REMOVED`.
+- [x] Analyst de IA, memória e conhecimento criado como `RESEARCH_REQUIRED`.
+- [x] Build pareado criado sem schema, DTO ou implementação inventados.
+- [x] Estados enganosos de prontidão rebaixados.
+- [x] Decisões de pitch identificadas como `DEMO_DECISION`.
+- [x] Warlog, Sprints, MiniSpecs, Specs, Plans, TDD, implementação e QA mantidos bloqueados.
+- [ ] Research clínico, regulatório e operacional concluído.
+- [ ] Recon técnico dos Builds concluído.
+- [ ] Adversarial por domínio concluído.
+- [ ] Surface Blueprints e reconstrução cega produzidos durante o fechamento do Build.
+- [ ] Marco assinou Taskgen, PRD, Analyst ou Build.
 
-O pacote fecha cinco papéis, lifecycle do caso, 14 widgets, semântica de respostas,
-catálogos, regra demonstrativa, três classes de slot, capacidade, reserva concorrente,
-avaliação, retorno, resultado, 17 superfícies, configurações, fixtures, persistência,
-segurança e prova ponta a ponta.
+O estado por artefato, o SHA revisado e a próxima ação vivem somente no
+[tracker](../.context/review/STATUS.md).
 
 ## Fluxo obrigatório
 
 ```text
-Taskgen
-→ PRD + assinatura Marco
-→ Analyst forense + assinatura Marco
-→ BUILD formal + Critic + assinatura Marco
-→ Warlog-base + assinatura Marco
-→ Sprints + assinatura Marco
-→ para cada minispec:
-   Spec + assinatura Marco
-   → Plan + assinatura Marco
-   → primeiro teste TDD em RED
-   → implementação
-   → QA + assinatura Marco
-→ QA final + assinatura Marco
-→ concluído
+Taskgen assinado
+→ PRD assinado
+→ Analyst pesquisado, revisado e assinado
+→ BUILD + Critic assinados
+→ Warlog assinado
+→ Sprints assinadas
+→ para cada MiniSpec:
+   Spec assinada → Plan assinado → TDD RED → implementação → QA assinado
+→ QA final assinado
 ```
-
-## Registro
-
-- [x] PRD v5 redigido com login local administrado e fixtures por papel.
-- [x] `analysis.md` produzido conforme Analyst forense.
-- [x] Sete dossiês `ANALYST-*.md` produzidos.
-- [x] Cada dossiê possui `BUILD-*.md` de mesmo nome.
-- [x] Papéis, lifecycle e classes de slot reconciliados entre domínios.
-- [x] Referências ao antigo scaffold de cinco dossiês removidas.
-- [x] `ANALYST.md` convertido em índice/gate canônico.
-- [x] `BUILD.md` convertido em síntese técnica sem autoridade de execução.
-- [x] Warlog, Sprints, minispecs, Plans e QA mantidos como rascunhos bloqueados.
-- [x] Nenhuma linha de funcionalidade ou teste TDD foi escrita nesta revisão.
-- [ ] Marco assinou o Taskgen: contrato de aprovação, `status.json` e `progress.md`.
-- [ ] Marco assinou o PRD v5.
-- [ ] Marco assinou o Analyst integrado e seus sete dossiês.
-- [ ] BUILD formal e Critic foram autorizados.
 
 ## Próxima ação permitida
 
-Marco revisa e assina primeiro `CONTRATO-DE-APROVACAO.md`, `status.json` e este registro.
-Depois revisa e assina `PRD.md`; em seguida, `analysis.md`, `ANALYST.md` e os sete dossiês.
-Só então os BUILDs antecipados podem entrar na fase formal e ser submetidos ao Critic.
-Nenhum Plan, teste ou código nasce desse review sozinho.
+Pesquisar `hack/domains/ANALYST-anamnese-e-catalogos.md`: conjunto clínico, estados de
+resposta, completude, catálogos e licenças. Depois, verificar fontes, corrigir esse Analyst,
+atualizar o tracker e publicar novo SHA. Não revisar o Build antes disso.
 
 ---
 
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `progress.md`
-- Próxima fase autorizada: nenhuma sem as assinaturas anteriores
-- Estado: `AGUARDANDO_ASSINATURA`
+- Próxima fase autorizada: nenhuma
+- Estado: `EM_REVISÃO`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`

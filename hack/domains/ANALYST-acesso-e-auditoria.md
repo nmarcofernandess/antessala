@@ -5,17 +5,20 @@
 - Source: `hack/PRD.md`, decisão explícita de Marco em 14/08/2026 e recon do código atual.
 - Route: `analyst_prd`.
 - Phase budget: `forensic`.
-- Confidence: `high` para o MVP local; não descreve identidade institucional futura.
+- Confidence: `medium`; as leis da demo estão definidas, mas segurança e escopo ainda exigem adversarial.
 - Created: `2026-08-14`.
-- Content verdict: `ready for human review`.
-- Governance state: `AGUARDANDO ASSINATURA DE MARCO`.
+- Review state: `ADVERSARIAL_REQUIRED`.
+- Content verdict: `EM REVISÃO`; não está pronto para assinatura.
+- Governance state: `BLOQUEADO`.
 - Build correspondente: `hack/domains/BUILD-acesso-e-auditoria.md`.
 
 ## TL;DR
 
 O MVP terá autenticação local, sem cadastro público: o administrador cria `nome + e-mail + senha + função`, e cada pessoa entra com essa credencial. Cinco papéis executam o fluxo — `RECEPCAO`, `ENFERMAGEM`, `ANESTESIOLOGISTA`, `SOLICITANTE` e `ADMIN` — com autorização aplicada no processo principal antes de qualquer leitura ou escrita. As contas da apresentação serão fixtures sintéticas, senhas serão armazenadas somente como hash `scrypt`, sessões não sobreviverão ao reinício do aplicativo e toda mutação relevante produzirá auditoria append-only sem copiar conteúdo clínico ou segredos.
 
-O conteúdo deste Analyst está fechado para o MVP, mas não libera o Build enquanto Marco não assinar o contrato ao final.
+As cinco funções e o login local são `PRODUCT_LAW`. Parâmetros de senha, sessão, fixture e
+auditoria são `DEMO_DECISION` ou decisão técnica sujeita a adversarial. Este Analyst não
+está fechado.
 
 ## Phase 0 Grill
 
@@ -391,7 +394,8 @@ stateDiagram-v2
 
 ## Open Questions
 
-Nenhuma decisão do MVP permanece aberta.
+Permanecem abertas a revisão adversarial de credenciais, sessão, escopo, capabilities e
+auditoria, além da separação entre semântica de produto e escolha técnica.
 
 Decisões futuras, explicitamente fora do hack:
 
@@ -403,8 +407,8 @@ Decisões futuras, explicitamente fora do hack:
 
 ## Grill Verdict
 
-- Verdict: `ready for human review` quanto ao conteúdo.
-- Why: atores, credencial, fixtures, entidades, estados, regras, RBAC, auditoria, fronteira de confiança, falhas e provas estão fechados para o MVP.
+- Verdict: `ADVERSARIAL_REQUIRED`.
+- Why: atores e fronteiras estão definidos, mas segurança, sessão, escopo e mistura com decisões de Build ainda precisam ser atacados.
 - Governance constraint: o Build correspondente existe como blueprint, mas não está autorizado até a assinatura de Marco.
 - Next stage: revisar e assinar este Analyst; produzir/revisar o Build correspondente e submetê-lo ao Critic, jamais saltar direto para Spec, Plan ou código.
 
@@ -421,10 +425,10 @@ todos chamam o mesmo guard e produzem auditoria.
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Conteúdo MVP: `FECHADO`.
+- Conteúdo MVP: `EM REVISÃO`.
 - Próxima fase material: `hack/domains/BUILD-acesso-e-auditoria.md`.
 - Próxima fase autorizada: `NENHUMA SEM ASSINATURA`.
-- Estado: `AGUARDANDO_ASSINATURA`.
+- Estado: `ADVERSARIAL_REQUIRED`.
 - Assinatura de Marco: `PENDENTE`.
 - Data: `PENDENTE`.
 - Revisão Git examinada: `PENDENTE`.

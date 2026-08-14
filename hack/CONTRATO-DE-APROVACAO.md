@@ -17,8 +17,9 @@ autoriza somente a **autoria do rascunho**. Ela não aprova o artefato, não pro
 decisão ausente no artefato anterior.
 
 Nesta revisão, Marco autorizou a redação conjunta dos dossiês do Analyst e de seus BUILDs
-correspondentes. Todos permanecem `AGUARDANDO_ASSINATURA`; o fluxo formal continua no
-Taskgen, porque este contrato, `status.json` e `progress.md` ainda não foram assinados.
+correspondentes. Nenhum está aprovado: alguns ainda exigem research, recon ou adversarial
+antes de poderem chegar à assinatura. O fluxo formal continua no Taskgen, porque este
+contrato, `status.json` e `progress.md` ainda não foram assinados.
 
 ## Assinatura válida
 

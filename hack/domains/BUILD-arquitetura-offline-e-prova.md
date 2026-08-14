@@ -3,7 +3,7 @@
 ## State
 
 - Documento: blueprint de arquitetura; **não é Plan nem autorização para código**.
-- Estado: `DRAFT — BLOCKED_BY_ANALYST_SIGNATURE`.
+- Estado: `INVALIDATED_BY_CHANGE — RECON_REQUIRED`.
 - Pré-requisito: `ANALYST-arquitetura-offline-e-prova.md` aprovado por Marco.
 - Alvo: Electron local em um Mac, PGlite, dados sintéticos e demonstração offline.
 
@@ -436,10 +436,10 @@ Qualquer piloto real reinicia em PRD → Analyst → Build com threat model e co
 
 ## Definition Of Build Complete
 
-- [x] Product, Backend e Frontend especificados.
-- [x] Arquivos, schema e DTOs próprios declarados; acesso, ações e papéis canônicos consumidos sem redefinição.
-- [x] Boot, migrations, seed, rede, isolamento do harness e prova fechados.
-- [x] Validação, rollout, rollback, reuso e limites futuros explícitos.
+- [x] Product, Backend e Frontend descritos como proposta.
+- [ ] Arquivos, schema, IPC e DTOs reconciliados com o HEAD.
+- [ ] Boot, migrations, seed, rede, IA opcional e prova revisados.
+- [ ] Validação, rollback e compatibilidade PGlite atacados pelo Critic.
 - [ ] Analyst deste domínio assinado por Marco.
 - [ ] Build revisado e assinado por Marco.
 
@@ -449,7 +449,7 @@ Este blueprint não autoriza MiniSpec, Spec, Plan, teste ou código.
 
 - Artefato: `BUILD-arquitetura-offline-e-prova.md`
 - Próxima fase autorizada após assinatura do Analyst, deste Build e do Critic: Warlog-base
-- Estado: `AGUARDANDO_ASSINATURA`
+- Estado: `INVALIDATED_BY_CHANGE`
 - Assinatura do Analyst por Marco: `PENDENTE`
 - Assinatura deste Build por Marco: `PENDENTE`
 - Data: `PENDENTE`

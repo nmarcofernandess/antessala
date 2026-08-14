@@ -4,8 +4,8 @@
 
 - Tipo: blueprint técnico; não é Spec, Plan ou autorização de código.
 - Fonte: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Conteúdo: `COMPLETE PARA REVISÃO`.
-- Estado de governança: `DRAFT — BLOQUEADO PELA ASSINATURA DO ANALYST`.
+- Conteúdo: `DRAFT — RESEARCH_REQUIRED + RECON_REQUIRED + ADVERSARIAL_REQUIRED`.
+- Estado de governança: `BLOQUEADO PELO ANALYST E PELA REVISÃO TÉCNICA`.
 - Risco: alto, porque define autenticação, autorização e auditoria transversal.
 - Próxima fase material depois das assinaturas: Critic; somente depois, Warlog e o restante do fluxo forense.
 
@@ -545,7 +545,7 @@ autorizada enquanto a anterior não estiver fechada e assinada.
 
 - Artefato: `hack/domains/BUILD-acesso-e-auditoria.md`.
 - Analyst de origem: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Estado: `DRAFT_BLOQUEADO_POR_ASSINATURA`.
+- Estado: `DRAFT_RESEARCH_REQUIRED`.
 - Autoriza implementação: `NÃO`.
 - Assinatura de Marco no Analyst: `PENDENTE`.
 - Assinatura de Marco neste Build: `PENDENTE`.

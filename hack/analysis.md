@@ -5,10 +5,10 @@
 - Source: `hack/PRD.md` v5, decisões diretas de Marco e recon do código
 - Route: `analyst_prd`
 - Phase budget: `forensic`
-- Confidence: alta para o MVP local; baixa para adoção institucional sem validação posterior
+- Confidence: `medium` para leis do produto; `low` para domínios sem pesquisa/recon/adversarial
 - Created: `2026-08-14`
 - Mode: `hybrid`
-- Verdict: `ready for human review`; qualquer transição ao Build formal está bloqueada pela assinatura de Marco
+- Verdict: `INVALIDATED_BY_CHANGE`; IA/memória entrou no MVP e os reviews ainda estão pendentes
 
 ## TL;DR
 
@@ -16,8 +16,9 @@ O MVP é um aplicativo Electron local que acompanha um caso pré-anestésico do
 encaminhamento ao recebimento do resultado pelo serviço solicitante. Cinco funções entram
 com contas locais: recepção, enfermagem, anestesiologista, solicitante e administrador. O
 produto separa dado clínico, requisito operacional de agenda, reserva e decisão médica.
-Este documento fecha o domínio da demonstração; não afirma reproduzir o fluxo ou o
-protocolo institucional do HC.
+IA pode propor preenchimento e recuperar conhecimento aprovado, sempre como rascunho
+auditável que depende de confirmação humana. Este documento está em reconciliação; não
+afirma reproduzir o fluxo ou protocolo institucional do HC.
 
 ## Phase 0 Grill
 
@@ -62,6 +63,8 @@ o que falta e o que já ocorreu.
 - Como solicitante, quero receber o resultado final e acusar seu recebimento.
 - Como administrador, quero preparar contas, serviços, procedimentos e capacidade da
   demonstração sem depender de serviço externo.
+- Como profissional autorizado, quero revisar sugestões de IA com origem e decidir o que
+  aceito, rejeito ou corrijo sem transformar um caso em regra global.
 
 ## Story Tecnica
 
@@ -73,15 +76,17 @@ o que falta e o que já ocorreu.
   operacional, a reserva, a avaliação e os eventos de auditoria.
 - Como sistema, devo efetivar uma reserva por transação condicional e chave de
   idempotência.
-- Como sistema, devo funcionar no primeiro boot sem rede e enviar dados à internet somente
-  em capacidades futuras explicitamente ativadas.
+- Como sistema, devo funcionar no primeiro boot sem rede; uma ação opcional de IA pode usar
+  rede com informação clara e falhar sem bloquear caso, agenda ou handoff.
 
 ## Current Terrain
 
 O repositório entrega uma casca Electron, PGlite, TIPC, tema, chat cloud, oito widgets
 nutricionais, catálogos clínicos locais e exportação PDF. Somente Início, Assistente IA e
-Configurações estão roteados. Não existem login, RBAC, telas clínicas, agenda ou entidades
-canônicas do novo fluxo.
+Configurações estão roteados. O backend de knowledge está IPC-callable embora sua página
+esteja fora das rotas; gravação está dormente e STT está incompleto. Não existem login,
+RBAC, telas clínicas, agenda ou entidades canônicas do novo fluxo. O inventário comprovado
+vive em [`.context/architecture.yaml`](../.context/architecture.yaml).
 
 `registros`, prioridade e `registro_jornada` estão declarados como legado da hipótese
 anterior. O Build deve migrar ou substituir essa superfície; nenhum estado antigo vira lei
@@ -99,6 +104,7 @@ reutilizáveis.
 | Avaliação, pendências e handoff | [ANALYST-avaliacao-pendencias-e-handoff](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | [BUILD-avaliacao-pendencias-e-handoff](domains/BUILD-avaliacao-pendencias-e-handoff.md) |
 | Superfícies e configurações | [ANALYST-superficies-e-configuracoes](domains/ANALYST-superficies-e-configuracoes.md) | [BUILD-superficies-e-configuracoes](domains/BUILD-superficies-e-configuracoes.md) |
 | Arquitetura offline e prova | [ANALYST-arquitetura-offline-e-prova](domains/ANALYST-arquitetura-offline-e-prova.md) | [BUILD-arquitetura-offline-e-prova](domains/BUILD-arquitetura-offline-e-prova.md) |
+| IA, memória e conhecimento | [ANALYST-ia-memoria-e-conhecimento](domains/ANALYST-ia-memoria-e-conhecimento.md) | [BUILD-ia-memoria-e-conhecimento](domains/BUILD-ia-memoria-e-conhecimento.md) |
 
 ## Evidence Matrix
 
@@ -527,12 +533,25 @@ stateDiagram-v2
 - IF o solicitante confirmar recebimento, THEN o caso chega a
   `DELIVERED_TO_REQUESTER`.
 
+### IA, memória e conhecimento
+
+- MUST: gravação/transcrição é opcional, informada e nunca condição para concluir a anamnese.
+- MUST: toda sugestão de widget nasce `DRAFT`, com origem e explicação visíveis.
+- MUST: profissional autorizado aceita, rejeita ou corrige; somente o valor confirmado entra na anamnese.
+- MUST: o motor operacional ignora propostas `DRAFT`.
+- MUST: memória global contém apenas relações aprovadas, versionadas, ativas e sem identidade ou narrativa integral da pessoa.
+- MUST: promover exemplo de caso para conhecimento global exige ação humana explícita e auditável.
+- MUST: RAG e grafo consultam somente conhecimento aprovado; inferência nova permanece sugestão.
+- MUST NOT: IA concluir gravidade, urgência, prioridade cirúrgica, duração, ASA, aptidão ou conduta clínica sozinha.
+- IF IA, rede, gravação ou memória estiver indisponível, THEN caso, agenda e handoff continuam pelo fluxo manual.
+
 ### Offline e segurança
 
 - MUST: boot, login, fixtures, catálogos e fluxo clínico funcionam sem rede.
 - MUST: renderer bloqueia carregamento remoto por padrão.
-- MUST: IA cloud, memória/RAG e importadores permanecem fora das rotas e do router ativo
-  do MVP; canal legado responde `FEATURE_DISABLED` antes de qualquer cliente de rede.
+- MUST: uso cloud ocorre somente por ação explícita, com propósito e destino informados.
+- MUST: backend legado de knowledge não permanece genericamente alcançável; o Build futuro
+  deverá expor apenas as capacidades aprovadas pelo novo Analyst.
 - MUST: dados, logs e provas usam somente pessoas sintéticas.
 - MUST NOT: token de IA ou senha aparecer em log, exportação ou auditoria.
 
@@ -547,11 +566,16 @@ stateDiagram-v2
 | high | Reserva concorrente pode duplicar vaga | Helpers atuais não oferecem primitive de slot | Constraint + transação condicional + idempotência + teste de corrida. |
 | high | Widgets herdados marcam defaults como completos | `tests/shared/anamnese/widgets.spec.ts:28-49` | Novo envelope e semântica de resposta; nenhum default clínico afirmativo. |
 | medium | Catálogo de medicamentos é recorte | `src/data/catalogos/README.md:21-38` | Fallback textual explícito e limite declarado; não alegar cobertura nacional. |
-| medium | Configuração de IA guarda segredo local | `src/main/db/schema.ts:14-24` | Ocultar rotas IA no MVP; nenhuma mensagem clínica sai do computador. |
+| high | IA envia histórico sem anonimização automática | `src/main/ia/cliente.ts:52-108` | Consentimento, minimização, ação explícita e revisão humana no novo domínio. |
+| high | Knowledge legado está IPC-callable e promove inferência sem aprovação | `src/main/tipc.ts:373-375` | Router mínimo, estados draft/aprovado e auditoria antes do reuso. |
+| medium | Configuração de IA guarda segredo local | `src/main/db/schema.ts:14-24` | Definir proteção do segredo no Build; nunca logar ou exportar token. |
 | medium | DDL idempotente não evolui schema existente | `src/main/db/schema.ts:211-233` | Ledger de migrations local e testes de upgrade. |
 | medium | TIPC aceita inputs TS sem validação geral | `src/main/tipc.ts:265-400` | Zod compartilhado em todo command/query novo. |
 
 ## Blueprint Handoff
+
+> Inventário provisório herdado. Paths, tabelas e componentes pertencem aos Builds; este
+> bloco não é fonte de implementação e será retirado quando os Analysts forem reconciliados.
 
 | Path/Area | Action | Reason | Validation |
 |---|---|---|---|
@@ -581,6 +605,8 @@ flowchart LR
   auth --> case
   case --> anamnesis["Anamnese e catálogos"]
   anamnesis --> requirement["Classificação operacional"]
+  anamnesis --> ai["IA e memória assistivas"]
+  ai --> requirement
   auth --> config["Superfícies e configurações"]
   config --> agenda["Agenda e reserva"]
   requirement --> agenda
@@ -620,41 +646,45 @@ as dependências. Nenhum deles substitui Spec, Plan ou primeiro teste TDD.
   exportação os chama de assinatura digital.
 - [ ] ADMIN não lê conteúdo clínico.
 - [ ] Primeiro boot, seed, login e jornada sintética funcionam sem acesso à internet.
+- [ ] Uma sugestão real de IA mostra origem e explicação, permanece draft e só entra após decisão humana.
+- [ ] Uma relação aprovada e versionada é recuperada da memória sem identidade ou narrativa integral de caso.
+- [ ] Indisponibilidade de IA/memória não bloqueia o fluxo manual.
 - [ ] O E2E percorre encaminhamento, triagem, reserva, avaliação, resultado e recebimento.
 - [ ] Nenhuma tela chama requisito operacional de risco clínico, ASA ou aptidão.
 
 ## Open Questions
 
-Nenhuma questão altera o formato do MVP. As perguntas seguintes pertencem à fase financiada:
+As perguntas abaixo bloqueiam a prontidão dos Analysts e precisam de research ou decisão
+explícita antes de assinatura:
 
 - Qual protocolo e quais pesos o HC validará para uso assistencial?
 - Quais sistemas institucionais fornecerão identidade, encaminhamento, agenda e prontuário?
 - Qual política institucional regerá retenção, consentimento, LGPD e assinatura?
 - Qual banco, identidade e arquitetura multiusuário substituirão o PGlite local?
 - Quais catálogos licenciados e processos de atualização irão para produção?
+- Quais dados podem sair do dispositivo na demonstração, com qual consentimento e por qual provedor?
+- Quais relações mínimas podem ser aprovadas como conhecimento sem fingir uma base clínica universal?
 
 ## Grill Verdict
 
-- Verdict: `ready for human review`
-- Why: produto, atores, superfícies, entidades, estados, regras, permissões, cadastros,
-  persistência, falhas e provas do MVP estão fechados e distribuídos por domínio.
-- Next stage: revisão humana. Após assinatura de Marco, o Build formal consome os sete
-  dossiês e seus blueprints correspondentes antes do Critic.
+- Verdict: `INVALIDATED_BY_CHANGE`
+- Why: novo domínio de IA/memória, pesquisas clínicas, recon técnico e adversariais ainda estão pendentes.
+- Next stage: corrigir o primeiro artefato indicado no tracker; não promover Build.
 - Approval status: `PENDENTE`
 
 ## Recommended Next Phase
 
-Marco revisa este `analysis.md`, o PRD v5 e os sete dossiês. Se aprovar o conjunto, assina
-o gate do Analyst. O próximo estado formal é Build + Critic. Warlog, sprints, specs, plans,
-testes e código continuam bloqueados.
+Executar a próxima pesquisa indicada em [`.context/review/STATUS.md`](../.context/review/STATUS.md),
+corrigir o artefato canônico e repetir o adversarial. Warlog, sprints, specs, plans, testes
+e código continuam bloqueados.
 
 ---
 
 ## Contrato de encerramento deste arquivo
 
-- Artefato: `analysis.md` e sete dossiês de domínio
+- Artefato: `analysis.md` e oito dossiês de domínio
 - Próxima fase autorizada após assinatura: Build formal e Critic
-- Estado: `AGUARDANDO_ASSINATURA`
+- Estado: `INVALIDATED_BY_CHANGE`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`

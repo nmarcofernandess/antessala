@@ -3,10 +3,10 @@
 ## State
 
 - Tipo: síntese técnica Product → Backend → Frontend → Validation
-- Estado: `DRAFT — BLOCKED_BY_ANALYST_SIGNATURE`
+- Estado: `INVALIDATED_BY_CHANGE — BLOCKED_BY_ANALYST_REVIEW`
 - Autoridade de execução: nenhuma
 - Fonte do produto: [PRD.md](PRD.md)
-- Fonte analítica: [analysis.md](analysis.md) e sete Analysts de domínio
+- Fonte analítica: [analysis.md](analysis.md) e oito Analysts de domínio
 - Próximo gate formal: Critic, somente depois da assinatura de Marco
 
 Este BUILD foi redigido antecipadamente por ordem direta de Marco para permitir a revisão
@@ -31,6 +31,7 @@ reserva, autoria rastreável e primeiro boot sem rede.
 | Avaliação, pendências e handoff | [ANALYST](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | [BUILD](domains/BUILD-avaliacao-pendencias-e-handoff.md) |
 | Superfícies e configurações | [ANALYST](domains/ANALYST-superficies-e-configuracoes.md) | [BUILD](domains/BUILD-superficies-e-configuracoes.md) |
 | Arquitetura offline e prova | [ANALYST](domains/ANALYST-arquitetura-offline-e-prova.md) | [BUILD](domains/BUILD-arquitetura-offline-e-prova.md) |
+| IA, memória e conhecimento | [ANALYST](domains/ANALYST-ia-memoria-e-conhecimento.md) | [BUILD DRAFT/BLOCKED](domains/BUILD-ia-memoria-e-conhecimento.md) |
 
 Em divergência, a ordem de reconciliação é: PRD assinado → `analysis.md` assinado →
 Analyst dono do domínio → BUILD do mesmo domínio → esta síntese. Nenhum consumidor escolhe
@@ -38,7 +39,7 @@ silenciosamente a versão que preferir.
 
 ## Current Terrain
 
-- Electron, React, PGlite, TIPC, tema e PDF já funcionam.
+- Electron, React, PGlite, TIPC, tema e handler PDF existem; a UI de PDF ainda não existe.
 - A casca ativa possui somente Início, IA e Configurações.
 - O banco clínico atual pertence à hipótese anterior e não é fonte canônica do novo fluxo.
 - O composer headless e a serialização versionada são reutilizáveis; seus oito widgets
@@ -46,6 +47,9 @@ silenciosamente a versão que preferir.
 - CID, medicamentos, MET e comorbidades já são assets offline com hash.
 - Não existem autenticação, autorização, caso canônico, agenda, avaliação ou telas por
   papel.
+- IA cloud está ativa e opcional; knowledge/RAG/grafo/importadores têm backend IPC-callable
+  sem superfície; gravação está dormente e STT está incompleto. Ver
+  [`.context/architecture.yaml`](../.context/architecture.yaml).
 
 ## Recommended Architecture
 
@@ -74,7 +78,8 @@ flowchart LR
 5. Cada mutação crítica grava estado e eventos/auditoria na mesma transação.
 6. PGlite é a fonte de verdade; grade semanal, filas, contadores e calendário são
    projeções.
-7. Nenhum caminho do MVP precisa de internet.
+7. Boot e fluxo-base não precisam de internet. Uma capacidade opcional de IA pode usar
+   rede somente por ação explícita e nunca bloqueia o caso, a agenda ou o handoff.
 
 ## Canonical Shared Contracts
 
@@ -132,6 +137,7 @@ exportados por `shared`, preload ou renderer. Serviços recebem o `ActorContext`
 | `src/main/db/seed.ts` e manifestos | assets e fixtures sintéticos | arquitetura offline coordena |
 | `src/main/tipc.ts` | apenas composição de routers | todos os domínios |
 | `src/main/export/pdf.ts` | motor genérico PDF | avaliação consome sem mover autoria ao exportador |
+| IA, memória, RAG e grafo | contrato físico ainda bloqueado | IA, memória e conhecimento |
 
 ### Database ownership
 
@@ -324,9 +330,9 @@ rota proibida não monta página nem dispara query. `ADMIN` não vê conteúdo c
   pré-anestésicos.
 - A agenda usa `WeeklyAgendaGrid` próprio e `AccessibleSlotTable` sobre a mesma projeção;
   não adiciona FullCalendar nem aceita drag-and-drop.
-- Tema claro/escuro/sistema continua disponível. IA cloud, memória, RAG, transcrição e
-  autopreenchimento não têm rota, menu ou mount; seus handlers não entram na composição do
-  router ativo e canais legados retornam `FEATURE_DISABLED` antes de alcançar rede.
+- Tema claro/escuro/sistema continua disponível. IA, memória, transcrição e revisão de
+  sugestões terão superfície somente depois do Analyst correspondente e dos Surface
+  Blueprints; o router futuro será uma allowlist, não o spread do backend legado.
 
 ### Required UI states
 
@@ -419,8 +425,8 @@ autoriza batching de implementação.
 - Grade e lista usam a mesma projeção; falha visual não remove a reserva transacional.
 - O produto não expõe backup, restore ou reset; provas repetíveis usam diretório temporário
   isolado do userData real.
-- Código dormente de IA/memória não é apagado por esta fase; apenas fica fora da árvore
-  ativa.
+- Código de IA/knowledge existente não é adotado por inércia: o novo domínio define a
+  allowlist futura, promoção humana e política de rede antes de qualquer reuso.
 - Nenhuma reversão destrói caso, revisão, booking, resultado ou evento já persistido.
 
 ## Risks
@@ -446,17 +452,17 @@ autoriza batching de implementação.
 - Não existe signup público, confirmação de e-mail, recuperação externa, SSO ou diretório.
 - Não existe editor livre de widgets, regras ou catálogos clínicos.
 - Não existe integração hospitalar, nuvem, Supabase, Stripe ou multiusuário real nesta fase.
-- Não existe chat clínico, gravação, transcrição ou autopreenchimento no MVP.
+- Não existe decisão clínica autônoma, promoção automática de caso para memória global nem
+  base universal de relações clínicas. IA/transcrição/autopreenchimento são assistivos e
+  permanecem bloqueados até o novo Analyst ser pesquisado e assinado.
 
 ## Definition Of BUILD Review Complete
 
-- [x] Cada Analyst separado possui BUILD de mesmo nome.
-- [x] Tabelas, DTOs, ações, superfícies, componentes e validações têm dono.
-- [x] Papéis, lifecycle, classes de slot e semântica de resposta são únicos.
-- [x] Cadastros mutáveis, fixtures read-only e snapshots estão separados.
-- [x] Fluxo ponta a ponta possui transações, falhas, recovery e prova.
-- [x] Offline, segurança, migração, rollback e fronteira futura estão descritos.
-- [ ] Critic revisou os sete BUILDs e esta síntese.
+- [x] Oito Analysts possuem BUILD pareado; IA/memória está explicitamente DRAFT/BLOCKED.
+- [ ] Research e recon fecharam as lacunas dos Analysts.
+- [ ] Tabelas, DTOs, ações e transações foram provados no runtime PGlite.
+- [ ] Surface Blueprints e reconstrução cega fecharam a experiência.
+- [ ] Critic revisou os oito BUILDs e esta síntese.
 - [ ] Marco assinou o PRD e o Analyst.
 - [ ] Marco assinou BUILD + Critic e autorizou Warlog.
 
@@ -464,9 +470,9 @@ autoriza batching de implementação.
 
 ## Contrato de encerramento deste arquivo
 
-- Artefato: `BUILD.md` e sete `domains/BUILD-*.md`
+- Artefato: `BUILD.md` e oito `domains/BUILD-*.md`
 - Próxima fase autorizada após assinatura: Critic corrigido e Warlog-base
-- Estado: `AGUARDANDO_ASSINATURA`
+- Estado: `INVALIDATED_BY_CHANGE`
 - Autoriza implementação: `NÃO`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`

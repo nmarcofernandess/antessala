@@ -3,13 +3,18 @@
 ## State
 
 - Documento: `ANALYST-arquitetura-offline-e-prova.md`
-- Estado: `READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`
+- Estado: `RECON_REQUIRED — ASSINATURA PENDENTE`
 - Escopo: Electron/PGlite local, migration, seed, catálogos, IPC, guardas, política de rede, segurança e prova.
 - Ambiente prometido: um Mac, uma instalação, dados sintéticos, sem integração institucional.
 
 ## TL;DR
 
-O Antessala deve iniciar, demonstrar o fluxo clínico e gerar PDF sem internet. PGlite é a fonte canônica local; o renderer nunca toca SQL; todo comando clínico cruza TIPC com validação runtime, `ActorContext` confiável, permissão, transação, idempotência e lock otimista. Migrations substituem o `CREATE TABLE IF NOT EXISTS` como mecanismo evolutivo. Catálogos versionados entram por assets locais e seed por hash. Código de IA pode permanecer no repositório, mas seus handlers ficam fora do router ativo ou respondem `FEATURE_DISABLED` antes de importar qualquer cliente de rede. Backup, restore e reset não são superfícies do MVP; repetição da demo pertence ao harness com diretório temporário.
+O primeiro boot e o fluxo-base devem funcionar sem internet. A IA cloud pode usar rede
+somente por ação explícita e sua falha não bloqueia caso, agenda ou handoff. O terreno atual
+precisa ser reconciliado: backend de knowledge está IPC-callable, STT está incompleto,
+preload não possui allowlist e não há autenticação/guardas. Capacidades comprovadas vivem
+em `.context/architecture.yaml`; este Analyst define comportamento futuro, não afirma que
+o Build proposto já existe.
 
 ## Phase 0 Grill
 
@@ -252,13 +257,15 @@ O Build deve fechar:
 
 ## Open Questions
 
-Não há pergunta bloqueadora para a arquitetura da demo. Antes de qualquer piloto com dados reais, um novo ciclo PRD → Analyst deve decidir autenticação, criptografia, retenção, LGPD, backup seguro, integração, observabilidade, atualização e suporte. Essas decisões não cabem em uma MiniSpec do MVP.
+Persistem perguntas bloqueadoras sobre fronteira IPC, rede opcional, áudio/transcrição,
+consentimento, promoção de memória e compatibilidade PGlite do Build proposto.
 
 ## Grill Verdict
 
-`READY_FOR_HUMAN_REVIEW — ASSINATURA PENDENTE`.
+`RECON_REQUIRED — ASSINATURA PENDENTE`.
 
-A arquitetura offline está fechada para um Mac e dados sintéticos. Ela é deliberadamente incapaz de sustentar alegações de prontuário, sync, autenticação ou operação hospitalar.
+A arquitetura offline ainda não está fechada. O escopo continua limitado a um Mac e dados
+sintéticos, sem alegar prontuário, sync ou operação hospitalar.
 
 ## Recommended Next Phase
 
@@ -268,14 +275,14 @@ assinatura de Marco, não criar Warlog, MiniSpec, Spec, Plan, teste ou código.
 
 ## Contrato de encerramento deste arquivo
 
-- [x] Boot, persistência, migrations, seed, rede, IPC, segurança e prova mapeados.
+- [ ] Boot, persistência, migrations, seed, rede, IPC, segurança e prova reconciliados com o HEAD.
 - [x] Repetição da demo isolada no harness, sem operação destrutiva no produto.
 - [x] Reuso, riscos e fronteira futura explícitos.
 - [ ] Revisado e assinado por Marco.
 
 - Artefato: `ANALYST-arquitetura-offline-e-prova.md`
 - Próxima fase autorizada após as assinaturas anteriores e desta revisão: Build formal e Critic
-- Estado: `AGUARDANDO_ASSINATURA`
+- Estado: `RECON_REQUIRED`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`
