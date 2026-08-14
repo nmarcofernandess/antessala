@@ -17,7 +17,7 @@ Estados: `INCORPORATED`, `REFERENCE_ONLY`, `NEEDS_FINAL_REVIEW`, `ADJUSTED`, `SU
 | `ANALYST-superficies-e-configuracoes.md` | recon e catálogo de superfícies | `REFERENCE_ONLY` | `9f501a9` | contratos integrados no BUILD |
 | `ANALYST-arquitetura-offline-e-prova.md` | recon Electron/PGlite | `REFERENCE_ONLY` | `9f501a9` | capacidade atual está em `.context/architecture.yaml` |
 | `ANALYST-ia-memoria-e-conhecimento.md` | research regulatório e de segurança | `REFERENCE_ONLY` | `9f501a9` | Gemini sintético único; uso real fora do escopo |
-| `hack/BUILD.md` | oito Builds reconciliados; P0 incorporados e recheck local concluído | `INCORPORATED` | `353913e` | Warlog criado; executar minispec 001 por TDD |
+| `hack/BUILD.md` | oito Builds reconciliados; P0 confirmados incorporados | `ADJUSTED` | `60106ca` | verificar somente as correções no novo SHA; sem P0, promover a `READY_FOR_WARLOG` |
 | `domains/BUILD-*.md` | contratos técnicos de detalhe | `REFERENCE_ONLY` | `9f501a9` | Writing Plans consultam sem superar `BUILD.md` |
 
 ## Decisões congeladas para a demonstração

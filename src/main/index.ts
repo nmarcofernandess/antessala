@@ -6,7 +6,6 @@ import { initDb, closeDb } from './db/pglite'
 import { APP_CONFIG } from './config/app-config'
 import { shouldShowMainWindow } from './headless'
 import { installRendererNetworkPolicy, isAllowedExternalUrl } from './renderer-network-policy'
-import { seedMvpData } from './mvp/service'
 
 process.stdout.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code !== 'EPIPE') console.error(err)
@@ -76,10 +75,11 @@ async function maybeSeedIaConfig(): Promise<void> {
     const { queryOne, execute } = await import('./db/query')
     const { PROVIDER_DEFAULTS, shouldAutoSeedIaConfig } = await import('./ia/config')
     const geminiKey = process.env.GOOGLE_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim()
-    if (!geminiKey) return
+    const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
+    if (!geminiKey && !openrouterKey) return
 
-    const provider = 'gemini' as const
-    const apiKey = geminiKey
+    const provider = geminiKey ? ('gemini' as const) : ('openrouter' as const)
+    const apiKey = geminiKey ?? openrouterKey!
     const modelo = PROVIDER_DEFAULTS[provider]
     const current = await queryOne<{
       provider: 'gemini' | 'openrouter'
@@ -159,7 +159,6 @@ async function bootstrap(): Promise<void> {
   await createTables()
   await maybeSeedIaConfig()
   await seedData()
-  await seedMvpData()
 
   await app.whenReady()
   installApplicationMenu(app)

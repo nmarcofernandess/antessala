@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from 'next-themes'
 import {
+  BrainCircuit,
   LayoutDashboard,
   Monitor,
   Moon,
@@ -23,11 +24,11 @@ import {
 import { cn } from '@/lib/utils'
 import { APP_ICON, APP_NAME } from '@/lib/app-info'
 import { useAppVersion } from '@/hooks/useAppVersion'
-import { useAuth } from '@/mvp/AuthProvider'
 
 export const ACTIVE_NAV_ITEMS = [
-  { label: 'Operação', to: '/', icon: LayoutDashboard, roles: ['ADMIN','RECEPCAO','ENFERMAGEM','ANESTESIOLOGISTA','SOLICITANTE'] },
-  { label: 'Configurações', to: '/configuracoes', icon: Settings, roles: ['ADMIN'] },
+  { label: 'Início', to: '/', icon: LayoutDashboard },
+  { label: 'Assistente IA', to: '/ia', icon: BrainCircuit },
+  { label: 'Configurações', to: '/configuracoes', icon: Settings },
 ] as const
 
 const THEME_OPTIONS = [
@@ -85,7 +86,6 @@ export function ThemeSelector() {
 export function AppSidebar() {
   const { pathname } = useLocation()
   const appVersion = useAppVersion()
-  const { session } = useAuth()
 
   return (
     <Sidebar collapsible="icon">
@@ -112,7 +112,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navegação</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {ACTIVE_NAV_ITEMS.filter((item) => session && (item.roles as readonly string[]).includes(session.role)).map((item) => (
+              {ACTIVE_NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
                     asChild
@@ -137,7 +137,6 @@ export function AppSidebar() {
 
       <SidebarSeparator />
       <SidebarFooter>
-        {session && <div className="px-1 text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden"><p className="font-medium text-sidebar-foreground">{session.name}</p><p>{session.role}</p></div>}
         <ThemeSelector />
       </SidebarFooter>
     </Sidebar>

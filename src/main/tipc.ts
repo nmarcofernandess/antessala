@@ -5,49 +5,17 @@ import { iaEnviarMensagem, iaTestarConexao } from './ia/cliente'
 import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
-import type { SemanticAnswer } from '../shared/mvp/workflow'
-import {
-  acceptPendencyEvidence,
-  bookCompatibleSlot,
-  acknowledgeDelivery,
-  approveKnowledgeRelation,
-  bookReturnSlot,
-  checkInBooking,
-  confirmRequirement,
-  confirmFieldProposal,
-  createCase,
-  finalizeResult,
-  getCurrentSession,
-  getCurrentResult,
-  listCasesForCurrentRole,
-  listCompatibleSlots,
-  listFixtureUsers,
-  listPendencies,
-  login,
-  logout,
-  openPendency,
-  proposeFieldsFromTranscript,
-  reviseResult,
-  requireMvpRole,
-  saveAndSubmitTriage,
-  sendResultToRequester,
-  searchApprovedKnowledge,
-  startAssessment,
-  startNursing,
-  submitPendencyEvidence,
-  suggestKnowledgeRelation,
-} from './mvp/service'
 
 const require = createRequire(import.meta.url)
 const { tipc } = require('@egoist/tipc/main') as typeof import('@egoist/tipc/main')
 const t = tipc.create()
 
-type CloudProvider = 'gemini'
+type CloudProvider = 'gemini' | 'openrouter'
 type ProviderSettings = Partial<Record<CloudProvider, { token?: string; modelo?: string }>>
 
 function assertProvider(value: string): asserts value is CloudProvider {
-  if (value !== 'gemini') {
-    throw new Error('Provider inválido. O Antessala usa somente Gemini.')
+  if (value !== 'gemini' && value !== 'openrouter') {
+    throw new Error('Provider inválido. Escolha Gemini ou OpenRouter.')
   }
 }
 
@@ -78,7 +46,6 @@ function publicIaConfig(config: IaConfiguracao | undefined) {
 }
 
 const iaConfiguracaoObter = t.procedure.action(async () => {
-  requireMvpRole('ADMIN')
   const config = await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1')
   return publicIaConfig(config)
 })
@@ -91,7 +58,6 @@ const iaConfiguracaoSalvar = t.procedure
     provider_configs_json?: string
   }>()
   .action(async ({ input }) => {
-    requireMvpRole('ADMIN')
     assertProvider(input.provider)
     const modelo = input.modelo.trim() || PROVIDER_DEFAULTS[input.provider]
     const current = await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1')
@@ -136,7 +102,6 @@ const iaConfiguracaoTestar = t.procedure
     provider_configs_json?: string
   }>()
   .action(async ({ input }) => {
-    requireMvpRole('ADMIN')
     assertProvider(input.provider)
     const current = await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1')
     const settings = parseProviderSettings(current?.provider_configs_json)
@@ -162,7 +127,6 @@ const iaChatEnviar = t.procedure
 const iaConversasListar = t.procedure
   .input<{ status?: 'ativo' | 'arquivado'; busca?: string } | undefined>()
   .action(async ({ input }) => {
-    requireMvpRole('ADMIN')
     const status = input?.status ?? 'ativo'
     const busca = input?.busca?.trim() ?? ''
     return queryAll(
@@ -291,107 +255,6 @@ const iaMensagensDeletarApos = t.procedure
   })
 
 export const router = {
-  'auth.login': t.procedure
-    .input<{ email: string; password: string }>()
-    .action(async ({ input }) => login(input)),
-  'auth.logout': t.procedure.action(async () => logout()),
-  'auth.current': t.procedure.action(async () => getCurrentSession()),
-  'mvp.cases.list': t.procedure.action(async () => listCasesForCurrentRole()),
-  'mvp.cases.create': t.procedure
-    .input<{
-      personName: string
-      sex: string
-      age: number
-      procedure: string
-      requesterService: string
-      externalReference: string | null
-    }>()
-    .action(async ({ input }) => createCase(input)),
-  'mvp.cases.startNursing': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => startNursing(input.caseId)),
-  'mvp.triage.submit': t.procedure
-    .input<{ caseId: string; answers: Record<string, SemanticAnswer> }>()
-    .action(async ({ input }) => saveAndSubmitTriage(input.caseId, input.answers)),
-  'mvp.requirements.confirm': t.procedure
-    .input<{
-      caseId: string
-      decision: 'CONFIRM' | 'OVERRIDE'
-      reason: string | null
-      slotClass?: 'QUICK' | 'STANDARD' | 'EXTENDED'
-      minutes?: number
-    }>()
-    .action(async ({ input }) => confirmRequirement(input.caseId, input)),
-  'mvp.slots.listCompatible': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => listCompatibleSlots(input.caseId)),
-  'mvp.bookings.confirm': t.procedure
-    .input<{ caseId: string; slotId: string }>()
-    .action(async ({ input }) => bookCompatibleSlot(input.caseId, input.slotId)),
-  'mvp.bookings.checkIn': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => checkInBooking(input.caseId)),
-  'mvp.assessments.start': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => startAssessment(input.caseId)),
-  'mvp.pendencies.open': t.procedure
-    .input<{
-      caseId: string
-      description: string
-      impact: 'BLOCKS_CURRENT_RESULT' | 'DOES_NOT_BLOCK_CURRENT_RESULT'
-      ownerRole: 'RECEPCAO' | 'ENFERMAGEM' | 'ANESTESIOLOGISTA' | 'SOLICITANTE'
-      requiresReturn: boolean
-    }>()
-    .action(async ({ input }) => openPendency(input.caseId, input)),
-  'mvp.pendencies.list': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => listPendencies(input.caseId)),
-  'mvp.pendencies.submitEvidence': t.procedure
-    .input<{ pendencyId: string; evidence: string }>()
-    .action(async ({ input }) => submitPendencyEvidence(input.pendencyId, input.evidence)),
-  'mvp.pendencies.acceptEvidence': t.procedure
-    .input<{ pendencyId: string }>()
-    .action(async ({ input }) => acceptPendencyEvidence(input.pendencyId)),
-  'mvp.returns.book': t.procedure
-    .input<{ caseId: string; slotId: string }>()
-    .action(async ({ input }) => bookReturnSlot(input.caseId, input.slotId)),
-  'mvp.results.current': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => getCurrentResult(input.caseId)),
-  'mvp.results.finalize': t.procedure
-    .input<{ caseId: string; summary: string; conclusion: string }>()
-    .action(async ({ input }) => finalizeResult(input.caseId, input)),
-  'mvp.results.revise': t.procedure
-    .input<{
-      caseId: string
-      kind: 'CORRECTION' | 'ADDENDUM'
-      reason: string
-      summary: string
-      conclusion: string
-    }>()
-    .action(async ({ input }) => reviseResult(input.caseId, input)),
-  'mvp.deliveries.send': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => sendResultToRequester(input.caseId)),
-  'mvp.deliveries.acknowledge': t.procedure
-    .input<{ caseId: string }>()
-    .action(async ({ input }) => acknowledgeDelivery(input.caseId)),
-  'mvp.ai.proposeFields': t.procedure
-    .input<{ caseId: string; transcript: string }>()
-    .action(async ({ input }) => proposeFieldsFromTranscript(input.caseId, input.transcript)),
-  'mvp.ai.reviewProposal': t.procedure
-    .input<{ proposalId: string; decision: 'ACCEPT' | 'REJECT' }>()
-    .action(async ({ input }) => confirmFieldProposal(input.proposalId, input.decision)),
-  'mvp.knowledge.suggest': t.procedure
-    .input<{ subject: string; predicate: string; object: string; rationale: string }>()
-    .action(async ({ input }) => suggestKnowledgeRelation(input)),
-  'mvp.knowledge.approve': t.procedure
-    .input<{ relationId: string }>()
-    .action(async ({ input }) => approveKnowledgeRelation(input.relationId)),
-  'mvp.knowledge.search': t.procedure
-    .input<{ term: string }>()
-    .action(async ({ input }) => searchApprovedKnowledge(input.term)),
-  'mvp.users.list': t.procedure.action(async () => listFixtureUsers()),
   'ia.configuracao.obter': iaConfiguracaoObter,
   'ia.configuracao.salvar': iaConfiguracaoSalvar,
   'ia.configuracao.testar': iaConfiguracaoTestar,

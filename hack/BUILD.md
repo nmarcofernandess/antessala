@@ -3,11 +3,11 @@
 ## State
 
 - Tipo: síntese técnica Product → Backend → Frontend → Validation
-- Estado: `USED_FOR_WARLOG`
+- Estado: `ADJUSTED_PENDING_CONGRUENCE_RECHECK`
 - Autoridade: especificação técnica integrada do hackathon
 - Fonte do produto: [PRD.md](PRD.md)
 - Fonte analítica: [analysis.md](analysis.md) e oito Analysts de domínio
-- Próximo passo: executar `minispecs/001-fluxo-ate-agenda/writing-plan.md` por TDD
+- Próximo passo: verificar as correções no SHA publicado; sem P0 material, Warlog
 
 Este BUILD incorpora os oito Builds de domínio e, junto do PRD e do Analyst integrado,
 substitui uma Spec separada. Os Builds de domínio são anexos técnicos: em conflito, este
@@ -583,14 +583,15 @@ com paths, testes RED e ordem de commits; não existe Spec intermediária.
 - [x] Perfil `PITCH_CRITICAL` separa o fluxo demonstrável do hardening sem enfraquecer os invariantes P0.
 - [x] Decisões sintéticas estão rotuladas; produção institucional permanece fora do escopo.
 - [x] Review final de congruência executado; bloqueadores confirmados foram incorporados.
-- [x] Correções verificadas localmente no novo SHA sem bloqueador P0 material restante.
+- [ ] Correções verificadas no novo SHA sem bloqueador P0 material restante.
 
 ---
 
 ## Estado de consolidação
 
 - Artefato canônico: `BUILD.md`.
-- Estado: `USED_FOR_WARLOG`.
+- Estado: `ADJUSTED_PENDING_CONGRUENCE_RECHECK`.
 - Anexos consumidos: oito `domains/BUILD-*.md`.
 - Gate individual por anexo: inexistente.
-- Próximo passo: executar as três fatias de `WARLOG.md`, começando pelo teste RED da 001.
+- Próximo passo: recheck focado das correções; sem P0 aberto, criar Warlog e Writing Plans
+  por minispec.

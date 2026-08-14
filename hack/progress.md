@@ -4,9 +4,10 @@
 
 - PRD: `APPROVED_PRODUCT_BASELINE` por decisão explícita de Marco em `2026-08-14`.
 - Analyst: `CONSOLIDATED_FOR_BUILD` em [analysis.md](analysis.md).
-- BUILD: `USED_FOR_WARLOG` em [BUILD.md](BUILD.md).
-- Fase atual: implementação concluída; QA final em fechamento.
-- Código de produto: três fatias implementadas após testes relevantes observados em RED.
+- BUILD: `ADJUSTED_AFTER_EXTERNAL_REVIEW` em [BUILD.md](BUILD.md).
+- Fase atual: publicar as correções e verificar no novo SHA somente os bloqueadores
+  confirmados pelo review final.
+- Código de produto: ainda não autorizado; primeiro o Warlog corta as minispecs.
 
 Os oito Analysts e oito Builds de domínio foram absorvidos pelas sínteses principais. Eles
 permanecem como anexos de detalhe, sem assinatura ou gate individual. Em conflito,
@@ -27,15 +28,9 @@ permanecem como anexos de detalhe, sem assinatura ou gate individual. Em conflit
 - [x] Placeholders antigos de Critic, Warlog, Sprints e minispecs descartados.
 - [x] Review final de congruência executado no SHA publicado e bloqueadores confirmados
       incorporados.
-- [x] Correções verificadas localmente no novo SHA, sem P0 material restante.
-- [x] Warlog criado e três minispecs cortadas.
-- [x] Writing Plans das três fatias criados.
-- [x] TDD e implementação das três fatias executados.
-- [x] Fluxo até agenda provado no serviço e na janela Electron.
-- [x] Consulta, pendência, retorno, resultado versionado e handoff provados.
-- [x] Gemini assistivo e memória aprovada integrados sem bloquear o offline.
-- [x] Suíte completa: 58 arquivos e 236 testes verdes.
-- [x] Typecheck, build Electron e E2E da janela real verdes.
+- [ ] Correções verificadas no novo SHA publicado, sem P0 material restante.
+- [ ] Warlog criado e minispecs cortadas.
+- [ ] Writing Plans, TDD, implementação e QA executados.
 
 ## Fluxo operacional
 
@@ -58,4 +53,7 @@ Plan traduz a fatia em arquivos, passos, testes e provas; não redecide produto 
 
 ## Próxima ação exata
 
-Empacotar a aplicação, registrar o SHA final e publicar a branch para o handoff do pitch.
+Publicar esta correção e pedir ao GPT Pro para verificar, no novo SHA, somente se os P0
+confirmados foram fechados e se surgiu alguma contradição material. Sem P0, mudar o BUILD
+para `READY_FOR_WARLOG`, criar `WARLOG.md`, cortar as minispecs e produzir o primeiro
+Writing Plan.

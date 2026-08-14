@@ -7,7 +7,6 @@ import {
 describe('active IPC channels', () => {
   it('keeps one unique, closed list for the published shell', () => {
     expect(new Set(ACTIVE_IPC_CHANNELS).size).toBe(ACTIVE_IPC_CHANNELS.length)
-    expect(isActiveIpcChannel('mvp.ai.proposeFields')).toBe(true)
     expect(isActiveIpcChannel('ia.chat.enviar')).toBe(true)
     expect(isActiveIpcChannel('app:version')).toBe(true)
   })
