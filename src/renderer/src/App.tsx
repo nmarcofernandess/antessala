@@ -13,13 +13,17 @@ import { NaoEncontrado } from './paginas/NaoEncontrado'
 import { RepertorioPagina } from './paginas/RepertorioPagina'
 import { CasoPagina } from './paginas/casos/CasoPagina'
 import { CasoAnamnesePagina } from './paginas/casos/CasoAnamnesePagina'
+import { CasoAvaliacaoPagina } from './paginas/casos/CasoAvaliacaoPagina'
+import { ArquivadosPagina } from './paginas/ArquivadosPagina'
 
 export const ACTIVE_ROUTE_PATHS = [
   '/',
   '/casos/novo',
   '/casos/:caseId',
   '/casos/:caseId/anamnese',
+  '/casos/:caseId/avaliacao',
   '/agenda',
+  '/arquivados',
   '/repertorio',
   '/repertorio/widgets',
   '/assistente',
@@ -53,7 +57,9 @@ export const router = createHashRouter([
       { path: '/casos/novo', element: <CadastroPagina /> },
       { path: '/casos/:caseId', element: <CasoPagina /> },
       { path: '/casos/:caseId/anamnese', element: <CasoAnamnesePagina /> },
+      { path: '/casos/:caseId/avaliacao', element: <CasoAvaliacaoPagina /> },
       { path: '/agenda', element: <AgendaPagina /> },
+      { path: '/arquivados', element: <ArquivadosPagina /> },
       { path: '/repertorio', element: <RepertorioPagina /> },
       { path: '/repertorio/widgets', element: <RepertorioPagina /> },
       { path: '/assistente', element: <IaPagina /> },

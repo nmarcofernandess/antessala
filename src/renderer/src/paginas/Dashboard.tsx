@@ -36,7 +36,9 @@ const FLUXO: { status: CaseStatus; rota: string }[] = [
   { status: 'SCHEDULED', rota: '/agenda' },
   { status: 'WAITING_ANESTHESIA', rota: '/agenda' },
   { status: 'IN_ASSESSMENT', rota: '/agenda' },
-  { status: 'DELIVERED_TO_REQUESTER', rota: '/agenda' },
+  { status: 'PENDING', rota: '/agenda' },
+  { status: 'READY_FOR_HANDOFF', rota: '/agenda' },
+  { status: 'DELIVERED_TO_REQUESTER', rota: '/arquivados' },
 ]
 
 const CLASSES_DO_DIA: SlotClass[] = ['QUICK', 'STANDARD', 'EXTENDED']

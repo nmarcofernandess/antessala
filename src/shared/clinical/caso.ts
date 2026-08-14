@@ -127,6 +127,18 @@ export type CaseEventType =
   | 'BOOKING_CANCELLED'
   | 'BOOKING_CHECKED_IN'
   | 'BOOKING_NO_SHOW'
+  | 'ENCOUNTER_STARTED'
+  | 'ENCOUNTER_INTERRUPTED'
+  | 'PENDENCY_OPENED'
+  | 'PENDENCY_EVIDENCE_SUBMITTED'
+  | 'PENDENCY_ACCEPTED'
+  | 'PENDENCY_REOPENED'
+  | 'PENDENCY_CANCELLED'
+  | 'REVIEW_RESUMED'
+  | 'RESULT_FINALIZED'
+  | 'RESULT_REVISED'
+  | 'DELIVERY_SENT'
+  | 'DELIVERY_ACKNOWLEDGED'
   | 'CASE_CANCELLED'
 
 export const ROTULO_EVENTO: Record<CaseEventType, string> = {
@@ -143,6 +155,18 @@ export const ROTULO_EVENTO: Record<CaseEventType, string> = {
   BOOKING_CANCELLED: 'Reserva cancelada',
   BOOKING_CHECKED_IN: 'Chegada confirmada',
   BOOKING_NO_SHOW: 'Ausência registrada',
+  ENCOUNTER_STARTED: 'Avaliação iniciada',
+  ENCOUNTER_INTERRUPTED: 'Avaliação interrompida',
+  PENDENCY_OPENED: 'Pendência aberta',
+  PENDENCY_EVIDENCE_SUBMITTED: 'Resposta entregue à pendência',
+  PENDENCY_ACCEPTED: 'Pendência aceita como suficiente',
+  PENDENCY_REOPENED: 'Resposta considerada insuficiente',
+  PENDENCY_CANCELLED: 'Pendência encerrada sem resposta',
+  REVIEW_RESUMED: 'Avaliação retomada',
+  RESULT_FINALIZED: 'Resultado emitido',
+  RESULT_REVISED: 'Resultado revisado',
+  DELIVERY_SENT: 'Resultado disponibilizado ao solicitante',
+  DELIVERY_ACKNOWLEDGED: 'Solicitante confirmou o recebimento',
   CASE_CANCELLED: 'Caso cancelado',
 }
 
@@ -188,7 +212,14 @@ export interface CaseSummaryDTO {
   openedAt: string
   updatedAt: string
   /** Só quando existe reserva ativa — é projeção, não estado do caso. */
-  booking: { id: string; startsAt: string; endsAt: string; slotClass: SlotClass } | null
+  booking: {
+    id: string
+    startsAt: string
+    endsAt: string
+    slotClass: SlotClass
+    status: string
+    version: number
+  } | null
   requirement: { id: string; slotClass: SlotClass; durationMinutes: number } | null
 }
 
@@ -305,6 +336,9 @@ export type CodigoErroCaso =
   | 'INVALID_TRANSITION'
   | 'SLOT_TAKEN'
   | 'INCOMPATIBLE_SLOT'
+  | 'BOOKING_NOT_CHECKED_IN'
+  | 'OPEN_BLOCKERS'
+  | 'RESULT_VERSION_CONFLICT'
 
 export class ErroDeCaso extends Error {
   constructor(

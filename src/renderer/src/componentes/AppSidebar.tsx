@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
+  Archive,
   Blocks,
   BrainCircuit,
   CalendarDays,
@@ -38,6 +39,7 @@ export const ACTIVE_NAV_ITEMS = [
   { label: 'Repertório', to: '/repertorio', icon: Blocks },
   { label: 'Assistente', to: '/assistente', icon: BrainCircuit },
   { label: 'Memória', to: '/memoria', icon: Network },
+  { label: 'Arquivados', to: '/arquivados', icon: Archive },
 ] as const
 
 export function AppSidebar() {

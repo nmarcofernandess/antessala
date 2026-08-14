@@ -389,6 +389,8 @@ export async function listarCasos(filtro: FiltroCasos = {}): Promise<CaseSummary
       booking_starts_at: string | null
       booking_ends_at: string | null
       booking_slot_class: SlotClass | null
+      booking_status: string | null
+      booking_version: number | null
       requirement_id: string | null
       requirement_slot_class: SlotClass | null
       requirement_duration: number | null
@@ -396,7 +398,8 @@ export async function listarCasos(filtro: FiltroCasos = {}): Promise<CaseSummary
   >(
     `SELECT c.*,
             b.id AS booking_id, b.starts_at AS booking_starts_at, b.ends_at AS booking_ends_at,
-            b.slot_class AS booking_slot_class,
+            b.slot_class AS booking_slot_class, b.status AS booking_status,
+            b.version AS booking_version,
             r.id AS requirement_id, r.slot_class AS requirement_slot_class,
             r.duration_minutes AS requirement_duration
        FROM preop_cases c
@@ -424,6 +427,8 @@ export async function listarCasos(filtro: FiltroCasos = {}): Promise<CaseSummary
             startsAt: l.booking_starts_at!,
             endsAt: l.booking_ends_at!,
             slotClass: l.booking_slot_class!,
+            status: l.booking_status!,
+            version: l.booking_version!,
           }
         : null,
       requirement: l.requirement_id
@@ -483,8 +488,10 @@ export async function obterCaso(caseId: string): Promise<CaseDetailDTO> {
     starts_at: string
     ends_at: string
     slot_class: SlotClass
+    status: string
+    version: number
   }>(
-    `SELECT id, starts_at, ends_at, slot_class FROM scheduling_bookings
+    `SELECT id, starts_at, ends_at, slot_class, status, version FROM scheduling_bookings
       WHERE case_id = $1 AND status IN ('CONFIRMED','CHECKED_IN','COMPLETED')
       ORDER BY created_at DESC LIMIT 1`,
     caseId,
@@ -518,6 +525,8 @@ export async function obterCaso(caseId: string): Promise<CaseDetailDTO> {
             startsAt: booking.starts_at,
             endsAt: booking.ends_at,
             slotClass: booking.slot_class,
+            status: booking.status,
+            version: booking.version,
           }
         : null,
       requirement: requisito

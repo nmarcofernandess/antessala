@@ -25,7 +25,36 @@ import {
   moverReserva,
   cancelarReserva,
   filaParaAgendar,
+  registrarChegada,
+  registrarAusencia,
 } from './scheduling/agenda-service'
+import {
+  iniciarEncontro,
+  obterEncontro,
+  salvarAvaliacao,
+  interromperEncontro,
+  abrirPendencia,
+  submeterEvidencia,
+  revisarEvidencia,
+  cancelarPendencia,
+  retomarRevisao,
+} from './clinical/assessment-service'
+import {
+  obterResultadoDoCaso,
+  finalizarResultado,
+  revisarResultado,
+  enviarEntrega,
+  confirmarRecebimento,
+} from './clinical/result-service'
+import type {
+  AvaliacaoRascunhoV1,
+  EvidenciaPendencia,
+  PedidoPendencia,
+  PendencyDTO,
+  PendencyImpact,
+  PendencyKind,
+  ResultadoConteudoV1,
+} from '../shared/clinical/avaliacao'
 import {
   serializarErro,
   type AnamnesisBlock,
@@ -385,6 +414,99 @@ const schedulingCancel = t.procedure
 
 const schedulingQueue = t.procedure.action(async () => comErroDeDominio(() => filaParaAgendar()))
 
+const schedulingCheckIn = t.procedure
+  .input<{ bookingId: string; expectedVersion: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => registrarChegada(input)))
+
+const schedulingNoShow = t.procedure
+  .input<{ bookingId: string; expectedVersion: number; nota?: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => registrarAusencia(input)))
+
+/* ══════════════ avaliação, pendências e resultado ══════════════ */
+
+const encountersStart = t.procedure
+  .input<{ caseId: string; bookingId: string; expectedCaseVersion: number; idempotencyKey: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => iniciarEncontro(input)))
+
+const encountersGet = t.procedure
+  .input<{ caseId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => obterEncontro(input.caseId)))
+
+const encountersSave = t.procedure
+  .input<{ encounterId: string; expectedVersion: number; assessment: AvaliacaoRascunhoV1 }>()
+  .action(async ({ input }) => comErroDeDominio(() => salvarAvaliacao(input)))
+
+const encountersInterrupt = t.procedure
+  .input<{ encounterId: string; expectedVersion: number; motivo: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => interromperEncontro(input)))
+
+const encountersResume = t.procedure
+  .input<{ encounterId: string; expectedVersion: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => retomarRevisao(input)))
+
+const pendenciesOpen = t.procedure
+  .input<{
+    encounterId: string
+    expectedEncounterVersion: number
+    kind: PendencyKind
+    ownerRole: PendencyDTO['ownerRole']
+    impact: PendencyImpact
+    description: string
+    requested: PedidoPendencia
+    dueAt?: string | null
+    dueAtBasis?: string | null
+  }>()
+  .action(async ({ input }) => comErroDeDominio(() => abrirPendencia(input)))
+
+const pendenciesSubmit = t.procedure
+  .input<{ pendencyId: string; expectedVersion: number; evidence: EvidenciaPendencia }>()
+  .action(async ({ input }) => comErroDeDominio(() => submeterEvidencia(input)))
+
+const pendenciesReview = t.procedure
+  .input<{
+    pendencyId: string
+    expectedVersion: number
+    decisao: 'ACCEPT' | 'REOPEN_AS_INSUFFICIENT'
+    motivo: string
+  }>()
+  .action(async ({ input }) => comErroDeDominio(() => revisarEvidencia(input)))
+
+const pendenciesCancel = t.procedure
+  .input<{ pendencyId: string; expectedVersion: number; motivo: string; substituida?: boolean }>()
+  .action(async ({ input }) => comErroDeDominio(() => cancelarPendencia(input)))
+
+const resultsGetForCase = t.procedure
+  .input<{ caseId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => obterResultadoDoCaso(input.caseId)))
+
+const resultsFinalize = t.procedure
+  .input<{
+    encounterId: string
+    expectedEncounterVersion: number
+    content: ResultadoConteudoV1
+    idempotencyKey: string
+  }>()
+  .action(async ({ input }) => comErroDeDominio(() => finalizarResultado(input)))
+
+const resultsRevise = t.procedure
+  .input<{
+    caseId: string
+    expectedHeadVersion: number
+    predecessorResultId: string
+    emissionType: 'CORRECTION' | 'ADDENDUM'
+    reason: string
+    content: ResultadoConteudoV1
+  }>()
+  .action(async ({ input }) => comErroDeDominio(() => revisarResultado(input)))
+
+const deliveriesSend = t.procedure
+  .input<{ caseId: string; idempotencyKey: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => enviarEntrega(input)))
+
+const deliveriesAcknowledge = t.procedure
+  .input<{ deliveryId: string; expectedVersion: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => confirmarRecebimento(input)))
+
 /* ══════════════ protocolos de coleta ══════════════ */
 
 const protocolosListar = t.procedure
@@ -445,6 +567,22 @@ export const router = {
   'scheduling.move': schedulingMove,
   'scheduling.cancel': schedulingCancel,
   'scheduling.queue': schedulingQueue,
+  'scheduling.checkIn': schedulingCheckIn,
+  'scheduling.noShow': schedulingNoShow,
+  'encounters.start': encountersStart,
+  'encounters.get': encountersGet,
+  'encounters.saveAssessment': encountersSave,
+  'encounters.interrupt': encountersInterrupt,
+  'encounters.resumeReview': encountersResume,
+  'pendencies.open': pendenciesOpen,
+  'pendencies.submitEvidence': pendenciesSubmit,
+  'pendencies.reviewEvidence': pendenciesReview,
+  'pendencies.cancel': pendenciesCancel,
+  'results.getForCase': resultsGetForCase,
+  'results.finalize': resultsFinalize,
+  'results.revise': resultsRevise,
+  'deliveries.send': deliveriesSend,
+  'deliveries.acknowledge': deliveriesAcknowledge,
   'protocolos.listar': protocolosListar,
   'protocolos.salvar': protocolosSalvar,
   'protocolos.duplicar': protocolosDuplicar,

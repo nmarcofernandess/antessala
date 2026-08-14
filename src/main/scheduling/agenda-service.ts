@@ -496,6 +496,150 @@ export async function cancelarReserva(entrada: {
   return cancelado
 }
 
+/* ══════════════ chegada e ausência ══════════════ */
+
+/**
+ * Registra que a pessoa chegou.
+ *
+ * O relógio nunca faz isso sozinho. Passar da hora marcada não é chegada nem
+ * ausência: são duas coisas que **alguém** afirma, e é por isso que existem
+ * dois comandos com autoria em vez de um job varrendo a agenda. Check-in
+ * também não inicia avaliação — só põe o caso na porta do anestesiologista.
+ */
+export async function registrarChegada(entrada: {
+  bookingId: string
+  expectedVersion: number
+}): Promise<BookingDTO> {
+  await garantirContaSintetica()
+  const atorRecepcao = ator('RECEPCAO')
+
+  await transaction(async () => {
+    const booking = await queryOne<LinhaBooking>(
+      `SELECT * FROM scheduling_bookings WHERE id = $1 FOR UPDATE`,
+      entrada.bookingId,
+    )
+    if (!booking) throw new ErroDeCaso('NOT_FOUND', 'Reserva não encontrada.')
+    if (booking.version !== entrada.expectedVersion) {
+      throw new ErroDeCaso('VERSION_CONFLICT', 'A reserva mudou em outra janela.')
+    }
+    if (booking.status !== 'CONFIRMED') {
+      throw new ErroDeCaso('INVALID_TRANSITION', 'Só uma consulta confirmada recebe chegada.')
+    }
+
+    const caso = await queryOne<{ status: CaseStatus }>(
+      `SELECT status FROM preop_cases WHERE id = $1 FOR UPDATE`,
+      booking.case_id,
+    )
+    if (caso?.status !== 'SCHEDULED') {
+      throw new ErroDeCaso('INVALID_TRANSITION', 'O caso não está aguardando a consulta marcada.')
+    }
+
+    await execute(
+      `UPDATE scheduling_bookings
+          SET status = 'CHECKED_IN', checked_in_at = NOW(), version = version + 1, updated_at = NOW()
+        WHERE id = $1`,
+      entrada.bookingId,
+    )
+
+    await execute(
+      `UPDATE preop_cases SET status = 'WAITING_ANESTHESIA', version = version + 1, updated_at = NOW()
+        WHERE id = $1`,
+      booking.case_id,
+    )
+
+    await registrarEvento({
+      caseId: booking.case_id,
+      eventType: 'BOOKING_CHECKED_IN',
+      fromStatus: 'SCHEDULED',
+      toStatus: 'WAITING_ANESTHESIA',
+      actor: atorRecepcao,
+      payload: { bookingId: entrada.bookingId, startsAt: booking.starts_at },
+      receiptDomain: 'SCHEDULING',
+      receiptId: `${entrada.bookingId}:checkin`,
+      commandEventIndex: 1,
+    })
+  })
+
+  const atualizado = await obterBooking(entrada.bookingId)
+  if (!atualizado) throw new ErroDeCaso('NOT_FOUND', 'Reserva não encontrada depois da chegada.')
+  return atualizado
+}
+
+/**
+ * Registra que a pessoa não veio.
+ *
+ * A ausência é afirmada por quem estava lá, com hora e autoria. O caso volta
+ * para a fila de agendamento — faltar não encerra caso, e remarcar é a
+ * continuação normal da história, não uma exceção.
+ */
+export async function registrarAusencia(entrada: {
+  bookingId: string
+  expectedVersion: number
+  nota?: string
+}): Promise<BookingDTO> {
+  await garantirContaSintetica()
+  const atorRecepcao = ator('RECEPCAO')
+  const nota = entrada.nota?.trim() || null
+  if (nota && nota.length > 500) {
+    throw new ErroDeCaso('VALIDATION_ERROR', 'A nota da ausência passa de 500 caracteres.')
+  }
+
+  await transaction(async () => {
+    const booking = await queryOne<LinhaBooking>(
+      `SELECT * FROM scheduling_bookings WHERE id = $1 FOR UPDATE`,
+      entrada.bookingId,
+    )
+    if (!booking) throw new ErroDeCaso('NOT_FOUND', 'Reserva não encontrada.')
+    if (booking.version !== entrada.expectedVersion) {
+      throw new ErroDeCaso('VERSION_CONFLICT', 'A reserva mudou em outra janela.')
+    }
+    if (booking.status !== 'CONFIRMED') {
+      throw new ErroDeCaso(
+        'INVALID_TRANSITION',
+        'Ausência só se registra em consulta confirmada que ninguém atendeu.',
+      )
+    }
+
+    const caso = await queryOne<{ status: CaseStatus }>(
+      `SELECT status FROM preop_cases WHERE id = $1 FOR UPDATE`,
+      booking.case_id,
+    )
+    if (!caso) throw new ErroDeCaso('NOT_FOUND', 'Caso não encontrado.')
+
+    await execute(
+      `UPDATE scheduling_bookings
+          SET status = 'NO_SHOW', closed_at = NOW(), closed_reason = $2,
+              version = version + 1, updated_at = NOW()
+        WHERE id = $1`,
+      entrada.bookingId,
+      nota,
+    )
+
+    await execute(
+      `UPDATE preop_cases SET status = 'READY_FOR_SCHEDULING', version = version + 1, updated_at = NOW()
+        WHERE id = $1`,
+      booking.case_id,
+    )
+
+    await registrarEvento({
+      caseId: booking.case_id,
+      eventType: 'BOOKING_NO_SHOW',
+      fromStatus: caso.status,
+      toStatus: 'READY_FOR_SCHEDULING',
+      actor: atorRecepcao,
+      reason: nota,
+      payload: { bookingId: entrada.bookingId, startsAt: booking.starts_at },
+      receiptDomain: 'SCHEDULING',
+      receiptId: `${entrada.bookingId}:no-show`,
+      commandEventIndex: 1,
+    })
+  })
+
+  const atualizado = await obterBooking(entrada.bookingId)
+  if (!atualizado) throw new ErroDeCaso('NOT_FOUND', 'Reserva não encontrada depois da ausência.')
+  return atualizado
+}
+
 /** Fila da recepção: casos com requisito publicado e ainda sem consulta marcada. */
 export async function filaParaAgendar(): Promise<
   Array<{
