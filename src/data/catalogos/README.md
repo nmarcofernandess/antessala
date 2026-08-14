@@ -39,4 +39,4 @@ Limites conhecidos:
 
 Esses catálogos não determinam quais widgets, protocolos ou templates entram na
 triagem. Eles serão auditados pelo Analyst e só poderão alimentar o contrato clínico
-depois do `PASS` da `hack/minispecs/002-triagem-decisao-humana/`.
+depois do `PASS` da `hack/minispecs/001-caso-triagem-classificacao/`.

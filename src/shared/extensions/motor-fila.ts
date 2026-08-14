@@ -1,5 +1,5 @@
 export const MOTOR_FILA_SPEC_PATH =
-  'hack/minispecs/003-agenda-diferenciada-demo/' as const
+  'hack/minispecs/002-capacidade-agenda-booking/' as const
 
 /**
  * Ponto de encaixe legado, intencionalmente vazio.

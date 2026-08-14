@@ -34,9 +34,9 @@ reescrever a história.
 
 ## Veredito atual
 
-**`NO-GO PARA BUILD`.** Apenas a MiniSpec 001 pode executar descoberta e fechamento de
-contrato. Schema clínico definitivo, formulário, widget ativo, regra, score, agenda,
-papel, tela e integração continuam bloqueados.
+**`NO-GO PARA BUILD`.** Descoberta e fechamento de contrato pertencem ao Analyst;
+nenhuma minispec está liberada. Schema clínico definitivo, formulário, widget ativo,
+regra, score, agenda, papel, tela e integração continuam bloqueados.
 
 Hipótese canônica:
 
@@ -69,7 +69,7 @@ exato, os atores, os sistemas nem qual propriedade do agendamento é semelhante.
    updater ou chamada cloud no bootstrap.
 10. **Legado provisório não é fundação de feature.** Não amplie `registros`,
     `registro_jornada`, prioridade 1..4, estados da antiga fila ou classificador antes do
-    mapa de migração do Sprint 001.
+    mapa de migração aprovado pelo Analyst.
 
 ## O que está confirmado
 
@@ -106,7 +106,7 @@ Rotas ativas em `src/renderer/src/App.tsx`:
 | `/configuracoes` | provedor de IA e informações essenciais |
 
 Essas rotas não são a arquitetura final por ator. Não declare novas telas antes dos
-gates G1–G4 do Analyst.
+gates de fluxo, atores, arquitetura e UX do Analyst.
 
 ## Mapa técnico
 
@@ -156,7 +156,7 @@ O registry possui oito widgets do DietFlow com defaults, validação, completude
 seleção clínica.
 
 `ACTIVE_ANAMNESE_TEMPLATES` e
-`src/shared/extensions/catalogo-widgets.ts` permanecem vazios até o Sprint 002 receber
+`src/shared/extensions/catalogo-widgets.ts` permanecem vazios até o Sprint 001 receber
 `PASS`. `LEGACY_DIETFLOW_BASIC_TEMPLATE` é referência de compatibilidade, nunca default.
 
 CID-10 codifica diagnóstico, mas não expressa sozinho controle, gravidade, atividade,
@@ -167,7 +167,7 @@ comorbidades, grupos e o classificador atual também dependem de validação de 
 
 `src/main/db/clinical-schema.ts`, `src/shared/clinical/registro.ts`, handlers de jornada,
 prioridade 1..4 e estados como `na_fila`/`no_hub` pertencem à hipótese invalidada. Eles
-ficam compiláveis enquanto o Sprint 001 produz a matriz manter/adaptar/migrar/desativar/
+ficam compiláveis enquanto o Analyst produz a matriz manter/adaptar/migrar/desativar/
 remover.
 
 Não:
@@ -179,7 +179,7 @@ Não:
 - trate o classificador/parecer como protocolo aprovado.
 
 O ponto `src/shared/extensions/motor-fila.ts` é apenas compatibilidade nominal. Sua decisão
-futura é requisito de capacidade/agenda do Sprint 003, não ordenação da antiga fila.
+futura é requisito de capacidade/agenda do Sprint 002, não ordenação da antiga fila.
 
 ## Offline e código dormente
 

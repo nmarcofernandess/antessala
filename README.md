@@ -8,8 +8,9 @@ que solicitações com necessidades diferentes cheguem à alocação de vagas se
 operacional suficiente — ou sem uma regra que use essa informação — para diferenciar
 prioridade de acesso, esforço esperado, recurso necessário e pendências.
 
-> **Estado atual: `NO-GO PARA BUILD`.** Somente o Sprint 001, de descoberta e contrato
-> operacional, está autorizado. Código existente não transforma hipótese em requisito.
+> **Estado atual: `NO-GO PARA BUILD`.** A descoberta está autorizada dentro do Analyst;
+> nenhuma minispec de construção foi liberada. Código existente não transforma hipótese
+> em requisito.
 
 ## O que o Antessala pretende provar
 
@@ -44,9 +45,9 @@ Cada sprint possui apenas `spec.md` e `writing-plan.md`:
 
 | Sprint | Estado | Objetivo |
 |---|---|---|
-| [`001-contrato-operacional`](hack/minispecs/001-contrato-operacional/spec.md) | liberado para descoberta | provar fluxo, atores, dados, sistemas, agenda e decisão real |
-| [`002-triagem-decisao-humana`](hack/minispecs/002-triagem-decisao-humana/spec.md) | bloqueado | construir coleta, avaliação explicável e revisão humana aprovadas |
-| [`003-agenda-diferenciada-demo`](hack/minispecs/003-agenda-diferenciada-demo/spec.md) | bloqueado | traduzir a decisão em requisito/alocação de vaga e fechar a demo |
+| [`001-caso-triagem-classificacao`](hack/minispecs/001-caso-triagem-classificacao/spec.md) | bloqueado | construir caso, coleta, régua explicável e decisão humana aprovadas |
+| [`002-capacidade-agenda-booking`](hack/minispecs/002-capacidade-agenda-booking/spec.md) | bloqueado | traduzir o requisito em capacidade e executar o caminho de agenda aprovado |
+| [`003-handoff-prova-final`](hack/minispecs/003-handoff-prova-final/spec.md) | bloqueado | fechar o handoff real e lacrar a prova end-to-end |
 
 Os documentos antigos em `specs/`, `hack/specs/` e os HTMLs de planejamento foram
 removidos porque cristalizavam o produto errado. Permanecem recuperáveis no histórico
@@ -94,14 +95,14 @@ Essa fundação prova infraestrutura, não adequação clínica.
 O schema, os handlers e os tipos atuais de `registros` e `registro_jornada` nasceram da
 hipótese invalidada de pessoa descartável, jornada no mesmo dia e fila por
 urgência/espera. Eles continuam no código apenas para que a correção seja feita com mapa
-de consumidores e decisão de migração no Sprint 001.
+de consumidores e decisão de migração aprovada pelo Analyst.
 
 Também permanecem vazios, de propósito:
 
 | Ponto de encaixe legado | Decisão futura |
 |---|---|
-| `src/shared/extensions/catalogo-widgets.ts` | contrato clínico do Sprint 002 |
-| `src/shared/extensions/motor-fila.ts` | contrato de capacidade/agenda do Sprint 003 |
+| `src/shared/extensions/catalogo-widgets.ts` | catálogo aprovado do Sprint 001 |
+| `src/shared/extensions/motor-fila.ts` | contrato de capacidade/agenda do Sprint 002 |
 
 Os oito widgets portados são infraestrutura disponível, não o formulário aprovado. O
 classificador e o parecer existentes são hipóteses legadas, não protocolo médico.

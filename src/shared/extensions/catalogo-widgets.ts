@@ -1,5 +1,5 @@
 export const CATALOGO_WIDGETS_SPEC_PATH =
-  'hack/minispecs/002-triagem-decisao-humana/' as const
+  'hack/minispecs/001-caso-triagem-classificacao/' as const
 
 /**
  * Ponto de encaixe para a seleção de widgets e templates da triagem.

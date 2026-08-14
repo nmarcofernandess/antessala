@@ -3,7 +3,7 @@
 ## Triagem aplicada ao agendamento da consulta pré-anestésica
 
 **Hacka Health 2026 · Desafio 1 · HCFMRP-USP**
-**Versão:** 2.0 · 13/08/2026
+**Versão:** 2.1 · 14/08/2026
 **Estado:** hipótese operacional mais provável, ainda dependente de validação com o HC
 **Dono da verdade de produto:** este arquivo
 
@@ -390,14 +390,15 @@ reaproveitado depois da análise, mas não prova requisito.
 
 ## 14. Estrutura de execução
 
-O trabalho está limitado a três minispecs:
+Descoberta e fechamento dos contratos pertencem ao Analyst e não são sprint de build. Só
+depois do `PASS`, o trabalho está limitado a três minispecs:
 
-1. [`001-contrato-operacional`](minispecs/001-contrato-operacional/spec.md) — fechar a
-   verdade do fluxo, atores, dados e decisão;
-2. [`002-triagem-decisao-humana`](minispecs/002-triagem-decisao-humana/spec.md) — construir
-   coleta, avaliação explicável e revisão humana aprovadas;
-3. [`003-agenda-diferenciada-demo`](minispecs/003-agenda-diferenciada-demo/spec.md) —
-   traduzir a decisão para capacidade e provar o fluxo end-to-end.
+1. [`001-caso-triagem-classificacao`](minispecs/001-caso-triagem-classificacao/spec.md) —
+   construir caso, coleta, régua explicável e decisão humana aprovados;
+2. [`002-capacidade-agenda-booking`](minispecs/002-capacidade-agenda-booking/spec.md) —
+   traduzir a decisão revisada para capacidade e executar o caminho de agenda aprovado;
+3. [`003-handoff-prova-final`](minispecs/003-handoff-prova-final/spec.md) — encerrar o
+   handoff real e provar o fluxo, sem inventar continuação pós-agendamento.
 
 O plano mestre está em [`BUILD.md`](BUILD.md), e cada minispec possui exatamente um
 `spec.md` e um `writing-plan.md`.

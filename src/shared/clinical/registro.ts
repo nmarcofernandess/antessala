@@ -11,7 +11,7 @@ export interface PessoaDoRegistro {
 /**
  * Estados persistíveis da hipótese anterior, preservados só por compatibilidade.
  *
- * Não use estes tipos como fonte do novo fluxo. A MiniSpec 001 decidirá se serão
+ * Não use estes tipos como fonte do novo fluxo. O Analyst decidirá se serão
  * mantidos, adaptados, migrados, desativados ou removidos.
  */
 export type EstadoJornada =

@@ -2,8 +2,8 @@
 
 **Estado:** `NO-GO PARA BUILD`
 **Hipótese de produto:** aprovada para investigação
-**Minispec liberada:** somente `001-contrato-operacional`
-**Última revisão:** 13/08/2026
+**Minispec liberada:** nenhuma
+**Última revisão:** 14/08/2026
 
 ---
 
@@ -29,6 +29,27 @@ permissão ou critério de aceite, o veredito é:
 
 O Analyst não pode ser contornado por código já existente, urgência do hackathon,
 diagrama convincente, literatura externa ou “parece que funciona assim”.
+
+### 0.1 Estrutura canônica interna
+
+Este único arquivo contém, sem abrir analyses paralelos:
+
+| Bloco obrigatório | Onde vive |
+|---|---|
+| A · verdade operacional | matriz da verdade + G1, G2 e G9 |
+| B · atores e permissões | G3 e G11 |
+| C · domínio, estados e invariantes | G5, G10, G14 e G16 |
+| D · widgets e proveniência | G12 e auditoria de catálogos |
+| E · régua e override | G7 e G14 |
+| F · agenda e concorrência | G6, G15 e G16 |
+| G · arquitetura, source of truth e offline | G17 e G18 |
+| H · reaproveitamento | G21 + auditoria do código |
+| I · segurança e auditoria | G19 |
+| J · testes, prova e métricas | G8 e G22 |
+| K · escopo das minispecs | porta de saída por minispec |
+
+Entregáveis de descoberta são consolidados nessas seções e no Warlog. Não criar um novo
+PRD, analysis, relatório ou plano geral para preencher um gate.
 
 ---
 
@@ -59,6 +80,10 @@ Consequência:
 | Papéis e telas finais | **BLOCKED** |
 | Agenda própria ou integração | **BLOCKED** |
 | Ordenação, slots, rotas ou tempos | **BLOCKED** |
+
+Pesquisa é trabalho do Analyst, não uma minispec de build. As três minispecs permanecem
+bloqueadas até que os gates P0 tenham decisão, evidência e contrato suficientes para a
+fatia correspondente.
 
 ---
 
@@ -117,9 +142,32 @@ Consequência:
 - ASA presumido como motor suficiente;
 - integração com PEP/agenda/mapa como fato.
 
+### 2.5 Matriz mestra de rastreabilidade
+
+Antes de liberar build, toda jornada crítica precisa caber nesta matriz:
+
+| Ator | Evento inicial | Superfície | Campo/widget | Fonte | Regra consumidora | Saída | Estado resultante | Permissão | Persistência | Exportação | Teste |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+
+Um exemplo serve apenas para testar o formato; não cria ator, campo ou regra do HC. Se
+existir tela, ação, dado, entidade ou transição sem linha equivalente, o gate continua
+aberto.
+
+Cada linha precisa responder também:
+
+- qual decisão está sendo tomada;
+- se a alegação é fato, hipótese, decisão ou pendência;
+- quem pode visualizar, criar, corrigir, confirmar e reabrir;
+- o que acontece quando a entrada falta, contradiz outra fonte ou chega atrasada;
+- se o item pode ser adiado e qual dívida nasce desse adiamento.
+
 ---
 
-## 3. Oito gates obrigatórios de descoberta
+## 3. Gates P0 obrigatórios
+
+Qualquer gate P0 aberto significa `NO-GO` para a fatia que depende dele. “Configurável”,
+“o sistema alerta”, “integra depois”, “offline-first”, “três perfis” e “usar o componente
+existente” não são respostas sem dono, default, contrato, falha e teste.
 
 ### G1 · Fluxo real e sequência
 
@@ -269,6 +317,210 @@ Números da Central de Agendamento Cirúrgico não são baseline automático do 
 de Pré-Anestesia. Sem baseline, o hack usa critérios determinísticos de demonstração e
 não promete percentuais.
 
+### G9 · Fronteira exata do produto
+
+Fechar explicitamente o início e o fim do Antessala:
+
+- qual evento cria o caso;
+- se o produto qualifica, agenda, acompanha consulta ou apenas entrega um requisito;
+- o que pertence ao serviço solicitante, ambulatório, agendamento e planejamento
+  cirúrgico;
+- se há qualquer relação com horas de sala cirúrgica — fora do escopo por padrão;
+- qual estado terminal e qual handoff provam que o valor foi entregue.
+
+O produto não ganha centro cirúrgico, prontuário paralelo, comunicação com paciente ou
+gestão documental por infiltração de tela.
+
+### G10 · Identidade, caso e solicitação
+
+Decidir com fonte real:
+
+- identificador institucional de paciente e de atendimento;
+- chave da solicitação de CPA e do procedimento proposto;
+- se o protótipo guarda referência, snapshot mínimo, réplica ou apenas fixture;
+- política para correção cadastral, duplicidade, múltiplos procedimentos e nova
+  solicitação da mesma pessoa;
+- fronteira de dados pessoais e clínicos que o Antessala precisa persistir.
+
+O antigo identificador descartável não pode voltar por conveniência da demo. Tampouco o
+protótipo pode virar um cadastro hospitalar fictício sem decisão explícita.
+
+### G11 · Atores, autenticação, RBAC e ownership
+
+O Analyst precisa distinguir cargo, papel funcional e usuário. Deve existir matriz por
+ação e dado, não apenas por página, cobrindo no mínimo os papéis realmente observados no
+fluxo.
+
+Para cada campo: quem origina, transcreve, confirma, corrige, sobrescreve, visualiza e
+audita. O número de logins da demo será consequência da separação real de autoridade;
+“três usuários” é candidato de demonstração, não fato operacional.
+
+Invariantes de segurança:
+
+- nenhum papel administrativo altera dado clínico sem autoridade confirmada;
+- nenhum papel de coleta toma decisão reservada ao anestesiologista;
+- override exige ator, motivo, instante e preservação da sugestão anterior;
+- acumular papéis precisa ser explícito e testado.
+
+### G12 · Catálogo de widgets, formulários e documentos
+
+Auditar os oito widgets portados e todos os candidatos do material de pesquisa. Para
+cada item, registrar:
+
+```text
+nome e finalidade
+→ decisão que consome o dado
+→ ator que responde e confirma
+→ fonte e temporalidade
+→ schema, unidade e cardinalidade
+→ ausente/desconhecido/não aplicável/recusado/conflitante
+→ condição de exibição
+→ regra ou pendência produzida
+→ resumo/exportação
+→ versão, migração e teste
+```
+
+O inventário sugerido de 23 blocos é uma lista de auditoria, não um backlog aprovado. Um
+widget sem consumidor ou justificativa não entra. Formulários, PDF, assinatura e
+exportação só existem quando houver ator, finalidade, destino e obrigação comprovados.
+
+### G13 · Procedimentos e condições específicas
+
+Confirmar catálogo local, SIGTAP ou outra fonte; especialidade, abordagem, porte e
+combinações; dono clínico e ciclo de publicação. Condições por procedimento vivem em
+protocolos versionados que compõem fatos reutilizáveis, perguntas condicionais,
+pendências e requisitos operacionais. Não criar mega-widget por cirurgia.
+
+Auditar cobertura e licença de CID, medicamentos, exames, procedimentos e terminologias.
+CID não representa estado clínico; lista de medicamentos não autoriza conduta; exame sem
+unidade, método, data e contexto não sustenta regra.
+
+### G14 · Régua clínico-operacional
+
+Fechar separadamente:
+
+- complexidade da avaliação;
+- prioridade/antecedência de acesso;
+- prontidão e pendências;
+- recurso, modalidade e esforço esperado;
+- decisão médica, que não é reduzida aos eixos acima.
+
+Classes como `SIMPLE/STANDARD/COMPLEX`, templates `S/M/L`, pontos ou cores são apenas
+candidatos. Antes de qualquer código: entradas disponíveis, função consumidora, regra
+aprovada, versão, explicação, confiança, override, recálculo e cenários-limite.
+
+Informação ausente nunca vale “não”. Uma recomendação não pode se apresentar como ASA
+final, aptidão, solicitação de exame, suspensão de medicamento ou conduta anestésica.
+
+### G15 · Agenda, capacidade e unidade temporal
+
+Descobrir se a saída é recomendação, booking demonstrativo ou integração. Se houver
+domínio de agenda, definir:
+
+- recurso agendável, local, profissional, modalidade e restrições;
+- disponibilidade, bloqueio, turno, duração e granularidade;
+- tipos/templates de vaga e quem os configura;
+- prioridade, espera e capacidade protegida, se existirem de fato;
+- reserva, confirmação, remarcação, cancelamento, ausência e encaixe;
+- resposta quando não há capacidade compatível.
+
+`FullCalendar` é somente projeção visual. Não é banco, motor de compatibilidade nem
+garantia de atomicidade. A biblioteca só pode ser escolhida depois do contrato de
+domínio, acessibilidade, licença, bundle e testabilidade.
+
+### G16 · Concorrência, estados e reclassificação
+
+Qualquer escrita que disputa capacidade exige contrato de atomicidade, idempotência,
+versão esperada e resposta estruturada para conflito. A prova deve simular dois usuários
+tentando a mesma vaga, reclassificação durante booking, cancelamento concorrente e retry.
+
+O Analyst precisa fechar a máquina de estados do caso e, se aplicável, do agendamento.
+Para cada estado: quem entra, pré-condições, ações permitidas, saídas, reversão,
+notificação e auditoria. Estados sugeridos no material são candidatos, não enum pronta.
+
+Definir quais mudanças recalculam o requisito, se uma decisão anterior é preservada e
+quem pode reabrir ou sobrescrever.
+
+### G17 · Arquitetura, fonte de verdade e offline
+
+Separar arquitetura de hack, piloto e produção. Comparar explicitamente:
+
+- web com banco compartilhado;
+- Electron/PGlite local;
+- web em servidor local do hospital;
+- híbrido com sincronização.
+
+A demo multiusuário só é honesta se usuários compartilham uma autoridade de dados ou se
+a simulação está marcada. O Electron atual é fundação disponível, não decisão final.
+
+Para cada operação, definir source of truth, leitura offline, escrita offline, fila de
+sincronização, idempotência, conflito e recuperação. Booking multi-master offline fica
+proibido sem autoridade local segura. “Offline” não é uma propriedade única do app.
+
+### G18 · Integrações
+
+Mapear prontuário/PEP, identidade, agenda ambulatorial, agenda cirúrgica, comunicação e
+qualquer catálogo externo. Para cada fronteira: dono, protocolo, autenticação, dados,
+latência, disponibilidade, idempotência, erro, sandbox e mock.
+
+Nome de sistema, tela parecida ou acesso por portal não prova API. Sem contrato da TI, a
+integração permanece mock ostensivo e não entra na promessa.
+
+### G19 · Segurança, LGPD e auditoria
+
+Definir minimização, base legal institucional, retenção, descarte, backup, exportação,
+criptografia, sessão, segregação de perfis, incidente e ambiente de demo. Dados reais
+não entram no repositório nem na demonstração.
+
+Auditoria mínima para eventos relevantes: ator, papel, ação, entidade, antes/depois
+quando permitido, motivo, timestamp, versão do protocolo, origem e correlação. Log
+técnico não substitui trilha clínica/operacional.
+
+### G20 · UX por papel e acessibilidade
+
+Só desenhar superfícies depois de fechar tarefa e autoridade. Para cada papel confirmado,
+definir o que precisa ver, decidir e corrigir; estados vazio, carregando, erro, conflito,
+offline e permissão negada; navegação por teclado; contraste; densidade; texto clínico
+completo e linguagem compatível.
+
+Painéis sugeridos para enfermagem, agendamento, anestesiologia, serviço cirúrgico ou
+paciente são hipóteses de superfície. Nenhum deles nasce porque o nome parece plausível.
+
+### G21 · Inventário de reaproveitamento
+
+Auditar DietFlow, EscalaFlow e FlowKit por contrato e dependência:
+
+| Decisão | Significado |
+|---|---|
+| copiar | módulo atravessa com dependências, licença e semântica conhecidas |
+| adaptar | contrato serve, domínio/UI/infra não atravessam integralmente |
+| extrair | núcleo puro merece pacote ou módulo isolado |
+| rejeitar | traz acoplamento, risco ou hipótese incompatível |
+
+Candidatos fortes do DietFlow: contratos de widgets, composer, padrões de agenda,
+catálogos e primitivas puras. Candidatos do EscalaFlow: representação de capacidade,
+conflito e configuração visual. O FlowKit oferece fundação desktop/IA, mas não substitui
+RBAC, source of truth compartilhado nem domínio clínico.
+
+Nenhum reuso passa sem inventário de imports, banco, autenticação, tema, bundle, testes e
+licença. “Já existe” não significa “cabe”.
+
+### G22 · Testes, prova e métricas
+
+Antes do build, definir oráculos para domínio, widgets, régua, RBAC, persistência,
+concorrência, offline/sync, segurança e E2E. A demo precisa provar:
+
+- par de contraste com requisito e tratamento distintos;
+- controle negativo com resultado equivalente;
+- mudança de procedimento quando o protocolo determina diferença;
+- ausente/conflito como pendência;
+- override auditável;
+- vaga incompatível recusada e falta de capacidade explícita;
+- mocks, fixtures e integrações visualmente distinguíveis.
+
+Métricas institucionais exigem baseline, definição, período e dono. Sem baseline, o
+sucesso é apenas determinístico e demonstrativo; nenhum percentual será prometido.
+
 ---
 
 ## 4. Auditoria de dados e catálogos
@@ -339,8 +591,8 @@ O widget captura fato. Protocolo e regra clínica interpretam o fato.
 - marca e textos associados à fila de espera;
 - rotas atuais da casca.
 
-Não reescrever esses contratos por impulso nesta reorganização documental. O Sprint 001
-decidirá migração, descarte ou adaptação depois do contrato real.
+Não reescrever esses contratos por impulso nesta reorganização documental. O Analyst
+decidirá migração, descarte ou adaptação antes de liberar o Sprint 001.
 
 ### 5.3 Branches em quarentena
 
@@ -378,34 +630,50 @@ O racional e a evidência entram no [`WARLOG.md`](WARLOG.md).
 
 ## 7. Porta de saída por minispec
 
-### MiniSpec 001 · Contrato operacional
+As três minispecs são fatias de build posteriores à descoberta. Nenhuma está liberada
+agora.
 
-**Pode iniciar agora.** Sai apenas quando G1–G8 tiverem resposta e decisão explícita;
-lacuna ainda bloqueante mantém o `NO-GO`. Entrega contratos, não funcionalidade clínica.
+### MiniSpec 001 · Caso, triagem e classificação
 
-### MiniSpec 002 · Triagem e decisão humana
+Só recebe `PASS MINISPEC 001` quando:
 
-Só recebe `PASS` quando:
+- início/fim do produto, unidade `Paciente → Solicitação → Caso` e identidade estiverem
+  definidos;
+- papéis, logins necessários, permissões e ownership por campo estiverem validados;
+- widgets e formulários P0 tiverem fonte, consumidor e contrato;
+- procedimento, protocolo e limite da régua estiverem fechados;
+- estados, reclassificação, auditoria e migração do legado estiverem decididos;
+- fixtures cobrirem ausente, conflito, override e mudança de procedimento.
 
-- unidade `Paciente → Solicitação → Caso` estiver definida;
-- papéis e permissões estiverem validados;
-- campos e widgets P0 tiverem dono e fonte;
-- catálogo de procedimentos/protocolos tiver estratégia;
-- limite do motor e autoridade humana estiverem fechados;
-- fixtures cobrirem ausente, conflito e mudança de procedimento;
-- migration do legado estiver decidida.
+### MiniSpec 002 · Capacidade, agenda e booking
 
-### MiniSpec 003 · Agenda diferenciada e demo
-
-Só recebe `PASS` quando:
+Só recebe `PASS MINISPEC 002` quando:
 
 - significado de “agendamento semelhante” estiver comprovado;
-- produto for definido como recomendador ou dono da agenda;
-- recursos, slots, restrições e concorrência tiverem contrato;
-- política de encaixe/remarcação estiver explícita ou fora do escopo;
-- biblioteca visual tiver sido escolhida por aderência, licença e bundle;
-- integração versus mock estiver marcada em cada fronteira;
-- critérios end-to-end tiverem fixtures e oráculo determinístico.
+- produto for definido como qualificador, dono de agenda demonstrativa ou integrador;
+- `SchedulingRequirement`, recursos, disponibilidade, slots e restrições tiverem
+  contrato;
+- concorrência, atomicidade, falta de vaga, encaixe, remarcação e cancelamento estiverem
+  definidos ou explicitamente fora;
+- biblioteca visual tiver sido escolhida por aderência, licença, bundle, acessibilidade e
+  testabilidade;
+- arquitetura, source of truth, offline e mocks estiverem fechados operação por operação.
+
+### MiniSpec 003 · Handoff e prova final
+
+Só recebe `PASS MINISPEC 003` quando:
+
+- o estado terminal da promessa e o handoff real estiverem validados;
+- consulta, retorno ao serviço cirúrgico, documento ou status pós-agendamento estiverem
+  confirmados como parte do produto — caso contrário, a fatia fecha apenas a prova do
+  agendamento e não inventa continuação;
+- superfícies mínimas por papel e dados mínimos de cada handoff estiverem definidos;
+- fixtures end-to-end, falha de rede, conflito, falta de capacidade e oráculo
+  determinístico estiverem aprovados;
+- critérios de segurança, auditoria, exportação e prova visual estiverem fechados.
+
+Essa terceira fatia não autoriza criar consulta, laudo ou status cirúrgico porque o
+material sugeriu. Ela contém somente o final do fluxo que a evidência local confirmar.
 
 ---
 
@@ -439,6 +707,21 @@ Ausência de evidência local em qualquer gate P0 mantém o build bloqueado.
 “A biblioteca faz”, “a IA consegue”, “a literatura usa” e “já existe código” não são
 substitutos.
 
+### 8.1 Gates P1 e dívida explícita
+
+Um item P1 só pode ser adiado se registrar:
+
+```text
+o que não será feito
+como será simulado
+qual risco permanece
+qual contrato futuro já precisa existir
+quem aceita a dívida e até quando
+```
+
+P0 não vira P1 para caber no cronograma. Escopo pode encolher; evidência clínica,
+autoridade, proteção de dados e integridade do domínio não podem ser simuladas como fato.
+
 ---
 
 ## 9. Grill obrigatório antes do build
@@ -458,6 +741,34 @@ O Analyst deve conseguir responder sem improvisar:
 
 Se qualquer resposta usar “provavelmente” sem estar marcada como hipótese aceita, o
 cajado continua no chão.
+
+### 9.1 Checklist final `YOU SHALL NOT PASS`
+
+O Analyst só pode trocar o estado para `READY FOR BUILD` quando:
+
+- [ ] fluxo, fronteira, início e final estão fechados;
+- [ ] fatos, hipóteses, decisões e pendências estão separados;
+- [ ] paciente, caso, solicitação, procedimento e agendamento possuem identidade;
+- [ ] atores, logins, permissões e ownership por campo estão validados;
+- [ ] todos os widgets e documentos possuem consumidor, origem e contrato;
+- [ ] catálogos e protocolos possuem cobertura, autoria, versão e licença auditadas;
+- [ ] régua separa complexidade, prioridade, prontidão, esforço, recurso e decisão médica;
+- [ ] informação ausente não é tratada como negativa;
+- [ ] override, recálculo, reabertura e histórico de decisão estão definidos;
+- [ ] agenda possui recurso, tempo, capacidade, estados e resposta à falta de vaga;
+- [ ] reserva e concorrência possuem contrato atômico quando aplicáveis;
+- [ ] FullCalendar, se usado, é somente projeção;
+- [ ] fronteira com agenda cirúrgica está congelada;
+- [ ] arquitetura de demo, piloto e source of truth estão decididas;
+- [ ] offline e sync estão definidos operação por operação;
+- [ ] integrações reais e mocks estão marcados fronteira por fronteira;
+- [ ] segurança, LGPD, retenção, autenticação e auditoria estão descritas;
+- [ ] DietFlow, EscalaFlow e FlowKit foram classificados em copiar/adaptar/extrair/rejeitar;
+- [ ] máquina de estados e regras temporais estão fechadas;
+- [ ] testes adversariais, fixtures e métricas honestas estão definidos;
+- [ ] as três minispecs são fatias verticais sem decisão P0 aberta;
+- [ ] casos simples, complexos, sem dado, sem vaga, com conflito e falha de rede podem ser
+      narrados do início ao fim sem “a gente vê no build”.
 
 ---
 

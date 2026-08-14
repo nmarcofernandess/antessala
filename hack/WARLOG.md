@@ -368,15 +368,59 @@ indiferenciação atrás de uma explicação textual.
 
 ---
 
+## W-013 · 14/08/2026 · Analyst expandido e discovery retirada dos sprints
+
+**Estado:** decidido
+
+### Contexto
+
+O material “Gates do Analyst — Antessala” consolidou perguntas de RBAC, ownership por
+campo, widgets, documentos, protocolos, régua, agenda, arquitetura, sincronização,
+concorrência, segurança, reaproveitamento e prova que não cabiam nos oito gates
+resumidos. Também revelou uma falha na arquitetura documental vigente: a MiniSpec 001
+era chamada de sprint, mas executava descoberta — exatamente o trabalho que precisa
+acontecer antes do Build receber autorização.
+
+### Decisão
+
+- O Analyst passa a possuir 22 gates P0, matriz mestra de rastreabilidade, dívida P1 e
+  checklist final.
+- Descoberta permanece autorizada, porém dentro do Analyst; nenhuma minispec está
+  liberada.
+- Os três sprints posteriores ao `PASS` passam a ser:
+  1. caso, triagem e classificação;
+  2. capacidade, agenda e booking;
+  3. handoff e prova final.
+- Três logins, 23 widgets, classes `SIMPLE/STANDARD/COMPLEX`, slots `S/M/L`, FullCalendar,
+  web compartilhada, consulta pós-agendamento e retorno cirúrgico permanecem candidatos,
+  não requisitos.
+
+### Impacto
+
+O Build e as seis peças das minispecs foram realinhados. O Sprint 003 termina onde a
+evidência disser que a promessa termina; não cria consulta, laudo ou planejamento
+cirúrgico por sugestão do material.
+
+### Pendência
+
+Executar a descoberta dos gates P0 com representantes, artefatos e fontes primárias do
+HC. Somente o Analyst pode converter candidato em contrato de build.
+
+---
+
 ## Pendências vivas
 
 | ID | Pergunta | Dono esperado | Bloqueia |
 |---|---|---|---|
-| P-01 | o que exatamente é semelhante no agendamento? | responsável do desafio/ambulatório | Sprint 003 |
-| P-02 | quem cria, coleta, revisa e agenda? | operação do HC | Sprints 002/003 |
+| P-01 | o que exatamente é semelhante no agendamento? | responsável do desafio/ambulatório | Sprint 002 |
+| P-02 | quem cria, coleta, revisa e agenda? | operação do HC | Sprints 001/002 |
 | P-03 | o que significa “um anestesiologista”? | anestesiologia | capacidade |
 | P-04 | quando a data cirúrgica nasce? | serviço cirúrgico/central | fluxo e prioridade |
 | P-05 | qual sistema contém solicitação e agenda? | TI/operação | integração |
-| P-06 | qual protocolo e catálogo de procedimentos? | dono clínico | Sprint 002 |
-| P-07 | quais dados/catálogos locais são suficientes? | dono clínico + Analyst | Sprint 002 |
-| P-08 | recomendação ou agenda própria? | produto + HC | Sprint 003 |
+| P-06 | qual protocolo e catálogo de procedimentos? | dono clínico | Sprint 001 |
+| P-07 | quais dados/catálogos locais são suficientes? | dono clínico + Analyst | Sprint 001 |
+| P-08 | recomendação ou agenda própria? | produto + HC | Sprint 002 |
+| P-09 | qual arquitetura sustenta a demo multiusuário sem fingir handoff? | produto + engenharia | todos os sprints |
+| P-10 | qual é o estado terminal real da promessa do Antessala? | operação + dono do desafio | Sprint 003 |
+| P-11 | quais papéis exigem login separado e qual RBAC por campo? | operação + TI | Sprint 001 |
+| P-12 | quais widgets/documentos possuem consumidor e obrigação reais? | operação + dono clínico | Sprint 001 |

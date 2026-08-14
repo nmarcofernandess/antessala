@@ -5,7 +5,7 @@ import { execDDL } from './query'
  *
  * `registros`, prioridade e `registro_jornada` são provisórios: não representam o
  * paciente institucional, o caso pré-anestésico nem o fluxo canônico. Não amplie essa
- * superfície antes do mapa de migração aprovado na MiniSpec 001.
+ * superfície antes do mapa de migração aprovado pelo Analyst.
  */
 const DDL_CLINICAL = `
 CREATE TABLE IF NOT EXISTS registros (

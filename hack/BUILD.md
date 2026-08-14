@@ -1,9 +1,9 @@
 # BUILD — plano mestre do Antessala
 
 **Estado:** `BLOCKED BY ANALYST`
-**Execução liberada:** somente MiniSpec 001, trabalho de contrato e descoberta
+**Execução liberada:** nenhuma minispec
 **Quantidade máxima de sprints:** 3
-**Última revisão:** 13/08/2026
+**Última revisão:** 14/08/2026
 
 ---
 
@@ -20,7 +20,8 @@ writing-plan.md  → sequência executável depois do PASS do Analyst
 ```
 
 O writing plan pode existir como rascunho bloqueado. Só vira ordem de execução quando o
-Analyst registrar `PASS` para a minispec.
+Analyst registrar `PASS` para a minispec. Descoberta, entrevistas, inventários e ADRs são
+trabalho interno do Analyst; não consomem um dos três sprints de build.
 
 ---
 
@@ -63,7 +64,7 @@ Não existe build válido se a cadeia começar por uma tela ou biblioteca.
 
 O código atual contém schema, handlers e tipos construídos para pessoa descartável,
 jornada no mesmo dia e fila por urgência/espera. Essas peças não serão removidas ou
-adaptadas antes do contrato do Sprint 001, mas também não serão importadas por novas
+adaptadas antes do contrato aprovado pelo Analyst, mas também não serão importadas por novas
 features.
 
 ### 2.3 Branches que não entram por merge
@@ -149,7 +150,7 @@ AuditEvent
 - Regulação vê o necessário para agendar, não o prontuário inteiro.
 - Nenhum agendamento incompatível é persistido silenciosamente.
 
-O Sprint 001 confirma, corrige ou remove cada invariante.
+O Analyst confirma, corrige ou remove cada invariante antes do `PASS MINISPEC 001`.
 
 ---
 
@@ -185,82 +186,75 @@ não lê detalhes clínicos que não participem da decisão operacional.
 
 ## 6. Os três sprints
 
-### Sprint 001 · Contrato operacional
+### Sprint 001 · Caso, triagem e classificação
 
-**Objetivo:** transformar a hipótese em um contrato que possa ser construído sem
-adivinhação.
+**Objetivo:** construir o caso pré-anestésico, a coleta aprovada, a avaliação explicável
+e a revisão humana que produzem um requisito operacional auditável.
 
-Entregas:
+Entregas candidatas, todas sujeitas ao `PASS MINISPEC 001`:
 
-- fluxo atual e fluxo-alvo mínimo;
-- atores, autoridade e matriz de acesso;
-- unidade `Paciente → Solicitação → Caso`;
-- dicionário de dados e proveniência;
-- significado operacional de risco e complexidade;
-- catálogo/protocolo de procedimento;
-- papel do produto perante a agenda;
-- decisão de integração/mock;
-- ADRs consolidadas no Analyst;
-- fixtures sintéticas aceitas;
-- mapa de migração do legado.
-
-**Saída:** Analyst decide `PASS` ou mantém o build bloqueado.
-
-Arquivos:
-
-- [`spec.md`](minispecs/001-contrato-operacional/spec.md)
-- [`writing-plan.md`](minispecs/001-contrato-operacional/writing-plan.md)
-
-### Sprint 002 · Triagem e decisão humana
-
-**Objetivo:** construir o caso, a coleta aprovada, a avaliação explicável e a revisão
-humana sem antecipar agenda.
-
-Entregas candidatas, sujeitas ao Sprint 001:
-
-- persistência/migração do caso;
-- intake do procedimento e origem da solicitação;
-- composição versionada de perguntas;
-- widgets P0 e tratamento de dados ausentes/conflitantes;
-- avaliação por regras aprovadas;
-- pendências;
+- persistência/migração de paciente-referência, solicitação, caso e procedimento;
+- autenticação e RBAC mínimos dos papéis confirmados;
+- intake e composição versionada de perguntas/widgets P0;
+- proveniência, ausência, conflito e temporalidade;
+- régua aprovada, pendências e explicação;
 - revisão/override humano;
-- resumo operacional mínimo;
-- auditoria e fixtures.
+- resumo operacional mínimo e auditoria;
+- fixtures e migração do legado.
 
-**Não entrega:** agenda, tempos inventados, autoaptidão ou integração real não fornecida.
-
-Arquivos:
-
-- [`spec.md`](minispecs/002-triagem-decisao-humana/spec.md)
-- [`writing-plan.md`](minispecs/002-triagem-decisao-humana/writing-plan.md)
-
-### Sprint 003 · Agenda diferenciada e demo
-
-**Objetivo:** traduzir a decisão revisada em uso de capacidade e fechar a narrativa
-end-to-end.
-
-Entregas candidatas, sujeitas aos Sprints 001 e 002:
-
-- contrato de requisito de vaga;
-- adaptador de recomendação ou agenda própria mínima;
-- disponibilidade, recurso, duração/modalidade e conflitos aprovados;
-- alocação compatível e resposta explícita de falta de capacidade;
-- superfícies mínimas por papel confirmado;
-- explicação da decisão;
-- cenário demonstrativo e prova automatizada/visual;
-- comparação honesta entre fluxo indiferenciado e diferenciado.
+**Não entrega:** agenda, vaga, booking ou decisão clínica além do limite aprovado.
 
 Arquivos:
 
-- [`spec.md`](minispecs/003-agenda-diferenciada-demo/spec.md)
-- [`writing-plan.md`](minispecs/003-agenda-diferenciada-demo/writing-plan.md)
+- [`spec.md`](minispecs/001-caso-triagem-classificacao/spec.md)
+- [`writing-plan.md`](minispecs/001-caso-triagem-classificacao/writing-plan.md)
+
+### Sprint 002 · Capacidade, agenda e booking
+
+**Objetivo:** traduzir o requisito revisado em capacidade compatível e realizar somente
+o caminho A, B ou C aprovado pelo Analyst.
+
+Entregas candidatas, sujeitas aos Sprints 001 e ao `PASS MINISPEC 002`:
+
+- contrato executável de `SchedulingRequirement` e compatibilidade;
+- adaptador de handoff, agenda demonstrativa mínima ou integração contratada;
+- recursos, disponibilidade, slots e restrições aprovados;
+- atomicidade/idempotência e proteção contra conflito, quando houver booking;
+- alocação compatível e resposta explícita à falta de capacidade;
+- superfícies mínimas de agendamento e explicação da decisão;
+- fixtures de contraste, controle negativo e concorrência.
+
+Arquivos:
+
+- [`spec.md`](minispecs/002-capacidade-agenda-booking/spec.md)
+- [`writing-plan.md`](minispecs/002-capacidade-agenda-booking/writing-plan.md)
+
+### Sprint 003 · Handoff e prova final
+
+**Objetivo:** fechar o final real da promessa e provar o fluxo end-to-end sem inventar
+uma consulta, laudo ou planejamento que a descoberta não tenha colocado no produto.
+
+Entregas candidatas, sujeitas ao `PASS MINISPEC 003`:
+
+- handoff confirmado ao papel/sistema seguinte;
+- consulta e retorno ao serviço cirúrgico somente se estiverem dentro da fronteira
+  validada;
+- estados finais, reabertura, cancelamento e auditoria aprovados;
+- exportação/documento apenas quando houver finalidade e destino;
+- cenários simples, complexos, ausentes, conflitantes, sem capacidade e com falha;
+- prova automatizada e visual das superfícies finais;
+- comparação honesta entre tratamento indiferenciado e diferenciado.
+
+Arquivos:
+
+- [`spec.md`](minispecs/003-handoff-prova-final/spec.md)
+- [`writing-plan.md`](minispecs/003-handoff-prova-final/writing-plan.md)
 
 ---
 
 ## 7. Decisão sobre calendário
 
-O Sprint 001 precisa escolher uma destas classes:
+O Analyst precisa escolher uma destas classes antes do `PASS MINISPEC 002`:
 
 ### A · O produto somente qualifica a solicitação
 
@@ -293,7 +287,7 @@ build e é representada por adaptador mockado.
 
 ## 8. Estratégia de dados e migração
 
-O Sprint 001 deve produzir uma matriz para cada tabela/contrato atual:
+O Analyst deve produzir uma matriz para cada tabela/contrato atual:
 
 | Ação | Quando usar |
 |---|---|
@@ -337,7 +331,7 @@ Regras:
 - alocação incompatível falha;
 - concorrência não duplica slot;
 - falta de capacidade é resposta de domínio;
-- remarcação/cancelamento só entram se o Sprint 001 os aprovar;
+- remarcação/cancelamento só entram se o Analyst os aprovar;
 - regra de duração e recurso possui oráculo claro.
 
 ### Demonstração
@@ -380,13 +374,14 @@ Uma tarefa só entra no writing plan executável quando possui:
 
 ## 12. Ordem de execução e branches
 
-1. Executar uma minispec por vez.
-2. Criar branch `codex/<minispec>` a partir da `main` atualizada.
-3. Não empilhar Sprint 002 antes do `PASS` do Sprint 001.
-4. Não empilhar Sprint 003 antes das provas do Sprint 002.
-5. Branches antigas são doadoras somente leitura.
-6. Cada PR declara qual gate do Analyst foi satisfeito.
-7. Merge só depois de provas no SHA final.
+1. O Analyst conclui a descoberta e emite `PASS` antes da primeira branch de build.
+2. Executar uma minispec por vez.
+3. Criar branch `codex/<minispec>` a partir da `main` atualizada.
+4. Não empilhar Sprint 002 antes das provas do Sprint 001.
+5. Não empilhar Sprint 003 antes das provas do Sprint 002.
+6. Branches antigas são doadoras somente leitura.
+7. Cada PR declara qual gate do Analyst foi satisfeito.
+8. Merge só depois de provas no SHA final.
 
 Esta reorganização documental vive em `codex/hack-prd-unico`; ela não autoriza nenhum dos
 três builds por si só.
