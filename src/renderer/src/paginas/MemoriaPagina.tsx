@@ -3,7 +3,6 @@ import {
   BookOpen,
   Boxes,
   FileText,
-  FlaskConical,
   Loader2,
   Network,
   RefreshCw,
@@ -72,7 +71,6 @@ export function MemoriaPagina() {
   const [links, setLinks] = useState<GraphLink[]>([])
   const [carregando, setCarregando] = useState(true)
   const [enriquecendo, setEnriquecendo] = useState(false)
-  const [carregandoDemo, setCarregandoDemo] = useState(false)
   const [dialogAberto, setDialogAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [fonteSelecionada, setFonteSelecionada] = useState<Fonte | null>(null)
@@ -86,7 +84,7 @@ export function MemoriaPagina() {
     try {
       const [stats, graph, metadata] = await Promise.all([
         servicoConhecimento.stats(),
-        servicoConhecimento.graphData('usuario', 300),
+        servicoConhecimento.graphData(undefined, 300),
         servicoConhecimento.metadataStatus().catch(() => null),
       ])
       setFontes(stats.fontes)
@@ -167,22 +165,6 @@ export function MemoriaPagina() {
     }
   }
 
-  async function carregarDemonstracao() {
-    setCarregandoDemo(true)
-    try {
-      const result = await servicoConhecimento.carregarDemonstracao()
-      await carregar()
-      setTab('grafo')
-      toast.success(result.imported > 0 ? 'Demonstração preparada' : 'Demonstração já estava pronta', {
-        description: `${result.sources_count} fontes sintéticas com chunks e grafo determinístico.`,
-      })
-    } catch (error) {
-      toast.error('Não foi possível preparar a demonstração', { description: cleanError(error) })
-    } finally {
-      setCarregandoDemo(false)
-    }
-  }
-
   return (
     <div className="flex min-h-full flex-col bg-muted/10">
       <PageHeader breadcrumbs={[{ label: 'Antessala' }, { label: 'Memória' }]} />
@@ -206,10 +188,6 @@ export function MemoriaPagina() {
             <Button size="sm" variant="outline" onClick={() => void enriquecer()} disabled={enriquecendo || totais.total_chunks === 0}>
               {enriquecendo ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
               Enriquecer
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => void carregarDemonstracao()} disabled={carregandoDemo}>
-              {carregandoDemo ? <Loader2 className="size-4 animate-spin" /> : <FlaskConical className="size-4" />}
-              Exemplos
             </Button>
             <Button size="sm" onClick={() => setDialogAberto(true)}>
               <Upload className="size-4" /> Importar

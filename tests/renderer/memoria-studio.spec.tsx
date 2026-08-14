@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   graphData: vi.fn(),
   metadataStatus: vi.fn(),
   listarChunks: vi.fn(),
-  carregarDemonstracao: vi.fn(),
 }))
 
 vi.mock('@/componentes/PageHeader', () => ({ PageHeader: () => <div data-testid="page-header" /> }))
@@ -23,7 +22,6 @@ vi.mock('@/servicos/conhecimento', () => ({
     graphData: mocks.graphData,
     metadataStatus: mocks.metadataStatus,
     listarChunks: mocks.listarChunks,
-    carregarDemonstracao: mocks.carregarDemonstracao,
     toggleAtivo: vi.fn(),
     removerFonte: vi.fn(),
     enrich: vi.fn(),
@@ -54,7 +52,6 @@ describe('Memória — knowledge studio', () => {
       message: 'Gemini pronto',
     })
     mocks.listarChunks.mockResolvedValue([{ id: 1, source_id: 7, conteudo: 'Trecho recuperável', importance: 'high', last_accessed_at: null, access_count: 0 }])
-    mocks.carregarDemonstracao.mockResolvedValue({ imported: 3, sources_count: 3, source_ids: [1, 2, 3], fixture_version: 'curated-demo-v1' })
   })
 
   it('expõe biblioteca, chunks, grafo e importação no mesmo studio', async () => {
@@ -75,14 +72,11 @@ describe('Memória — knowledge studio', () => {
     expect(await screen.findByText('Trecho recuperável')).toBeInTheDocument()
   })
 
-  it('carrega o corpus de demonstração e abre o grafo', async () => {
+  it('não expõe uma ação teatral para carregar o corpus inicial', async () => {
     const { MemoriaPagina } = await import('../../src/renderer/src/paginas/MemoriaPagina')
-    const user = userEvent.setup()
     render(<MemoriaPagina />)
 
     await screen.findByText('Treinamento pré-anestésico')
-    await user.click(screen.getByRole('button', { name: /Exemplos/i }))
-    await waitFor(() => expect(mocks.carregarDemonstracao).toHaveBeenCalledTimes(1))
-    expect(screen.getByRole('tab', { name: /Grafo/i })).toHaveAttribute('data-state', 'active')
+    expect(screen.queryByRole('button', { name: /Exemplos/i })).not.toBeInTheDocument()
   })
 })

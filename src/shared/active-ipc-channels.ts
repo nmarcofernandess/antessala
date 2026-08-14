@@ -31,7 +31,6 @@ export const ACTIVE_IPC_CHANNELS = [
   'knowledge.enrichmentConfig.get',
   'knowledge.enrichmentConfig.save',
   'knowledge.enrichmentModels.list',
-  'knowledge.demo.seed',
   'knowledge.rebuildGraph',
   'knowledge.graphStats',
   'knowledge.search',

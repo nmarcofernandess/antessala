@@ -93,13 +93,6 @@ export const servicoConhecimento = {
   listarEnrichmentModels: () =>
     knowledgeClient['knowledge.enrichmentModels.list']() as Promise<KnowledgeEnrichmentModelOption[]>,
 
-  carregarDemonstracao: () => knowledgeClient['knowledge.demo.seed']() as Promise<{
-    imported: number
-    sources_count: number
-    source_ids: number[]
-    fixture_version: string
-  }>,
-
   enrich: () => knowledgeClient['knowledge.enrich']({}) as Promise<{
     chunks_enriquecidos: number
     entities_count: number

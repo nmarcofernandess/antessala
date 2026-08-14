@@ -449,11 +449,6 @@ const knowledgeEnrichmentModelsList = t.procedure.action(async () => {
   return listKnowledgeEnrichmentModelOptions()
 })
 
-const knowledgeDemoSeed = t.procedure.action(async () => {
-  const { seedKnowledgeDemo } = await import('./demo-fixtures')
-  return seedKnowledgeDemo()
-})
-
 const knowledgeRebuildGraph = t.procedure
   .input<{ origem?: 'sistema' | 'usuario' } | undefined>()
   .action(async ({ input }) => {
@@ -594,7 +589,6 @@ export const dormantKnowledgeRouter = {
   'knowledge.enrichmentConfig.get': knowledgeEnrichmentConfigGet,
   'knowledge.enrichmentConfig.save': knowledgeEnrichmentConfigSave,
   'knowledge.enrichmentModels.list': knowledgeEnrichmentModelsList,
-  'knowledge.demo.seed': knowledgeDemoSeed,
   'knowledge.rebuildGraph': knowledgeRebuildGraph,
   'knowledge.graphStats': knowledgeGraphStats,
   'knowledge.rebuildAndExportSistema': knowledgeRebuildAndExportSistema,
@@ -632,7 +626,6 @@ export const knowledgeStudioRouter = {
   'knowledge.enrichmentConfig.get': knowledgeEnrichmentConfigGet,
   'knowledge.enrichmentConfig.save': knowledgeEnrichmentConfigSave,
   'knowledge.enrichmentModels.list': knowledgeEnrichmentModelsList,
-  'knowledge.demo.seed': knowledgeDemoSeed,
   'knowledge.rebuildGraph': knowledgeRebuildGraph,
   'knowledge.graphStats': knowledgeGraphStats,
   'knowledge.search': knowledgeSearch,
