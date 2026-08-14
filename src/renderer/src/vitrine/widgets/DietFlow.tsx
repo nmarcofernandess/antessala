@@ -13,15 +13,35 @@
  */
 
 import {
+  Annoyed,
   Apple,
+  Armchair,
+  BatteryFull,
+  BatteryLow,
+  BatteryMedium,
+  BatteryWarning,
   Bed,
+  Bike,
+  Brain,
   CircleDot,
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
   CupSoda,
   Droplet,
   Flame,
+  Frown,
+  Laugh,
+  Meh,
   Moon,
   Pill,
+  PlugZap,
   Scale,
+  Smile,
+  ThumbsDown,
+  ThumbsUp,
+  Trophy,
   Utensils,
   Wind,
 } from 'lucide-react'
@@ -37,6 +57,7 @@ import {
   EtiquetaSecao,
   GradeDados,
   Metrica,
+  Intensidade as BarrasIntensidade,
   Regua,
   SliderStatus,
   ValorHero,
@@ -58,28 +79,29 @@ export type DadosSono = {
   acordouNoite?: 'nao' | 'uma_vez' | 'varias'
 }
 
+/** Os ícones são os do DietFlow: a escala se lê pela cara antes do texto. */
 const SATISFACAO: Opcao<Likert>[] = [
-  { valor: 0, rotulo: 'Muito satisfeito', detalhe: 'Durmo muito bem', status: 'ideal' },
-  { valor: 1, rotulo: 'Satisfeito', detalhe: 'Durmo bem', status: 'ideal' },
-  { valor: 2, rotulo: 'Neutro', detalhe: 'Nem bom nem ruim', status: 'adequado' },
-  { valor: 3, rotulo: 'Insatisfeito', detalhe: 'Durmo mal', status: 'atencao' },
-  { valor: 4, rotulo: 'Muito insatisfeito', detalhe: 'Durmo muito mal', status: 'critico' },
+  { valor: 0, rotulo: 'Muito bem', detalhe: 'Durmo muito bem', status: 'ideal', icone: Laugh },
+  { valor: 1, rotulo: 'Bem', detalhe: 'Durmo bem', status: 'ideal', icone: Smile },
+  { valor: 2, rotulo: 'Mais ou menos', detalhe: 'Nem bom nem ruim', status: 'adequado', icone: Meh },
+  { valor: 3, rotulo: 'Mal', detalhe: 'Durmo mal', status: 'atencao', icone: Frown },
+  { valor: 4, rotulo: 'Muito mal', detalhe: 'Durmo muito mal', status: 'critico', icone: Annoyed },
 ]
 
 const INTERFERENCIA: Opcao<Likert>[] = [
-  { valor: 0, rotulo: 'Nenhuma', detalhe: 'Não interfere', status: 'ideal' },
-  { valor: 1, rotulo: 'Pouca', detalhe: 'Quase não interfere', status: 'ideal' },
-  { valor: 2, rotulo: 'Alguma', detalhe: 'Interfere um pouco', status: 'adequado' },
-  { valor: 3, rotulo: 'Muita', detalhe: 'Interfere bastante', status: 'atencao' },
-  { valor: 4, rotulo: 'Demais', detalhe: 'Interfere demais', status: 'critico' },
+  { valor: 0, rotulo: 'Nada', detalhe: 'Não interfere', status: 'ideal', icone: BatteryFull },
+  { valor: 1, rotulo: 'Quase nada', detalhe: 'Quase não interfere', status: 'ideal', icone: BatteryMedium },
+  { valor: 2, rotulo: 'Um pouco', detalhe: 'Interfere um pouco', status: 'adequado', icone: BatteryLow },
+  { valor: 3, rotulo: 'Bastante', detalhe: 'Interfere bastante', status: 'atencao', icone: BatteryWarning },
+  { valor: 4, rotulo: 'Demais', detalhe: 'Interfere demais', status: 'critico', icone: PlugZap },
 ]
 
 const PREOCUPACAO: Opcao<Likert>[] = [
-  { valor: 0, rotulo: 'Nenhuma', detalhe: 'Não me preocupo', status: 'ideal' },
-  { valor: 1, rotulo: 'Pouca', detalhe: 'Quase não me preocupo', status: 'ideal' },
-  { valor: 2, rotulo: 'Alguma', detalhe: 'Me preocupo um pouco', status: 'adequado' },
-  { valor: 3, rotulo: 'Muita', detalhe: 'Me preocupo bastante', status: 'atencao' },
-  { valor: 4, rotulo: 'Demais', detalhe: 'Me preocupo demais', status: 'critico' },
+  { valor: 0, rotulo: 'Nenhuma', detalhe: 'Não me preocupo', status: 'ideal', icone: Brain },
+  { valor: 1, rotulo: 'Pouca', detalhe: 'Quase não me preocupo', status: 'ideal', icone: Cloud },
+  { valor: 2, rotulo: 'Alguma', detalhe: 'Me preocupo um pouco', status: 'adequado', icone: CloudFog },
+  { valor: 3, rotulo: 'Muita', detalhe: 'Me preocupo bastante', status: 'atencao', icone: CloudLightning },
+  { valor: 4, rotulo: 'Demais', detalhe: 'Me preocupo demais', status: 'critico', icone: CloudRain },
 ]
 
 /** Faixas do ISI-3 tal como o DietFlow as define. */
@@ -236,22 +258,15 @@ const BRISTOL: { valor: 1 | 2 | 3 | 4 | 5 | 6 | 7; rotulo: string; detalhe: stri
   ]
 
 const FREQUENCIA: Opcao<'diaria' | 'dias_alternados' | 'irregular'>[] = [
-  { valor: 'diaria', rotulo: 'Diária', detalhe: 'Todo dia', status: 'ideal' },
-  { valor: 'dias_alternados', rotulo: 'Dias alternados', detalhe: 'Dia sim, dia não', status: 'adequado' },
-  { valor: 'irregular', rotulo: 'Irregular', detalhe: 'Sem padrão', status: 'atencao' },
+  { valor: 'diaria', rotulo: 'Todo dia', detalhe: 'Frequência diária', status: 'ideal' },
+  { valor: 'dias_alternados', rotulo: 'Dia sim, dia não', detalhe: 'Alternada', status: 'adequado' },
+  { valor: 'irregular', rotulo: 'Sem padrão', detalhe: 'Irregular', status: 'atencao' },
 ]
 
 const SINTOMAS_GI = [
   { chave: 'inchaco' as const, rotulo: 'Inchaço', icone: CircleDot, detalhe: 'Sensação de estufamento' },
   { chave: 'gases' as const, rotulo: 'Gases', icone: Wind, detalhe: 'Flatulência excessiva' },
   { chave: 'dorAbdominal' as const, rotulo: 'Dor abdominal', icone: Flame, detalhe: 'Dor ou cólica' },
-]
-
-const INTENSIDADES: Opcao<Intensidade>[] = [
-  { valor: 0, rotulo: 'Ausente', status: 'ideal' },
-  { valor: 1, rotulo: 'Leve', status: 'adequado' },
-  { valor: 2, rotulo: 'Moderado', status: 'atencao' },
-  { valor: 3, rotulo: 'Intenso', status: 'critico' },
 ]
 
 const FAIXAS_GI: { ate: number; nome: string; status: Status }[] = [
@@ -315,27 +330,26 @@ export function WidgetBristol({
             return (
               <div
                 key={s.chave}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card px-4 py-2.5"
+                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-xl border bg-card px-4 py-3"
               >
-                <span className="flex min-w-[150px] items-center gap-2">
+                <span className="flex items-center gap-2.5">
                   <s.icone
                     className={cn(
-                      'size-3.5',
-                      nivel === 0 ? 'text-muted-foreground' : 'text-warning',
+                      'size-4',
+                      nivel === 0 ? 'text-muted-foreground/60' : 'text-warning',
                     )}
                   />
-                  <span className="text-[13px]">{s.rotulo}</span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-medium leading-tight">{s.rotulo}</span>
+                    <span className="block text-[11px] text-muted-foreground">{s.detalhe}</span>
+                  </span>
                 </span>
-                <div className="flex-1">
-                  <Escolha
-                    opcoes={INTENSIDADES}
-                    valor={nivel}
-                    onChange={(v) =>
-                      onChange({ ...dados, sintomas: { ...dados.sintomas, [s.chave]: v } })
-                    }
-                    colunas={4}
-                  />
-                </div>
+                <BarrasIntensidade
+                  valor={nivel}
+                  onChange={(v) =>
+                    onChange({ ...dados, sintomas: { ...dados.sintomas, [s.chave]: v } })
+                  }
+                />
               </div>
             )
           })}
@@ -381,6 +395,12 @@ const FAIXA_PERFIL: Record<Perfil, { min: number; max: number; nome: string }> =
   sedentario: { min: 30, max: 35, nome: 'Sedentário' },
   ativo: { min: 35, max: 40, nome: 'Ativo' },
   atleta: { min: 40, max: 50, nome: 'Atleta' },
+}
+
+const ICONE_PERFIL: Record<Perfil, typeof Armchair> = {
+  sedentario: Armchair,
+  ativo: Bike,
+  atleta: Trophy,
 }
 
 const ML_POR_COPO = 250
@@ -445,9 +465,11 @@ export function WidgetHidratacao({
             opcoes={(Object.keys(FAIXA_PERFIL) as Perfil[]).map((p) => ({
               valor: p,
               rotulo: FAIXA_PERFIL[p].nome,
+              icone: ICONE_PERFIL[p],
             }))}
             valor={dados.perfil}
             onChange={(v) => onChange({ ...dados, perfil: v })}
+            colunas={3}
           />
         </CartaoDado>
 
@@ -494,9 +516,9 @@ export type DadosAdesao = {
 const KCAL_POR_KG = 7700
 
 const SEGUIU: Opcao<'sim' | 'parcial' | 'nao'>[] = [
-  { valor: 'sim', rotulo: 'Sim', status: 'ideal' },
-  { valor: 'parcial', rotulo: 'Parcialmente', status: 'atencao' },
-  { valor: 'nao', rotulo: 'Não', status: 'critico' },
+  { valor: 'sim', rotulo: 'Seguiu', status: 'ideal', icone: ThumbsUp },
+  { valor: 'parcial', rotulo: 'Em parte', status: 'atencao', icone: Meh },
+  { valor: 'nao', rotulo: 'Não seguiu', status: 'critico', icone: ThumbsDown },
 ]
 
 export function WidgetAdesao({

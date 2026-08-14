@@ -329,11 +329,17 @@ export type Opcao<T extends string | number> = {
   rotulo: string
   detalhe?: string
   status?: Status
+  /** Ícone expressivo — é o que faz a escala ser lida antes de ser lida. */
+  icone?: LucideIcon
 }
 
 /**
  * Lista de opções mutuamente exclusivas — o Likert do DietFlow.
- * Cada opção carrega seu próprio status, então a resposta já se classifica.
+ *
+ * Cada opção carrega o próprio status e o próprio ícone, então a escala se lê
+ * pela forma antes de se ler pelo texto: um rosto que fecha a cara, uma
+ * bateria que esvazia. A opção escolhida ganha cor, peso e um leve
+ * levantamento; as outras recuam sem sumir.
  */
 export function Escolha<T extends string | number>({
   opcoes,
@@ -348,20 +354,62 @@ export function Escolha<T extends string | number>({
   colunas?: 2 | 3 | 4 | 5
   className?: string
 }) {
+  const comIcone = opcoes.some((o) => o.icone)
+
   return (
     <div
       className={cn(
         'grid gap-2',
-        colunas === 2 && 'sm:grid-cols-2',
-        colunas === 3 && 'sm:grid-cols-3',
-        colunas === 4 && 'sm:grid-cols-2 lg:grid-cols-4',
-        colunas === 5 && 'sm:grid-cols-3 lg:grid-cols-5',
+        colunas === 2 && 'grid-cols-2',
+        colunas === 3 && 'grid-cols-3',
+        colunas === 4 && 'grid-cols-2 sm:grid-cols-4',
+        colunas === 5 && 'grid-cols-3 sm:grid-cols-5',
         className,
       )}
     >
       {opcoes.map((o) => {
         const ativo = valor === o.valor
         const s = o.status ? STATUS[o.status] : null
+        const Icone = o.icone
+
+        if (comIcone) {
+          return (
+            <button
+              key={String(o.valor)}
+              type="button"
+              onClick={() => onChange(o.valor)}
+              aria-pressed={ativo}
+              title={o.detalhe}
+              className={cn(
+                'group flex flex-col items-center gap-2 rounded-xl border px-2 py-3.5',
+                'transition-all duration-200',
+                ativo
+                  ? cn(s?.fundo, s?.borda ?? 'border-foreground/25', 'shadow-sm')
+                  : 'border-transparent bg-muted/40 hover:bg-muted',
+              )}
+            >
+              {Icone && (
+                <Icone
+                  className={cn(
+                    'size-[26px] stroke-[1.5] transition-colors',
+                    ativo
+                      ? (s?.texto ?? 'text-foreground')
+                      : 'text-muted-foreground/60 group-hover:text-muted-foreground',
+                  )}
+                />
+              )}
+              <span
+                className={cn(
+                  'text-center text-[11.5px] leading-tight',
+                  ativo ? cn('font-medium', s?.texto) : 'text-muted-foreground',
+                )}
+              >
+                {o.rotulo}
+              </span>
+            </button>
+          )
+        }
+
         return (
           <button
             key={String(o.valor)}
@@ -369,12 +417,10 @@ export function Escolha<T extends string | number>({
             onClick={() => onChange(o.valor)}
             aria-pressed={ativo}
             className={cn(
-              'flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors',
+              'flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-all duration-200',
               ativo
-                ? s
-                  ? cn(s.fundo, s.borda)
-                  : 'border-foreground/25 bg-accent'
-                : 'hover:bg-accent/50',
+                ? cn(s?.fundo, s?.borda ?? 'border-foreground/25', 'shadow-sm')
+                : 'border-transparent bg-muted/40 hover:bg-muted',
             )}
           >
             {s && (
@@ -382,7 +428,7 @@ export function Escolha<T extends string | number>({
                 className={cn(
                   'size-2 shrink-0 rounded-full transition-opacity',
                   s.ponto,
-                  !ativo && 'opacity-25',
+                  !ativo && 'opacity-30',
                 )}
                 aria-hidden
               />
@@ -403,6 +449,67 @@ export function Escolha<T extends string | number>({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * Intensidade em quatro degraus, desenhada como barras que crescem.
+ * Quatro botões de texto medem a mesma coisa e não dizem nada de relance;
+ * quatro barras dizem tudo antes da leitura.
+ */
+export function Intensidade({
+  valor,
+  onChange,
+  rotulos = ['Ausente', 'Leve', 'Moderado', 'Intenso'],
+  className,
+}: {
+  valor: 0 | 1 | 2 | 3
+  onChange: (v: 0 | 1 | 2 | 3) => void
+  rotulos?: [string, string, string, string] | string[]
+  className?: string
+}) {
+  const tons: Status[] = ['neutro', 'adequado', 'atencao', 'critico']
+  const s = STATUS[tons[valor]]
+
+  return (
+    <div className={cn('flex items-center gap-3.5', className)}>
+      <div className="flex h-7 items-end gap-1">
+        {([0, 1, 2, 3] as const).map((n) => {
+          // O degrau zero também é uma barra: "ausente" é resposta, não vazio.
+          const aceso = n <= valor
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              aria-label={rotulos[n]}
+              aria-pressed={valor === n}
+              title={rotulos[n]}
+              className="group flex h-full items-end"
+            >
+              <span
+                className={cn(
+                  'block w-3 rounded-[3px] transition-all duration-200',
+                  aceso && valor > 0
+                    ? s.ponto
+                    : 'bg-muted-foreground/25 group-hover:bg-muted-foreground/50',
+                )}
+                style={{ height: 7 + n * 7 }}
+                aria-hidden
+              />
+            </button>
+          )
+        })}
+      </div>
+      <span
+        className={cn(
+          'min-w-[72px] text-[12.5px] font-medium',
+          valor === 0 ? 'text-muted-foreground' : s.texto,
+        )}
+      >
+        {rotulos[valor]}
+      </span>
     </div>
   )
 }

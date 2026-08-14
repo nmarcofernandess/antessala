@@ -83,13 +83,16 @@ export function PerguntaChave({
     )
   }
 
+  const [sim, nao, ...secundarias] = ALTERNATIVAS
+
   return (
     <div>
       <p className="text-sm font-medium leading-snug">{pergunta}</p>
       {apoio && <p className="mt-1 max-w-[70ch] text-xs text-muted-foreground">{apoio}</p>}
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {ALTERNATIVAS.map((a) => {
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {/* Sim e não pesam mais: são a resposta que o produto espera. */}
+        {[sim, nao].map((a) => {
           const ativa = selecionada?.chave === a.chave
           const s = STATUS[tomDe(a)]
           return (
@@ -99,13 +102,36 @@ export function PerguntaChave({
               onClick={() => onChange({ estado: a.estado, valor: a.valor })}
               aria-pressed={ativa}
               className={cn(
-                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors',
+                'flex min-w-[104px] items-center justify-center gap-2 rounded-xl border px-4 py-2',
+                'text-sm transition-all duration-200',
                 ativa
-                  ? cn(s.fundo, s.borda, s.texto, 'font-medium')
-                  : 'text-muted-foreground hover:bg-accent',
+                  ? cn(s.fundo, s.borda, s.texto, 'font-medium shadow-sm')
+                  : 'border-transparent bg-muted/40 text-muted-foreground hover:bg-muted',
               )}
             >
-              <a.icone className="size-3.5" />
+              <a.icone className="size-4" />
+              {a.rotulo}
+            </button>
+          )
+        })}
+
+        <span className="mx-1 h-6 w-px bg-border" aria-hidden />
+
+        {secundarias.map((a) => {
+          const ativa = selecionada?.chave === a.chave
+          return (
+            <button
+              key={a.chave}
+              type="button"
+              onClick={() => onChange({ estado: a.estado, valor: a.valor })}
+              aria-pressed={ativa}
+              className={cn(
+                'rounded-lg px-2.5 py-1.5 text-xs transition-colors',
+                ativa
+                  ? 'bg-accent font-medium text-foreground'
+                  : 'text-muted-foreground hover:bg-accent/60',
+              )}
+            >
               {a.rotulo}
             </button>
           )
