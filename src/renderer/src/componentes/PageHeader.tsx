@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, BrainCircuit, PanelRightClose } from 'lucide-react'
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -13,7 +13,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { useIaStore } from '@/store/iaStore'
 
 interface BreadcrumbEntry {
   label: string
@@ -70,17 +69,6 @@ export function PageHeader({
     window.addEventListener('antessala:nav-link', handleClick)
     return () => window.removeEventListener('antessala:nav-link', handleClick)
   }, [])
-
-  const iaStore = useIaStore()
-  const { setOpen: setSidebarOpen } = useSidebar()
-
-  const toggleIa = () => {
-    const abrindo = !iaStore.aberto
-    iaStore.toggleAberto()
-    if (abrindo) {
-      setSidebarOpen(false)
-    }
-  }
 
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-1 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
@@ -146,34 +134,9 @@ export function PageHeader({
         {afterBreadcrumb}
       </div>
 
-      {/* Actions da página + Toggle IA */}
+      {/* Ações específicas da página. O Assistente vive somente na rota própria. */}
       <div className="flex items-center gap-2">
         {actions}
-        {location.pathname !== '/ia' && (
-          <>
-            <Separator orientation="vertical" className="mx-1 !h-4" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  id="ia-toggle"
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  onClick={toggleIa}
-                >
-                  {iaStore.aberto ? (
-                    <PanelRightClose className="size-4" />
-                  ) : (
-                    <BrainCircuit className="size-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {iaStore.aberto ? 'Fechar Assistente IA' : 'Abrir Assistente IA'}
-              </TooltipContent>
-            </Tooltip>
-          </>
-        )}
       </div>
     </header>
   )

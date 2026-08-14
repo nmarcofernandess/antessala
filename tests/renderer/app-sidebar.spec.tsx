@@ -62,14 +62,14 @@ describe('AppSidebar — casca ativa do Antessala', () => {
     await screen.findByText('v1.0.0')
 
     expect(screen.getByRole('link', { name: 'Início' })).toHaveAttribute('href', '/')
-    expect(screen.getByRole('link', { name: 'Assistente IA' })).toHaveAttribute('href', '/ia')
+    expect(screen.getByRole('link', { name: 'Assistente' })).toHaveAttribute('href', '/assistente')
+    expect(screen.getByRole('link', { name: 'Memória' })).toHaveAttribute('href', '/memoria')
     expect(screen.getByRole('link', { name: 'Configurações' })).toHaveAttribute(
       'href',
       '/configuracoes',
     )
 
     for (const removedOrHidden of [
-      'Memória',
       'Galeria',
       'Terminal',
       'Maia',

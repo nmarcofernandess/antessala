@@ -8,6 +8,7 @@ import {
   Stethoscope,
   Monitor,
   Moon,
+  Network,
   Settings,
   Sun,
 } from 'lucide-react'
@@ -33,7 +34,8 @@ export const ACTIVE_NAV_ITEMS = [
   { label: 'Novo encaminhamento', to: '/casos/novo', icon: ClipboardPlus },
   { label: 'Triagem', to: '/triagem', icon: Stethoscope },
   { label: 'Agenda', to: '/agenda', icon: CalendarDays },
-  { label: 'Assistente IA', to: '/ia', icon: BrainCircuit },
+  { label: 'Assistente', to: '/assistente', icon: BrainCircuit },
+  { label: 'Memória', to: '/memoria', icon: Network },
   { label: 'Configurações', to: '/configuracoes', icon: Settings },
 ] as const
 

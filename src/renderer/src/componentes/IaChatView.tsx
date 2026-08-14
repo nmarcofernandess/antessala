@@ -118,7 +118,7 @@ export function IaChatView() {
                 </p>
                 <p className="max-w-sm text-xs leading-relaxed">
                   {modelConfig.canSendMessages
-                    ? 'Conversa direta, sem memória automática, ferramentas ou busca em documentos.'
+                    ? 'Pergunte sobre os documentos da Memória. O Assistente recupera os trechos mais relevantes antes de responder.'
                     : modelConfig.activeProviderReason}
                 </p>
               </div>
