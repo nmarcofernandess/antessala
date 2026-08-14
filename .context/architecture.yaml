@@ -1,0 +1,377 @@
+schema_version: 1
+artifact: antessala-current-architecture
+reviewed_revision: 79ec02f813027dbb43489f34e348cca7e49c5b4b
+proof_scope: "Recon estatico do codigo e dos contratos de teste existentes; npm run typecheck passou nesta rodada. Testes unitarios e E2E nao foram executados."
+allowed_statuses:
+  - ACTIVE
+  - DORMANT
+  - INCOMPLETE
+  - REMOVED
+
+identity:
+  status: ACTIVE
+  summary: "Antessala 0.1.0, aplicativo Electron para a prova de conceito de agendamento pre-anestesico."
+  evidence:
+    - "package.json:2-12"
+    - "src/shared/app-identity.ts:1-5"
+    - "src/main/config/app-config.ts:10-24"
+    - "electron-builder.yml:1-5"
+  reuse_boundary: "app-identity.ts e APP_CONFIG continuam sendo as fontes de nome e configuracao; nao reintroduzir aliases do FlowKit."
+
+runtime:
+  electron_processes:
+    status: ACTIVE
+    summary: "electron-vite compila main, preload e renderer React; a navegacao usa hash router."
+    evidence:
+      - "electron.vite.config.ts:6-31"
+      - "src/main/index.ts:24-64"
+      - "src/preload/index.ts:1-17"
+      - "src/renderer/src/App.tsx:49-58"
+    reuse_boundary: "Reutilizar a casca Electron; as rotas atuais nao representam o produto clinico final."
+  active_routes:
+    status: ACTIVE
+    value:
+      - "/"
+      - "/ia"
+      - "/configuracoes"
+    evidence:
+      - "src/renderer/src/App.tsx:13-13"
+      - "src/renderer/src/App.tsx:49-57"
+      - "src/renderer/src/componentes/AppSidebar.tsx:28-32"
+    reuse_boundary: "Dashboard e menu sao casca; nenhuma rota clinica esta implementada."
+  dormant_anamnesis_ui:
+    status: DORMANT
+    summary: "Contratos e componentes dos oito widgets existem, mas nenhuma rota ativa monta o composer."
+    evidence:
+      - "src/shared/anamnese/registry.ts:1-35"
+      - "src/renderer/src/anamnese/Composer.tsx:1-20"
+      - "src/renderer/src/App.tsx:49-58"
+    reuse_boundary: "Reutilizar contratos e validacao somente depois de reconciliados com o Analyst; nao tratar a ausencia de rota como funcionalidade entregue."
+
+trust_boundary:
+  main_window:
+    status: INCOMPLETE
+    summary: "A janela isola contexto e desliga Node no renderer, mas permanece sem sandbox."
+    evidence:
+      - "src/main/index.ts:32-46"
+      - "src/renderer/index.html:6-9"
+    reuse_boundary: "Manter contextIsolation e nodeIntegration=false; revisar sandbox, navegacao e permissoes antes de dados clinicos reais."
+  preload:
+    status: INCOMPLETE
+    summary: "O preload expoe invoke, on e removeAllListeners genericos, apesar do comentario afirmar allowlist."
+    evidence:
+      - "src/preload/index.ts:1-17"
+    reuse_boundary: "O cliente TIPC pode ser mantido, mas a ponte deve ser estreitada antes de uma fronteira multiusuario."
+  authorization:
+    status: INCOMPLETE
+    summary: "O HEAD nao possui login, sessao, papeis, capabilities nem guards de autorizacao IPC."
+    evidence:
+      - "src/main/tipc.ts:373-409"
+      - "src/main/db/schema.ts:8-24"
+    reuse_boundary: "Nao publicar superficies clinicas sobre o router atual sem o contrato de acesso aprovado."
+
+persistence:
+  pglite:
+    status: ACTIVE
+    summary: "PGlite embarcado usa vector e pg_trgm; no pacote, os dados vivem em userData/antessala-pg."
+    evidence:
+      - "src/main/db/pglite.ts:1-3"
+      - "src/main/db/pglite.ts:12-27"
+      - "src/main/db/pglite.ts:29-48"
+    reuse_boundary: "Reutilizar PGlite e os helpers queryOne, queryAll, execute e transaction."
+  schema_strategy:
+    status: INCOMPLETE
+    summary: "O schema usa CREATE TABLE IF NOT EXISTS e retrofits inline; nao existe ledger nem diretorio de migrations."
+    evidence:
+      - "src/main/db/schema.ts:207-246"
+      - "src/main/db/query.ts:76-99"
+    reuse_boundary: "Preservar o banco embarcado, mas definir migracoes versionadas antes do schema canônico; nao ocultar falhas com EXCEPTION WHEN others."
+  clinical_legacy:
+    status: INCOMPLETE
+    summary: "registros, prioridade e registro_jornada pertencem a hipotese invalidada e sao provisórios."
+    evidence:
+      - "src/main/db/clinical-schema.ts:3-9"
+      - "src/main/db/clinical-schema.ts:10-52"
+    reuse_boundary: "Nao ampliar nem usar como fonte canônica de caso, jornada, fila ou paciente."
+  knowledge_tables:
+    status: DORMANT
+    summary: "Tabelas de fontes, chunks, memorias, entidades e relacoes sao criadas no boot mesmo sem superficie publicada."
+    evidence:
+      - "src/main/db/schema.ts:27-127"
+      - "src/main/db/schema.ts:129-164"
+      - "src/main/db/schema.ts:239-246"
+    reuse_boundary: "Reutilizar conceitos de armazenamento e busca, nao o contrato de governanca ou promocao automatica."
+
+first_boot:
+  status: ACTIVE
+  summary: "O caminho normal inicializa PGlite, cria tabelas e carrega catalogos versionados sem baixar modelo ou chamar LLM."
+  sequence:
+    - initDb
+    - createTables
+    - maybeSeedIaConfig
+    - seedData
+    - app.whenReady
+    - registerIpcMain
+    - createWindow
+  evidence:
+    - "src/main/index.ts:154-169"
+    - "src/main/db/seed.ts:75-95"
+    - "src/main/db/seed.ts:128-150"
+    - "tests/main/db/clinical-seed.spec.ts:10-38"
+    - "package.json:28-28"
+  reuse_boundary: "Boot e fluxo-base devem continuar offline; falha de asset/hash hoje encerra o bootstrap e precisa permanecer observavel."
+  catalog_bundle:
+    status: ACTIVE
+    contents:
+      cid10: 14793
+      medications: 382
+      risk_groups: 12
+      met_activities: 94
+      comorbidities: 14
+    evidence:
+      - "electron-builder.yml:8-12"
+      - "src/main/db/seed.ts:63-95"
+      - "tests/main/db/clinical-seed.spec.ts:37-78"
+    reuse_boundary: "Catalogos sao assets locais; suas alegacoes clinicas e licencas continuam sujeitas ao tracker de review."
+
+ipc:
+  tipc:
+    status: ACTIVE
+    summary: "O main registra um router TIPC e o renderer chama procedimentos tipados como funcoes diretas."
+    evidence:
+      - "src/main/index.ts:166-169"
+      - "src/main/tipc.ts:17-20"
+      - "src/renderer/src/servicos/client.ts:1-6"
+      - "src/renderer/src/componentes/IaChatView.tsx:69-74"
+    reuse_boundary: "Usar client['procedimento'](input); nao adicionar .invoke() no codigo de produto."
+  registered_surface:
+    status: INCOMPLETE
+    summary: "O router registrado ainda expoe contratos clinicos provisórios, PDF e todo o backend de conhecimento sem guard de papel."
+    evidence:
+      - "src/main/tipc.ts:373-409"
+    reuse_boundary: "Criar allowlist e autorizacao do produto antes de considerar o router uma fronteira confiavel."
+
+network:
+  renderer_policy:
+    status: ACTIVE
+    summary: "HTTP, HTTPS e WebSocket remotos sao bloqueados; em dev, apenas o endpoint electron-vite e liberado."
+    evidence:
+      - "src/main/renderer-network-policy.ts:3-46"
+      - "src/main/renderer-network-policy.ts:57-70"
+      - "src/main/index.ts:57-57"
+      - "src/renderer/index.html:6-9"
+    reuse_boundary: "Manter fail-closed no renderer. Esta politica nao bloqueia chamadas cloud feitas pelo processo main."
+  external_links:
+    status: ACTIVE
+    summary: "Somente links HTTPS podem ser abertos externamente e sempre por acao de abertura de janela."
+    evidence:
+      - "src/main/index.ts:52-55"
+      - "src/main/renderer-network-policy.ts:48-55"
+    reuse_boundary: "Uso de rede opcional deve continuar explicito e informado; HTTPS nao equivale a dominio confiavel."
+  automatic_updates:
+    status: REMOVED
+    summary: "Nao existe auto-updater ou verificacao de atualizacao no runtime atual."
+    evidence:
+      - "package.json:35-110"
+    reuse_boundary: "Nao adicionar rede de release ao boot da prova de conceito."
+
+pdf_and_files:
+  pdf_export:
+    status: ACTIVE
+    summary: "O handler recebe HTML, abre save dialog e usa printToPDF em janela efemera sem JavaScript e sem rede."
+    evidence:
+      - "src/main/tipc.ts:398-400"
+      - "src/main/export/pdf.ts:16-25"
+      - "src/main/export/pdf.ts:38-91"
+    reuse_boundary: "Reutilizar o handler; criar uma superficie e permissao próprias antes de publica-lo."
+  local_file_access:
+    status: DORMANT
+    summary: "Handlers ocultos escolhem arquivo ou pasta e importam caminhos locais, embora a pagina Memoria nao esteja roteada."
+    evidence:
+      - "src/main/knowledge/router.ts:202-237"
+      - "src/main/knowledge/router.ts:300-335"
+      - "src/renderer/src/App.tsx:49-58"
+    reuse_boundary: "Reutilizar dialogos e parsers; exigir gesto, escopo de path, permissao e auditoria no produto."
+
+audio_and_transcription:
+  recording:
+    status: DORMANT
+    summary: "Existe captura mono para WAV, limitada a 60 segundos, mas o componente nao integra nenhuma rota ativa."
+    evidence:
+      - "src/renderer/src/hooks/useAudioRecorder.ts:4-84"
+      - "src/renderer/src/componentes/ai/FlowSpeechInput.tsx:14-66"
+      - "src/renderer/src/App.tsx:49-58"
+    reuse_boundary: "Pode servir como primitiva; nao prova gravacao de entrevista, consentimento, proveniencia ou vinculo com caso."
+  local_stt:
+    status: INCOMPLETE
+    summary: "Sidecar e downloader Parakeet existem, mas os canais ia.stt nao sao registrados e binario/modelo nao entram no bundle."
+    evidence:
+      - "src/main/stt/catalog.ts:8-23"
+      - "src/main/stt/download.ts:15-48"
+      - "src/main/stt/download.ts:51-79"
+      - "src/renderer/src/servicos/stt.ts:3-15"
+      - "src/main/tipc.ts:373-409"
+      - "electron-builder.yml:8-12"
+      - ".github/workflows/dist.yml:3-8"
+    reuse_boundary: "Nao declarar transcricao funcional nem expor download de 478 MB; qualquer retorno exige acao explicita e degradacao segura."
+
+cloud_ai:
+  direct_chat:
+    status: ACTIVE
+    summary: "Gemini ou OpenRouter respondem somente quando o usuario testa conexao ou envia mensagem; o chat ativo nao injeta RAG, memoria ou ferramentas."
+    evidence:
+      - "src/main/ia/cliente.ts:10-24"
+      - "src/main/ia/cliente.ts:45-80"
+      - "src/main/ia/cliente.ts:82-108"
+      - "src/renderer/src/componentes/IaChatView.tsx:50-84"
+      - "src/renderer/src/componentes/IaChatView.tsx:117-123"
+    reuse_boundary: "Reutilizar a fronteira de provider, nao o chat generico como solucao do fluxo clinico. Toda sugestao clinica precisa draft, proveniencia e confirmacao."
+  configuration:
+    status: INCOMPLETE
+    summary: "A UI informa o envio cloud, mas tokens ficam em texto no PGlite e nao ha redacao automatica de dados identificaveis."
+    evidence:
+      - "src/renderer/src/paginas/ConfiguracoesPagina.tsx:128-223"
+      - "src/main/db/schema.ts:14-24"
+      - "src/main/tipc.ts:61-103"
+    reuse_boundary: "Antes de dados reais, definir segredo seguro, consentimento, minimizacao, retencao e trilha de uso de rede."
+  advanced_context:
+    status: DORMANT
+    summary: "Discovery, compactacao e context bundle existem em fonte, mas nao sao chamados pelo chat ativo."
+    evidence:
+      - "src/main/ia/discovery.ts:24-62"
+      - "src/main/ia/session-processor.ts:1-18"
+      - "src/shared/ia-context.ts:96-164"
+      - "src/main/tipc.ts:373-409"
+    reuse_boundary: "Nao reativar promocao automatica de conversa ou memoria; adaptar somente apos o Analyst de IA e conhecimento."
+
+memory_rag_graph:
+  hidden_backend:
+    status: ACTIVE
+    summary: "Apesar do nome dormantKnowledgeRouter, todos os handlers sao espalhados no router IPC registrado."
+    evidence:
+      - "src/main/knowledge/router.ts:542-582"
+      - "src/main/tipc.ts:7-7"
+      - "src/main/tipc.ts:373-375"
+    reuse_boundary: "Tratar como backend alcancavel, nao como codigo morto; restringir ou desligar antes de dados clinicos."
+  user_surface:
+    status: DORMANT
+    summary: "Memorias, documentos, RAG playground e grafo possuem componentes, mas nao aparecem em rota ou menu."
+    evidence:
+      - "src/renderer/src/paginas/MemoriaPagina.tsx:86-112"
+      - "src/renderer/src/paginas/MemoriaPagina.tsx:354-392"
+      - "src/renderer/src/App.tsx:49-58"
+      - "src/renderer/src/componentes/AppSidebar.tsx:28-32"
+    reuse_boundary: "Nao reativar a pagina legada como produto; compor uma superficie Antessala a partir dos contratos aprovados."
+  retrieval:
+    status: DORMANT
+    summary: "Chunking, FTS e trigram funcionam localmente; sem adapter, embeddings retornam null e a busca degrada para texto."
+    evidence:
+      - "src/main/knowledge/embeddings.ts:1-79"
+      - "src/main/knowledge/ingest.ts:60-108"
+      - "src/main/knowledge/search.ts:15-37"
+      - "src/main/knowledge/search.ts:124-185"
+    reuse_boundary: "Reutilizar chunking e busca textual; qualquer embedding exige adapter explicitamente aprovado e nunca download no boot."
+  importers:
+    status: DORMANT
+    summary: "Existem parsers locais para texto, PDF, JSON ChatGPT, JSON Claude e ZIP."
+    evidence:
+      - "src/main/importers/importer-registry.ts:19-59"
+      - "src/main/importers/pdf-importer.ts:5-21"
+      - "src/main/importers/zip-importer.ts:11-62"
+    reuse_boundary: "Reutilizar parsers somente com limites de arquivo, privacidade, origem e politica de retencao."
+  graph_governance:
+    status: INCOMPLETE
+    summary: "Rebuild e enrichment cloud persistem entidades e relacoes sugeridas sem draft, aprovador, versao ou proveniencia clinica suficiente."
+    evidence:
+      - "src/main/knowledge/graph.ts:207-272"
+      - "src/main/knowledge/enrichment.ts:265-334"
+      - "src/main/knowledge/enrichment.ts:487-518"
+      - "src/main/db/schema.ts:105-126"
+    reuse_boundary: "Reutilizar apenas mecanismos tecnicos; conhecimento global exige sugestao inativa, promocao humana, versao, desativacao e auditoria."
+  automatic_memory:
+    status: INCOMPLETE
+    summary: "O processor legado extrai fatos e indexa conversas automaticamente, mas esta desconectado do router atual e viola a nova fronteira de promocao humana."
+    evidence:
+      - "src/main/ia/session-processor.ts:46-160"
+      - "src/main/ia/session-processor.ts:162-222"
+      - "src/main/tipc.ts:373-409"
+    reuse_boundary: "Nao reutilizar como esta; dado de caso nunca vira memoria global sem promocao humana explicita."
+
+removed_legacy:
+  status: REMOVED
+  summary: "Terminal, CLI, MCP, tool-server, cron, galeria, Maia/TTS e LLM local nao existem no runtime atual."
+  evidence:
+    - "package.json:35-110"
+    - "git:bff8553"
+    - "git:36af6af"
+    - "git:7dbe440"
+  reuse_boundary: "Nao reintroduzir runtime FlowKit para implementar o Antessala."
+
+verification:
+  executed:
+    command: "npm run typecheck"
+    result: "PASS"
+    date: "2026-08-14"
+  commands:
+    install: "npm install"
+    development: "npm run dev"
+    build: "npm run build"
+    typecheck: "npm run typecheck"
+    unit_and_component_tests: "npm test"
+    end_to_end: "npm run test:e2e"
+    package_directory: "npm run pack"
+    package_mac: "npm run dist:mac"
+    package_windows: "npm run dist:win"
+    package_linux: "npm run dist:linux"
+  evidence:
+    - "package.json:13-33"
+    - "vitest.config.ts:13-27"
+    - "playwright.config.ts:3-10"
+    - "tests/e2e/app-flow.spec.ts:4-80"
+  note: "Nao existe script lint no HEAD. Resultados verdes precisam ser vinculados ao SHA em que os comandos foram executados."
+
+known_risks:
+  - id: generic-preload
+    status: INCOMPLETE
+    evidence: "src/preload/index.ts:3-16"
+    statement: "Renderer pode invocar canais arbitrarios e remover listeners globais."
+  - id: sandbox-disabled
+    status: INCOMPLETE
+    evidence: "src/main/index.ts:40-45"
+    statement: "A janela principal nao usa sandbox."
+  - id: hidden-router-is-callable
+    status: INCOMPLETE
+    evidence: "src/main/tipc.ts:373-375"
+    statement: "Ocultar rota nao desabilita handlers de memoria, arquivos, jobs, cloud ou grafo."
+  - id: plaintext-cloud-token
+    status: INCOMPLETE
+    evidence: "src/main/db/schema.ts:14-24"
+    statement: "Tokens cloud ficam no banco embarcado sem keychain."
+  - id: knowledge-auto-promotion
+    status: INCOMPLETE
+    evidence: "src/main/ia/session-processor.ts:46-160"
+    statement: "O codigo legado pode transformar conversa em memoria global sem aprovacao."
+  - id: graph-auto-persistence
+    status: INCOMPLETE
+    evidence: "src/main/knowledge/enrichment.ts:487-518"
+    statement: "Inferencias do LLM podem ser persistidas diretamente como relacoes."
+  - id: stt-large-download
+    status: INCOMPLETE
+    evidence: "src/main/stt/catalog.ts:10-23"
+    statement: "O downloader dormente aponta para um modelo de 478 MB."
+  - id: inline-migration-errors
+    status: INCOMPLETE
+    evidence: "src/main/db/schema.ts:211-233"
+    statement: "Retrofits ignoram qualquer erro e nao possuem ledger."
+  - id: theme-config-drift
+    status: INCOMPLETE
+    evidence: "src/main/config/app-config.ts:23-24; src/renderer/src/main.tsx:10-17"
+    statement: "APP_CONFIG declara dark, mas o renderer usa system."
+
+approval:
+  controller: "hack/CONTRATO-DE-APROVACAO.md"
+  status: "PENDING"
+  signed_by: null
+  signed_at: null
+  reviewed_git_revision: null
+  statement: null

@@ -1,0 +1,61 @@
+# Status único de pesquisa e review
+
+Atualizado em `2026-08-14`. Este é o único tracker de readiness documental do
+Antessala. `hack/status.json` controla fases e assinaturas; não replica esta matriz.
+
+Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
+`ADVERSARIAL_REQUIRED`, `IN_REVIEW`, `ADJUSTED`, `READY_FOR_MARCO`,
+`APPROVED_BY_MARCO`, `INVALIDATED_BY_CHANGE`.
+
+| Artefato | Pesquisa web | Recon técnico | Adversarial | Estado | Último SHA revisado | Próxima ação |
+|---|---|---|---|---|---|---|
+| `hack/ANALYST.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Reconciliar somente depois dos oito Analysts. |
+| `hack/analysis.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Integrar IA/memória e remover fechamentos não provados. |
+| `ANALYST-caso-e-encaminhamento.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `5d768bc` (base) | Atacar intake, referência, correção, cancelamento e handoff. |
+| `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `5d768bc` (base) | Separar semântica de criptografia/DDL e atacar sessão e escopo. |
+| `ANALYST-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Pesquisar widgets, campos, completude, catálogos e licenças. |
+| `ANALYST-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Separar evidência de `DEMO_DECISION`; pesquisar carga e capacidade. |
+| `ANALYST-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Pesquisar avaliação, pendência, retorno, resultado e entrega. |
+| `ANALYST-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Integrar IA/memória e aguardar contratos dos domínios. |
+| `ANALYST-arquitetura-offline-e-prova.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RECON_REQUIRED` | `5d768bc` (base) | Reconciliar com `.context/architecture.yaml` e política de rede opcional. |
+| `ANALYST-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | — | Pesquisar privacidade, consentimento, proveniência e promoção de conhecimento. |
+| `hack/BUILD.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Ressintetizar somente depois dos oito pares e Surface Blueprints. |
+| `BUILD-caso-e-encaminhamento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Validar intake e provar contratos físicos no PGlite. |
+| `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Validar segurança local, fixtures e guards IPC. |
+| `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Aguardar pesquisa clínica; depois provar schema e round-trip. |
+| `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Provar compatibilidade PGlite, locks, corridas e decisões de demo. |
+| `BUILD-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Aguardar research; depois provar transações e isolamento por serviço. |
+| `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Corrigir após os domínios; então criar Surface Blueprints. |
+| `BUILD-arquitetura-offline-e-prova.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Refazer política IPC/rede/IA e provar o runtime PGlite. |
+| `BUILD-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | — | Permanecer DRAFT/BLOCKED até o Analyst fechar e Marco assinar. |
+
+## Como atualizar
+
+1. Publique branch, SHA e artefato para research ou adversarial.
+2. Trate a resposta externa como material de trabalho, nunca como fonte canônica.
+3. Verifique as fontes e corrija o artefato canônico.
+4. Registre aqui o SHA revisado, a data e a próxima ação.
+5. Use `PRODUCT_LAW`, `EVIDENCE_BACKED`, `DEMO_DECISION` ou `UNRESOLVED` dentro do artefato.
+6. Mudança material volta o estado para `INVALIDATED_BY_CHANGE`.
+
+## Próxima rodada
+
+Primeiro artefato: `hack/domains/ANALYST-anamnese-e-catalogos.md`.
+
+Objetivo: pesquisar o conjunto clínico, a semântica de resposta e completude, a origem dos
+catálogos e suas licenças. Não revisar o Build antes de corrigir o Analyst.
+
+Nenhum estado nesta página substitui assinatura. Somente Marco pode produzir
+`APPROVED_BY_MARCO`.
+
+---
+
+## Contrato de encerramento
+
+- Artefato: `.context/review/STATUS.md`.
+- Gate: definido em `hack/status.json` e `hack/CONTRATO-DE-APROVACAO.md`.
+- Estado: `EM_REVISÃO`.
+- Assinatura de Marco: `PENDENTE`.
+- Data, revisão Git e declaração: `PENDENTES`.
+
+Sem assinatura válida, este tracker não promove fase nem autoriza implementação.

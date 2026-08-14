@@ -1,0 +1,147 @@
+schema_version: "antessala.product-context.v1"
+
+truth_labels:
+  PRODUCT_LAW: "Decisão de produto definida por Marco; só muda com reabertura explícita do PRD."
+  EVIDENCE_BACKED: "Afirmação sustentada por fonte ou recon verificável."
+  DEMO_DECISION: "Escolha sintética para provar o conceito; não descreve protocolo do hospital."
+  UNRESOLVED: "Questão que ainda exige pesquisa, decisão ou assinatura."
+
+identity:
+  name: "Antessala"
+  kind: "Prova de conceito local para o fluxo da consulta pré-anestésica"
+  classification: "PRODUCT_LAW"
+
+problem:
+  classification: "PRODUCT_LAW"
+  statement: "A recepção precisa reservar uma consulta pré-anestésica compatível, mas não deve interpretar clínica. A anamnese de enfermagem ainda precisa virar uma necessidade operacional clara e rastreável para a agenda."
+
+goal:
+  classification: "PRODUCT_LAW"
+  statement: "Transformar a entrevista de enfermagem em uma necessidade operacional de agenda compreensível pela recepção e acompanhar o caso até o resultado chegar ao serviço solicitante."
+
+users:
+  classification: "PRODUCT_LAW"
+  direct:
+    - role: "ADMIN"
+      responsibility: "Preparar contas locais e configurações permitidas da demonstração."
+    - role: "RECEPCAO"
+      responsibility: "Registrar o encaminhamento, reservar vaga compatível e executar handoffs operacionais."
+    - role: "ENFERMAGEM"
+      responsibility: "Conduzir a anamnese e confirmar ou corrigir a necessidade operacional."
+    - role: "ANESTESIOLOGISTA"
+      responsibility: "Avaliar, abrir pendências e retornos e finalizar o resultado."
+    - role: "SOLICITANTE"
+      responsibility: "Receber o resultado no escopo do próprio serviço."
+  external:
+    - actor: "Paciente"
+      responsibility: "Entregar o encaminhamento, responder à entrevista e comparecer à consulta."
+      login: false
+    - actor: "Médico solicitante"
+      responsibility: "Indicar o procedimento e emitir o encaminhamento."
+      login: false
+
+main_flow:
+  classification: "PRODUCT_LAW"
+  steps:
+    - "médico solicitante indica procedimento"
+    - "recepção registra o encaminhamento"
+    - "enfermagem conduz anamnese pré-anestésica"
+    - "sistema produz ou sugere uma necessidade operacional de agenda"
+    - "profissional humano confirma ou altera com justificativa"
+    - "recepção encontra e reserva vaga compatível"
+    - "anestesiologista realiza a consulta"
+    - "abre pendências e retorno quando necessário"
+    - "finaliza resultado"
+    - "serviço solicitante recebe o resultado"
+    - "marcação da cirurgia continua externa"
+
+boundaries:
+  classification: "PRODUCT_LAW"
+  before_product:
+    - "A triagem geral do SUS acontece antes e está fora do Antessala."
+    - "A consulta que indica o procedimento acontece fora do Antessala."
+  after_product:
+    - "A marcação da cirurgia continua no serviço solicitante e está fora do Antessala."
+  excluded:
+    - "prontuário longitudinal"
+    - "cadastro de paciente"
+    - "evolução entre casos"
+    - "classificação de emergência"
+    - "ordem de chamada no mesmo dia"
+    - "agenda ou mapa cirúrgico"
+    - "decisão automática de aptidão anestésica"
+    - "integração institucional real no protótipo"
+    - "dados reais de pacientes"
+
+product_laws:
+  - "Não existe paciente longitudinal: cada encaminhamento abre um caso autônomo com pessoa em snapshot."
+  - "O mesmo nome pode aparecer em casos diferentes; não há busca, deduplicação ou vínculo entre eles."
+  - "Não existe evolução, série temporal ou comparação entre casos da mesma pessoa."
+  - "O primeiro boot e o fluxo-base funcionam sem internet."
+  - "O aplicativo não atribui ASA."
+  - "O aplicativo não declara aptidão anestésica."
+  - "O aplicativo não substitui decisão médica."
+  - "Gravidade clínica, urgência, prioridade cirúrgica e duração necessária da consulta são eixos diferentes."
+  - "Uma pessoa pode ter quadro grave sem necessidade de atendimento imediato."
+  - "Uma pessoa sem grande carga de doença pode se beneficiar de velocidade por causa do procedimento ou do contexto."
+  - "Nenhuma doença ou medicação isolada vira urgência automática."
+  - "Ausência de resposta nunca equivale a resposta negativa."
+  - "Toda sugestão operacional relevante depende de confirmação humana; alteração exige justificativa."
+
+proof_of_concept:
+  classification: "DEMO_DECISION"
+  statement: "O MVP roda localmente em Electron, usa dados sintéticos e demonstra o fluxo por troca sequencial de papéis. Não alega reproduzir a operação, a arquitetura ou o protocolo do hospital."
+  future_boundary: "Nuvem, banco institucional, identidade externa e operação multiusuário pertencem a uma etapa posterior financiada."
+
+ai_memory_and_knowledge:
+  classification: "PRODUCT_LAW"
+  mvp_role: "Demonstrar pelo menos um uso real de IA e um uso real de memória que ajudem a entrevista ou a explicação operacional sem decidir pelo profissional."
+  obligations:
+    - "Sugestões permanecem em rascunho até confirmação humana."
+    - "Cada sugestão informa origem e explicação suficiente para revisão."
+    - "Indisponibilidade de IA ou rede não quebra caso, agenda nem handoff."
+    - "Uso de rede é opcional, explícito e informado ao usuário."
+    - "Memória global aceita somente conhecimento promovido e aprovado por pessoa autorizada."
+    - "Identidade e narrativa integral de um caso nunca entram na memória global."
+    - "Decisão de um caso não se torna regra global automaticamente."
+    - "IA não conclui urgência, gravidade, prioridade cirúrgica, aptidão ou conduta clínica."
+  contract_owner: "hack/domains/ANALYST-ia-memoria-e-conhecimento.md"
+  unresolved: "Campos, estados, permissões, proveniência e relações só ficam canônicos após pesquisa, adversarial e assinatura do Analyst dono."
+
+clinical_limits:
+  classification: "PRODUCT_LAW"
+  human_authority: "Enfermagem confirma o requisito operacional; anestesiologista decide avaliação, pendências, retorno e resultado."
+  reception_boundary: "Recepção recebe consequência operacional suficiente para agendar; não interpreta comorbidades, medicamentos, exames ou risco clínico."
+  prohibited_claims:
+    - "diagnóstico"
+    - "ASA"
+    - "aptidão anestésica"
+    - "urgência clínica automática"
+    - "prescrição ou suspensão medicamentosa"
+    - "protocolo oficial do HCFMRP-USP"
+
+definition_of_done:
+  classification: "PRODUCT_LAW"
+  criteria:
+    - "Um caso sintético percorre todo o fluxo."
+    - "Cada papel enxerga e executa apenas sua responsabilidade."
+    - "Enfermagem registra a entrevista com origem e estados semânticos."
+    - "Ausência de resposta nunca vira negativa."
+    - "A necessidade de agenda é explicável."
+    - "Uma pessoa autorizada confirma ou altera a classificação ou o requisito."
+    - "Recepção agenda apenas vaga compatível."
+    - "Conflitos e falta de capacidade são tratados."
+    - "Anestesiologista registra avaliação, pendência, retorno e conclusão."
+    - "O resultado chega ao serviço solicitante."
+    - "Autoria e auditoria são reconstruíveis."
+    - "Boot e fluxo-base não dependem de internet."
+    - "Ao menos um uso real de IA e um uso real de memória são demonstrados."
+    - "IA e memória permanecem assistivas, auditáveis e dependentes de confirmação humana."
+
+approval:
+  controller: "hack/CONTRATO-DE-APROVACAO.md"
+  status: "PENDING"
+  signed_by: null
+  signed_at: null
+  reviewed_git_revision: null
+  statement: null

@@ -1,0 +1,157 @@
+schema_version: "antessala.workflow-context.v1"
+
+purpose: "Definir como o produto é pesquisado, analisado, projetado, criticado, fatiado e implementado sem antecipar fases."
+
+diagram: |
+  flowchart LR
+      PRD["PRD assinado"]
+
+      subgraph ANALYST_PHASE["Fase Analyst"]
+          LAW["Leis do produto<br/>definidas por Marco"]
+          WEB["Research científico,<br/>regulatório e operacional"]
+          CODE["Recon do código<br/>e bases doadoras"]
+          DOMAIN["Analysts de domínio"]
+          ADV_A["Adversarial por domínio"]
+          SYNTH["analysis.md<br/>síntese ponta a ponta"]
+
+          LAW --> DOMAIN
+          WEB --> DOMAIN
+          CODE --> DOMAIN
+          DOMAIN --> ADV_A
+          ADV_A --> SYNTH
+      end
+
+      subgraph BUILD_PHASE["Fase Build"]
+          DBUILD["Builds de domínio"]
+          SURF["Blueprints de superfície<br/>uma documentação por tela"]
+          WIREFRAME["Wireframe navegável<br/>reconstrução cega"]
+          INTEGRATED["BUILD.md integrado"]
+          CRITIC["Critic técnico e UX"]
+
+          DBUILD --> SURF
+          SURF --> WIREFRAME
+          WIREFRAME --> INTEGRATED
+          INTEGRATED --> CRITIC
+      end
+
+      PRD --> ANALYST_PHASE
+      SYNTH --> SIGN_A{"Marco assina?"}
+      SIGN_A -->|"sim"| BUILD_PHASE
+      CRITIC --> SIGN_B{"Marco assina?"}
+      SIGN_B -->|"sim"| WARLOG["Warlog corta em sprints"]
+
+analyst_phase:
+  research: "Descobre o que pode ser afirmado, qual fonte sustenta a afirmação e qual limite deve acompanhá-la."
+  code_recon: "Prova capacidades, lacunas e contratos no HEAD e nas bases doadoras; não transforma legado em requisito."
+  analyst: "Define a verdade e o comportamento lógico do domínio."
+  required_content:
+    - "entidades e identidades"
+    - "campos e estados semânticos"
+    - "regras e invariantes"
+    - "atores, permissões e ownership"
+    - "consumidores e handoffs"
+    - "falhas e recuperação"
+    - "proibições e limites"
+  forbidden_content: "Analyst não escolhe arquivos, componentes, tabelas físicas ou detalhes de implementação."
+  adversarial: "Tenta derrubar alegações, completude, coerência entre domínios e limites clínicos antes da síntese."
+  subprocess_rule: "Research e adversarial são subprocessos da fase Analyst; não formam uma fase burocrática separada."
+  completion: "analysis.md sintetiza o fluxo ponta a ponta. A fase só termina com pesquisa e adversarial registrados, lacunas resolvidas e assinatura válida de Marco."
+
+build_phase:
+  build: "Traduz o Analyst assinado para a arquitetura concreta do repositório."
+  required_content:
+    - "tabelas e constraints"
+    - "DTOs e schemas físicos"
+    - "IPC e serviços"
+    - "transações e concorrência"
+    - "componentes e composição"
+    - "estratégia de testes"
+  gap_rule: "Build não pode compensar, adivinhar nem esconder lacuna do Analyst; devolve o domínio ao owner analítico."
+  surface_blueprint: "Compõe contratos de vários Builds na experiência concreta de uma superfície."
+  wireframe: "Um modelo limpo tenta reconstruir o produto somente com o pacote de Build; toda invenção necessária é defeito documental."
+  critic: "Tenta quebrar arquitetura, segurança, completude, UX, estados e estratégia de prova."
+  completion: "Build integrado e Critic só terminam com correções incorporadas e assinatura válida de Marco."
+
+surface_blueprints:
+  future_location: "hack/surfaces/"
+  create_now: false
+  timing:
+    - order: 1
+      rule: "ANALYST-superficies define quais superfícies existem, seus usuários, trabalhos e limites de informação."
+    - order: 2
+      rule: "Analysts de domínio fecham campos, estados, permissões e regras."
+    - order: 3
+      rule: "Builds de domínio fecham DTOs e arquitetura."
+    - order: 4
+      rule: "Durante o fechamento do Build são criados os Surface Blueprints."
+    - order: 5
+      rule: "Cada superfície com trabalho independente recebe um documento canônico em hack/surfaces/."
+    - order: 6
+      rule: "Componentes compartilhados recebem contrato único quando necessário; não se duplicam em todas as telas."
+    - order: 7
+      rule: "Um modelo limpo tenta reconstruir wireframes somente com o pacote de Build."
+    - order: 8
+      rule: "Qualquer invenção necessária devolve o Build para correção."
+    - order: 9
+      rule: "Somente depois o Build e o Critic podem ser assinados."
+    - order: 10
+      rule: "Só então o Warlog divide o produto em fatias."
+  future_contract:
+    - "usuário e objetivo"
+    - "rota e permissões"
+    - "chegada e saída"
+    - "regiões da tela"
+    - "campos, origem, editabilidade e validação"
+    - "DTOs consumidos"
+    - "ações e efeitos"
+    - "loading, vazio, erro, conflito, forbidden e sucesso"
+    - "privacidade e redação por papel"
+    - "navegação"
+    - "comportamento com 0, 1, 100 e 1.000 itens"
+    - "teclado e acessibilidade"
+    - "viewport"
+    - "wireframe"
+    - "fixtures"
+    - "critérios de reconstrução e testes"
+    - "Analysts e Builds consumidos"
+
+delivery_flow:
+  warlog: "Fatia o sistema em sprints somente depois do Build integrado e Critic assinados."
+  minispec: "Define uma fatia vertical de valor."
+  spec: "Fecha o contrato da fatia; exige assinatura de Marco."
+  plan: "Define ordem de execução, arquivos e testes; exige assinatura de Marco."
+  tdd: "O primeiro ato executável é um teste relevante em RED após o Plan assinado."
+  implementation: "Código só começa depois desse RED."
+  qa: "Valida o comportamento real da minispec; a próxima unidade depende da assinatura exigida."
+  final_qa: "Valida a demonstração ponta a ponta antes de qualquer estado concluído."
+
+gates:
+  rule: "Nenhuma fase termina e nenhuma seguinte começa sem assinatura válida de Marco registrada no artefato e em hack/status.json."
+  ai_may_sign: false
+  material_change: "Mudança material invalida a assinatura anterior e reabre o gate afetado."
+  current_state_owner: "hack/status.json"
+  approval_contract: "hack/CONTRATO-DE-APROVACAO.md"
+
+review_cycle:
+  tracker: ".context/review/STATUS.md"
+  steps:
+    - "Publicar branch, SHA e artefato canônico a revisar."
+    - "GPT Pro pesquisa ou executa review adversarial direto sobre o repositório."
+    - "Marco traz a resposta ao chat principal."
+    - "O chat principal verifica fontes e corrige o artefato canônico."
+    - "Registrar SHA, data, estado e próxima ação no tracker."
+  raw_output_rule: "Nunca guardar a resposta bruta como documentação canônica."
+
+documentation_minimalism:
+  - "Um owner canônico por regra."
+  - "Sem dossiês por busca, prompts permanentes por domínio ou relatórios adversariais descartáveis."
+  - "Sem pastas de pendentes e concluídos."
+  - "Sem Surface Blueprint antes do momento definido acima."
+
+approval:
+  controller: "hack/CONTRATO-DE-APROVACAO.md"
+  status: "PENDING"
+  signed_by: null
+  signed_at: null
+  reviewed_git_revision: null
+  statement: null

@@ -1,78 +1,210 @@
 # Antessala
 
-Produto para diferenciar o agendamento da consulta pré-anestésica a partir da anamnese de
-enfermagem.
+Prova de conceito para transformar a anamnese pré-anestésica de enfermagem em uma
+necessidade operacional de agenda explicável e conduzir o caso até o resultado voltar ao
+serviço solicitante.
 
-> **Estado: Analyst forense redigido e aguardando revisão de Marco. Código bloqueado.**
+> Nenhum gate está aprovado. O PRD aguarda assinatura; Analysts e Builds ainda exigem as
+> rodadas indicadas no [tracker único](.context/review/STATUS.md) antes de qualquer
+> assinatura. O [estado mecânico](hack/status.json) mantém o código de produto bloqueado.
 
-## Problema
+## Problema e objetivo
 
-A recepção precisa reservar a consulta pré-anestésica, mas não deve interpretar dados
-clínicos. A enfermagem coleta a anamnese, porém essa avaliação precisa virar uma orientação
-operacional de agenda: vaga rápida, normal ou estendida.
+A recepção precisa reservar a consulta, mas não deve interpretar comorbidades,
+medicamentos ou exames. A enfermagem coleta a história; o Antessala deve traduzir essa
+entrevista em um requisito operacional que uma pessoa autorizada confirma ou corrige com
+justificativa. A recepção então reserva uma vaga compatível.
 
-## Fluxo canônico
+O produto acompanha o mesmo caso até o anestesiologista concluir ou abrir pendências e o
+serviço solicitante receber o resultado.
 
-```text
-médico indica procedimento e entrega encaminhamento
-→ recepção recebe o encaminhamento
-→ enfermagem realiza a anamnese
-→ triagem define a necessidade da vaga
-→ recepção agenda uma vaga compatível
-→ anestesiologista conclui ou registra pendência e retorno
-→ resultado volta ao serviço solicitante
-```
-
-A triagem geral do SUS acontece antes. A marcação da cirurgia acontece depois. As duas
-ficam fora do Antessala.
-
-## Documentação
-
-1. [`hack/PRD.md`](hack/PRD.md) — contrato do produto, congelado;
-2. [`hack/status.json`](hack/status.json) — GPS mecânico e assinaturas dos gates;
-3. [`hack/progress.md`](hack/progress.md) — recibo humano do estado;
-4. [`hack/CONTRATO-DE-APROVACAO.md`](hack/CONTRATO-DE-APROVACAO.md) — regra de assinatura;
-5. [`hack/analysis.md`](hack/analysis.md) — Analyst canônico e síntese ponta a ponta;
-6. [`hack/ANALYST.md`](hack/ANALYST.md) — índice, contratos globais e gate semântico;
-7. [`hack/domains/`](hack/domains/) — sete Analysts e sete BUILDs correspondentes;
-8. [`hack/BUILD.md`](hack/BUILD.md) — síntese técnica em revisão, sem autoridade de execução;
-9. [`hack/CRITIC.md`](hack/CRITIC.md) — rascunho bloqueado;
-10. [`hack/WARLOG.md`](hack/WARLOG.md) — rascunho bloqueado;
-11. [`hack/SPRINTS.md`](hack/SPRINTS.md) — mapa ainda não aprovado;
-12. [`hack/minispecs/`](hack/minispecs/) — possíveis sprints, sem autorização;
-13. [`hack/qa_report.md`](hack/qa_report.md) — QA final ainda não iniciado.
-
-## Sequência obrigatória
+## Fluxo principal
 
 ```text
-Taskgen → PRD → Analyst → Build → Critic → Warlog → Sprints
-→ Spec → Plan → TDD → código → QA da minispec
-→ próxima minispec ou QA final
+médico solicitante indica procedimento
+→ recepção registra o encaminhamento
+→ enfermagem conduz anamnese pré-anestésica
+→ sistema produz ou sugere uma necessidade operacional de agenda
+→ profissional humano confirma ou altera com justificativa
+→ recepção encontra e reserva vaga compatível
+→ anestesiologista realiza a consulta
+→ abre pendências e retorno quando necessário
+→ finaliza resultado
+→ serviço solicitante recebe o resultado
+→ marcação da cirurgia continua externa
 ```
 
-Cada seta exige assinatura de Marco no artefato anterior e no gate correspondente de
-`status.json`. Cada minispec repete Spec → assinatura → Plan → assinatura → TDD → código →
-QA → assinatura. Alteração material invalida a assinatura anterior.
+A triagem geral do SUS ocorre antes e está fora do produto. Cada encaminhamento abre um
+caso autônomo: não existe cadastro longitudinal de paciente, deduplicação por nome nem
+evolução entre casos. A marcação da cirurgia ocorre depois e também fica fora.
 
-## Fundação técnica existente
+## O que o produto não faz
 
-O repositório já contém Electron, React, PGlite, IPC, widgets de anamnese, catálogos
-offline, tema, PDF e testes. Isso é inventário, não autorização para construir o produto.
-O Analyst registra o que será reutilizado, adaptado ou rejeitado; o código só começa após
-BUILD, Critic, Warlog, Sprints, Spec, Plan e primeiro teste TDD aprovados.
+- não atribui ASA, aptidão anestésica, diagnóstico ou conduta clínica;
+- não confunde gravidade, urgência, prioridade cirúrgica e duração da consulta;
+- não transforma doença ou medicação isolada em urgência automática;
+- não substitui a decisão da enfermagem ou do anestesiologista;
+- não é prontuário, triagem geral do SUS, fila de chamada ou agenda cirúrgica;
+- não alega reproduzir protocolo ou arquitetura do HCFMRP-USP.
+
+## Atores
+
+| Ator | Responsabilidade no Antessala |
+|---|---|
+| Recepção | registra o encaminhamento e reserva vaga compatível |
+| Enfermagem | conduz a entrevista e confirma ou corrige o requisito operacional |
+| Anestesiologista | avalia, abre pendências e retornos e finaliza o resultado |
+| Serviço solicitante | recebe o resultado do próprio serviço |
+| Administrador | prepara contas locais e configurações permitidas da demonstração |
+
+Paciente e médico solicitante participam do fluxo, mas não entram no aplicativo no MVP.
+
+## IA, memória e conhecimento
+
+A prova de conceito deve demonstrar um uso real de IA e um de memória. A direção é
+assistiva: transcrição pode originar propostas de preenchimento; cada proposta mostra sua
+origem e continua rascunho até confirmação humana. Conhecimento global só nasce por
+promoção explícita e versionada; identidade, narrativa integral e decisão isolada de um
+caso nunca viram regra automática.
+
+Uso de rede é opcional, informado e iniciado pela pessoa. Sem IA ou internet, caso,
+agenda e handoff continuam funcionando. O contrato completo permanece no
+[Analyst de IA, memória e conhecimento](hack/domains/ANALYST-ia-memoria-e-conhecimento.md),
+ainda sujeito a pesquisa e adversarial.
+
+## Base técnica atual
+
+O repositório contém uma casca Electron com processo principal, preload e renderer React;
+PGlite local; cliente TIPC tipado; catálogos versionados carregados sem rede; política de
+egress do renderer; e PDF pelo motor de impressão do Electron. A casca ativa ainda expõe
+somente Início, IA e Configurações: o fluxo clínico ponta a ponta não está implementado.
+
+Gravação em WAV, peças de transcrição, RAG, grafo, memória e importadores existem em
+estados incompletos ou dormentes. Existência no código não autoriza reativação. O inventário
+com evidências e limites vive em [.context/architecture.yaml](.context/architecture.yaml).
+
+## Mapa documental
+
+Comece em [.context/manifest.yaml](.context/manifest.yaml). Ele define leitura obrigatória,
+fontes e autoridade.
+
+| Artefato | Pergunta que responde |
+|---|---|
+| [PRD](hack/PRD.md) | qual produto, problema, promessa e fronteira |
+| [Analyst integrado](hack/analysis.md) e [índice](hack/ANALYST.md) | qual é a verdade lógica ponta a ponta |
+| `hack/domains/ANALYST-*.md` | quais entidades, campos, estados, regras, papéis e falhas pertencem a cada domínio |
+| [Build integrado](hack/BUILD.md) e `hack/domains/BUILD-*.md` | como um Analyst assinado será traduzido para este repositório |
+| [.context/product.yaml](.context/product.yaml) | resumo estável do produto e Definition of Done |
+| [.context/workflow.yaml](.context/workflow.yaml) | método, gates e momento futuro dos documentos de tela |
+| [.context/review/STATUS.md](.context/review/STATUS.md) | única fila de pesquisa, recon e review por artefato |
+| [status.json](hack/status.json) e [progress.md](hack/progress.md) | gate mecânico e recibo humano da fase |
+| [Contrato de aprovação](hack/CONTRATO-DE-APROVACAO.md) | o que constitui assinatura válida de Marco |
+
+`.context` é mapa cognitivo. Não substitui PRD, Analyst ou Build.
+
+## Método
+
+```mermaid
+flowchart LR
+    PRD["PRD assinado"]
+
+    subgraph ANALYST_PHASE["Fase Analyst"]
+        LAW["Leis do produto<br/>definidas por Marco"]
+        WEB["Research científico,<br/>regulatório e operacional"]
+        CODE["Recon do código<br/>e bases doadoras"]
+        DOMAIN["Analysts de domínio"]
+        ADV_A["Adversarial por domínio"]
+        SYNTH["analysis.md<br/>síntese ponta a ponta"]
+
+        LAW --> DOMAIN
+        WEB --> DOMAIN
+        CODE --> DOMAIN
+        DOMAIN --> ADV_A
+        ADV_A --> SYNTH
+    end
+
+    subgraph BUILD_PHASE["Fase Build"]
+        DBUILD["Builds de domínio"]
+        SURF["Blueprints de superfície<br/>uma documentação por tela"]
+        WIREFRAME["Wireframe navegável<br/>reconstrução cega"]
+        INTEGRATED["BUILD.md integrado"]
+        CRITIC["Critic técnico e UX"]
+
+        DBUILD --> SURF
+        SURF --> WIREFRAME
+        WIREFRAME --> INTEGRATED
+        INTEGRATED --> CRITIC
+    end
+
+    PRD --> ANALYST_PHASE
+    SYNTH --> SIGN_A{"Marco assina?"}
+    SIGN_A -->|"sim"| BUILD_PHASE
+    CRITIC --> SIGN_B{"Marco assina?"}
+    SIGN_B -->|"sim"| WARLOG["Warlog corta em sprints"]
+```
+
+Research e adversarial pertencem ao Analyst. Analyst define comportamento sem escolher
+tabela ou componente. Build traduz contratos fechados para arquitetura, DTOs, IPC,
+transações, componentes e testes; não preenche lacuna analítica por conta própria.
+
+### Review com GPT Pro
+
+1. publicamos branch, SHA e artefato canônico;
+2. GPT Pro pesquisa ou tenta quebrá-lo direto no repositório;
+3. Marco traz a resposta ao chat principal;
+4. o chat verifica fontes e corrige o artefato canônico;
+5. atualiza o tracker e publica um novo SHA.
+
+A resposta bruta é material de trabalho, não documentação do produto.
+
+### Quando nascem os documentos de tela
+
+`ANALYST-superficies` identifica as superfícies e seus trabalhos. Analysts fecham
+semântica; Builds fecham DTOs e arquitetura. Só durante o fechamento do Build cada tela
+com trabalho próprio recebe um Surface Blueprint em `hack/surfaces/`. Um modelo limpo
+tenta reconstruir o wireframe apenas com esse pacote. Invenção necessária reabre o Build.
+Nenhum Surface Blueprint deve existir antes disso.
+
+### Do Build ao código
+
+```text
+Build integrado + Critic assinados
+→ Warlog
+→ Sprints
+→ MiniSpec
+→ Spec assinada
+→ Plan assinado
+→ primeiro teste TDD em RED
+→ implementação
+→ QA da minispec
+→ QA final
+```
+
+Nenhuma seta avança sem a assinatura exigida de Marco. Uma IA nunca assina, presume
+aprovação nem transforma pedido de revisão em autorização.
+
+## Comandos atuais
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run typecheck
+npm test
+npm run test:e2e
+```
+
+Não existe script de lint no projeto. Validação documental usa YAML/JSON, links locais,
+Mermaid e `git diff --check`; CI pesado só roda quando a superfície alterada justificar.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Contrato de encerramento
 
 - Artefato: `README.md`.
-- Gate controlador: `taskgen` em `hack/status.json`.
+- Gate: definido em `hack/status.json` e `hack/CONTRATO-DE-APROVACAO.md`.
 - Estado: `AGUARDANDO_ASSINATURA`.
 - Assinatura de Marco: `PENDENTE`.
-- Data: `PENDENTE`.
-- Revisão Git examinada: `PENDENTE`.
-- Declaração: `PENDENTE`.
+- Data, revisão Git e declaração: `PENDENTES`.
 
-Declaração exigida: “Aprovo o README como parte do bundle Taskgen do Antessala.”
-
-Sem essa assinatura, este arquivo não terminou e não autoriza a próxima fase.
+Sem assinatura válida, este arquivo não promove fase nem autoriza implementação.

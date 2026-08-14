@@ -157,7 +157,7 @@ autorizam merge; merge exige ordem explícita de Marco.
 
 ## Contrato de encerramento
 
-- Artefato: `CLAUDE.md`.
+- Artefato: `AGENTS.md`.
 - Gate: definido em `hack/status.json` e `hack/CONTRATO-DE-APROVACAO.md`.
 - Estado: `AGUARDANDO_ASSINATURA`.
 - Assinatura de Marco: `PENDENTE`.

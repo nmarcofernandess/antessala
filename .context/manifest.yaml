@@ -1,0 +1,98 @@
+schema_version: "antessala.context.v1"
+
+identity:
+  product: "Antessala"
+  purpose: "Diferenciar a necessidade operacional da consulta pré-anestésica e conduzir o caso até o handoff final."
+  repository_role: "Prova de conceito Electron local, com dados sintéticos."
+
+entrypoint:
+  required: true
+  instruction: "Toda IA deve começar por este arquivo antes de afirmar, revisar ou alterar qualquer coisa no Antessala."
+
+mandatory_read_order:
+  - order: 1
+    path: ".context/manifest.yaml"
+    purpose: "Localizar fontes, autoridade e estado documental."
+  - order: 2
+    path: "hack/PRD.md"
+    purpose: "Ler o contrato do produto sem alterá-lo silenciosamente."
+  - order: 3
+    paths:
+      - "hack/CONTRATO-DE-APROVACAO.md"
+      - "hack/status.json"
+      - "hack/progress.md"
+    purpose: "Conhecer gates, assinaturas, bloqueios e próxima ação permitida."
+  - order: 4
+    paths:
+      - ".context/product.yaml"
+      - ".context/workflow.yaml"
+      - ".context/review/STATUS.md"
+    purpose: "Entender o produto, o método e o estado honesto de pesquisa e review."
+  - order: 5
+    path: ".context/architecture.yaml"
+    purpose: "Separar capacidades comprovadas no HEAD de propostas documentais."
+  - order: 6
+    paths:
+      - "hack/ANALYST.md"
+      - "hack/analysis.md"
+      - "hack/domains/ANALYST-*.md"
+    purpose: "Ler a síntese e o Analyst dono do domínio em questão."
+  - order: 7
+    paths:
+      - "hack/BUILD.md"
+      - "hack/domains/BUILD-*.md"
+    purpose: "Ler arquitetura proposta somente quando a tarefa exigir Build ou sua revisão."
+  - order: 8
+    path: "código e testes do HEAD"
+    purpose: "Provar a implementação viva antes de afirmar capacidade técnica."
+
+canonical_artifacts:
+  product_contract: "hack/PRD.md"
+  analyst_index: "hack/ANALYST.md"
+  integrated_analysis: "hack/analysis.md"
+  domain_analysts: "hack/domains/ANALYST-*.md"
+  integrated_build: "hack/BUILD.md"
+  domain_builds: "hack/domains/BUILD-*.md"
+  review_tracker: ".context/review/STATUS.md"
+  mechanical_gate_state: "hack/status.json"
+  human_progress_receipt: "hack/progress.md"
+
+context_map:
+  manifest.yaml: "Entrada, leitura obrigatória e hierarquia de autoridade."
+  product.yaml: "Resumo estável do problema, fluxo, fronteiras e Definition of Done."
+  workflow.yaml: "Método forense, gates e momento futuro dos Surface Blueprints."
+  architecture.yaml: "Inventário comprovado da arquitetura Electron no HEAD."
+  review/STATUS.md: "Único tracker de pesquisa, recon e review por artefato."
+
+authority:
+  levels:
+    - order: 1
+      source: "Marco / PRD assinado"
+    - order: 2
+      source: "decisões canônicas dos Analysts assinados"
+    - order: 3
+      source: "BUILD assinado"
+    - order: 4
+      source: "Spec assinada da minispec"
+    - order: 5
+      source: "Plan assinado"
+    - order: 6
+      source: "código e testes do HEAD"
+    - order: 7
+      source: "documentação auxiliar"
+  conflict_rule: "Ao encontrar conflito, pare e reporte as fontes, o conflito e o gate afetado. Nunca escolha silenciosamente."
+  unsigned_rule: "Texto não assinado pode orientar revisão, mas não promove fase nem autoriza implementação."
+
+limits:
+  context_role: ".context organiza o mapa cognitivo; não substitui PRD, Analyst ou Build."
+  flowkit_warning: "Qualquer CLAUDE, AGENTS, comentário ou documentação herdada do FlowKit é contexto histórico, nunca verdade do produto Antessala."
+  raw_review_rule: "Resposta de GPT ou de outro revisor é material de trabalho. Corrija o artefato canônico e o tracker; não arquive a resposta como nova fonte de verdade."
+  documentation_rule: "Não criar documentação paralela quando já existe um owner canônico para a regra."
+
+approval:
+  controller: "hack/CONTRATO-DE-APROVACAO.md"
+  status: "PENDING"
+  signed_by: null
+  signed_at: null
+  reviewed_git_revision: null
+  statement: null
