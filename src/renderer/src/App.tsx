@@ -5,12 +5,22 @@ import { useIaStore } from '@/store/iaStore'
 import { AppSidebar } from './componentes/AppSidebar'
 import { ErrorBoundary } from './componentes/ErrorBoundary'
 import { IaChatPanel } from './componentes/IaChatPanel'
+import { AgendaPagina } from './paginas/AgendaPagina'
+import { AnamnesePagina } from './paginas/AnamnesePagina'
+import { CadastroPagina } from './paginas/CadastroPagina'
 import { Dashboard } from './paginas/Dashboard'
 import { ConfiguracoesPagina } from './paginas/ConfiguracoesPagina'
 import { IaPagina } from './paginas/IaPagina'
 import { NaoEncontrado } from './paginas/NaoEncontrado'
 
-export const ACTIVE_ROUTE_PATHS = ['/', '/ia', '/configuracoes'] as const
+export const ACTIVE_ROUTE_PATHS = [
+  '/',
+  '/casos/novo',
+  '/triagem',
+  '/agenda',
+  '/ia',
+  '/configuracoes',
+] as const
 
 function AppLayout() {
   const location = useLocation()
@@ -51,6 +61,9 @@ export const router = createHashRouter([
     element: <AppLayout />,
     children: [
       { path: '/', element: <Dashboard /> },
+      { path: '/casos/novo', element: <CadastroPagina /> },
+      { path: '/triagem', element: <AnamnesePagina /> },
+      { path: '/agenda', element: <AgendaPagina /> },
       { path: '/ia', element: <IaPagina /> },
       { path: '/configuracoes', element: <ConfiguracoesPagina /> },
       { path: '*', element: <NaoEncontrado /> },

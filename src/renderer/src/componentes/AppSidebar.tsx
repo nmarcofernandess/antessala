@@ -2,7 +2,10 @@ import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from 'next-themes'
 import {
   BrainCircuit,
+  CalendarDays,
+  ClipboardPlus,
   LayoutDashboard,
+  Stethoscope,
   Monitor,
   Moon,
   Settings,
@@ -27,6 +30,9 @@ import { useAppVersion } from '@/hooks/useAppVersion'
 
 export const ACTIVE_NAV_ITEMS = [
   { label: 'Início', to: '/', icon: LayoutDashboard },
+  { label: 'Novo encaminhamento', to: '/casos/novo', icon: ClipboardPlus },
+  { label: 'Triagem', to: '/triagem', icon: Stethoscope },
+  { label: 'Agenda', to: '/agenda', icon: CalendarDays },
   { label: 'Assistente IA', to: '/ia', icon: BrainCircuit },
   { label: 'Configurações', to: '/configuracoes', icon: Settings },
 ] as const
