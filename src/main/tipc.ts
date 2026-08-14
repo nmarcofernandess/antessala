@@ -6,6 +6,15 @@ import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
 import { knowledgeStudioRouter } from './knowledge/router'
+import {
+  arquivarProtocolo,
+  duplicarProtocolo,
+  listarProtocolos,
+  restaurarFixture,
+  restaurarProtocolo,
+  salvarProtocolo,
+  type EntradaProtocolo,
+} from './db/protocolos'
 
 const require = createRequire(import.meta.url)
 const { tipc } = require('@egoist/tipc/main') as typeof import('@egoist/tipc/main')
@@ -255,6 +264,30 @@ const iaMensagensDeletarApos = t.procedure
     return { ok: true }
   })
 
+/* ══════════════ protocolos de coleta ══════════════ */
+
+const protocolosListar = t.procedure
+  .input<{ incluirArquivados?: boolean } | undefined>()
+  .action(async ({ input }) => listarProtocolos({ incluirArquivados: input?.incluirArquivados }))
+
+const protocolosSalvar = t.procedure
+  .input<EntradaProtocolo>()
+  .action(async ({ input }) => salvarProtocolo(input))
+
+const protocolosDuplicar = t.procedure
+  .input<{ id: string }>()
+  .action(async ({ input }) => duplicarProtocolo(input.id))
+
+const protocolosArquivar = t.procedure
+  .input<{ id: string }>()
+  .action(async ({ input }) => arquivarProtocolo(input.id))
+
+const protocolosRestaurar = t.procedure
+  .input<{ id: string }>()
+  .action(async ({ input }) => restaurarProtocolo(input.id))
+
+const protocolosRestaurarFixture = t.procedure.action(async () => restaurarFixture())
+
 export const router = {
   'ia.configuracao.obter': iaConfiguracaoObter,
   'ia.configuracao.salvar': iaConfiguracaoSalvar,
@@ -272,6 +305,12 @@ export const router = {
   'ia.mensagens.salvar': iaMensagensSalvar,
   'ia.mensagens.atualizar': iaMensagensAtualizar,
   'ia.mensagens.deletarApos': iaMensagensDeletarApos,
+  'protocolos.listar': protocolosListar,
+  'protocolos.salvar': protocolosSalvar,
+  'protocolos.duplicar': protocolosDuplicar,
+  'protocolos.arquivar': protocolosArquivar,
+  'protocolos.restaurar': protocolosRestaurar,
+  'protocolos.restaurarFixture': protocolosRestaurarFixture,
   ...knowledgeStudioRouter,
   'app:version': t.procedure.action(async () => {
     try {

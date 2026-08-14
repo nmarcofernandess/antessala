@@ -333,6 +333,37 @@ cirurgia, nunca julgamento clínico de quem será operado. **Nenhuma instituiç�
 listas**, a interface declara isso, e elas não constituem protocolo hospitalar, mínimo
 clínico, avaliação de risco ou conduta.
 
+#### Emenda de 2026-08-14 — onde a composição é editada e persistida
+
+`DEMO_DECISION`. Complementa a emenda acima: se a composição decide a completude do caso,
+ela precisa ter dono, tela e persistência. Registrado aqui porque muda a lei do
+`SYSTEM_PROTOCOL`.
+
+- As composições vivem em `protocolos_anamnese` (PGlite local). A **fixture compilada** é o
+  estado de nascimento: gravada uma vez, com `ON CONFLICT DO NOTHING`, e nunca reescrita —
+  ao contrário dos catálogos clínicos, que são substituídos a cada revisão de asset.
+  Sobrescrever apagaria trabalho humano.
+- Fora do Electron — vitrine no navegador, testes — não há banco. A fixture é a própria
+  lista e a edição vale pela sessão. A tela declara essa diferença; não finge persistir o
+  que vai evaporar.
+- `Configurações › Protocolos` cadastra cirurgia e composição: lista à esquerda, composer à
+  direita, drawer de widgets ao lado. Criar uma cirurgia abre o composer **vazio**, com
+  estado vazio explícito — nada é obrigatório por padrão, obrigatório é o que a pessoa
+  incluir.
+- **Correção da lei do `SYSTEM_PROTOCOL`:** nesta fase a linha de fábrica **pode** ser
+  editada in-place. Ao ser editada ela deixa de ser `FIXTURE` e passa a `OPERADOR`, e a ação
+  `Restaurar padrão` devolve tudo ao estado de nascimento — com confirmação, porque descarta
+  edição humana. A garantia que substitui "não editar in-place" é a reversibilidade
+  declarada, não a imutabilidade.
+- A **versão** sobe quando a composição muda, nunca quando só o nome ou o regime muda: o que
+  precisa ser rastreável é a lista de perguntas, porque casos antigos foram coletados sob a
+  lista antiga.
+- Um procedimento pertence a **um** protocolo ativo. Vínculo em conflito é recusado com o
+  nome do protocolo que já o atende — nunca transferido em silêncio. Procedimento sem dono
+  cai no protocolo geral, e a tela mostra quais estão nessa situação.
+- Arquivar não apaga: um protocolo que já abriu entrevistas continua sendo a explicação de
+  por que aqueles casos coletaram o que coletaram. O protocolo geral não pode ser arquivado.
+
 ### Ações do editor
 
 O cabeçalho oferece `Adicionar widgets`, `Protocolos`, `Salvar como template`, `Copiar

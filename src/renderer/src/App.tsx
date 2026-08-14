@@ -7,6 +7,7 @@ import { AnamnesePagina } from './paginas/AnamnesePagina'
 import { CadastroPagina } from './paginas/CadastroPagina'
 import { Dashboard } from './paginas/Dashboard'
 import { ConfiguracoesPagina } from './paginas/ConfiguracoesPagina'
+import { ProtocolosPagina } from './paginas/ProtocolosPagina'
 import { IaPagina } from './paginas/IaPagina'
 import { MemoriaPagina } from './paginas/MemoriaPagina'
 import { NaoEncontrado } from './paginas/NaoEncontrado'
@@ -21,6 +22,7 @@ export const ACTIVE_ROUTE_PATHS = [
   '/assistente',
   '/memoria',
   '/configuracoes',
+  '/configuracoes/protocolos',
 ] as const
 
 function AppLayout() {
@@ -52,6 +54,7 @@ export const router = createHashRouter([
       { path: '/assistente', element: <IaPagina /> },
       { path: '/memoria', element: <MemoriaPagina /> },
       { path: '/configuracoes', element: <ConfiguracoesPagina /> },
+      { path: '/configuracoes/protocolos', element: <ProtocolosPagina /> },
       { path: '*', element: <NaoEncontrado /> },
     ],
   },

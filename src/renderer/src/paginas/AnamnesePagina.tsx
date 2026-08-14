@@ -1,4 +1,5 @@
-import { useMemo, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
+import { Link } from 'react-router-dom'
 import { ChevronDown, GripVertical, Plus, Search, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,13 +24,13 @@ import {
   type DefWidget,
 } from '@/vitrine/widgets/registro'
 import {
-  PROTOCOLOS,
   PROTOCOLO_GERAL,
   acrescentarFaltantes,
   aplicar,
   protocoloPara,
   type Protocolo,
 } from '@/vitrine/widgets/protocolos'
+import { carregarProtocolos, useProtocolos } from '@/vitrine/protocolos-store'
 import { BASE_MINUTOS, CLASSES, calcularRequisito } from '@/vitrine/widgets/requisito'
 
 /**
@@ -42,25 +43,38 @@ import { BASE_MINUTOS, CLASSES, calcularRequisito } from '@/vitrine/widgets/requ
  * completude — só o que ele pede precisa estar tratado para publicar.
  */
 export function AnamnesePagina() {
-  const [protocolo, setProtocolo] = useState<Protocolo>(() =>
-    protocoloPara(PACIENTE.procedimento),
-  )
-  const [blocos, setBlocos] = useState<Bloco[]>(() => aplicar(protocoloPara(PACIENTE.procedimento)))
-  const [abertos, setAbertos] = useState<string[]>(() => {
-    const alergias = aplicar(protocoloPara(PACIENTE.procedimento)).find(
-      (b) => b.tipo === 'allergies',
-    )
-    return alergias ? [alergias.id] : []
-  })
+  // A composição vem de onde ela é editada: da tabela no app, da fixture fora
+  // dele. Montar o caso antes disso abriria uma entrevista que a configuração
+  // já mudou.
+  const { protocolos, carregando } = useProtocolos()
+  const [protocolo, setProtocolo] = useState<Protocolo | null>(null)
+  const [blocos, setBlocos] = useState<Bloco[]>([])
+  const [abertos, setAbertos] = useState<string[]>([])
   const [paletaAberta, setPaletaAberta] = useState(false)
   const [trocaPendente, setTrocaPendente] = useState<Protocolo | null>(null)
 
-  const requisito = useMemo(() => calcularRequisito(blocos, protocolo), [blocos, protocolo])
+  useEffect(() => {
+    void carregarProtocolos()
+  }, [])
+
+  useEffect(() => {
+    if (carregando || protocolo) return
+    const escolhido = protocoloPara(PACIENTE.procedimento, protocolos)
+    const novos = aplicar(escolhido)
+    setProtocolo(escolhido)
+    setBlocos(novos)
+    setAbertos(novos.filter((b) => b.tipo === 'allergies').map((b) => b.id))
+  }, [carregando, protocolo, protocolos])
+
+  const requisito = useMemo(
+    () => calcularRequisito(blocos, protocolo ?? PROTOCOLO_GERAL),
+    [blocos, protocolo],
+  )
   const classe = CLASSES[requisito.classe]
 
   /** Troca de protocolo: com o caso já montado, a pessoa escolhe o que fazer. */
   const pedirTroca = (p: Protocolo) => {
-    if (p.id === protocolo.id) return
+    if (p.id === protocolo?.id) return
     if (blocos.length === 0) {
       setProtocolo(p)
       setBlocos(aplicar(p))
@@ -97,6 +111,15 @@ export function AnamnesePagina() {
     setAbertos((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]))
 
   const usados = new Set(blocos.map((b) => b.tipo))
+
+  if (!protocolo) {
+    return (
+      <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+        Carregando o protocolo do procedimento…
+      </div>
+    )
+  }
+
   const tratados = protocolo.blocos.length - requisito.pendentes.length
   /** Blocos que a pessoa acrescentou além do que o protocolo pede. */
   const extras = blocos.filter((b) => !protocolo.blocos.includes(b.tipo)).length
@@ -128,6 +151,7 @@ export function AnamnesePagina() {
           <div>
             <CabecalhoProtocolo
               protocolo={protocolo}
+              opcoes={protocolos}
               tratados={tratados}
               extras={extras}
               onTrocar={pedirTroca}
@@ -286,17 +310,18 @@ export function AnamnesePagina() {
 
 function CabecalhoProtocolo({
   protocolo,
+  opcoes,
   tratados,
   extras,
   onTrocar,
 }: {
   protocolo: Protocolo
+  opcoes: Protocolo[]
   tratados: number
   extras: number
   onTrocar: (p: Protocolo) => void
 }) {
   const total = protocolo.blocos.length
-  const opcoes = [...PROTOCOLOS, PROTOCOLO_GERAL]
 
   return (
     <div className="pb-4">
@@ -342,8 +367,11 @@ function CabecalhoProtocolo({
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-        Composição de coleta desta demonstração, gerenciada em Configurações › Protocolos.
-        Nenhuma instituição validou esta lista: ela decide quais perguntas o formulário faz,
+        Composição de coleta desta demonstração, gerenciada em{' '}
+        <Link to="/configuracoes/protocolos" className="underline underline-offset-2 hover:text-foreground">
+          Configurações › Protocolos
+        </Link>
+        . Nenhuma instituição validou esta lista: ela decide quais perguntas o formulário faz,
         nunca o que o paciente tem.
       </p>
     </div>

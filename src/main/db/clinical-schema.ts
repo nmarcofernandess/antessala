@@ -125,6 +125,37 @@ CREATE INDEX IF NOT EXISTS idx_medicamentos_nome
   ON catalogo_medicamentos(nome);
 `
 
+/**
+ * Protocolos de coleta da anamnese.
+ *
+ * Um protocolo é uma composição versionada de blocos e nunca guarda resposta,
+ * pessoa, caso ou proveniência clínica — só quais perguntas o formulário faz e
+ * em que ordem. `procedimentos` é a lista de procedimentos que o aplicam; um
+ * procedimento sem protocolo cai no geral.
+ *
+ * A composição é `TEXT[]` de tipos de widget, não blocos materializados: o
+ * blueprint precisa acompanhar a evolução do widget, e blob congelado no
+ * momento da autoria não acompanha.
+ */
+const DDL_PROTOCOLOS = `
+CREATE TABLE IF NOT EXISTS protocolos_anamnese (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL CHECK (length(trim(nome)) > 0),
+  regime TEXT NOT NULL DEFAULT '',
+  blocos TEXT[] NOT NULL DEFAULT '{}',
+  procedimentos TEXT[] NOT NULL DEFAULT '{}',
+  versao INTEGER NOT NULL DEFAULT 1 CHECK (versao >= 1),
+  origem TEXT NOT NULL DEFAULT 'FIXTURE' CHECK (origem IN ('FIXTURE', 'OPERADOR')),
+  arquivado_em TIMESTAMPTZ,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_protocolos_ativos
+  ON protocolos_anamnese(nome) WHERE arquivado_em IS NULL;
+`
+
 export async function createClinicalTables(): Promise<void> {
   await execDDL(DDL_CLINICAL)
+  await execDDL(DDL_PROTOCOLOS)
 }

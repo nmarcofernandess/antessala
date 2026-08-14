@@ -8,6 +8,9 @@ import type { Router } from '../../../main/tipc'
  */
 const ponte = window.electron?.ipcRenderer
 
+/** Há banco atrás desta tela? Fora do Electron não há — e a UI declara isso. */
+export const temPersistencia = Boolean(ponte)
+
 export const client = createClient<Router>({
   ipcInvoke: ponte
     ? ponte.invoke

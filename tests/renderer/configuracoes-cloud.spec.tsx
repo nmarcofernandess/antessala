@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,6 +12,9 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/servicos/client', () => ({
+  // Fora do Electron não há ponte: a tela mostra os protocolos de fábrica e
+  // nenhuma chamada de protocolo sai daqui.
+  temPersistencia: false,
   client: {
     'ia.configuracao.obter': mocks.obter,
     'ia.configuracao.salvar': mocks.salvar,
@@ -43,7 +47,11 @@ describe('Configurações do assistente', () => {
 
   it('mostra somente provider cloud, token, modelo, salvar e testar', async () => {
     const { ConfiguracoesPagina } = await import('../../src/renderer/src/paginas/ConfiguracoesPagina')
-    render(<ConfiguracoesPagina />)
+    render(
+      <MemoryRouter>
+        <ConfiguracoesPagina />
+      </MemoryRouter>,
+    )
 
     await waitFor(() => expect(screen.getByLabelText('Token da API')).toHaveAttribute(
       'placeholder',
@@ -60,7 +68,11 @@ describe('Configurações do assistente', () => {
   it('salva pelo client tipado sem colocar o token no JSON de compatibilidade', async () => {
     const { ConfiguracoesPagina } = await import('../../src/renderer/src/paginas/ConfiguracoesPagina')
     const user = userEvent.setup()
-    render(<ConfiguracoesPagina />)
+    render(
+      <MemoryRouter>
+        <ConfiguracoesPagina />
+      </MemoryRouter>,
+    )
 
     const token = await screen.findByLabelText('Token da API')
     await user.type(token, 'segredo-novo')

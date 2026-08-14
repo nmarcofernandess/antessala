@@ -3,6 +3,7 @@ import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { gunzipSync } from 'node:zlib'
 import { execute, queryOne, transaction } from './query'
+import { seedProtocolos } from './protocolos'
 
 type CatalogFile<T> = {
   _meta: Record<string, unknown>
@@ -134,6 +135,10 @@ export async function seedData(): Promise<void> {
     `INSERT INTO config (key, value) VALUES ('onboarding_complete', 'false'::jsonb)
      ON CONFLICT (key) DO NOTHING`,
   )
+
+  // Antes da checagem de revisão: os catálogos são substituídos quando o asset
+  // muda, os protocolos não — eles só nascem, e depois pertencem ao operador.
+  await seedProtocolos()
 
   const current = await queryOne<{ sha256: string }>(
     `SELECT sha256 FROM catalogo_seed_state WHERE catalogo = 'clinical-v1'`,

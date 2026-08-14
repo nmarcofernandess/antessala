@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ArrowRight, Check, ClipboardPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import { PageHeader } from '@/componentes/PageHeader'
 import { cn } from '@/lib/utils'
 import { PROCEDIMENTOS, SERVICOS, iniciais } from '@/vitrine/dados'
 import { CarimboSintetico, Rotulo, TituloTela } from '@/vitrine/pecas'
-import { protocoloPara } from '@/vitrine/widgets/protocolos'
+import { carregarProtocolos, useProtocoloDe } from '@/vitrine/protocolos-store'
 
 type Campo = 'nome' | 'nascimento' | 'sexo' | 'procedimento' | 'servico' | 'medico'
 
@@ -48,7 +48,11 @@ export function CadastroPagina() {
 
   const preenchidos = OBRIGATORIOS.filter((c) => form[c].trim().length > 0)
   const completo = preenchidos.length === OBRIGATORIOS.length
-  const protocolo = protocoloPara(form.procedimento)
+  const protocolo = useProtocoloDe(form.procedimento)
+
+  useEffect(() => {
+    void carregarProtocolos()
+  }, [])
 
   const idade = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(form.nascimento)) return null
