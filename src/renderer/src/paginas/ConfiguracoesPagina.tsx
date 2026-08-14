@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   Check,
-  ChevronRight,
   Eye,
   EyeOff,
   KeyRound,
-  Layers,
   Loader2,
   Save,
   ShieldCheck,
@@ -20,7 +17,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/servicos/client'
 import { cn } from '@/lib/utils'
-import { carregarProtocolos, useProtocolos } from '@/vitrine/protocolos-store'
 
 const DEFAULT_MODEL = 'gemini-3.5-flash'
 
@@ -38,11 +34,6 @@ export function ConfiguracoesPagina() {
   const [salvando, setSalvando] = useState(false)
   const [testando, setTestando] = useState(false)
   const [mostrarToken, setMostrarToken] = useState(false)
-  const { protocolos } = useProtocolos()
-
-  useEffect(() => {
-    void carregarProtocolos()
-  }, [])
 
   useEffect(() => {
     let active = true
@@ -122,23 +113,6 @@ export function ConfiguracoesPagina() {
             {configurado ? 'Gemini pronto' : 'Aguardando conexão'}
           </div>
         </div>
-
-        <Link
-          to="/configuracoes/protocolos"
-          className="mb-6 flex items-center gap-4 rounded-2xl border bg-card p-5 shadow-sm transition hover:border-primary/50 hover:bg-muted/30"
-        >
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-            <Layers className="size-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold">Protocolos de coleta</h2>
-            <p className="text-xs text-muted-foreground">
-              Quais widgets cada cirurgia abre na entrevista. {protocolos.length} cadastrados —
-              incluído significa obrigatório para publicar o caso.
-            </p>
-          </div>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        </Link>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">

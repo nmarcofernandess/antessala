@@ -368,8 +368,8 @@ function CabecalhoProtocolo({
 
       <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
         Composição de coleta desta demonstração, gerenciada em{' '}
-        <Link to="/configuracoes/protocolos" className="underline underline-offset-2 hover:text-foreground">
-          Configurações › Protocolos
+        <Link to="/repertorio" className="underline underline-offset-2 hover:text-foreground">
+          Repertório › Protocolos
         </Link>
         . Nenhuma instituição validou esta lista: ela decide quais perguntas o formulário faz,
         nunca o que o paciente tem.

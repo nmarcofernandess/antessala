@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -48,6 +48,12 @@ function renderSidebar(path = '/') {
   )
 }
 
+/** O menu da conta só existe montado; Radix não renderiza conteúdo fechado. */
+async function abrirMenuDaConta() {
+  await userEvent.click(screen.getByRole('button', { name: 'Menu da conta' }))
+  return screen.getByRole('menu')
+}
+
 describe('AppSidebar — casca ativa do Antessala', () => {
   beforeEach(() => {
     themeMock.theme = 'system'
@@ -56,18 +62,17 @@ describe('AppSidebar — casca ativa do Antessala', () => {
     stubMatchMedia()
   })
 
-  it('expõe somente rotas ativas e não aponta para superfícies escondidas ou removidas', async () => {
+  it('a navegação carrega o fluxo do caso e nada além dele', async () => {
     renderSidebar()
 
     await screen.findByText('v1.0.0')
 
     expect(screen.getByRole('link', { name: 'Início' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: 'Triagem' })).toHaveAttribute('href', '/triagem')
+    expect(screen.getByRole('link', { name: 'Agenda' })).toHaveAttribute('href', '/agenda')
+    expect(screen.getByRole('link', { name: 'Repertório' })).toHaveAttribute('href', '/repertorio')
     expect(screen.getByRole('link', { name: 'Assistente' })).toHaveAttribute('href', '/assistente')
     expect(screen.getByRole('link', { name: 'Memória' })).toHaveAttribute('href', '/memoria')
-    expect(screen.getByRole('link', { name: 'Configurações' })).toHaveAttribute(
-      'href',
-      '/configuracoes',
-    )
 
     for (const removedOrHidden of [
       'Galeria',
@@ -80,27 +85,49 @@ describe('AppSidebar — casca ativa do Antessala', () => {
     }
   })
 
-  it('mantém claro, escuro e sistema acessíveis no canto da casca', async () => {
+  it('Configurações não ocupa linha da navegação: é ajuste de operador, não etapa', () => {
     renderSidebar()
 
-    const selector = screen.getByRole('radiogroup', { name: 'Tema da interface' })
-    const light = screen.getByRole('radio', { name: 'Tema claro' })
-    const dark = screen.getByRole('radio', { name: 'Tema escuro' })
-    const system = screen.getByRole('radio', { name: 'Tema sistema' })
+    expect(screen.queryByRole('link', { name: 'Configurações' })).not.toBeInTheDocument()
+  })
 
-    expect(selector).toContainElement(light)
-    expect(selector).toContainElement(dark)
-    expect(selector).toContainElement(system)
-    expect(system).toHaveAttribute('aria-checked', 'true')
+  it('o menu da conta leva às configurações e declara que a conta é sintética', async () => {
+    renderSidebar()
 
-    await userEvent.click(light)
-    await userEvent.click(dark)
-    await userEvent.click(system)
+    expect(screen.getAllByText('Conta da demonstração').length).toBeGreaterThan(0)
+    expect(screen.getByText('Demonstração integrada')).toBeInTheDocument()
 
-    expect(themeMock.setTheme.mock.calls).toEqual([
-      ['light'],
-      ['dark'],
-      ['system'],
-    ])
+    const menu = await abrirMenuDaConta()
+    expect(within(menu).getByRole('menuitem', { name: 'Configurações' })).toHaveAttribute(
+      'href',
+      '/configuracoes',
+    )
+  })
+
+  it('mantém claro, escuro e sistema acessíveis dentro do menu da conta', async () => {
+    renderSidebar()
+
+    const menu = await abrirMenuDaConta()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Tema' }))
+
+    const claro = await screen.findByRole('menuitemradio', { name: 'Claro' })
+    const escuro = screen.getByRole('menuitemradio', { name: 'Escuro' })
+    const sistema = screen.getByRole('menuitemradio', { name: 'Sistema' })
+
+    expect(sistema).toHaveAttribute('aria-checked', 'true')
+    expect(claro).toHaveAttribute('aria-checked', 'false')
+    expect(escuro).toHaveAttribute('aria-checked', 'false')
+
+    await userEvent.click(claro)
+    expect(themeMock.setTheme).toHaveBeenCalledWith('light')
+  })
+
+  it('o menu não promete conta, papel ou sessão que o produto não tem', async () => {
+    renderSidebar()
+
+    const menu = await abrirMenuDaConta()
+    for (const promessaFalsa of ['Sair', 'Perfil', 'Trocar de papel', 'Criar usuário']) {
+      expect(within(menu).queryByText(promessaFalsa)).not.toBeInTheDocument()
+    }
   })
 })

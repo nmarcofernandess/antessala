@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * Configurações › Protocolos, na sessão sem banco.
+ * Repertório › Protocolos, na sessão sem banco.
  *
  * Fora do Electron a tela precisa continuar inteira — é assim que a vitrine roda
  * no navegador. O que ela não pode fazer é mentir: sem ponte, edição vale para a
@@ -17,13 +17,7 @@ vi.mock('@/servicos/client', () => ({
   client: {},
 }))
 
-vi.mock('@/componentes/PageHeader', () => ({
-  PageHeader: ({ actions }: { actions?: React.ReactNode }) => (
-    <div data-testid="page-header">{actions}</div>
-  ),
-}))
-
-describe('Configurações › Protocolos', () => {
+describe('Repertório › Protocolos', () => {
   beforeEach(async () => {
     const { resetarStoreDeProtocolos } = await import(
       '../../src/renderer/src/vitrine/protocolos-store'
@@ -32,20 +26,20 @@ describe('Configurações › Protocolos', () => {
   })
 
   async function abrirTela() {
-    const { ProtocolosPagina } = await import('../../src/renderer/src/paginas/ProtocolosPagina')
+    const { PainelProtocolos } = await import(
+      '../../src/renderer/src/paginas/repertorio/PainelProtocolos'
+    )
     render(
       <MemoryRouter>
-        <ProtocolosPagina />
+        <PainelProtocolos />
       </MemoryRouter>,
     )
     return userEvent.setup()
   }
 
-  /** O botão do cabeçalho — o estado vazio oferece um segundo com o mesmo nome. */
+  /** O da lista — o estado vazio do composer oferece um segundo com o mesmo nome. */
   function botaoNovaCirurgia() {
-    return within(screen.getByTestId('page-header')).getByRole('button', {
-      name: /Nova cirurgia/,
-    })
+    return screen.getAllByRole('button', { name: /Nova cirurgia/ })[0]
   }
 
   it('lista os protocolos de fábrica e declara que a sessão não persiste', async () => {

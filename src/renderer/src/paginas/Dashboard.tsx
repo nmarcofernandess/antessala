@@ -127,7 +127,7 @@ export function Dashboard() {
             requisito de agenda é sugerido pela entrevista e confirmado por uma pessoa antes de
             virar vaga. Cada encaminhamento é autônomo — nada aqui junta pessoas ou histórico. O
             vocabulário dos widgets vem do{' '}
-            <Link to="/repertorio" className="text-foreground underline underline-offset-2">
+            <Link to="/repertorio/widgets" className="text-foreground underline underline-offset-2">
               repertório do DietFlow
             </Link>
             .

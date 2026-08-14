@@ -208,6 +208,38 @@ de resultado ainda exige `requireServiceScope(session.servicoSolicitanteId)` no
 main e a query já retorna a projeção redigida do próprio serviço. A UI nunca recebe a lista
 global para ocultar linhas localmente.
 
+#### Emenda de 2026-08-14 — onde protocolos moram e o que o user menu carrega
+
+`DEMO_DECISION`. Decisão do dono do produto, registrada aqui porque contraria o registry
+acima e a lista de itens do menu.
+
+**1. Protocolos saem de Configurações.** O registry coloca `settings-protocols` em
+`/configuracoes/protocolos`. Nesta fase a superfície passa a viver em `/repertorio`, com
+duas abas:
+
+| rota | aba | o quê |
+|---|---|---|
+| `/repertorio` | Protocolos | cadastro de cirurgias e suas composições |
+| `/repertorio/widgets` | Widgets | catálogo do Antessala + herança do DietFlow |
+
+Razão: a composição e o catálogo respondem à mesma pergunta por dois lados — o que existe
+para perguntar, e o que cada cirurgia pergunta de fato. Separá-los deixava o Repertório
+exibindo widget alheio sem dizer para que servia, e o cadastro escondido atrás de um menu
+de configuração. O catálogo passa a declarar, por widget, em quantas composições ele
+entrou. `clinical:protocols:manage` continua sendo a capability da superfície; o que muda é
+o caminho, não a responsabilidade.
+
+**2. `Configurações` deixa a navegação lateral.** A sidebar carrega o fluxo do caso e nada
+além dele. Configuração e tema passam a ser alcançados pelo menu da conta, no
+`SidebarFooter` — que é o que `:78` e `:643-645` já mandavam e nunca foi implementado.
+
+**3. O user menu nasce com dois itens, não quatro.** `Configurações` e
+`Tema (Claro | Escuro | Sistema)` existem. **`Amostra de uso` e `Sair` continuam
+contratados e não implementados nesta fase** — declarado aqui em vez de omitido em
+silêncio. O rótulo da conta sintética e o badge `Demonstração integrada`
+(`BUILD-acesso-e-auditoria.md:404-407`) são exibidos, e o menu não oferece troca de papel,
+criação de usuário nem edição de credencial.
+
 ### Read state and mutation state
 
 ```ts

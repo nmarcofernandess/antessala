@@ -1,10 +1,14 @@
 /**
- * Configurações › Protocolos — onde as cirurgias são cadastradas.
+ * Repertório › Protocolos — onde as cirurgias são cadastradas.
  *
- * A tela responde uma pergunta só: **quando alguém marcar esta cirurgia, quais
- * perguntas a entrevista faz?** Ela não classifica risco, não sugere conduta e
+ * O painel responde uma pergunta só: **quando alguém marcar esta cirurgia, quais
+ * perguntas a entrevista faz?** Ele não classifica risco, não sugere conduta e
  * não sabe nada sobre o paciente. Cadastrar aqui é montar um formulário, não
  * escrever protocolo clínico — e o rodapé do composer diz isso na cara.
+ *
+ * Mora no Repertório, ao lado do catálogo de widgets, porque as duas coisas são
+ * a mesma pergunta vista de dois ângulos: o que existe para perguntar, e o que
+ * cada cirurgia pergunta de fato.
  *
  * Regra desta fase: **incluído é obrigatório**. O que está na composição precisa
  * estar tratado para o caso ser publicado; o que ficou de fora não bloqueia.
@@ -26,7 +30,6 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { PageHeader } from '@/componentes/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -117,7 +120,7 @@ const TOM_CATEGORIA: Record<Categoria, string> = {
   apoio: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
 }
 
-export function ProtocolosPagina() {
+export function PainelProtocolos() {
   const { protocolos, carregando, erro, persistente } = useProtocolos()
   const [selecionado, setSelecionado] = useState<string | null>(null)
   const [rascunho, setRascunho] = useState<Rascunho | null>(null)
@@ -273,33 +276,34 @@ export function ProtocolosPagina() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PageHeader
-        breadcrumbs={[
-          { label: 'Configurações', href: '/configuracoes' },
-          { label: 'Protocolos de coleta' },
-        ]}
-        actions={
-          <>
-            <Button variant="ghost" size="sm" onClick={() => setConfirmarReset(true)}>
-              <RotateCcw className="size-4" />
-              Restaurar padrão
-            </Button>
-            <Button size="sm" onClick={criar}>
-              <Plus className="size-4" />
-              Nova cirurgia
-            </Button>
-          </>
-        }
-      />
-
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 lg:grid-cols-[22rem_1fr]">
         {/* ─────────── lista ─────────── */}
         <aside className="flex min-h-0 flex-col border-r">
+          {/* As ações moram ao lado da lista em que agem, não num cabeçalho
+              distante: quem cria cirurgia está olhando para as que já existem. */}
           <div className="border-b px-4 py-3">
-            <p className="text-sm font-medium">
-              {protocolos.length} {protocolos.length === 1 ? 'protocolo' : 'protocolos'}
-            </p>
-            <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">
+                {protocolos.length} {protocolos.length === 1 ? 'protocolo' : 'protocolos'}
+              </p>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground"
+                  aria-label="Restaurar padrão"
+                  title="Restaurar padrão"
+                  onClick={() => setConfirmarReset(true)}
+                >
+                  <RotateCcw className="size-4" />
+                </Button>
+                <Button size="sm" onClick={criar}>
+                  <Plus className="size-4" />
+                  Nova cirurgia
+                </Button>
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
               {persistente
                 ? 'Salvos no banco local do app.'
                 : 'Sessão sem banco: edições valem até recarregar.'}

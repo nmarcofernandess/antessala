@@ -1,5 +1,4 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useTheme } from 'next-themes'
 import {
   Blocks,
   BrainCircuit,
@@ -7,11 +6,7 @@ import {
   ClipboardPlus,
   LayoutDashboard,
   Stethoscope,
-  Monitor,
-  Moon,
   Network,
-  Settings,
-  Sun,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -26,10 +21,17 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { cn } from '@/lib/utils'
 import { APP_ICON, APP_NAME } from '@/lib/app-info'
 import { useAppVersion } from '@/hooks/useAppVersion'
+import { UserMenu } from '@/componentes/UserMenu'
 
+/**
+ * A lateral carrega o **fluxo do caso**, e só ele.
+ *
+ * Configuração e tema saíram daqui para o menu da conta, no rodapé: eles não são
+ * etapa do caminho que a demonstração percorre, e ocupar uma linha da navegação
+ * com ajuste de operador faz a lista prometer o que não cumpre.
+ */
 export const ACTIVE_NAV_ITEMS = [
   { label: 'Início', to: '/', icon: LayoutDashboard },
   { label: 'Novo encaminhamento', to: '/casos/novo', icon: ClipboardPlus },
@@ -38,60 +40,7 @@ export const ACTIVE_NAV_ITEMS = [
   { label: 'Repertório', to: '/repertorio', icon: Blocks },
   { label: 'Assistente', to: '/assistente', icon: BrainCircuit },
   { label: 'Memória', to: '/memoria', icon: Network },
-  { label: 'Configurações', to: '/configuracoes', icon: Settings },
 ] as const
-
-const THEME_OPTIONS = [
-  { value: 'light', label: 'Claro', icon: Sun },
-  { value: 'dark', label: 'Escuro', icon: Moon },
-  { value: 'system', label: 'Sistema', icon: Monitor },
-] as const
-
-/** Seletor sempre visível no canto inferior da casca. */
-export function ThemeSelector() {
-  const { theme, setTheme } = useTheme()
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="px-1 text-xs font-medium text-sidebar-foreground/70 group-data-[collapsible=icon]:sr-only">
-        Tema
-      </span>
-      <div
-        role="radiogroup"
-        aria-label="Tema da interface"
-        className="grid grid-cols-3 gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-1 group-data-[collapsible=icon]:grid-cols-1"
-      >
-        {THEME_OPTIONS.map((option) => {
-          const selected = theme === option.value
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              aria-label={`Tema ${option.label.toLowerCase()}`}
-              title={option.label}
-              onClick={() => setTheme(option.value)}
-              className={cn(
-                'flex h-8 min-w-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-                'group-data-[collapsible=icon]:px-0',
-                selected
-                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-              )}
-            >
-              <option.icon className="size-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate group-data-[collapsible=icon]:sr-only">
-                {option.label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 export function AppSidebar() {
   const { pathname } = useLocation()
@@ -147,7 +96,7 @@ export function AppSidebar() {
 
       <SidebarSeparator />
       <SidebarFooter>
-        <ThemeSelector />
+        <UserMenu />
       </SidebarFooter>
     </Sidebar>
   )
