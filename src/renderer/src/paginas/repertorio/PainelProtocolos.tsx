@@ -513,10 +513,11 @@ export function PainelProtocolos() {
 
               <div className="flex items-center justify-between gap-3 border-t px-6 py-3">
                 <p className="text-xs text-muted-foreground">
-                  {rascunho.blocos.length}{' '}
-                  {rascunho.blocos.length === 1 ? 'widget' : 'widgets'} · {' '}
-                  {rascunho.procedimentos.length}{' '}
-                  {rascunho.procedimentos.length === 1 ? 'procedimento' : 'procedimentos'}
+                  {`${rascunho.blocos.length} ${rascunho.blocos.length === 1 ? 'widget' : 'widgets'}`}
+                  {' · '}
+                  {`${rascunho.procedimentos.length} ${
+                    rascunho.procedimentos.length === 1 ? 'procedimento' : 'procedimentos'
+                  }`}
                 </p>
                 <div className="flex items-center gap-2">
                   {rascunho.id && rascunho.id !== ID_PROTOCOLO_GERAL && (
