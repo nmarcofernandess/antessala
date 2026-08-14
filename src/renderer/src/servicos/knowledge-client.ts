@@ -6,5 +6,7 @@ import type { DormantKnowledgeRouter } from '../../../main/knowledge/router'
  * client e do router IPC não publica rota nem coloca trabalho no boot.
  */
 export const knowledgeClient = createClient<DormantKnowledgeRouter>({
-  ipcInvoke: window.electron.ipcRenderer.invoke,
+  ipcInvoke: window.electron?.ipcRenderer
+    ? window.electron.ipcRenderer.invoke
+    : () => Promise.reject(new Error('IPC indisponível fora do Electron')),
 })

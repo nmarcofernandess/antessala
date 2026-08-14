@@ -44,7 +44,7 @@ function parseMetadata(value: unknown): Record<string, unknown> {
 
 async function activeCloudFactory(feature: string) {
   const config = await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1')
-  if (!config) throw new Error(`${feature} requer Gemini ou OpenRouter configurado.`)
+  if (!config || config.provider !== 'gemini') throw new Error(`${feature} requer Gemini configurado.`)
   const factory = buildModelFactory(config)
   if (!factory) throw new Error(`${feature} requer um token cloud válido.`)
   return { config, factory }
@@ -401,7 +401,7 @@ const knowledgeEnrich = t.procedure
     const config = await getKnowledgeEnrichmentConfig()
     const model = await buildKnowledgeEnrichmentModel(config, { explicitOverride: true })
     if (!model) {
-      throw new Error('Selecione explicitamente Gemini ou OpenRouter para enriquecer.')
+      throw new Error('Configure o Gemini para enriquecer.')
     }
     return enrichAllChunksWithModel(model, {
       sourceTipo: input?.sourceTipo,
@@ -582,3 +582,39 @@ export const dormantKnowledgeRouter = {
 }
 
 export type DormantKnowledgeRouter = typeof dormantKnowledgeRouter
+
+/**
+ * Superfície publicada do estúdio de conhecimento. Memória automática de
+ * conversas e utilitários de exportação DEV continuam fora do router ativo.
+ */
+export const knowledgeStudioRouter = {
+  'knowledge.stats': knowledgeStats,
+  'knowledge.escolherArquivo': knowledgeEscolherArquivo,
+  'knowledge.escolherPasta': knowledgeEscolherPasta,
+  'knowledge.importar': knowledgeImportar,
+  'knowledge.bulkImport.start': knowledgeBulkImportStart,
+  'knowledge.removerFonte': knowledgeRemoverFonte,
+  'knowledge.toggleAtivo': knowledgeToggleAtivo,
+  'knowledge.obterTextoOriginal': knowledgeObterTextoOriginal,
+  'knowledge.extrairTexto': knowledgeExtrairTexto,
+  'knowledge.metadataStatus': knowledgeMetadataStatus,
+  'knowledge.gerarMetadataIa': knowledgeGerarMetadataIa,
+  'knowledge.importarCompleto': knowledgeImportarCompleto,
+  'knowledge.enrich': knowledgeEnrich,
+  'knowledge.enrichmentConfig.get': knowledgeEnrichmentConfigGet,
+  'knowledge.enrichmentConfig.save': knowledgeEnrichmentConfigSave,
+  'knowledge.enrichmentModels.list': knowledgeEnrichmentModelsList,
+  'knowledge.rebuildGraph': knowledgeRebuildGraph,
+  'knowledge.graphStats': knowledgeGraphStats,
+  'knowledge.search': knowledgeSearch,
+  'knowledge.listarChunks': knowledgeListarChunks,
+  'knowledge.graphData': knowledgeGraphData,
+  'knowledge.graphExplore': knowledgeGraphExplore,
+  'jobs.list': jobsList,
+  'jobs.get': jobsGet,
+  'jobs.cancel': jobsCancel,
+  'jobs.pause': jobsPause,
+  'jobs.resume': jobsResume,
+}
+
+export type KnowledgeStudioRouter = typeof knowledgeStudioRouter

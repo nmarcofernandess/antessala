@@ -3,15 +3,12 @@ import type { IaConfiguracao, IaMensagem } from '../../../src/shared/types'
 
 const mocks = vi.hoisted(() => {
   const googleModel = vi.fn((modelo: string) => ({ provider: 'gemini', modelo }))
-  const openrouterModel = vi.fn((modelo: string) => ({ provider: 'openrouter', modelo }))
-
   return {
     queryOne: vi.fn(),
     generateText: vi.fn(),
     createGoogleGenerativeAI: vi.fn(() => googleModel),
-    createOpenRouter: vi.fn(() => openrouterModel),
+    searchKnowledge: vi.fn(),
     googleModel,
-    openrouterModel,
     isGeminiCloudApiEnabled: vi.fn(() => true),
   }
 })
@@ -22,8 +19,9 @@ vi.mock('@ai-sdk/google', () => ({
   createGoogleGenerativeAI: mocks.createGoogleGenerativeAI,
 }))
 vi.mock('@openrouter/ai-sdk-provider', () => ({
-  createOpenRouter: mocks.createOpenRouter,
+  createOpenRouter: vi.fn(),
 }))
+vi.mock('../../../src/main/knowledge/search', () => ({ searchKnowledge: mocks.searchKnowledge }))
 vi.mock('../../../src/main/config/app-config', () => ({
   isGeminiCloudApiEnabled: mocks.isGeminiCloudApiEnabled,
 }))
@@ -52,15 +50,21 @@ describe('cliente de IA cloud direto', () => {
     vi.clearAllMocks()
     mocks.isGeminiCloudApiEnabled.mockReturnValue(true)
     mocks.generateText.mockResolvedValue({ text: 'Resposta clínica revisável.' })
+    mocks.searchKnowledge.mockResolvedValue({ chunks: [], relations: [], context_for_llm: '' })
   })
 
-  it('envia histórico e mensagem diretamente ao Gemini, sem tools, RAG ou roteamento', async () => {
+  it('envia histórico e conhecimento recuperado diretamente ao Gemini, sem tools', async () => {
     const historico: IaMensagem[] = [
       { id: 'u1', papel: 'usuario', conteudo: 'Contexto anterior', timestamp: '2026-01-01' },
       { id: 'a1', papel: 'assistente', conteudo: 'Resposta anterior', timestamp: '2026-01-01' },
       { id: 't1', papel: 'tool_result', conteudo: 'legado ignorado', timestamp: '2026-01-01' },
     ]
     mocks.queryOne.mockResolvedValue(config())
+    mocks.searchKnowledge.mockResolvedValue({
+      chunks: [{ id: 1 }],
+      relations: [],
+      context_for_llm: 'Fonte: protocolo-treinamento.md\nTrecho recuperado para a dúvida.',
+    })
 
     await expect(iaEnviarMensagem(' Avalie o caso ', historico)).resolves.toEqual({
       resposta: 'Resposta clínica revisável.',
@@ -70,7 +74,7 @@ describe('cliente de IA cloud direto', () => {
     expect(mocks.googleModel).toHaveBeenCalledWith('gemini-3.5-flash')
     expect(mocks.generateText).toHaveBeenCalledWith(expect.objectContaining({
       model: { provider: 'gemini', modelo: 'gemini-3.5-flash' },
-      system: expect.stringContaining('Antessala'),
+      system: expect.stringContaining('Trecho recuperado para a dúvida.'),
       messages: [
         { role: 'user', content: 'Contexto anterior' },
         { role: 'assistant', content: 'Resposta anterior' },
@@ -78,9 +82,10 @@ describe('cliente de IA cloud direto', () => {
       ],
     }))
     expect(mocks.generateText.mock.calls[0][0]).not.toHaveProperty('tools')
+    expect(mocks.searchKnowledge).toHaveBeenCalledWith('Avalie o caso', { limite: 4 })
   })
 
-  it('usa o token e o modelo salvos para OpenRouter', async () => {
+  it('rejeita configuração OpenRouter legada', async () => {
     mocks.queryOne.mockResolvedValue(config({
       provider: 'openrouter',
       api_key: 'fallback-openrouter',
@@ -90,10 +95,7 @@ describe('cliente de IA cloud direto', () => {
       }),
     }))
 
-    await iaEnviarMensagem('Olá')
-
-    expect(mocks.createOpenRouter).toHaveBeenCalledWith({ apiKey: 'openrouter-provider-token' })
-    expect(mocks.openrouterModel).toHaveBeenCalledWith('anthropic/claude-sonnet-4')
+    await expect(iaEnviarMensagem('Olá')).rejects.toThrow(/Somente Gemini/i)
     expect(mocks.createGoogleGenerativeAI).not.toHaveBeenCalled()
   })
 
@@ -102,19 +104,18 @@ describe('cliente de IA cloud direto', () => {
 
     await expect(iaEnviarMensagem('Olá')).rejects.toThrow('Assistente IA não configurado.')
     expect(mocks.createGoogleGenerativeAI).not.toHaveBeenCalled()
-    expect(mocks.createOpenRouter).not.toHaveBeenCalled()
     expect(mocks.generateText).not.toHaveBeenCalled()
   })
 
   it('testa explicitamente a conexão cloud sem persistir nem escolher rota', async () => {
     mocks.generateText.mockResolvedValueOnce({ text: 'OK' })
 
-    await expect(iaTestarConexao('openrouter', ' token ', ' openai/gpt-4.1 ')).resolves.toEqual({
+    await expect(iaTestarConexao('gemini', ' token ', ' gemini-3.5-flash ')).resolves.toEqual({
       sucesso: true,
-      mensagem: 'OpenRouter conectado: OK',
+      mensagem: 'Gemini conectado: OK',
     })
-    expect(mocks.createOpenRouter).toHaveBeenCalledWith({ apiKey: 'token' })
-    expect(mocks.openrouterModel).toHaveBeenCalledWith('openai/gpt-4.1')
+    expect(mocks.createGoogleGenerativeAI).toHaveBeenCalledWith({ apiKey: 'token' })
+    expect(mocks.googleModel).toHaveBeenCalledWith('gemini-3.5-flash')
   })
 
   it('traduz limite do provedor sem vazar o erro bruto para a UI', async () => {

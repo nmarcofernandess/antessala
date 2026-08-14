@@ -78,13 +78,13 @@ describe('knowledge enrichment config dormente', () => {
 
     await expect(getKnowledgeEnrichmentConfig()).resolves.toEqual({
       auto_enrich_after_import: false,
-      provider: 'auto',
-      modelo: 'auto',
+      provider: 'gemini',
+      modelo: 'gemini-3.5-flash',
       force_all_default: false,
     })
   })
 
-  it('normaliza configuração legada local para auto sem ressuscitar modelo local', async () => {
+  it('normaliza configuração legada local para Gemini sem ressuscitar modelo local', async () => {
     dbState.configValues['knowledge.enrichment'] = {
       auto_enrich_after_import: true,
       provider: 'local',
@@ -96,12 +96,12 @@ describe('knowledge enrichment config dormente', () => {
     )
 
     await expect(getKnowledgeEnrichmentConfig()).resolves.toMatchObject({
-      provider: 'auto',
-      modelo: 'gemma-legado',
+      provider: 'gemini',
+      modelo: 'gemini-3.5-flash',
     })
   })
 
-  it('persiste a configuração normalizada', async () => {
+  it('normaliza qualquer provider legado para Gemini', async () => {
     const { saveKnowledgeEnrichmentConfig } = await import(
       '../../../src/main/knowledge/enrichment-config'
     )
@@ -112,35 +112,39 @@ describe('knowledge enrichment config dormente', () => {
       modelo: 'openai/gpt-oss-20b:free',
     })).resolves.toMatchObject({
       auto_enrich_after_import: true,
-      provider: 'openrouter',
+      provider: 'gemini',
+      modelo: 'gemini-3.5-flash',
     })
   })
 
-  it('lista somente os dois providers cloud', async () => {
+  it('lista somente Gemini', async () => {
     const { listKnowledgeEnrichmentModelOptions } = await import(
       '../../../src/main/knowledge/enrichment-config'
     )
 
     const options = await listKnowledgeEnrichmentModelOptions()
-    expect(options.map((option) => option.provider)).toEqual(['gemini', 'openrouter'])
-    expect(options.find((option) => option.provider === 'openrouter')).toMatchObject({
-      available: true,
-      modelo: 'openai/gpt-oss-20b:free',
-    })
+    expect(options.map((option) => option.provider)).toEqual(['gemini'])
   })
 
-  it('usa diretamente o provider cloud ativo no modo auto', async () => {
+  it('usa Gemini mesmo diante de configuração OpenRouter legada', async () => {
+    dbState.iaConfig = {
+      ...dbState.iaConfig,
+      provider_configs_json: JSON.stringify({
+        openrouter: { token: 'sk-or-test', modelo: 'openai/gpt-oss-20b:free' },
+        gemini: { token: 'gemini-test', modelo: 'gemini-3.5-flash' },
+      }),
+    }
     const { buildKnowledgeEnrichmentModel } = await import(
       '../../../src/main/knowledge/enrichment-config'
     )
 
     await expect(buildKnowledgeEnrichmentModel()).resolves.toMatchObject({
-      provider: 'openrouter',
-      modelo: 'openai/gpt-oss-20b:free',
+      provider: 'gemini',
+      modelo: 'gemini-3.5-flash',
     })
   })
 
-  it('mantém o token legado apenas para o provider ativo', async () => {
+  it('não reaproveita token legado OpenRouter como Gemini', async () => {
     dbState.iaConfig = {
       ...dbState.iaConfig,
       api_key: 'legacy-openrouter-token',
@@ -154,14 +158,11 @@ describe('knowledge enrichment config dormente', () => {
     )
     const { buildModelFactory } = await import('../../../src/main/ia/config')
 
-    await buildKnowledgeEnrichmentModel()
-    expect(vi.mocked(buildModelFactory).mock.calls.at(-1)?.[0]).toMatchObject({
-      provider: 'openrouter',
-      api_key: 'legacy-openrouter-token',
-    })
+    await expect(buildKnowledgeEnrichmentModel()).rejects.toThrow(/Gemini configurado/i)
+    expect(buildModelFactory).not.toHaveBeenCalled()
   })
 
-  it('rejeita modelo explícito sem provider', async () => {
+  it('normaliza modo auto legado para Gemini', async () => {
     const { buildKnowledgeEnrichmentModel } = await import(
       '../../../src/main/knowledge/enrichment-config'
     )
@@ -171,6 +172,9 @@ describe('knowledge enrichment config dormente', () => {
       provider: 'auto',
       modelo: 'openai/gpt-oss-20b:free',
       force_all_default: false,
-    }, { explicitOverride: true })).rejects.toThrow(/provider/i)
+    }, { explicitOverride: true })).resolves.toMatchObject({
+      provider: 'gemini',
+      modelo: 'gemini-3.5-flash',
+    })
   })
 })

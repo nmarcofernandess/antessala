@@ -9,7 +9,7 @@ export interface RagMetadataSuggestion {
 }
 
 export interface KnowledgeCloudRoute {
-  provider: 'gemini' | 'openrouter'
+  provider: 'gemini'
   model: string
 }
 
@@ -104,6 +104,7 @@ async function getActiveIaConfig(): Promise<IaConfiguracao | null> {
 
 function resolveCloudFactory(config: IaConfiguracao | null) {
   if (!config) throw new Error('Assistente IA não configurado para ação cloud.')
+  if (config.provider !== 'gemini') throw new Error('Configure o Gemini para esta ação.')
   const factory = buildModelFactory(config)
   if (!factory) {
     throw new Error(`Provider ${config.provider} indisponível para ação cloud.`)
@@ -121,7 +122,7 @@ export async function getKnowledgeCloudStatus(): Promise<KnowledgeCloudStatus> {
       available: false,
       provider: null,
       model: null,
-      message: 'Configure Gemini ou OpenRouter para usar metadados por IA.',
+      message: 'Configure o Gemini para usar metadados por IA.',
       action: 'Abrir Configurações de IA',
     }
   }
@@ -137,7 +138,7 @@ export async function getKnowledgeCloudStatus(): Promise<KnowledgeCloudStatus> {
   } catch (error) {
     return {
       available: false,
-      provider: config.provider,
+      provider: config.provider === 'gemini' ? 'gemini' : null,
       model: config.modelo,
       message: (error as Error).message,
       action: 'Revisar Configurações de IA',

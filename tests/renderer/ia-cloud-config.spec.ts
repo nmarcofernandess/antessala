@@ -7,7 +7,7 @@ import {
 } from '../../src/renderer/src/hooks/useIaModelConfig'
 
 describe('configuração cloud do assistente', () => {
-  it('aceita somente Gemini ou OpenRouter e usa readiness redigida', () => {
+  it('aceita somente Gemini e usa readiness redigida', () => {
     expect(normalizeCloudIaConfig({
       provider: 'gemini',
       modelo: 'gemini-custom',
@@ -21,16 +21,12 @@ describe('configuração cloud do assistente', () => {
     expect(normalizeCloudIaConfig({ provider: 'local', configurado: true })).toBeNull()
   })
 
-  it('mantém default de modelo sem expor token persistido', () => {
+  it('rejeita configuração OpenRouter legada', () => {
     expect(normalizeCloudIaConfig({
       provider: 'openrouter',
       configurado: true,
       api_key: '',
       provider_configs_json: JSON.stringify({ openrouter: {} }),
-    })).toEqual({
-      provider: 'openrouter',
-      modelo: CLOUD_PROVIDER_DEFAULTS.openrouter,
-      configurado: true,
-    })
+    })).toBeNull()
   })
 })

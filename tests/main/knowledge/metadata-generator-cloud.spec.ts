@@ -24,9 +24,9 @@ describe('knowledge metadata cloud boundary', () => {
     vi.clearAllMocks()
     mocks.queryOne.mockResolvedValue({
       id: 1,
-      provider: 'openrouter',
+      provider: 'gemini',
       api_key: 'token',
-      modelo: 'openai/gpt-oss-20b:free',
+      modelo: 'gemini-3.5-flash',
       ativo: true,
       memoria_automatica: false,
       criado_em: '2026-01-01T00:00:00.000Z',
@@ -34,7 +34,7 @@ describe('knowledge metadata cloud boundary', () => {
     })
     mocks.buildModelFactory.mockReturnValue({
       createModel: mocks.createModel,
-      modelo: 'openai/gpt-oss-20b:free',
+      modelo: 'gemini-3.5-flash',
     })
     mocks.generateText.mockResolvedValue({
       text: '{"titulo":"Protocolo","quando_consultar":"Ao preparar a triagem."}',
@@ -67,11 +67,11 @@ describe('knowledge metadata cloud boundary', () => {
       titulo: 'Protocolo',
       quando_consultar: 'Ao preparar a triagem.',
       route: {
-        provider: 'openrouter',
-        model: 'openai/gpt-oss-20b:free',
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
       },
     })
-    expect(mocks.createModel).toHaveBeenCalledWith('openai/gpt-oss-20b:free')
+    expect(mocks.createModel).toHaveBeenCalledWith('gemini-3.5-flash')
     expect(mocks.generateText).toHaveBeenCalledTimes(1)
   })
 })

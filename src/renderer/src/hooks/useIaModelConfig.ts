@@ -38,7 +38,7 @@ export function normalizeCloudIaConfig(raw: unknown): CloudIaConfig | null {
   if (!raw || typeof raw !== 'object') return null
 
   const row = raw as Record<string, unknown>
-  if (row.provider !== 'gemini' && row.provider !== 'openrouter') return null
+  if (row.provider !== 'gemini') return null
 
   const provider = row.provider
   const providerConfigs = parseProviderConfigs(row.provider_configs ?? row.provider_configs_json)

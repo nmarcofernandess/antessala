@@ -9,11 +9,17 @@ describe('active IPC channels', () => {
     expect(new Set(ACTIVE_IPC_CHANNELS).size).toBe(ACTIVE_IPC_CHANNELS.length)
     expect(isActiveIpcChannel('ia.chat.enviar')).toBe(true)
     expect(isActiveIpcChannel('app:version')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.stats')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.importarCompleto')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.listarChunks')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.enrich')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.graphData')).toBe(true)
   })
 
   it.each([
-    'knowledge.obterTextoOriginal',
-    'knowledge.rebuildGraph',
+    'ia.memorias.listar',
+    'ia.config.memoriaAutomatica',
+    'knowledge.rebuildAndExportSistema',
     'registros.salvarAnamnese',
     'catalogos.cid10.buscar',
     'export.imprimirPDF',

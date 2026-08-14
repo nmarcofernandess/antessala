@@ -16,8 +16,8 @@ export const KNOWLEDGE_ENRICHMENT_CONFIG_KEY = 'knowledge.enrichment'
 
 export const DEFAULT_KNOWLEDGE_ENRICHMENT_CONFIG: KnowledgeEnrichmentConfig = {
   auto_enrich_after_import: false,
-  provider: 'auto',
-  modelo: 'auto',
+  provider: 'gemini',
+  modelo: PROVIDER_DEFAULTS.gemini,
   force_all_default: false,
 }
 
@@ -32,14 +32,14 @@ function parseJsonValue<T>(value: unknown, fallback: T): T {
 }
 
 function normalizeConfig(input: Partial<KnowledgeEnrichmentConfig> | null | undefined): KnowledgeEnrichmentConfig {
-  const provider = input?.provider && ['auto', 'gemini', 'openrouter'].includes(input.provider)
-    ? input.provider
-    : DEFAULT_KNOWLEDGE_ENRICHMENT_CONFIG.provider
+  const modelo = input?.provider === 'gemini' && input.modelo && !input.modelo.includes('/')
+    ? input.modelo
+    : PROVIDER_DEFAULTS.gemini
 
   return {
     auto_enrich_after_import: Boolean(input?.auto_enrich_after_import ?? DEFAULT_KNOWLEDGE_ENRICHMENT_CONFIG.auto_enrich_after_import),
-    provider: provider as KnowledgeEnrichmentProvider,
-    modelo: String(input?.modelo || DEFAULT_KNOWLEDGE_ENRICHMENT_CONFIG.modelo),
+    provider: 'gemini',
+    modelo,
     force_all_default: Boolean(input?.force_all_default ?? DEFAULT_KNOWLEDGE_ENRICHMENT_CONFIG.force_all_default),
   }
 }
@@ -88,9 +88,6 @@ export async function listKnowledgeEnrichmentModelOptions(): Promise<KnowledgeEn
     ? 'Gemini API direta desativada nesta build.'
     : geminiAvailable ? undefined : 'API key Gemini nao configurada.'
 
-  const openrouterToken = getProviderToken(iaConfig, 'openrouter')
-  const openrouterAvailable = openrouterToken.length > 0
-
   return [
     {
       provider: 'gemini',
@@ -99,21 +96,13 @@ export async function listKnowledgeEnrichmentModelOptions(): Promise<KnowledgeEn
       available: geminiAvailable,
       reason: geminiReason,
     },
-    {
-      provider: 'openrouter',
-      modelo: getProviderModel(iaConfig, 'openrouter'),
-      label: getProviderModel(iaConfig, 'openrouter'),
-      available: openrouterAvailable,
-      reason: openrouterAvailable ? undefined : 'API key OpenRouter nao configurada.',
-    },
   ]
 }
 
 async function buildKnowledgeEnrichmentModelFromConfig(
   config: KnowledgeEnrichmentConfig,
 ): Promise<EnrichmentModel | null> {
-  if (config.provider === 'auto') return null
-  return buildKnowledgeEnrichmentModelForProvider(config.provider, config.modelo)
+  return buildKnowledgeEnrichmentModelForProvider('gemini', config.modelo)
 }
 
 export async function buildKnowledgeEnrichmentModel(
@@ -123,22 +112,16 @@ export async function buildKnowledgeEnrichmentModel(
   const baseConfig = configOverride ?? await getKnowledgeEnrichmentConfig()
 
   if (options.explicitOverride === true) {
-    if (baseConfig.provider !== 'auto') {
-      return buildKnowledgeEnrichmentModelFromConfig(baseConfig)
-    }
-    // A model was chosen but no provider: don't silently route past the explicit model.
-    if (baseConfig.modelo && baseConfig.modelo !== 'auto') {
-      throw new Error('Para escolher um modelo de enrichment, informe também o provider (gemini ou openrouter).')
-    }
+    return buildKnowledgeEnrichmentModelFromConfig(baseConfig)
   }
 
   const iaConfig = await getActiveIaConfig()
-  if (!iaConfig || !getProviderToken(iaConfig, iaConfig.provider)) {
-    throw new Error('Enriquecimento do RAG requer um provider cloud configurado.')
+  if (!iaConfig || !getProviderToken(iaConfig, 'gemini')) {
+    throw new Error('Enriquecimento do conhecimento requer Gemini configurado.')
   }
   return buildKnowledgeEnrichmentModelForProvider(
-    iaConfig.provider,
-    getProviderModel(iaConfig, iaConfig.provider),
+    'gemini',
+    getProviderModel(iaConfig, 'gemini'),
   )
 }
 

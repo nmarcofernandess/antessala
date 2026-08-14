@@ -5,17 +5,18 @@ import { iaEnviarMensagem, iaTestarConexao } from './ia/cliente'
 import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
+import { knowledgeStudioRouter } from './knowledge/router'
 
 const require = createRequire(import.meta.url)
 const { tipc } = require('@egoist/tipc/main') as typeof import('@egoist/tipc/main')
 const t = tipc.create()
 
-type CloudProvider = 'gemini' | 'openrouter'
+type CloudProvider = 'gemini'
 type ProviderSettings = Partial<Record<CloudProvider, { token?: string; modelo?: string }>>
 
 function assertProvider(value: string): asserts value is CloudProvider {
-  if (value !== 'gemini' && value !== 'openrouter') {
-    throw new Error('Provider inválido. Escolha Gemini ou OpenRouter.')
+  if (value !== 'gemini') {
+    throw new Error('Provider inválido. O Antessala usa somente Gemini.')
   }
 }
 
@@ -271,6 +272,7 @@ export const router = {
   'ia.mensagens.salvar': iaMensagensSalvar,
   'ia.mensagens.atualizar': iaMensagensAtualizar,
   'ia.mensagens.deletarApos': iaMensagensDeletarApos,
+  ...knowledgeStudioRouter,
   'app:version': t.procedure.action(async () => {
     try {
       const electron = require('electron') as { app?: { getVersion?: () => string } }

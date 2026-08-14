@@ -8,9 +8,10 @@ describe('active main router surface', () => {
     expect(source).toContain('satisfies Record<ActiveIpcChannel, unknown>')
   })
 
-  it('does not publish dormant, legacy, filesystem or arbitrary-document handlers', () => {
-    expect(source).not.toContain('dormantKnowledgeRouter')
-    expect(source).not.toContain("'knowledge.")
+  it('publishes the bounded knowledge studio without automatic case memory', () => {
+    expect(source).toContain('knowledgeStudioRouter')
+    expect(source).not.toContain("'ia.memorias.")
+    expect(source).not.toContain("'ia.config.memoriaAutomatica'")
     expect(source).not.toContain("'registros.")
     expect(source).not.toContain("'catalogos.")
     expect(source).not.toContain("'export.")
