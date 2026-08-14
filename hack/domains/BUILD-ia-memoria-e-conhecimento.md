@@ -2,8 +2,9 @@
 
 ## State
 
-- Estado: `DRAFT`.
-- Bloqueios: `BLOCKED_BY_ANALYST_RESEARCH`, `BLOCKED_BY_ANALYST_SIGNATURE`.
+- Estado: `DRAFT`, `INVALIDATED_BY_ANALYST_CHANGE`.
+- Bloqueios: `BLOCKED_BY_ANALYST_ADVERSARIAL`, `BLOCKED_BY_RECON`,
+  `BLOCKED_BY_ANALYST_SIGNATURE`.
 - `AUTHORIZA_IMPLEMENTACAO = NÃO`.
 - Natureza: recon técnico e agenda de decisões físicas; não é blueprint fechado.
 - Analyst de origem:
@@ -27,7 +28,7 @@ provedor, retenção ou arquivo-alvo neste estado.
 ## Fontes consumidas
 
 - `hack/PRD.md` — fronteiras gerais da prova, ainda sem o contrato deste domínio.
-- `hack/domains/ANALYST-ia-memoria-e-conhecimento.md` — `RESEARCH_REQUIRED`.
+- `hack/domains/ANALYST-ia-memoria-e-conhecimento.md` — `ADVERSARIAL_REQUIRED`.
 - `hack/domains/ANALYST-acesso-e-auditoria.md` — atores e fronteira de confiança.
 - `hack/domains/ANALYST-anamnese-e-catalogos.md` — respostas semânticas e proveniência.
 - `hack/domains/ANALYST-classificacao-e-agenda.md` — requisito operacional e autoridade humana.
@@ -40,10 +41,10 @@ provedor, retenção ou arquivo-alvo neste estado.
 |---|---|---|
 | Chat cloud genérico | `ATIVO`, fora do caso clínico | `/ia` e painel lateral estão montados em `src/renderer/src/App.tsx:13-55`; envio usa `src/main/ia/cliente.ts`. |
 | Configuração de provedor | `ATIVA`, inadequada para segredo clínico | Token/modelo persistem em `configuracao_ia` (`src/main/db/schema.ts:14-24`) e handlers salvam token (`src/main/tipc.ts:61-103`). |
-| Egress cloud do main | `ATIVO` por ação de chat/teste | Gemini/OpenRouter são chamados em `src/main/ia/cliente.ts:52-107`; Gemini fica habilitado por padrão em `src/main/config/app-config.ts:34-43`. |
+| Egress cloud do main | `ATIVO` por ação de chat/teste, divergente do alvo | O legado ainda contém Gemini e OpenRouter em `src/main/ia/cliente.ts:52-107`; o Analyst corrigido fixa Gemini único, sintético e demo-only. |
 | Conversas e mensagens | `ATIVAS`, sem vínculo com caso | Tabelas em `src/main/db/schema.ts:133-163`; handlers em `src/main/tipc.ts:131-262`. |
-| Memória de texto livre | Handler `ATIVO`, superfície sem rota | `dormantKnowledgeRouter` é espalhado no router ativo em `src/main/tipc.ts:373-390`; `MemoriaPagina` não aparece em `App.tsx`. |
-| RAG/importadores/grafo | Handlers `ATIVOS`, UI principal dormente, contrato não clínico | Canais em `src/main/knowledge/router.ts:546-582`; tabelas em `src/main/db/schema.ts:31-126`. |
+| Memória de texto livre | `CONTIDA` no IPC, superfície sem rota | O router ativo não espalha mais `dormantKnowledgeRouter`; módulos e tabelas permanecem no repositório. |
+| RAG/importadores/grafo | Backend preservado, não IPC-callable | Módulos em `src/main/knowledge/` e tabelas em `src/main/db/schema.ts:31-126`; nenhum canal ativo os expõe no recon atual. |
 | Embeddings | `DORMENTE` sem adaptador | Sem adapter, funções retornam `null` e busca textual permanece disponível (`src/main/knowledge/embeddings.ts:1-79`). |
 | Captura de áudio | Componente `DORMENTE` | `FlowSpeechInput` grava WAV, mas o input ativo é somente texto (`FlowSpeechInput.tsx:14-66`; `IaChatInput.tsx:14-55`). |
 | STT local | `INCOMPLETO` | Main possui catálogo, download e sidecar, mas `ia.stt.*` não está no router ativo (`src/main/stt/*`; `src/main/tipc.ts:373-409`). |
@@ -52,9 +53,9 @@ provedor, retenção ou arquivo-alvo neste estado.
 | Propostas por campo | `INEXISTENTE` | Não há contrato que ligue transcript, widget, origem e decisão humana. |
 | Relação aprovada/versionada | `INEXISTENTE` | `knowledge_relations` guarda arestas e vigência, mas não aprovação, versão, justificativa ou auditoria clínica (`src/main/db/schema.ts:105-126`). |
 
-Os nomes “dormant” no código não são prova de inatividade: os handlers de conhecimento são
-registrados pelo spread no router. Qualquer Build futuro precisa provar rota, router, egress
-e consumidores separadamente.
+O terreno mudou depois da primeira redação deste Build: a superfície e os handlers de
+conhecimento estão contidos, enquanto o chat cloud genérico permanece ativo. O recon deve
+ser repetido no SHA que receber o futuro Build; nome de módulo não prova exposição.
 
 ## Gap entre legado e produto
 
@@ -90,12 +91,16 @@ Estas restrições decorrem de leis do produto e não dependem da escolha de arq
 10. Mutação e recibo de decisão humana são atômicos no main.
 11. Conteúdo clínico e segredos ficam fora de logs, erros públicos, auditoria e exportação.
 12. Fallback manual funciona quando microfone, STT, embeddings, provedor ou rede falham.
+13. A PoC cloud usa somente Gemini e somente fixture sintética; OpenRouter e fallback entre
+    provedores não pertencem ao produto-alvo.
+14. Conteúdo não confiável não amplia tools, rede, campos, papel ou transição, e a IA não
+    recebe ferramenta mutadora.
 
 ## Decisões físicas bloqueadas
 
 | Área | O que falta no Analyst/research | O que o Build deverá definir depois |
 |---|---|---|
-| Consentimento | Texto, base legal, revogação e retenção. | Persistência, lifecycle, UI e prova do recibo. |
+| Autorização de captura | Texto apresentado, revogação e separação da base legal. | Persistência, lifecycle, UI e prova do recibo. |
 | Áudio | Política de retenção e STT permitido. | Limites, formato, diretório temporário, descarte e isolamento. |
 | Transcript | Retenção, correção e acesso por papel. | Schema físico, versionamento, DTOs e transações. |
 | Propostas de campo | Campos/widgets demonstrados e explicação mínima. | Schema, parser estrito, canais, serviço e write atômico. |
@@ -104,7 +109,7 @@ Estas restrições decorrem de leis do produto e não dependem da escolha de arq
 | Exemplos | Critério de promoção e de-identificação. | Separação física, validação e auditoria. |
 | RAG/grafo | Fontes, ranking, conflitos e fallback. | Índice, query, filtros de estado e projeção de proveniência. |
 | Embeddings | Necessidade, provider, licença e tamanho. | Adapter, armazenamento, rebuild e modo textual. |
-| Cloud | Provedor, política de dados e segredo. | Cofre local, egress allowlist, minimização e envelopes de erro. |
+| Cloud | Gemini demo-only já decidido; operação real e segredo seguem abertos. | Remover OpenRouter do alvo; cofre local, allowlist Gemini, minimização e envelopes de erro. |
 | Permissões | Aprovação final dos papéis/capabilities. | Guards no main e DTOs redigidos por papel. |
 | Auditoria | Conteúdo seguro versus proibido. | Eventos, sanitização, atomicidade e testes negativos. |
 | Superfícies | Trabalho e momento exatos em cada tela. | Surface Blueprints na fase correta; não criar agora. |
@@ -157,6 +162,8 @@ O Build definitivo deverá fechar, sem deixar valores implícitos:
 12. Logs, auditoria, PDF e erros não contêm segredo ou conteúdo clínico proibido.
 13. Nenhum modelo grande é baixado no boot.
 14. Uma prova sintética executa um uso real de IA e um uso real de memória aprovada.
+15. OpenRouter não aparece em configuração, rota, fallback ou chamada do produto-alvo.
+16. Prompt injection não ganha efeito sem ação humana autorizada.
 
 Esta lista define resultados, não nomes de testes ou arquivos; o Plan só poderá fazê-lo após
 Build e Critic assinados.
@@ -192,8 +199,9 @@ Somente depois podem existir Warlog, MiniSpec, Spec, Plan e primeiro teste TDD e
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `hack/domains/BUILD-ia-memoria-e-conhecimento.md`.
-- Estado: `DRAFT`.
-- Bloqueios: `BLOCKED_BY_ANALYST_RESEARCH`, `BLOCKED_BY_ANALYST_SIGNATURE`.
+- Estado: `DRAFT`, `INVALIDATED_BY_ANALYST_CHANGE`.
+- Bloqueios: `BLOCKED_BY_ANALYST_ADVERSARIAL`, `BLOCKED_BY_RECON`,
+  `BLOCKED_BY_ANALYST_SIGNATURE`.
 - Contrato físico: `NÃO_FECHADO`.
 - `AUTHORIZA_IMPLEMENTACAO = NÃO`.
 - Assinatura de Marco no Analyst: `PENDENTE`.

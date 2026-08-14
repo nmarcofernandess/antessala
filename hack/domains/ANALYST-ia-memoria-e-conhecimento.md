@@ -2,12 +2,13 @@
 
 ## State
 
-- Estado: `RESEARCH_REQUIRED`.
+- Estado: `ADVERSARIAL_REQUIRED` para a PoC sintética; uso real continua fora do escopo e bloqueado.
 - Fase: Analyst; este documento não autoriza Build, Spec, Plan, teste ou código.
 - Fonte de produto: direção explícita de Marco para a prova de conceito, ainda não
   incorporada a um PRD assinado.
-- Pesquisa científica, regulatória, de privacidade e operacional: `PENDENTE`.
-- Recon técnico do HEAD: `PARCIAL`, limitado às evidências listadas neste arquivo.
+- Pesquisa científica, regulatória, de privacidade e operacional: `IN_REVIEW`; fontes
+  centrais verificadas, contratos institucionais, STT e operação real permanecem abertos.
+- Recon técnico do HEAD: `RECON_REQUIRED` após contenção dos handlers de conhecimento.
 - Adversarial: `PENDENTE`.
 - Assinatura de Marco: `PENDENTE`.
 
@@ -34,6 +35,11 @@ IA. A prova demonstra uma relação criada por pessoa, uma relação sugerida pe
 consulta real a conhecimento aprovado. O fluxo-base continua funcional sem IA, sem modelo
 local e sem rede.
 
+`DEMO_DECISION`: o único provedor cloud da prova é o Gemini, acionado somente com dados
+sintéticos. OpenRouter não pertence ao produto-alvo. A escolha de capturar áudio não define
+base legal para tratamento, e esta PoC não autoriza uso de Gemini com atendimento ou dado
+clínico real. Operação real exige novo ciclo institucional, contratual e regulatório.
+
 ## Phase 0 Grill
 
 | Pergunta | Estado | Resposta atual |
@@ -43,7 +49,7 @@ local e sem rede.
 | Entrada e saída estão definidas? | `DEMO_DECISION` | Transcrição, anamnese em rascunho, schema de widgets e conhecimento aprovado entram; propostas rastreáveis saem. |
 | A IA decide o caso? | `PRODUCT_LAW` | Não. Toda saída é assistiva, explicável e sujeita a confirmação humana. |
 | O fluxo depende de rede? | `PRODUCT_LAW` | Não. Rede é opcional, explícita e incapaz de bloquear caso, agenda ou handoff. |
-| Privacidade e consentimento estão comprovados? | `UNRESOLVED` | Não. Exigem pesquisa antes de qualquer dado real. |
+| Privacidade e autorização de captura estão comprovadas? | `UNRESOLVED` | O caminho sintético foi delimitado; base legal, retenção, terceiros e operação real continuam abertos. |
 | O conhecimento clínico está validado? | `UNRESOLVED` | Não. A demo usa relações sintéticas ou aprovadas e não se apresenta como protocolo. |
 
 O Grill não passa para assinatura enquanto os itens `UNRESOLVED` exigidos para a demo não
@@ -75,7 +81,7 @@ e transformar decisões de casos em “memória” pode criar uma regra clínica
 
 ### Dentro da prova de conceito
 
-1. Captura opcional de áudio durante a entrevista, após ação e consentimento explícitos.
+1. Captura opcional de áudio durante a entrevista, após ação e autorização operacional explícitas.
 2. Transcrição literal, revisável e ligada somente ao caso corrente.
 3. Propostas `DRAFT` para campos dos widgets, com fonte e explicação.
 4. Aceite, rejeição e correção humana por proposta.
@@ -86,6 +92,10 @@ e transformar decisões de casos em “memória” pode criar uma regra clínica
 8. Aprovação, versionamento, desativação, consulta e auditoria de relações.
 9. Uma demonstração real de proposta por IA e uma demonstração real de recuperação de
    conhecimento aprovado.
+10. Chamada Gemini única, explícita e limitada a fixture sintética, com caminho manual se a
+    rede ou o provedor falharem.
+11. Classificação do dado enviado, contenção de conteúdo não confiável e lifecycle de
+    aprovação separado do lifecycle de ativação do conhecimento.
 
 ### Fora da prova de conceito
 
@@ -97,7 +107,9 @@ e transformar decisões de casos em “memória” pode criar uma regra clínica
 - resumo enviado diretamente à recepção ou ao serviço solicitante;
 - gravação invisível, permanente ou obrigatória;
 - promoção automática de transcrição, conversa ou decisão para memória global;
-- operação com dados reais antes de pesquisa de consentimento, retenção, LGPD e fornecedor.
+- chat genérico, fallback entre provedores ou agente com ferramenta mutadora;
+- OpenRouter como provedor-alvo;
+- operação com dados reais, consulta clínica real ou envio de dado de saúde ao Gemini.
 
 ## Leis do produto aplicadas ao domínio
 
@@ -124,7 +136,7 @@ e transformar decisões de casos em “memória” pode criar uma regra clínica
 
 | Ator | Pode | Não pode |
 |---|---|---|
-| `ENFERMAGEM` | Solicitar consentimento; iniciar/parar captura; revisar transcrição; aceitar, rejeitar ou corrigir propostas dos campos que coleta. | Finalizar por lote sem revisão; aprovar regra global; enviar conteúdo à nuvem em segundo plano. |
+| `ENFERMAGEM` | Explicar e solicitar autorização de captura; iniciar/parar captura; revisar transcrição; aceitar, rejeitar ou corrigir propostas dos campos que coleta. | Finalizar por lote sem revisão; aprovar regra global; enviar conteúdo à nuvem em segundo plano. |
 | `ANESTESIOLOGISTA` | Ler a transcrição confirmada no caso; consultar conhecimento aprovado; criar relação manual; aprovar, rejeitar, corrigir, versionar ou desativar relação clínica no escopo da demo. | Alterar a anamnese final; promover caso automaticamente; delegar aprovação à IA. |
 | `ADMIN` | Habilitar ou desabilitar a capacidade técnica, selecionar modo permitido e ver saúde sem conteúdo clínico. | Aprovar significado clínico por ser admin; ler transcrições, prompts ou propostas por padrão. |
 | `RECEPCAO` | Consumir apenas o requisito operacional já confirmado por humano. | Ler áudio, transcrição, anamnese, propostas, relações ou explicações clínicas. |
@@ -175,21 +187,36 @@ publicada, reserva, resultado ou handoff.
 
 Esta seção define significado, não tabela, arquivo, DTO físico ou canal IPC.
 
-### `CaptureConsent`
+### `CaptureAuthorization`
 
 - Identifica caso, finalidade da captura, ator que explicou, decisão da pessoa, horário e
-  versão do texto de consentimento.
+  versão do texto apresentado.
 - Estados: `NOT_REQUESTED`, `GRANTED`, `REFUSED`, `REVOKED`.
 - `REFUSED` e `REVOKED` mantêm o formulário manual disponível.
-- `UNRESOLVED`: texto, base legal e retenção aplicáveis a dados reais.
+- `GRANTED` registra uma escolha operacional de captura; não escolhe nem prova base legal
+  da LGPD.
+- Base legal por finalidade, dever de informação, retenção, controlador, operadores e
+  transferência são contratos diferentes e permanecem `UNRESOLVED` para operação real.
+
+### `DataClassification`
+
+- Classifica cada entrada e saída como `FICTIONAL_NON_DERIVED`, `SYNTHETIC_DERIVED`,
+  `ANONYMIZED`, `PSEUDONYMIZED`, `IDENTIFIABLE`, `SENSITIVE_HEALTH` ou `TEMPORARY_AUDIO`.
+- Os nomes são categorias semânticas do produto, não conclusão jurídica automática.
+- Pseudonimização não é anonimização. A prova cloud aceita somente
+  `FICTIONAL_NON_DERIVED` ou `SYNTHETIC_DERIVED` sem vínculo com pessoa real.
 
 ### `InterviewCapture`
 
 - Pertence a um único caso e a uma sessão de entrevista.
-- Mantém estado técnico, duração e vínculo com o consentimento; não entra na memória global.
+- Mantém estado técnico, duração e vínculo com a autorização; não entra na memória global.
 - Estados: `IDLE`, `RECORDING`, `TRANSCRIBING`, `TRANSCRIBED`, `DISCARDED`, `FAILED`.
 - `DEMO_DECISION`: áudio bruto é temporário e descartado após transcrição ou cancelamento;
   não existe galeria de gravações.
+- Iniciar, pausar, retomar e parar são ações visíveis. Cancelamento e falha eliminam os
+  temporários da tentativa.
+- Fala de terceiro marca o intervalo como inválido: o trecho é excluído e não entra em
+  transcript, proposta, exemplo ou memória.
 - Estado inválido: captura após recusa/revogação, gravação sem indicador visível ou áudio
   associado a mais de um caso.
 
@@ -207,17 +234,24 @@ Esta seção define significado, não tabela, arquivo, DTO físico ou canal IPC.
 - Aponta para caso, revisão do contexto do intake, revisão do transcript, versão do widget e
   campo-alvo.
 - Contém valor semântico proposto, estado de resposta proposto, trechos exatos de origem,
-  relações aprovadas consultadas, explicação, provedor/modelo e horário da geração.
+  relações aprovadas consultadas, explicação, provedor/modelo, versão da instrução e horário
+  da geração.
+- Estado da evidência: `SUPPORTED`, `AMBIGUOUS`, `CONFLICTING`, `NO_EVIDENCE` ou
+  `OUT_OF_SCOPE`; não existe probabilidade numérica sem calibração demonstrada.
 - Estados: `DRAFT`, `ACCEPTED`, `REJECTED`, `CORRECTED`, `STALE`, `INVALID`.
 - Aceite/correção registra ator, horário e valor efetivamente aplicado.
 - Mudar transcript, schema, dado-fonte ou qualquer campo de intake consumido torna a
   proposta não decidida `STALE`.
 - `INVALID` nunca pode ser aplicado; `DRAFT` nunca aparece como resposta clínica confirmada.
+- Saída inválida falha por inteiro; aceitar uma proposta não aceita as demais; rejeitar ou
+  ignorar nunca cria resposta negativa.
 
 ### `OperationalSignalSummary`
 
 - Lista sinais observados, fontes, lacunas e relações aprovadas relevantes.
-- Pode explicar por que um item merece revisão, duração ou recurso; não publica o requisito.
+- Pode explicar por que um item merece revisão de duração ou recurso; não publica o requisito.
+- `DURATION_HINT` apenas indica necessidade de revisão dentro de uma relação aprovada; não
+  define classe, duração final, prioridade, prazo ou reserva.
 - Não contém score opaco nem transforma “não encontrado” em negativo.
 - Estados: `DRAFT`, `HUMAN_ACKNOWLEDGED`, `STALE`, `UNAVAILABLE`.
 
@@ -228,8 +262,9 @@ Esta seção define significado, não tabela, arquivo, DTO físico ou canal IPC.
   `DURATION_HINT` ou `RESOURCE_HINT`.
 - Campos semânticos: sujeito, relação, objeto/valor, escopo, justificativa, fontes,
   autor, aprovador, versão, vigência, estado e motivo de substituição/desativação.
-- Estados: `DRAFT`, `ACTIVE`, `SUPERSEDED`, `INACTIVE`.
-- Apenas `ACTIVE` participa de consulta operacional.
+- Estados: `RELATION_SUGGESTED`, `RELATION_APPROVED_INACTIVE`, `KNOWLEDGE_ACTIVE`,
+  `REJECTED`, `SUPERSEDED`, `RETIRED`.
+- Aprovar não ativa. Apenas `KNOWLEDGE_ACTIVE` participa de consulta operacional.
 - Uma nova versão não altera silenciosamente o significado da versão usada por um caso.
 - A relação nunca significa urgência, gravidade, prioridade, aptidão ou conduta.
 - `DEMO_DECISION`: na prova sintética, o mesmo anestesiologista pode cadastrar e depois
@@ -245,14 +280,16 @@ Esta seção define significado, não tabela, arquivo, DTO físico ou canal IPC.
   versão consultada.
 - Desativação remove a fonte de novas consultas sem apagar decisões históricas.
 - Fonte importada, resposta de chat e texto sem licença conhecida nunca nascem `ACTIVE`.
+- Fonte ativa registra versão, data, localização verificável, licença ou fundamento de uso,
+  escopo, limitações, aprovador, vigência e data de revisão.
 
 ### `KnowledgeSuggestion`
 
 - Proposta de relação gerada a partir de exemplos humanos explicitamente promovidos.
 - Contém relações candidatas, exemplos de origem, explicação, modelo e decisão humana.
 - Estados: `DRAFT`, `REJECTED`, `CORRECTED`, `PROMOTED`, `STALE`.
-- `PROMOTED` cria uma versão de `KnowledgeRelation` somente por ação humana; a sugestão não
-  vira `ACTIVE` por si.
+- `PROMOTED` cria uma `KnowledgeRelation` em `RELATION_APPROVED_INACTIVE` somente por ação
+  humana; outra ação explícita é necessária para `KNOWLEDGE_ACTIVE`.
 
 ### `CuratedExample`
 
@@ -276,7 +313,8 @@ nível automaticamente.
 
 ### Pode entrar por ação humana explícita
 
-- versão `ACTIVE` de `KnowledgeRelation`, com fonte, justificativa, autor e aprovador;
+- versão `KNOWLEDGE_ACTIVE` de `KnowledgeRelation`, com fonte, justificativa, autor,
+  aprovador e ativador;
 - versão `ACTIVE` de `ApprovedKnowledgeSource`, se origem e licença forem adequadas;
 - `CuratedExample` sintético e mínimo, separado do índice de regras ativas;
 - recibos sanitizados de criação, aprovação, correção, substituição e desativação.
@@ -299,7 +337,7 @@ Toda saída assistiva deve permitir reconstruir:
 
 1. qual caso e qual versão de entrada foram usados;
 2. quais trechos sustentam cada proposta;
-3. quais relações `ACTIVE`, com versão, foram recuperadas;
+3. quais relações `KNOWLEDGE_ACTIVE`, com versão, foram recuperadas;
 4. qual provedor/modelo produziu a proposta;
 5. qual humano aceitou, rejeitou ou corrigiu;
 6. o valor proposto e o valor efetivamente aplicado;
@@ -310,7 +348,7 @@ Toda saída assistiva deve permitir reconstruir:
 
 ## Consulta por RAG ou grafo
 
-- `DEMO_DECISION`: a consulta busca apenas fontes aprovadas e versões `ACTIVE`.
+- `DEMO_DECISION`: a consulta busca apenas fontes ativas e relações `KNOWLEDGE_ACTIVE`.
 - `PRODUCT_LAW`: sugestões, casos e exemplos não aprovados ficam fora do índice ativo.
 - `DEMO_DECISION`: a resposta retorna as relações e fontes recuperadas; o texto gerado é uma
   camada de apresentação, não a fonte.
@@ -319,19 +357,45 @@ Toda saída assistiva deve permitir reconstruir:
 - `DEMO_DECISION`: busca textual é fallback válido; embeddings não são requisito do boot.
 - `UNRESOLVED`: estratégia final de ranking, conflito entre fontes e limiar de recuperação.
 
-## Rede, privacidade e consentimento
+## Rede, privacidade e autorização de captura
 
 1. `PRODUCT_LAW`: nenhuma chamada de IA ocorre no boot, em autosave, ao trocar de tela ou
    em background.
-2. `PRODUCT_LAW`: a ação mostra se é local ou cloud; em cloud, mostra provedor, finalidade e
+2. `PRODUCT_LAW`: a ação mostra se é local ou cloud; em cloud, mostra Gemini, finalidade e
    categorias de dados enviadas antes da confirmação.
-3. `DEMO_DECISION`: a prova usa somente dados sintéticos, inclusive na chamada cloud.
-4. `PRODUCT_LAW`: cancelar, negar consentimento ou perder rede mantém o registro manual.
+3. `DEMO_DECISION`: a prova usa Gemini somente com dados sintéticos e sem fallback para
+   outro provedor.
+4. `PRODUCT_LAW`: cancelar, negar autorização ou perder rede mantém o registro manual.
 5. `PRODUCT_LAW`: token, áudio, transcript, prompt e resposta não entram em logs técnicos.
 6. `DEMO_DECISION`: memória e relações aprovadas permanecem no PGlite local da demo.
-7. `UNRESOLVED`: fornecedor permitido, contrato de tratamento, retenção, região, segredo e
-   redação jurídica para uso com dados reais.
+7. `UNRESOLVED`: fornecedor elegível, contrato de tratamento, retenção, região, segredo e
+   redação jurídica para uso com dados reais. Os termos atuais do Gemini não autorizam esta
+   rota para prática clínica real; isso não bloqueia a demonstração sintética.
 8. `PRODUCT_LAW`: nenhum modelo de centenas de megabytes é baixado no primeiro boot.
+
+### Elegibilidade da rota de IA na prova
+
+| Rota | Classe de dado | Estado | Consequência |
+|---|---|---|---|
+| Gemini | Fixture sintética sem derivação de pessoa real | `DEMO_ONLY` | Permitida por ação explícita para a apresentação. |
+| Gemini | Identificável, pseudonimizada ou dado sensível de saúde real | `PROHIBITED_BY_PROVIDER_TERMS` | Não enviar; operação real exige outra rota e novo review. |
+| STT local | Áudio sintético | `UNRESOLVED` | Só usar após provar artefato, revisão, hash, licença e tamanho; texto digitado é fallback. |
+
+Não existe troca dinâmica de provedor. Falha, indisponibilidade ou recusa da chamada cloud
+devolvem o usuário ao caminho manual sem alterar o caso.
+
+## Conteúdo não confiável e contenção de efeitos
+
+- Áudio, transcript, campo livre, documento importado, trecho recuperado por RAG e resposta
+  do modelo são dados não confiáveis, mesmo quando parecem instruções.
+- Conteúdo não confiável não amplia finalidade, papel, campos permitidos, rede, ferramentas
+  ou transições de estado.
+- A IA não possui ferramenta mutadora. Uma saída só produz efeito após ação humana
+  autorizada no contrato do campo ou da relação.
+- O produto promete contenção e zero efeito automático; não promete tornar o modelo imune
+  a prompt injection ou poisoning.
+- Prompt, resposta e narrativa integral não entram em logs. A auditoria guarda metadados,
+  versões, decisão humana e referências mínimas.
 
 ## Permissões e redação por papel
 
@@ -405,8 +469,9 @@ redistribuir ou ampliar essas fronteiras.
 
 - `EVIDENCE_BACKED`: `/ia` e o painel lateral de chat estão ativos
   (`src/renderer/src/App.tsx:13-55`).
-- `EVIDENCE_BACKED`: o router registra chat cloud, configuração, conversas e todos os
-  handlers do chamado router “dormente” de conhecimento (`src/main/tipc.ts:373-390`).
+- `EVIDENCE_BACKED`: o router atual registra 17 canais de chat/configuração/conversas; os
+  handlers de conhecimento, grafo e importadores foram retirados do router ativo. Suas
+  tabelas e módulos continuam no repositório, sem superfície ativa.
 - `EVIDENCE_BACKED`: configuração de IA persiste token no PGlite e Gemini fica habilitado
   por padrão (`src/main/db/schema.ts:14-24`, `src/main/config/app-config.ts:34-43`).
 - `EVIDENCE_BACKED`: as tabelas herdadas de memória e grafo não possuem estados de
@@ -425,9 +490,34 @@ redistribuir ou ampliar essas fronteiras.
 O código atual prova capacidade reaproveitável, não aderência a este Analyst. Chat genérico,
 memória de texto livre e extração automática de grafo não satisfazem o produto.
 
+## Contexto regulatório e de evidência
+
+| Tipo | Estado e limite |
+|---|---|
+| LGPD | `EVIDENCE_BACKED`: consentimento não é base universal para dado sensível e pseudonimização não é anonimização. Base por finalidade permanece institucional. |
+| CFM 2.454/2026 | `EVIDENCE_BACKED`: publicada em 27/02/2026, com vigência após 180 dias; em 14/08/2026 está em vacatio. Não é apresentada como regra já vigente. |
+| COFEN 736/2024 e 754/2024 | `EVIDENCE_BACKED`: sustentam responsabilidade profissional, documentação, confidencialidade e proteção de dados; não validam o questionário ou a IA do Antessala. |
+| Termos Gemini | `EVIDENCE_BACKED`: a versão vigente desde 23/03/2026 veda uso em prática clínica, aconselhamento médico e SaMD. A PoC usa apenas fixtures sintéticas. |
+| Prompt injection e automation bias | `EVIDENCE_BACKED`: são ameaças reais; justificam confirmação humana, fonte explícita e ausência de ferramentas mutadoras, não garantia de prevenção. |
+| Retenção do áudio da demo | `DEMO_DECISION`: descarte após transcrição/cancelamento reduz exposição; não é apresentado como mandato da Lei 13.787. |
+| RIPD, SaMD e operação institucional | `UNRESOLVED`: dependem de finalidade, implantação e avaliação institucional; não bloqueiam a demo sintética nem autorizam uso real. |
+
+Fontes primárias verificadas nesta rodada:
+
+- [LGPD — Lei 13.709/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm)
+- [Lei 13.787/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13787.htm)
+- [Resolução CFM 2.454/2026](https://sistemas.cfm.org.br/normas/arquivos/resolucoes/BR/2026/2454_2026.pdf)
+- [Resolução COFEN 736/2024](https://www.cofen.gov.br/resolucao-cofen-no-736-de-17-de-janeiro-de-2024/)
+- [Resolução COFEN 754/2024](https://www.cofen.gov.br/resolucao-cofen-no-754-de-16-de-maio-de-2024/)
+- [Gemini API Additional Terms](https://ai.google.dev/gemini-api/terms)
+- [ANVISA — Software como Dispositivo Médico](https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/produtos-para-a-saude/manuais/software-como-dispositivo-medico-perguntas-e-respostas)
+- [OWASP — LLM Prompt Injection](https://genai.owasp.org/llm-top-10/?cat=253)
+
 ## Critérios de aceite do domínio
 
 - [ ] A pessoa pode recusar gravação e concluir a entrevista pelo caminho manual.
+- [ ] A autorização de captura não é exibida nem persistida como base legal universal.
+- [ ] Fala de terceiro é excluída e não alimenta transcript, proposta ou memória.
 - [ ] Captura consentida produz transcript revisável sem persistir áudio bruto na demo.
 - [ ] IA propõe ao menos dois campos com trechos de origem e versão de widget.
 - [ ] Enfermagem aceita um, corrige outro e rejeita outro; só os dois primeiros afetam o
@@ -438,11 +528,15 @@ memória de texto livre e extração automática de grafo não satisfazem o prod
 - [ ] Resumo mostra sinais, lacunas e relações consultadas sem atribuir ASA, aptidão,
       gravidade, urgência ou prioridade.
 - [ ] Uma relação manual é versionada, aprovada e recuperada com fonte e aprovador.
+- [ ] Aprovar uma relação não a ativa; relação retirada deixa novas buscas imediatamente.
 - [ ] Uma sugestão de relação permanece inativa até promoção humana explícita.
 - [ ] Uma decisão de caso não cria memória, exemplo ou relação automaticamente.
 - [ ] Busca vazia e relações conflitantes não produzem conclusão automática.
 - [ ] Cada papel recebe apenas o conteúdo necessário à sua responsabilidade.
 - [ ] Falha da IA ou ausência de rede mantém anamnese, agenda, avaliação e handoff utilizáveis.
+- [ ] A chamada cloud usa somente Gemini e fixture sintética; não existe fallback de provedor.
+- [ ] Prompt injection não amplia campos, capabilities, rede, ferramentas ou estado.
+- [ ] STT só participa da prova se hash, revisão, licença e tamanho estiverem comprovados.
 - [ ] A prova registra ao menos um uso real de IA e um uso real de memória aprovada.
 - [ ] Nenhum token, áudio, transcript, prompt ou resposta aparece em log, auditoria ou PDF.
 
@@ -450,9 +544,9 @@ memória de texto livre e extração automática de grafo não satisfazem o prod
 
 Antes de mudar o estado para `READY_FOR_MARCO`, pesquisar e verificar:
 
-1. consentimento, indicação visual, revogação e retenção de gravação/transcrição;
+1. autorização de captura, indicação visual, revogação e retenção de gravação/transcrição;
 2. LGPD, base legal, minimização e direitos para uso com dados reais;
-3. políticas de cada provedor sobre retenção, treinamento, região e suboperadores;
+3. contrato futuro de provedor elegível para eventual uso real; Gemini permanece demo-only;
 4. licença, empacotamento, tamanho e desempenho do STT local escolhido;
 5. fontes clínicas ou operacionais licenciáveis para relações da demonstração;
 6. quem pode aprovar, corrigir e desativar conhecimento em operação institucional;
@@ -465,14 +559,14 @@ Antes de mudar o estado para `READY_FOR_MARCO`, pesquisar e verificar:
 
 - `UNRESOLVED`: a prova empacota um STT local pequeno, usa apenas texto digitado como
   fallback ou demonstra o modelo grande já instalado fora do boot?
-- `UNRESOLVED`: qual provedor e qual política de dados podem ser demonstrados?
+- `DEMO_DECISION`: Gemini é o único provedor da prova sintética; não existe fallback.
 - `UNRESOLVED`: qual conjunto mínimo de relações sintéticas sustenta a demo sem fingir
   protocolo clínico?
 - `UNRESOLVED`: qual profissional institucional seria curador; para a demo, mantém-se a
   decisão provisória de anestesiologista aprovador?
 - `UNRESOLVED`: operação real exigirá dupla revisão para ativar uma relação ou permitirá
   autor e aprovador iguais em algum escopo?
-- `UNRESOLVED`: qual retenção vale para transcript confirmado e recibo de consentimento?
+- `UNRESOLVED`: qual retenção vale para transcript confirmado e recibo de autorização?
 - `UNRESOLVED`: como conflitos entre relações aprovadas serão apresentados sem score opaco?
 - `UNRESOLVED`: quais trechos do transcript podem ser enviados ao provedor e como minimizá-los?
 
@@ -489,8 +583,9 @@ O arquivo pareado existe apenas como mapa de terreno e bloqueios:
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `hack/domains/ANALYST-ia-memoria-e-conhecimento.md`.
-- Estado: `RESEARCH_REQUIRED`.
-- Pesquisa obrigatória: `PENDENTE`.
+- Estado: `ADVERSARIAL_REQUIRED` para a PoC sintética.
+- Pesquisa obrigatória: `IN_REVIEW`; fontes centrais incorporadas e lacunas reais delimitadas.
+- Recon técnico: `RECON_REQUIRED` contra o próximo SHA publicado.
 - Adversarial: `PENDENTE`.
 - Autoriza Build definitivo: `NÃO`.
 - Autoriza implementação: `NÃO`.

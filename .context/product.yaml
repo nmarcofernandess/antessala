@@ -97,11 +97,14 @@ proof_of_concept:
 ai_memory_and_knowledge:
   classification: "PRODUCT_LAW"
   mvp_role: "Demonstrar pelo menos um uso real de IA e um uso real de memória que ajudem a entrevista ou a explicação operacional sem decidir pelo profissional."
+  demo_provider: "Gemini único, somente com fixtures sintéticas, por ação explícita e sem fallback de provedor."
   obligations:
     - "Sugestões permanecem em rascunho até confirmação humana."
     - "Cada sugestão informa origem e explicação suficiente para revisão."
     - "Indisponibilidade de IA ou rede não quebra caso, agenda nem handoff."
     - "Uso de rede é opcional, explícito e informado ao usuário."
+    - "OpenRouter não pertence ao produto-alvo da prova de conceito."
+    - "Autorização de captura não substitui a definição de base legal para eventual operação real."
     - "Memória global aceita somente conhecimento promovido e aprovado por pessoa autorizada."
     - "Identidade e narrativa integral de um caso nunca entram na memória global."
     - "Decisão de um caso não se torna regra global automaticamente."

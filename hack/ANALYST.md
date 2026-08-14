@@ -34,6 +34,10 @@ local, papéis e permissões, auditoria, cadastros, configurações, navegação
 persistência PGlite, fixtures, funcionamento offline, segurança, IA assistiva, memória
 aprovada e prova ponta a ponta. “Descreve” não significa pesquisado, revisado ou aprovado.
 
+No domínio de IA, a decisão vigente para a prova é Gemini único com fixtures sintéticas,
+sem fallback de provedor. OpenRouter não pertence ao produto-alvo; uso clínico real de
+cloud permanece fora do escopo deste hack.
+
 ## Dossiês e BUILDs correspondentes
 
 | # | Domínio | Analyst canônico | BUILD correspondente |

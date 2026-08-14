@@ -18,7 +18,8 @@ somente `DRAFT/BLOCKED`.
 - [x] `.context/` mínimo com produto, workflow, arquitetura e tracker.
 - [x] README humano e instruções Antessala em `CLAUDE.md` e `AGENTS.md`.
 - [x] Recon do HEAD separando `ACTIVE`, `DORMANT`, `INCOMPLETE` e `REMOVED`.
-- [x] Analyst de IA, memória e conhecimento criado como `RESEARCH_REQUIRED`.
+- [x] Research central de IA incorporado; Analyst passou a `ADVERSARIAL_REQUIRED` para a
+      PoC sintética, com Gemini único e operação real ainda fora do escopo.
 - [x] Build pareado criado sem schema, DTO ou implementação inventados.
 - [x] Estados enganosos de prontidão rebaixados.
 - [x] Decisões de pitch identificadas como `DEMO_DECISION`.
@@ -52,6 +53,9 @@ Concluir as lacunas de pesquisa de `ANALYST-anamnese-e-catalogos.md` e executar 
 adversarial multiprofissional sobre o SHA corrigido: semântica de ausência, competência do
 enfermeiro/técnico, campos clínicos, licenças e correção pós-publicação. O Build pareado está
 invalidado e não pode ser refeito antes de Analyst assinado.
+
+Em paralelo, executar adversarial do `ANALYST-ia-memoria-e-conhecimento.md` corrigido e
+repetir o recon técnico do router atual; não promover nem reconstruir o Build pareado.
 
 ---
 

@@ -86,10 +86,10 @@ o que falta e o que já ocorreu.
 
 O repositório entrega uma casca Electron, PGlite, TIPC, tema, chat cloud, oito widgets
 nutricionais, catálogos clínicos locais e exportação PDF. Somente Início, Assistente IA e
-Configurações estão roteados. O backend de knowledge está IPC-callable embora sua página
-esteja fora das rotas; gravação está dormente e STT está incompleto. Não existem login,
-RBAC, telas clínicas, agenda ou entidades canônicas do novo fluxo. O inventário comprovado
-vive em [`.context/architecture.yaml`](../.context/architecture.yaml).
+Configurações estão roteados. O backend de knowledge permanece no repositório, mas seus
+handlers foram contidos no router ativo; gravação está dormente e STT está incompleto. Não
+existem login, RBAC, telas clínicas, agenda ou entidades canônicas do novo fluxo. O
+inventário comprovado vive em [`.context/architecture.yaml`](../.context/architecture.yaml).
 
 `registros`, prioridade e `registro_jornada` estão declarados como legado da hipótese
 anterior. O Build deve migrar ou substituir essa superfície; nenhum estado antigo vira lei
@@ -604,13 +604,17 @@ stateDiagram-v2
 ### IA, memória e conhecimento
 
 - MUST: gravação/transcrição é opcional, informada e nunca condição para concluir a anamnese.
+- MUST: autorização operacional para gravar não é apresentada como base legal universal.
 - MUST: toda sugestão de widget nasce `DRAFT`, com origem e explicação visíveis.
 - MUST: profissional autorizado aceita, rejeita ou corrige; somente o valor confirmado entra na anamnese.
 - MUST: o motor operacional ignora propostas `DRAFT`.
-- MUST: memória global contém apenas relações aprovadas, versionadas, ativas e sem identidade ou narrativa integral da pessoa.
+- MUST: memória global contém apenas relações aprovadas, depois ativadas por ação separada,
+  versionadas e sem identidade ou narrativa integral da pessoa.
 - MUST: promover exemplo de caso para conhecimento global exige ação humana explícita e auditável.
 - MUST: RAG e grafo consultam somente conhecimento aprovado; inferência nova permanece sugestão.
 - MUST NOT: IA concluir gravidade, urgência, prioridade cirúrgica, duração, ASA, aptidão ou conduta clínica sozinha.
+- MUST: áudio, transcript, campo livre, documento e RAG são conteúdo não confiável e nunca
+  ampliam rede, ferramentas, campos, papel ou estado.
 - IF IA, rede, gravação ou memória estiver indisponível, THEN caso, agenda e handoff continuam pelo fluxo manual.
 
 ### Offline e segurança
@@ -618,7 +622,8 @@ stateDiagram-v2
 - MUST: boot, login, fixtures, catálogos e fluxo clínico funcionam sem rede.
 - MUST: renderer bloqueia carregamento remoto por padrão.
 - MUST: uso cloud ocorre somente por ação explícita, finalidade fechada, categorias mínimas
-  informadas e dados sintéticos; chat livre e histórico integral não são capacidades.
+  informadas e dados sintéticos. A PoC usa apenas Gemini, sem fallback; chat livre e
+  histórico integral não são capacidades.
 - MUST: backend legado de knowledge não permanece genericamente alcançável; o Build futuro
   deverá expor apenas as capacidades aprovadas pelo novo Analyst.
 - MUST: dados, logs e provas usam somente pessoas sintéticas.
@@ -638,7 +643,7 @@ stateDiagram-v2
 | high | Widgets herdados marcam defaults como completos | `tests/shared/anamnese/widgets.spec.ts:28-49` | Novo envelope e semântica de resposta; nenhum default clínico afirmativo. |
 | medium | Catálogo de medicamentos é recorte | `src/data/catalogos/README.md:21-38` | Fallback textual explícito e limite declarado; não alegar cobertura nacional. |
 | high | IA envia histórico sem anonimização automática | `src/main/ia/cliente.ts:52-108` | Consentimento, minimização, ação explícita e revisão humana no novo domínio. |
-| high | Knowledge legado está IPC-callable e promove inferência sem aprovação | `src/main/tipc.ts:373-375` | Router mínimo, estados draft/aprovado e auditoria antes do reuso. |
+| high | Knowledge legado preservado não possui lifecycle clínico de aprovação/ativação | módulos e tabelas permanecem, mas foram contidos no IPC ativo | Só reexpor por router mínimo após Analyst e Build assinados. |
 | medium | Configuração de IA guarda segredo local | `src/main/db/schema.ts:14-24` | Definir proteção do segredo no Build; nunca logar ou exportar token. |
 | medium | DDL idempotente não evolui schema existente | `src/main/db/schema.ts:211-233` | Ledger de migrations local e testes de upgrade. |
 | medium | TIPC aceita inputs TS sem validação geral | `src/main/tipc.ts:265-400` | Zod compartilhado em todo command/query novo. |
@@ -736,10 +741,11 @@ explícita antes de assinatura:
 
 - Qual protocolo e quais pesos o HC validará para uso assistencial?
 - Quais sistemas institucionais fornecerão identidade, encaminhamento, agenda e prontuário?
-- Qual política institucional regerá retenção, consentimento, LGPD e assinatura?
+- Qual política institucional regerá retenção, autorização de captura, base legal LGPD e assinatura?
 - Qual banco, identidade e arquitetura multiusuário substituirão o PGlite local?
 - Quais catálogos licenciados e processos de atualização irão para produção?
-- Quais dados podem sair do dispositivo na demonstração, com qual consentimento e por qual provedor?
+- Quais dados sintéticos podem sair do dispositivo na demonstração, sob qual disclosure e
+  minimização? O provedor da PoC já está fixado em Gemini.
 - Quais relações mínimas podem ser aprovadas como conhecimento sem fingir uma base clínica universal?
 
 ## Grill Verdict

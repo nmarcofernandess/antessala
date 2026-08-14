@@ -11,8 +11,9 @@
 
 O primeiro boot e o fluxo-base devem funcionar sem internet. A IA cloud pode usar rede
 somente por ação explícita e sua falha não bloqueia caso, agenda ou handoff. O terreno atual
-precisa ser reconciliado: backend de knowledge está IPC-callable, STT está incompleto,
-preload não possui allowlist e não há autenticação/guardas. Capacidades comprovadas vivem
+precisa ser reconciliado: o backend de knowledge foi contido no router ativo, STT está
+incompleto, preload não possui allowlist e não há autenticação/guardas. Capacidades
+comprovadas vivem
 em `.context/architecture.yaml`; este Analyst define comportamento futuro, não afirma que
 o Build proposto já existe.
 

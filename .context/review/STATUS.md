@@ -18,7 +18,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `ANALYST-avaliacao-pendencias-e-handoff.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 25 cenários; resolver custódia, assinatura, documentos, correção substituta e canal institucional. |
 | `ANALYST-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Compor IA/memória somente após os contratos dos domínios. |
 | `ANALYST-arquitetura-offline-e-prova.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RECON_REQUIRED` | `7b8cdc4` | Reconciliar com `.context/architecture.yaml` e política de rede opcional. |
-| `ANALYST-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar privacidade, consentimento, proveniência e promoção de conhecimento. |
+| `ANALYST-ia-memoria-e-conhecimento.md` | `IN_REVIEW` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Atacar o contrato corrigido: Gemini sintético único, terceiros, injection, evidência por proposta e aprovação separada de ativação; fechar proveniência STT. |
 | `hack/BUILD.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Ressintetizar somente depois dos oito pares e Surface Blueprints. |
 | `BUILD-caso-e-encaminhamento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar novo adversarial e assinatura do Analyst; depois refazer contratos físicos. |
 | `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar novo adversarial e assinatura do Analyst; depois refazer fronteira física. |
@@ -27,7 +27,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `BUILD-avaliacao-pendencias-e-handoff.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `9f501a9` | Não remendar: reescrever depois do Analyst assinado, incluindo suficiência, versões, documentos, retorno e handoff local/externo. |
 | `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Corrigir após os domínios; então criar Surface Blueprints. |
 | `BUILD-arquitetura-offline-e-prova.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Refazer política IPC/rede/IA e provar o runtime PGlite. |
-| `BUILD-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Permanecer DRAFT/BLOCKED até o Analyst fechar e Marco assinar. |
+| `BUILD-ia-memoria-e-conhecimento.md` | `IN_REVIEW` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `9f501a9` | Permanecer DRAFT/BLOCKED; repetir recon e reconstruir somente após Analyst adversarial e assinatura de Marco. |
 
 ## Como atualizar
 
@@ -70,6 +70,13 @@ conteúdo deixou de alegar verificabilidade, resultado ganhou versões sucessora
 local deixou de fingir envio externo. O Analyst continua `ADVERSARIAL_REQUIRED` até
 repetir os 25 cenários e as lacunas institucionais continuam sem resposta inventada. O
 Build descendente foi invalidado integralmente.
+
+Research regulatório de IA incorporado: autorização de captura foi separada de base legal,
+dados receberam classificação semântica, conteúdo não confiável ganhou contenção de efeitos,
+propostas passaram a carregar estado de evidência e o lifecycle de conhecimento separou
+aprovação de ativação. Por decisão de produto, Gemini é o único provedor da PoC e recebe
+somente fixtures sintéticas; OpenRouter saiu do alvo. O uso clínico real de cloud permanece
+fora do escopo, a proveniência do STT continua aberta e o Build pareado foi invalidado.
 
 Nenhum estado nesta página substitui assinatura. Somente Marco pode produzir
 `APPROVED_BY_MARCO`.

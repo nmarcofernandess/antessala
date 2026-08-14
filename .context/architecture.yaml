@@ -294,7 +294,7 @@ cloud_ai:
       - "src/main/ia/cliente.ts:82-108"
       - "src/renderer/src/componentes/IaChatView.tsx:50-84"
       - "src/renderer/src/componentes/IaChatView.tsx:117-123"
-    reuse_boundary: "Reutilizar a fronteira de provider, nao o chat generico como solucao do fluxo clinico. Toda sugestao clinica precisa draft, proveniencia e confirmacao."
+    reuse_boundary: "O codigo atual ainda contem dois providers; o produto-alvo da PoC fixa somente Gemini com fixture sintetica. Nao reutilizar o chat generico. Toda sugestao precisa draft, proveniencia e confirmacao."
   configuration:
     status: INCOMPLETE
     summary: "A UI informa principalmente o envio de conversa, mas tokens ficam em texto no PGlite e duplicados em provider_configs_json; nao ha redacao automatica de dados identificaveis."
