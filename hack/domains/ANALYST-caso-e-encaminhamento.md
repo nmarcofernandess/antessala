@@ -130,7 +130,7 @@ ENTITY: PersonSnapshot
   originIdentifier nullable.
 - Actions: capture at intake; correct by append-only correction event somente nos estados
   pré-publicação e enquanto não existe revisão `FINAL/COMPLETE` nem requirement
-  `CALCULATED/CONFIRMED/OVERRIDDEN`.
+  `PROPOSED/CONFIRMED/OVERRIDDEN`.
 - Relations: embedded in exactly one PreopCase.
 - Source of truth: preop_cases.person_snapshot JSONB.
 - Runtime states: captured, corrected.
@@ -343,7 +343,7 @@ persistido ou inferido para autorizar comandos.
 | solicitante | `serviceId` de fixture ativa; revisão e label copiados; médico 2–160; demais textos até 200 |
 | `idempotencyKey` | UUID gerado uma vez por tentativa lógica e preservado em retry |
 | correção/cancelamento | motivo trim de 10–1.000 para correção e 10–500 para cancelamento |
-| estado para `cases.correctIntake` | somente `RECEIVED_AT_RECEPTION`, `WAITING_NURSING`, `NURSING_IN_PROGRESS` ou `TRIAGE_PENDING`, sem revisão `FINAL/COMPLETE` e sem requirement `CALCULATED/CONFIRMED/OVERRIDDEN`; qualquer marco ou `READY_FOR_SCHEDULING+` retorna `INVALID_TRANSITION` |
+| estado para `cases.correctIntake` | somente `RECEIVED_AT_RECEPTION`, `WAITING_NURSING`, `NURSING_IN_PROGRESS` ou `TRIAGE_PENDING`, sem revisão `FINAL/COMPLETE` e sem requirement `PROPOSED/CONFIRMED/OVERRIDDEN`; qualquer marco ou `READY_FOR_SCHEDULING+` retorna `INVALID_TRANSITION` |
 
 `displayCode` é gerado no main no formato local `ANT-YYYY-NNNN`, com sequência única no
 banco. Ele ajuda a conferência humana, mas UUID continua sendo a chave canônica.
@@ -353,7 +353,7 @@ banco. Ele ajuda a conferência humana, mas UUID continua sendo a chave canônic
 `cases.correctIntake` aceita patch estrito e não vazio de pessoa, encaminhamento,
 procedimento e/ou solicitante somente enquanto o caso está em `RECEIVED_AT_RECEPTION`,
 `WAITING_NURSING`, `NURSING_IN_PROGRESS` ou `TRIAGE_PENDING` **e** ainda não existe revisão
-de anamnese `FINAL/COMPLETE` nem requirement `CALCULATED/CONFIRMED/OVERRIDDEN`. O estado do
+de anamnese `FINAL/COMPLETE` nem requirement `PROPOSED/CONFIRMED/OVERRIDDEN`. O estado do
 caso sozinho não basta: `NURSING_IN_PROGRESS` persiste entre `submitFinal` e a publicação.
 Qualquer um desses marcos retorna `INVALID_TRANSITION` sem escrita. Depois,
 `CONFIRMED/OVERRIDDEN` move o caso para `READY_FOR_SCHEDULING`; a demo nunca inventa stale,
@@ -362,7 +362,7 @@ reclassificação ou regressão de lifecycle.
 Na mesma transação, a correção:
 
 1. valida `expectedCaseVersion`, papel, motivo, um dos quatro estados e ausência de revisão
-   `FINAL/COMPLETE` ou requirement `CALCULATED/CONFIRMED/OVERRIDDEN`;
+   `FINAL/COMPLETE` ou requirement `PROPOSED/CONFIRMED/OVERRIDDEN`;
 2. preserva `referralId` local e campos não incluídos no patch;
 3. resolve novamente labels/revisões de catálogo;
 4. recalcula `requestingServiceId`, a referência normalizada e, se `birthDate` ou
@@ -393,9 +393,10 @@ nome jamais substituem o ID na autorização.
 - MUST NOT create, search or reference a patient master.
 - MUST NOT merge cases because person snapshots match.
 - MUST NOT let reception fill or interpret clinical anamnese fields.
-- MUST NOT correct intake, mark stale or reclassify after an anamnese revision reaches
-  `FINAL/COMPLETE`, a requirement reaches `CALCULATED/CONFIRMED/OVERRIDDEN` or the case
-  reaches `READY_FOR_SCHEDULING`.
+- MUST NOT corrigir intake ou a anamnese silenciosamente depois de uma revisão
+  `FINAL/COMPLETE`. Uma nova decisão operacional pode apenas superseder a anterior pelo
+  contrato do Analyst de classificação, preservando histórico e revalidando qualquer
+  reserva; isso não reabre o intake.
 - IF a create request repeats the same idempotency key, THEN return the original case.
 - IF a non-empty source reference repeats in the same requesting service, THEN return
   `DUPLICATE_REFERRAL` with the existing display code; never compare person fields.
@@ -450,7 +451,7 @@ nome jamais substituem o ID na autorização.
   `READY_FOR_SCHEDULING`, correção de intake retorna `INVALID_TRANSITION` sem stale,
   reclassificação ou regressão do caso.
 - [ ] Mesmo em `NURSING_IN_PROGRESS`, revisão `FINAL/COMPLETE` ou requirement
-  `CALCULATED/CONFIRMED/OVERRIDDEN` bloqueia correção sem escrita; somente anamnese `DRAFT`
+  `PROPOSED/CONFIRMED/OVERRIDDEN` bloqueia correção sem escrita; somente anamnese `DRAFT`
   pode receber stale/rebase.
 - [ ] `SOLICITANTE` não lista nem abre caso cujo `requestingServiceId` difere do seu escopo.
 - [ ] `sourceReference` equivalente após NFKC/whitespace/uppercase colide no mesmo serviço;

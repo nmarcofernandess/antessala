@@ -1,11 +1,11 @@
 # Build — Classificação operacional e agenda
 
-> **DRAFT BLOQUEADO; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+> **DRAFT INVALIDADO POR MUDANÇA MATERIAL NO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
 
 ## State
 
 - Source: `hack/domains/ANALYST-classificacao-e-agenda.md`
-- Status: `RESEARCH_REQUIRED + RECON_REQUIRED`
+- Status: `INVALIDATED_BY_ANALYST_CHANGE + RECON_REQUIRED`
 - Scope: arquitetura do domínio; não é Plan nem catálogo de tarefas
 - Confidence: `low`; regras e capacidade são `DEMO_DECISION` e os locks ainda não foram provados
 
@@ -1236,12 +1236,13 @@ A sequência é topológica, não um Plan executável.
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `hack/domains/BUILD-classificacao-e-agenda.md`
-- Próxima fase autorizada: Critic do domínio
-- Estado: `DRAFT_RESEARCH_REQUIRED`
+- Próxima fase autorizada: `NENHUMA`; aguardar Analyst reconciliado, adversarial e
+  assinatura de Marco; depois refazer este Build e somente então executar Critic
+- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`
 - Declaração: `PENDENTE`
 
-Declaração futura exigida após Critic: “Aprovo o Build de classificação e agenda corrigido e
-autorizo seu registro no Warlog.”
+Declaração futura exigida após Analyst assinado, Build refeito e Critic: “Aprovo o Build de
+classificação e agenda corrigido e autorizo seu registro no Warlog.”

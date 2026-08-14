@@ -40,12 +40,16 @@ operacional e regulatória.
 - `hack/PRD.md:53-70` define consulta, pendência, retorno e devolução.
 - `hack/PRD.md:133-168` exige contratos fechados e proíbe integração inventada.
 - `hack/domains/ANALYST-caso-e-encaminhamento.md:258-270` separa check-in de início do encontro.
-- `hack/domains/BUILD-acesso-e-auditoria.md:284-312` é a fonte de capabilities e escopo do solicitante.
-- `hack/domains/BUILD-classificacao-e-agenda.md:291-328` é a fonte de booking e concorrência.
+- `hack/domains/ANALYST-acesso-e-auditoria.md` é a fonte semântica de papéis, capabilities e
+  escopo do solicitante.
+- `hack/domains/ANALYST-classificacao-e-agenda.md` é a fonte semântica de booking,
+  compatibilidade e capacidade.
 - `src/main/export/pdf.ts:16-91` e `tests/main/export/pdf.spec.ts:53-150` provam PDF isolado e offline.
 
-O retorno copia classe, duração e capabilities do requisito vigente. Este domínio não
-recalcula classificação nem inventa requisito clínico.
+O anestesiologista define ou confirma explicitamente classe, duração, capabilities e
+data-alvo do retorno conforme seu objetivo atual. O requisito inicial pode aparecer como
+referência não vinculante; não é copiado automaticamente. Este domínio não recalcula a
+triagem nem transforma necessidade operacional em risco clínico.
 
 ## Product Promise
 
@@ -87,8 +91,8 @@ append-only, para impedir check-in, retomada, retorno, conclusão ou handoff inv
 | Necessidade | Evidência | Consequência |
 |---|---|---|
 | Check-in não é avaliação | `ANALYST-caso-e-encaminhamento.md:258-264` | Comandos e papéis separados. |
-| Permissão nasce no main | `BUILD-acesso-e-auditoria.md:284-312` | Payload não escolhe ator, papel ou serviço. |
-| Retorno ocupa agenda | `BUILD-classificacao-e-agenda.md:291-328` | Reusar booking e proteção concorrente. |
+| Permissão nasce no main | `ANALYST-acesso-e-auditoria.md` | Payload não escolhe ator, papel ou serviço; detalhes físicos pertencem ao Build. |
+| Retorno ocupa agenda | `ANALYST-classificacao-e-agenda.md` | Consumir compatibilidade e capacidade; arquitetura física pertence ao Build. |
 | Persistência ausente | `clinical-schema.ts:3-52` | Criar entidades canônicas no PGlite. |
 | PDF offline existente | `pdf.ts:16-91` | Projetar somente resultado autorizado. |
 
@@ -249,37 +253,17 @@ O service considera apenas `encounterId + reviewCycle`:
 
 ### `ReturnRequest`
 
-```text
-ENTITY: ReturnRequest
-- Attributes: id, caseId, sourceEncounterId, reviewCycle, triggerPendencyIds,
-  schedulingRequirementSnapshot, status, version, timestamps.
-- States: READY_FOR_BOOKING | BOOKED | CHECKED_IN | CONSUMED.
-- Invalid: sem pendência cumprida que exige retorno; booking INITIAL; outro caso;
-  duas solicitações ativas; consumo sem check-in.
-```
+`ReturnRequest` pertence ao caso e ao encontro de origem, referencia as pendências que
+justificaram o retorno e possui estados `READY_FOR_BOOKING | BOOKED | CHECKED_IN |
+CONSUMED`. Não existe sem pendência cumprida que exija retorno, não aceita booking inicial,
+não atravessa casos e não pode ser consumido sem check-in.
 
-```ts
-type ReturnSchedulingRequirementSnapshot = {
-  requirementId: string
-  slotClass: 'QUICK' | 'STANDARD' | 'EXTENDED'
-  durationMinutes: 20 | 35 | 50
-  bufferMinutes: 5 | 10
-  occupiedMinutes: 25 | 40 | 60
-  desiredBy: string
-  requiredResourceKinds: ['ANESTHESIA_PROFESSIONAL', 'ROOM']
-  requiredCapabilities: ResourceCapability[]
-}
-```
-
-O snapshot é fechado e copia `requirementId`, `slotClass`, `durationMinutes`,
-`bufferMinutes`, `occupiedMinutes`, `desiredBy`, `requiredResourceKinds` e
-`requiredCapabilities` vigentes. `occupiedMinutes = durationMinutes + bufferMinutes` e
-`requiredResourceKinds` contém, no mínimo, `ANESTHESIA_PROFESSIONAL` e `ROOM`. Na demo,
-`desiredBy = ReturnRequest.createdAt + 10 dias úteis`; dia útil significa segunda a sexta,
-sem calendário de feriados. Campo ausente torna a solicitação inválida para booking. A
-recepção seleciona slot compatível; não recalcula classificação. `return_requests` não guarda
-`bookingId`: a reserva vigente é derivada por
-`scheduling_bookings.return_request_id = return_requests.id`.
+Ao criar o pedido, o anestesiologista define ou confirma a necessidade operacional atual:
+classe demonstrativa, duração, buffer, ocupação, data-alvo, tipos de recurso e
+capabilities. O requisito inicial é apenas referência histórica. A data de dez dias úteis e
+as durações `20/35/50` permanecem `DEMO_DECISION` até o research deste domínio; não são
+aplicadas como protocolo ou urgência. A recepção seleciona vaga compatível e não recalcula
+a decisão. Identidade física, relação com booking e persistência pertencem ao Build.
 
 ### Conteúdo do encontro
 
@@ -494,8 +478,8 @@ cumprimento.
 - [ ] Owner ou serviço incorreto não cumpre.
 - [ ] Último bloqueio sem retorno só libera `resumeReview`.
 - [ ] Último bloqueio com retorno cria uma única solicitação.
-- [ ] A solicitação de retorno contém classe, duração, buffer, ocupação, prazo, kinds e
-      capabilities; qualquer campo ausente impede o booking.
+- [ ] O anestesiologista define ou confirma classe, duração, buffer, ocupação, prazo,
+      recursos e capabilities do retorno; o requisito inicial é referência não vinculante.
 - [ ] Iniciar o encontro `RETURN` fecha o encontro de origem como
       `COMPLETED/RETURN_STARTED` antes de consumir a solicitação, no mesmo commit.
 - [ ] Cancelamento/no-show reabre a mesma solicitação.

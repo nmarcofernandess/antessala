@@ -296,7 +296,11 @@ stateDiagram-v2
 14. Permissão de interface e permissão de handler precisam concordar; ocultar um botão nunca substitui o guard.
 15. `SOLICITANTE` só lê casos cujo `servico_solicitante_id` coincide com o snapshot da sessão.
 16. `ADMIN` não lê anamnese, avaliação ou resultado clínico por ser administrador.
-17. A recepção recebe categoria, duração e opções compatíveis; não recebe comorbidades, medicamentos, respostas ou explicação clínica detalhada.
+17. A recepção recebe apenas identificador operacional, classe demonstrativa, duração,
+    ocupação, capabilities, data-alvo, status/autoria da decisão, motivo operacional
+    genérico, vagas e falhas de capacidade. Não recebe comorbidades, medicamentos,
+    alergias, sintomas, exames, respostas, recusa/desconhecimento, field paths, transcript,
+    sinal clínico bruto ou saída de IA.
 18. Somente a enfermagem usa `clinical:anamnesis:edit` enquanto a anamnese está `DRAFT` e
     executa `submitFinal` para `COMPLETE`. Depois disso não existe escrita na anamnese; o
     anestesiologista apenas lê o snapshot submetido e registra informação própria por

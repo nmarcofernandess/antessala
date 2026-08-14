@@ -14,7 +14,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `ANALYST-caso-e-encaminhamento.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `7b8cdc4` | Atacar intake, referência, correção, cancelamento e handoff. |
 | `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `7b8cdc4` | Separar semântica de criptografia/DDL e atacar sessão e escopo. |
 | `ANALYST-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar widgets, campos, completude, catálogos e licenças. |
-| `ANALYST-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Separar evidência de `DEMO_DECISION`; pesquisar carga e capacidade. |
+| `ANALYST-classificacao-e-agenda.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Atacar abstenção da regra, supersessão, redaction, retorno e falhas de capacidade após reconciliar a criticidade campo a campo da anamnese. |
 | `ANALYST-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar avaliação, pendência, retorno, resultado e entrega. |
 | `ANALYST-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Compor IA/memória somente após os contratos dos domínios. |
 | `ANALYST-arquitetura-offline-e-prova.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RECON_REQUIRED` | `7b8cdc4` | Reconciliar com `.context/architecture.yaml` e política de rede opcional. |
@@ -23,7 +23,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `BUILD-caso-e-encaminhamento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Validar intake e provar contratos físicos no PGlite. |
 | `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Validar segurança local, fixtures e guards IPC. |
 | `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar pesquisa clínica; depois provar schema e round-trip. |
-| `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Provar compatibilidade PGlite, locks, corridas e decisões de demo. |
+| `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar Analyst corrigido, adversarial e assinatura; depois reconciliar contratos físicos e provar o PGlite. |
 | `BUILD-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar research; depois provar transações e isolamento por serviço. |
 | `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Corrigir após os domínios; então criar Surface Blueprints. |
 | `BUILD-arquitetura-offline-e-prova.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Refazer política IPC/rede/IA e provar o runtime PGlite. |
@@ -40,10 +40,14 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 
 ## Próxima rodada
 
-Primeiro artefato: `hack/domains/ANALYST-anamnese-e-catalogos.md`.
+Próximo artefato: `hack/domains/ANALYST-anamnese-e-catalogos.md`.
 
 Objetivo: pesquisar o conjunto clínico, a semântica de resposta e completude, a origem dos
 catálogos e suas licenças. Não revisar o Build antes de corrigir o Analyst.
+
+Research de classificação/agenda recebido e incorporado: as fontes sustentam variabilidade
+e calibração local, não os números do motor. O artefato segue para adversarial somente após
+a criticidade campo a campo da anamnese ser reconciliada.
 
 Nenhum estado nesta página substitui assinatura. Somente Marco pode produzir
 `APPROVED_BY_MARCO`.

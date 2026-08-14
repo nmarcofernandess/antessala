@@ -199,11 +199,11 @@ ENTITY: RequisitoAgenda
 - Attributes: id, caseId, anamnesisRevisionId, slotClass, durationMinutes,
   bufferMinutes, desiredBy, requiredResourceKinds, requiredCapabilities, reasons,
   ruleSetVersion, status, override nullable
-- Actions: calcular, confirmar, sobrescrever com motivo
+- Actions: propor, confirmar, alterar com motivo e substituir decisão operacional sem apagar histórico
 - Relations: deriva de uma revisão da anamnese; filtra slots
 - Source of truth: snapshot persistido da saída da regra
-- Runtime states: CALCULATED, CONFIRMED, OVERRIDDEN; `UNCLASSIFIABLE` é saída rejeitada e
-  não cria requisito persistido
+- Runtime states: PROPOSED, CONFIRMED, OVERRIDDEN, SUPERSEDED; `INCOMPLETE`,
+  `HUMAN_DEFINITION_REQUIRED` e `OUT_OF_DEMO_RANGE` são resultados prévios à publicação
 - Invalid states: CONFIRMED com pendência bloqueante; saída sem regras explicativas
 
 ENTITY: AgendaSlot
@@ -256,16 +256,16 @@ ENTITY: CaseDocument
 
 ENTITY: ReturnRequest
 - Attributes: id, caseId, sourceEncounterId, reviewCycle, triggerPendencyIds,
-  schedulingRequirementSnapshot com requirementId, slotClass, durationMinutes,
-  bufferMinutes, occupiedMinutes, desiredBy, requiredResourceKinds e requiredCapabilities,
-  status, version, timestamps
+  necessidade operacional definida ou confirmada pelo anestesiologista, status, version,
+  timestamps
 - Actions: criar ao cumprir o último bloqueio, reservar, fazer check-in, consumir ao iniciar retorno
 - Relations: pertence ao caso e encontro de origem; zero ou uma reserva RETURN ativa
 - Source of truth: PGlite local
 - Runtime states: READY_FOR_BOOKING, BOOKED, CHECKED_IN, CONSUMED
 - Invalid states: duas solicitações ativas; snapshot incompleto; reserva INITIAL; consumo sem
   booking CHECKED_IN; encontro de origem ainda aberto quando o retorno começa
-- Demo rule: `desiredBy = createdAt + 10 dias úteis`, contando segunda a sexta sem feriados
+- Demo rule: duração, data-alvo e recursos são definidos ou confirmados pelo
+  anestesiologista; qualquer fallback numérico permanece `DEMO_DECISION`
 
 ENTITY: Resultado
 - Attributes: id, caseId, encounterId, status, content, finalizedBy, finalizedAt,
@@ -351,7 +351,7 @@ sequenceDiagram
   N->>X: Aceita handoff e preenche anamnese
   X->>DB: Rascunhos versionados
   N->>X: Submete revisão FINAL
-  X->>DB: Snapshot + requisito CALCULATED, mantendo NURSING_IN_PROGRESS
+  X->>DB: Snapshot + resultado PROPOSED ou abstenção explícita, mantendo NURSING_IN_PROGRESS
   N->>X: Confirma ou faz override justificado do requisito
   X->>DB: Requisito publicado + estado READY_FOR_SCHEDULING
   R->>X: Busca slots compatíveis
@@ -474,22 +474,31 @@ stateDiagram-v2
 - MUST: cada resposta registra fonte, autor, função e horário.
 - MUST: todo campo consumido por regra pertence a um widget versionado.
 - MUST: finalizar calcula a completude no processo principal.
-- MUST: `submitFinal` cria a única revisão COMPLETE/FINAL e o requisito CALCULATED no
-  mesmo commit; depois disso a anamnese não aceita save, amend, supersede ou rebase.
+- MUST: `submitFinal` rejeita `INCOMPLETE`; quando aceito, cria a única revisão
+  COMPLETE/FINAL e o resultado `PROPOSED`, `HUMAN_DEFINITION_REQUIRED` ou
+  `OUT_OF_DEMO_RANGE` no mesmo commit. Depois disso a anamnese não aceita save, amend,
+  supersede ou rebase.
 - MUST NOT: array vazio representar resposta negativa.
 - MUST NOT: widget nutricional herdado entrar no template por conveniência.
-- IF um campo obrigatório estiver `NOT_ASKED`, THEN o requisito fica `UNCLASSIFIABLE`.
+- IF um campo obrigatório estiver `NOT_ASKED`, THEN o resultado é `INCOMPLETE`, nenhum
+  requisito é criado e a finalização é recusada.
 
 ### Classificação operacional
 
 - MUST: a saída contém tipo de slot, janela desejada, recursos, regra aplicada, fatos
   encontrados e versão do conjunto de regras.
+- MUST: gravidade, urgência, prioridade cirúrgica, carga operacional e relação entre
+  data-alvo e capacidade permanecem eixos independentes.
 - MUST: a UI chama a saída de requisito de agenda, nunca ASA, risco anestésico ou aptidão.
 - MUST: regra e override são persistidos como snapshot explicável.
 - MUST NOT: gerar recomendação de suspensão medicamentosa ou decisão médica.
+- MUST NOT: atribuir minutos universais a `UNKNOWN`, `REFUSED` ou documento pendente.
+- MUST: combinação fora do alcance da demo exige definição humana; nenhum cap descarta
+  sinal ou força o caso a caber em cinquenta minutos.
 - IF a enfermagem sobrescrever a saída, THEN informa valor anterior, novo valor e motivo.
-- MUST NOT: reabrir anamnese, corrigir entrada que altere o contexto ou reclassificar depois
-  que existe revisão FINAL/requisito CALCULATED; esse fluxo regressivo fica fora do MVP.
+- MUST NOT: alterar silenciosamente uma decisão publicada; nova decisão operacional
+  supersede a anterior, preserva histórico e força revalidação de reserva existente.
+- UNRESOLVED: correção do conteúdo FINAL da anamnese pertence ao Analyst dono.
 
 ### Agenda e concorrência
 
@@ -520,9 +529,9 @@ stateDiagram-v2
   filtra `ownerRole` e, para `SOLICITANTE`, o `targetServiceId` da sessão.
 - MUST: evidência documental persiste somente metadados, hash SHA-256 e autoria em
   `CaseDocument`; bytes e paths locais nunca entram no banco.
-- MUST: `ReturnRequest` copia o requisito operacional completo, inclusive duração, buffer,
-  ocupação, prazo e recursos; iniciar o retorno conclui o encontro de origem como
-  `COMPLETED/RETURN_STARTED` antes de consumir a solicitação.
+- MUST: o anestesiologista define ou confirma duração, buffer, ocupação, prazo e recursos
+  do retorno; a necessidade inicial é referência não vinculante. Iniciar o retorno conclui
+  o encontro de origem como `COMPLETED/RETURN_STARTED` antes de consumir a solicitação.
 - MUST: só existe resultado `FINAL`; após criado, update, delete, adendo e segunda
   finalização são rejeitados no MVP.
 - MUST: `finalizedBy + finalizedAt + contentHash` são proveniência e integridade local, não
