@@ -119,10 +119,11 @@ export function GraphVisualizer({
 
       // Label
       if (globalScale > 0.6 || isSelected || isNeighbor) {
+        const isDark = document.documentElement.classList.contains('dark')
         ctx.font = `${fontSize}px Inter, sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'top'
-        ctx.fillStyle = dimmed ? '#94a3b844' : '#e2e8f0'
+        ctx.fillStyle = dimmed ? '#64748b55' : (isDark ? '#e2e8f0' : '#334155')
         ctx.fillText(label, node.x, node.y + r + 2)
       }
     },
@@ -156,6 +157,7 @@ export function GraphVisualizer({
         onNodeClick={handleNodeClick}
         backgroundColor="transparent"
         cooldownTicks={100}
+        onEngineStop={() => fgRef.current?.zoomToFit(400, 60)}
         enableNodeDrag={true}
         enableZoomInteraction={true}
         enablePanInteraction={true}

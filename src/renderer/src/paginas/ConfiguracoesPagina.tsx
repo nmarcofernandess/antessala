@@ -92,7 +92,7 @@ export function ConfiguracoesPagina() {
     <div className="flex min-h-full flex-col bg-muted/10">
       <PageHeader breadcrumbs={[{ label: 'Configurações' }]} />
 
-      <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:px-8">
         <div className="mb-8 flex flex-col gap-3 border-b pb-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">

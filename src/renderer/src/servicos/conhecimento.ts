@@ -70,8 +70,19 @@ export const servicoConhecimento = {
   gerarMetadataIa: (texto: string, campo: 'titulo' | 'quando_consultar' | 'texto') =>
     knowledgeClient['knowledge.gerarMetadataIa']({ texto, campo }) as Promise<{ resultado: string }>,
 
-  importarCompleto: (titulo: string, conteudo: string, quando_consultar: string) =>
-    knowledgeClient['knowledge.importarCompleto']({ titulo, conteudo, quando_consultar }) as Promise<{ source_id: number; chunks_count: number; entities_count: number }>,
+  importarCompleto: (titulo: string, conteudo: string, quando_consultar: string, auto_enrich = true) =>
+    knowledgeClient['knowledge.importarCompleto']({ titulo, conteudo, quando_consultar, auto_enrich }) as Promise<{
+      source_id: number
+      chunks_count: number
+      entities_count: number
+      enrichment: {
+        status: 'completed' | 'skipped' | 'failed'
+        reason?: string
+        chunks_enriquecidos?: number
+        entities_count?: number
+        relations_count?: number
+      }
+    }>,
 
   enrichmentConfig: () =>
     knowledgeClient['knowledge.enrichmentConfig.get']() as Promise<KnowledgeEnrichmentConfig>,
@@ -82,13 +93,20 @@ export const servicoConhecimento = {
   listarEnrichmentModels: () =>
     knowledgeClient['knowledge.enrichmentModels.list']() as Promise<KnowledgeEnrichmentModelOption[]>,
 
+  carregarDemonstracao: () => knowledgeClient['knowledge.demo.seed']() as Promise<{
+    imported: number
+    sources_count: number
+    source_ids: number[]
+    fixture_version: string
+  }>,
+
   enrich: () => knowledgeClient['knowledge.enrich']({}) as Promise<{
     chunks_enriquecidos: number
     entities_count: number
     relations_count: number
     batches_processados: number
     batches_failed: number
-    provider: 'gemini' | 'openrouter'
+    provider: 'gemini' | 'openrouter' | 'fixture'
     modelo: string
   }>,
 

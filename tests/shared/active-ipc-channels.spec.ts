@@ -13,6 +13,7 @@ describe('active IPC channels', () => {
     expect(isActiveIpcChannel('knowledge.importarCompleto')).toBe(true)
     expect(isActiveIpcChannel('knowledge.listarChunks')).toBe(true)
     expect(isActiveIpcChannel('knowledge.enrich')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.demo.seed')).toBe(true)
     expect(isActiveIpcChannel('knowledge.graphData')).toBe(true)
   })
 

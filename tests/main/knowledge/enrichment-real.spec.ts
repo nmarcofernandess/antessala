@@ -7,6 +7,8 @@ import { createTables } from '../../../src/main/db/schema'
 import { execute, insertReturningId, queryAll, queryOne } from '../../../src/main/db/query'
 import { enrichAllChunksWithModel } from '../../../src/main/knowledge/enrichment'
 import type { EnrichmentModel } from '../../../src/main/knowledge/enrichment'
+import { seedKnowledgeDemo } from '../../../src/main/knowledge/demo-fixtures'
+import { insertChunk } from '../../../src/main/knowledge/ingest'
 
 vi.mock('../../../src/main/knowledge/embeddings', () => ({
   generatePassageEmbedding: vi.fn(async () => null),
@@ -122,5 +124,68 @@ describe('knowledge enrichment with real persistence', () => {
     expect(relations).toEqual([
       { from_nome: 'AlphaFlow', to_nome: 'BetaKernel', tipo_relacao: 'usa' },
     ])
+  })
+
+  it('enriches only the newly imported source when sourceId is provided', async () => {
+    const firstSource = await insertReturningId(
+      `INSERT INTO knowledge_sources (tipo, titulo, conteudo_original, metadata, importance)
+       VALUES ('manual', 'Primeira fonte', 'conteudo', '{}'::jsonb, 'high')`,
+    )
+    const targetSource = await insertReturningId(
+      `INSERT INTO knowledge_sources (tipo, titulo, conteudo_original, metadata, importance)
+       VALUES ('manual', 'Fonte alvo', 'conteudo', '{}'::jsonb, 'high')`,
+    )
+    await insertChunk(firstSource, 'Esta fonte anterior nao deve ser enriquecida por uma importacao posterior com filtro de origem.', null)
+    await insertChunk(targetSource, 'Checklist cirurgico melhora a comunicacao da equipe durante o cuidado perioperatorio.', null)
+
+    const model: EnrichmentModel = {
+      provider: 'gemini',
+      modelo: 'fixture-source-filter',
+      generate: vi.fn().mockResolvedValue({
+        chunks: [{
+          index: 0,
+          resumo: 'Checklist melhora a comunicação perioperatória.',
+          tags: ['checklist', 'segurança', 'perioperatório'],
+          entidades: [
+            { nome: 'Checklist cirúrgico', tipo: 'documento' },
+            { nome: 'Equipe perioperatória', tipo: 'funcao' },
+          ],
+          relacoes: [{ from: 'Checklist cirúrgico', to: 'Equipe perioperatória', tipo_relacao: 'apoia', peso: 1 }],
+        }],
+      }),
+    }
+
+    const result = await enrichAllChunksWithModel(model, { sourceId: targetSource })
+    expect(result.chunks_enriquecidos).toBe(1)
+    const first = await queryOne<{ enriched_at: string | null }>(
+      'SELECT enriched_at::text FROM knowledge_chunks WHERE source_id = $1', firstSource,
+    )
+    const target = await queryOne<{ enriched_at: string | null }>(
+      'SELECT enriched_at::text FROM knowledge_chunks WHERE source_id = $1', targetSource,
+    )
+    expect(first?.enriched_at).toBeNull()
+    expect(target?.enriched_at).toBeTruthy()
+  })
+
+  it('seeds the curated demo idempotently with searchable chunks and graph relations', async () => {
+    const first = await seedKnowledgeDemo()
+    const second = await seedKnowledgeDemo()
+
+    expect(first).toMatchObject({ imported: 3, sources_count: 3 })
+    expect(second).toMatchObject({ imported: 0, sources_count: 3 })
+    const counts = await queryOne<{ sources: number; enriched: number; relations: number }>(`
+      SELECT
+        (SELECT COUNT(*)::int FROM knowledge_sources WHERE metadata->>'synthetic_fixture' = 'true') AS sources,
+        (SELECT COUNT(*)::int FROM knowledge_chunks WHERE enriched_at IS NOT NULL) AS enriched,
+        (SELECT COUNT(*)::int FROM knowledge_relations) AS relations
+    `)
+    expect(counts?.sources).toBe(3)
+    expect(counts?.enriched).toBeGreaterThanOrEqual(3)
+    expect(counts?.relations).toBeGreaterThanOrEqual(8)
+
+    const searchable = await queryOne<{ total: number }>(
+      `SELECT COUNT(*)::int AS total FROM knowledge_chunks WHERE search_tsv @@ plainto_tsquery('portuguese', 'indução anestésica')`,
+    )
+    expect(searchable?.total).toBeGreaterThan(0)
   })
 })

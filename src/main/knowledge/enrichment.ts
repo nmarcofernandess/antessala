@@ -86,7 +86,7 @@ ${chunkBlocks}`
 // =============================================================================
 
 export interface EnrichmentModel {
-  provider: 'gemini' | 'openrouter'
+  provider: 'gemini' | 'openrouter' | 'fixture'
   modelo: string
   generate: (prompt: string) => Promise<ChunkEnrichmentResult>
 }
@@ -348,6 +348,8 @@ export interface EnrichmentProgress {
 }
 
 export interface EnrichmentOptions {
+  /** Restringe o processamento a uma única fonte recém-importada. */
+  sourceId?: number
   /** Filtro por tipo de source: 'sistema', 'manual', 'importacao_usuario', etc. Se omitido, processa todos. */
   sourceTipo?: string
   /** Filtro por grupo de importacao em massa. */
@@ -374,6 +376,7 @@ export async function enrichAllChunksWithModel(
 
   // 1. Carregar chunks agrupados por source
   const params: unknown[] = []
+  const sourceIdFilter = options?.sourceId ? `AND ks.id = $${params.push(options.sourceId)}` : ''
   const tipoFilter = options?.sourceTipo ? `AND ks.tipo = $${params.push(options.sourceTipo)}` : ''
   let bulkGroupFilter = ''
   if (options?.bulkGroupId) {
@@ -403,6 +406,7 @@ export async function enrichAllChunksWithModel(
     JOIN knowledge_sources ks ON ks.id = kc.source_id AND ks.ativo = true
     WHERE length(kc.conteudo) > 50
       ${tipoFilter}
+      ${sourceIdFilter}
       ${bulkGroupFilter}
       ${enrichedFilter}
     ORDER BY ks.tipo, ks.id, kc.id

@@ -88,6 +88,8 @@ export function AdicionarConhecimentoDialog({
     if (nome) {
       setArquivoNome(nome)
       setTitulo(nome)
+    } else {
+      setTitulo((atual) => atual || 'Documento importado')
     }
     setStep(2)
 
@@ -196,10 +198,17 @@ export function AdicionarConhecimentoDialog({
     setSalvando(true)
     try {
       const textoFinal = conteudoCompletoRef.current || conteudo
-      const result = await servicoConhecimento.importarCompleto(titulo.trim(), textoFinal, quandoConsultar.trim())
-      toast.success('Conhecimento adicionado!', {
-        description: `${result.chunks_count} chunks criados.`,
-      })
+      const result = await servicoConhecimento.importarCompleto(titulo.trim(), textoFinal, quandoConsultar.trim(), true)
+      const enrichment = result.enrichment
+      if (enrichment.status === 'completed') {
+        toast.success('Documento salvo e enriquecido', {
+          description: `${result.chunks_count} chunks · ${enrichment.entities_count ?? 0} entidades · ${enrichment.relations_count ?? 0} relações`,
+        })
+      } else {
+        toast.success('Documento salvo', {
+          description: enrichment.reason || `${result.chunks_count} chunks criados. O enriquecimento pode ser iniciado depois.`,
+        })
+      }
       resetState()
       onOpenChange(false)
       onSaved()
@@ -545,7 +554,7 @@ export function AdicionarConhecimentoDialog({
               </Button>
               <Button onClick={handleSalvar} disabled={!podeSalvar || salvando || alguemGerando}>
                 {salvando && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-                Salvar
+                {iaDisponivel ? 'Salvar e enriquecer' : 'Salvar documento'}
               </Button>
             </DialogFooter>
           </>

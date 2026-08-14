@@ -378,20 +378,41 @@ const knowledgeGerarMetadataIa = t.procedure
   })
 
 const knowledgeImportarCompleto = t.procedure
-  .input<{ titulo: string; conteudo: string; quando_consultar: string }>()
+  .input<{ titulo: string; conteudo: string; quando_consultar: string; auto_enrich?: boolean }>()
   .action(async ({ input }) => {
     const { ingestKnowledge } = await import('./ingest')
     const conteudo = input.quando_consultar
       ? `<!-- quando_usar: ${input.quando_consultar} -->\n${input.conteudo}`
       : input.conteudo
-    return ingestKnowledge(input.titulo, conteudo, 'high', {
+    const imported = await ingestKnowledge(input.titulo, conteudo, 'high', {
       tipo: 'manual',
       context_hint: input.quando_consultar,
     })
+    if (!input.auto_enrich) return { ...imported, enrichment: { status: 'skipped' as const } }
+
+    try {
+      const { enrichAllChunksWithModel } = await import('./enrichment')
+      const { buildKnowledgeEnrichmentModel, getKnowledgeEnrichmentConfig } = await import('./enrichment-config')
+      const config = await getKnowledgeEnrichmentConfig()
+      const model = await buildKnowledgeEnrichmentModel(config, { explicitOverride: true })
+      if (!model) {
+        return { ...imported, enrichment: { status: 'skipped' as const, reason: 'Configure o Gemini para enriquecer automaticamente.' } }
+      }
+      const enrichment = await enrichAllChunksWithModel(model, { sourceId: imported.source_id })
+      return { ...imported, enrichment: { status: 'completed' as const, ...enrichment } }
+    } catch (error) {
+      return {
+        ...imported,
+        enrichment: {
+          status: 'failed' as const,
+          reason: error instanceof Error ? error.message : String(error),
+        },
+      }
+    }
   })
 
 const knowledgeEnrich = t.procedure
-  .input<{ sourceTipo?: string; bulkGroupId?: number; forceAll?: boolean } | undefined>()
+  .input<{ sourceId?: number; sourceTipo?: string; bulkGroupId?: number; forceAll?: boolean } | undefined>()
   .action(async ({ input }) => {
     const { enrichAllChunksWithModel } = await import('./enrichment')
     const {
@@ -404,6 +425,7 @@ const knowledgeEnrich = t.procedure
       throw new Error('Configure o Gemini para enriquecer.')
     }
     return enrichAllChunksWithModel(model, {
+      sourceId: input?.sourceId,
       sourceTipo: input?.sourceTipo,
       bulkGroupId: input?.bulkGroupId,
       forceAll: input?.forceAll ?? config.force_all_default,
@@ -425,6 +447,11 @@ const knowledgeEnrichmentConfigSave = t.procedure
 const knowledgeEnrichmentModelsList = t.procedure.action(async () => {
   const { listKnowledgeEnrichmentModelOptions } = await import('./enrichment-config')
   return listKnowledgeEnrichmentModelOptions()
+})
+
+const knowledgeDemoSeed = t.procedure.action(async () => {
+  const { seedKnowledgeDemo } = await import('./demo-fixtures')
+  return seedKnowledgeDemo()
 })
 
 const knowledgeRebuildGraph = t.procedure
@@ -567,6 +594,7 @@ export const dormantKnowledgeRouter = {
   'knowledge.enrichmentConfig.get': knowledgeEnrichmentConfigGet,
   'knowledge.enrichmentConfig.save': knowledgeEnrichmentConfigSave,
   'knowledge.enrichmentModels.list': knowledgeEnrichmentModelsList,
+  'knowledge.demo.seed': knowledgeDemoSeed,
   'knowledge.rebuildGraph': knowledgeRebuildGraph,
   'knowledge.graphStats': knowledgeGraphStats,
   'knowledge.rebuildAndExportSistema': knowledgeRebuildAndExportSistema,
@@ -604,6 +632,7 @@ export const knowledgeStudioRouter = {
   'knowledge.enrichmentConfig.get': knowledgeEnrichmentConfigGet,
   'knowledge.enrichmentConfig.save': knowledgeEnrichmentConfigSave,
   'knowledge.enrichmentModels.list': knowledgeEnrichmentModelsList,
+  'knowledge.demo.seed': knowledgeDemoSeed,
   'knowledge.rebuildGraph': knowledgeRebuildGraph,
   'knowledge.graphStats': knowledgeGraphStats,
   'knowledge.search': knowledgeSearch,

@@ -3,6 +3,7 @@ import {
   BookOpen,
   Boxes,
   FileText,
+  FlaskConical,
   Loader2,
   Network,
   RefreshCw,
@@ -71,6 +72,7 @@ export function MemoriaPagina() {
   const [links, setLinks] = useState<GraphLink[]>([])
   const [carregando, setCarregando] = useState(true)
   const [enriquecendo, setEnriquecendo] = useState(false)
+  const [carregandoDemo, setCarregandoDemo] = useState(false)
   const [dialogAberto, setDialogAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [fonteSelecionada, setFonteSelecionada] = useState<Fonte | null>(null)
@@ -165,13 +167,29 @@ export function MemoriaPagina() {
     }
   }
 
+  async function carregarDemonstracao() {
+    setCarregandoDemo(true)
+    try {
+      const result = await servicoConhecimento.carregarDemonstracao()
+      await carregar()
+      setTab('grafo')
+      toast.success(result.imported > 0 ? 'Demonstração preparada' : 'Demonstração já estava pronta', {
+        description: `${result.sources_count} fontes sintéticas com chunks e grafo determinístico.`,
+      })
+    } catch (error) {
+      toast.error('Não foi possível preparar a demonstração', { description: cleanError(error) })
+    } finally {
+      setCarregandoDemo(false)
+    }
+  }
+
   return (
     <div className="flex min-h-full flex-col bg-muted/10">
       <PageHeader breadcrumbs={[{ label: 'Antessala' }, { label: 'Memória' }]} />
 
       <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:px-8">
-        <header className="mb-7 flex flex-col gap-5 border-b pb-7 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+        <header className="mb-7 grid gap-5 border-b pb-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="max-w-xl">
             <div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
               <span className="size-1.5 rounded-full bg-violet-500" />
               Knowledge studio
@@ -181,15 +199,19 @@ export function MemoriaPagina() {
               Importe material de treinamento, veja como ele foi fragmentado e transforme os conceitos em um grafo que o Assistente pode consultar.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => void carregar()} disabled={carregando}>
-              <RefreshCw className={cn('size-4', carregando && 'animate-spin')} /> Atualizar
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <Button size="sm" variant="outline" onClick={() => void carregar()} disabled={carregando} aria-label="Atualizar memória" title="Atualizar memória">
+              <RefreshCw className={cn('size-4', carregando && 'animate-spin')} />
             </Button>
-            <Button variant="outline" onClick={() => void enriquecer()} disabled={enriquecendo || totais.total_chunks === 0}>
+            <Button size="sm" variant="outline" onClick={() => void enriquecer()} disabled={enriquecendo || totais.total_chunks === 0}>
               {enriquecendo ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-              Enriquecer grafo
+              Enriquecer
             </Button>
-            <Button onClick={() => setDialogAberto(true)}>
+            <Button size="sm" variant="outline" onClick={() => void carregarDemonstracao()} disabled={carregandoDemo}>
+              {carregandoDemo ? <Loader2 className="size-4 animate-spin" /> : <FlaskConical className="size-4" />}
+              Exemplos
+            </Button>
+            <Button size="sm" onClick={() => setDialogAberto(true)}>
               <Upload className="size-4" /> Importar
             </Button>
           </div>
@@ -203,9 +225,9 @@ export function MemoriaPagina() {
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="mb-5">
-            <TabsTrigger value="biblioteca"><BookOpen className="size-4" /> Biblioteca</TabsTrigger>
-            <TabsTrigger value="chunks"><Boxes className="size-4" /> Chunks</TabsTrigger>
-            <TabsTrigger value="grafo"><Network className="size-4" /> Grafo</TabsTrigger>
+            <TabsTrigger value="biblioteca" className="gap-2"><BookOpen className="size-4" /> Biblioteca</TabsTrigger>
+            <TabsTrigger value="chunks" className="gap-2"><Boxes className="size-4" /> Chunks</TabsTrigger>
+            <TabsTrigger value="grafo" className="gap-2"><Network className="size-4" /> Grafo</TabsTrigger>
           </TabsList>
 
           <TabsContent value="biblioteca">
