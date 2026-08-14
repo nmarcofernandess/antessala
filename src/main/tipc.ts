@@ -7,10 +7,14 @@ import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
 import type { SemanticAnswer } from '../shared/mvp/workflow'
 import {
+  acceptPendencyEvidence,
   bookCompatibleSlot,
   acknowledgeDelivery,
+  approveKnowledgeRelation,
+  bookReturnSlot,
   checkInBooking,
   confirmRequirement,
+  confirmFieldProposal,
   createCase,
   finalizeResult,
   getCurrentSession,
@@ -18,26 +22,31 @@ import {
   listCasesForCurrentRole,
   listCompatibleSlots,
   listFixtureUsers,
+  listPendencies,
   login,
   logout,
   openPendency,
+  proposeFieldsFromTranscript,
   reviseResult,
   saveAndSubmitTriage,
   sendResultToRequester,
+  searchApprovedKnowledge,
   startAssessment,
   startNursing,
+  submitPendencyEvidence,
+  suggestKnowledgeRelation,
 } from './mvp/service'
 
 const require = createRequire(import.meta.url)
 const { tipc } = require('@egoist/tipc/main') as typeof import('@egoist/tipc/main')
 const t = tipc.create()
 
-type CloudProvider = 'gemini' | 'openrouter'
+type CloudProvider = 'gemini'
 type ProviderSettings = Partial<Record<CloudProvider, { token?: string; modelo?: string }>>
 
 function assertProvider(value: string): asserts value is CloudProvider {
-  if (value !== 'gemini' && value !== 'openrouter') {
-    throw new Error('Provider inválido. Escolha Gemini ou OpenRouter.')
+  if (value !== 'gemini') {
+    throw new Error('Provider inválido. O Antessala usa somente Gemini.')
   }
 }
 
@@ -329,6 +338,18 @@ export const router = {
       requiresReturn: boolean
     }>()
     .action(async ({ input }) => openPendency(input.caseId, input)),
+  'mvp.pendencies.list': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => listPendencies(input.caseId)),
+  'mvp.pendencies.submitEvidence': t.procedure
+    .input<{ pendencyId: string; evidence: string }>()
+    .action(async ({ input }) => submitPendencyEvidence(input.pendencyId, input.evidence)),
+  'mvp.pendencies.acceptEvidence': t.procedure
+    .input<{ pendencyId: string }>()
+    .action(async ({ input }) => acceptPendencyEvidence(input.pendencyId)),
+  'mvp.returns.book': t.procedure
+    .input<{ caseId: string; slotId: string }>()
+    .action(async ({ input }) => bookReturnSlot(input.caseId, input.slotId)),
   'mvp.results.current': t.procedure
     .input<{ caseId: string }>()
     .action(async ({ input }) => getCurrentResult(input.caseId)),
@@ -350,6 +371,21 @@ export const router = {
   'mvp.deliveries.acknowledge': t.procedure
     .input<{ caseId: string }>()
     .action(async ({ input }) => acknowledgeDelivery(input.caseId)),
+  'mvp.ai.proposeFields': t.procedure
+    .input<{ caseId: string; transcript: string }>()
+    .action(async ({ input }) => proposeFieldsFromTranscript(input.caseId, input.transcript)),
+  'mvp.ai.reviewProposal': t.procedure
+    .input<{ proposalId: string; decision: 'ACCEPT' | 'REJECT' }>()
+    .action(async ({ input }) => confirmFieldProposal(input.proposalId, input.decision)),
+  'mvp.knowledge.suggest': t.procedure
+    .input<{ subject: string; predicate: string; object: string; rationale: string }>()
+    .action(async ({ input }) => suggestKnowledgeRelation(input)),
+  'mvp.knowledge.approve': t.procedure
+    .input<{ relationId: string }>()
+    .action(async ({ input }) => approveKnowledgeRelation(input.relationId)),
+  'mvp.knowledge.search': t.procedure
+    .input<{ term: string }>()
+    .action(async ({ input }) => searchApprovedKnowledge(input.term)),
   'mvp.users.list': t.procedure.action(async () => listFixtureUsers()),
   'ia.configuracao.obter': iaConfiguracaoObter,
   'ia.configuracao.salvar': iaConfiguracaoSalvar,

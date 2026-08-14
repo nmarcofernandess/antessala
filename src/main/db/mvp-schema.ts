@@ -163,6 +163,38 @@ CREATE TABLE IF NOT EXISTS result_deliveries (
   acknowledged_by TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
   acknowledged_at TIMESTAMPTZ
 );
+
+CREATE TABLE IF NOT EXISTS ai_field_proposals (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES preop_cases(id) ON DELETE RESTRICT,
+  field_path TEXT NOT NULL,
+  proposed_value JSONB NOT NULL,
+  evidence_excerpt TEXT NOT NULL,
+  explanation TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT','ACCEPTED','REJECTED','CORRECTED')),
+  transcript_hash TEXT NOT NULL,
+  created_by TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  reviewed_by TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS mvp_knowledge_relations (
+  id TEXT PRIMARY KEY,
+  subject TEXT NOT NULL,
+  predicate TEXT NOT NULL,
+  object TEXT NOT NULL,
+  rationale TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'SUGGESTED' CHECK (status IN ('SUGGESTED','ACTIVE','INACTIVE','SUPERSEDED')),
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  suggested_by TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  approved_by TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  approved_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_active_search
+  ON mvp_knowledge_relations(status, subject, predicate, object);
 `
 
 export async function createMvpTables(): Promise<void> {

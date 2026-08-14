@@ -2,11 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { CalendarCheck, ClipboardPlus, FileCheck2, LogOut, Play, RefreshCw, Send, ShieldCheck, Stethoscope } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
 import { PageHeader } from '@/componentes/PageHeader'
 import { client } from '@/servicos/client'
 import { useAuth } from './AuthProvider'
@@ -124,6 +126,12 @@ function ReceptionPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => 
     await refresh()
   }
 
+  async function bookReturn(caseId: string, slotId: string) {
+    await client['mvp.returns.book']({ caseId, slotId })
+    toast.success('Retorno reservado em vaga compatível.')
+    await refresh()
+  }
+
   async function checkIn(caseId: string) {
     await client['mvp.bookings.checkIn']({ caseId })
     toast.success('Chegada confirmada. O caso já está com o anestesiologista.')
@@ -160,6 +168,7 @@ function ReceptionPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => 
             {(slots[item.id] ?? []).map((slot) => <Button key={slot.id} variant="secondary" onClick={() => void book(item.id, slot.id)}>{new Date(slot.startsAt).toLocaleString('pt-BR')} · {slot.slotClass}</Button>)}
           </div>}
           {item.status === 'SCHEDULED' && <Button onClick={() => void checkIn(item.id)}><CalendarCheck className="size-4" /> Confirmar chegada</Button>}
+          {item.status === 'WAITING_RETURN' && <div className="grid gap-2"><Button variant="outline" onClick={() => void loadSlots(item.id)}>Encontrar vaga de retorno</Button>{(slots[item.id] ?? []).map((slot) => <Button key={slot.id} variant="secondary" onClick={() => void bookReturn(item.id, slot.id)}>{new Date(slot.startsAt).toLocaleString('pt-BR')} · {slot.slotClass}</Button>)}</div>}
           {item.status === 'READY_FOR_HANDOFF' && <Button onClick={() => void send(item.id)}><Send className="size-4" /> Enviar resultado</Button>}
         </CaseCard>)}
       </section>
@@ -169,6 +178,8 @@ function ReceptionPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => 
 
 function NursingPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => Promise<void> }) {
   const [draft, setDraft] = useState({ cardiovascular: false, respiratory: false, allergy: false, accommodation: false, medications: 0 })
+  const [transcript, setTranscript] = useState('Relata alergia a dipirona e uso de cinco medicamentos.')
+  const [proposals, setProposals] = useState<Awaited<ReturnType<typeof client['mvp.ai.proposeFields']>>>([])
   async function start(caseId: string) { await client['mvp.cases.startNursing']({ caseId }); await refresh() }
   async function submit(caseId: string) {
     const source = 'PATIENT_REPORT' as const
@@ -184,11 +195,29 @@ function NursingPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => Pr
     toast.success('Necessidade confirmada e publicada para a recepção.')
     await refresh()
   }
+  async function propose(caseId: string) {
+    const result = await client['mvp.ai.proposeFields']({ caseId, transcript })
+    setProposals(result)
+    toast.info('Gemini gerou rascunhos. Nada foi aceito automaticamente.')
+  }
+  async function review(proposalId: string, decision: 'ACCEPT' | 'REJECT') {
+    const updated = await client['mvp.ai.reviewProposal']({ proposalId, decision })
+    setProposals((current) => current.map((item) => item.id === updated.id ? updated : item))
+  }
   return <section className="grid gap-3">
     <div><h2 className="font-semibold">Entrevistas de enfermagem</h2><p className="text-sm text-muted-foreground">A regra sugere tempo; você confirma antes da recepção enxergar.</p></div>
     {cases.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma pessoa aguardando entrevista.</p>}
     {cases.map((item) => <CaseCard key={item.id} item={item}>
       {item.status === 'WAITING_NURSING' ? <Button onClick={() => void start(item.id)}><Play className="size-4" /> Iniciar entrevista</Button> : <div className="grid gap-3">
+        <div className="rounded-md border bg-muted/30 p-3">
+          <Label htmlFor={`transcript-${item.id}`}>Transcrição digitada para a prova de IA</Label>
+          <Textarea id={`transcript-${item.id}`} className="mt-2" value={transcript} onChange={(event) => setTranscript(event.target.value)} />
+          <Button className="mt-2" type="button" variant="outline" onClick={() => void propose(item.id)}>Gerar sugestões com Gemini</Button>
+          {proposals.map((proposal) => <div key={proposal.id} className="mt-2 rounded border bg-background p-2 text-sm">
+            <p><strong>{proposal.fieldPath}</strong>: {String(proposal.value)}</p><p className="text-muted-foreground">Origem: “{proposal.evidence}” · {proposal.explanation}</p>
+            {proposal.status === 'DRAFT' ? <div className="mt-2 flex gap-2"><Button size="sm" onClick={() => void review(proposal.id, 'ACCEPT')}>Aceitar</Button><Button size="sm" variant="ghost" onClick={() => void review(proposal.id, 'REJECT')}>Rejeitar</Button></div> : <Badge className="mt-2" variant="outline">{proposal.status}</Badge>}
+          </div>)}
+        </div>
         {[['allergy','Alergia relatada'],['cardiovascular','Sinal cardiovascular'],['respiratory','Sinal respiratório'],['accommodation','Precisa de acomodação']].map(([key,label]) => <label key={key} className="flex items-center gap-2 text-sm"><Checkbox checked={draft[key as keyof typeof draft] as boolean} onCheckedChange={(value) => setDraft({ ...draft, [key]: value === true })} />{label}</label>)}
         <div className="grid gap-1.5"><Label>Quantidade de medicamentos</Label><Input type="number" min={0} value={draft.medications} onChange={(e) => setDraft({ ...draft, medications: Number(e.target.value) })} /></div>
         <Button onClick={() => void submit(item.id)}><ShieldCheck className="size-4" /> Submeter e confirmar necessidade</Button>
@@ -208,6 +237,8 @@ function AssessmentPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () =>
     summary: 'Avaliação pré-anestésica realizada pelo profissional responsável.',
     conclusion: 'Resultado demonstrativo registrado após revisão humana.',
   })
+  const [knowledge, setKnowledge] = useState<Awaited<ReturnType<typeof client['mvp.knowledge.search']>>>([])
+  const [pendencies, setPendencies] = useState<Record<string, Awaited<ReturnType<typeof client['mvp.pendencies.list']>>>>({})
 
   async function start(caseId: string) {
     await client['mvp.assessments.start']({ caseId })
@@ -232,8 +263,28 @@ function AssessmentPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () =>
     await refresh()
   }
 
+  async function demonstrateMemory() {
+    const relation = await client['mvp.knowledge.suggest']({
+      subject: 'Endoscopia', predicate: 'pode_requerer', object: 'revisão de alergias',
+      rationale: 'Relação demonstrativa cadastrada e revisada por profissional humano.',
+    })
+    await client['mvp.knowledge.approve']({ relationId: relation.id })
+    setKnowledge(await client['mvp.knowledge.search']({ term: 'Endoscopia' }))
+    toast.success('Relação aprovada e recuperada da memória local.')
+  }
+  async function loadPendencies(caseId: string) {
+    const items = await client['mvp.pendencies.list']({ caseId })
+    setPendencies((current) => ({ ...current, [caseId]: items }))
+  }
+  async function acceptEvidence(caseId: string, pendencyId: string) {
+    await client['mvp.pendencies.acceptEvidence']({ pendencyId })
+    toast.success('Evidência revisada. O retorno foi encaminhado à recepção quando necessário.')
+    await refresh(); await loadPendencies(caseId)
+  }
+
   return <section className="grid gap-3">
-    <div><h2 className="font-semibold">Consultas pré-anestésicas</h2><p className="text-sm text-muted-foreground">Somente você conclui a avaliação; o sistema não atribui ASA nem aptidão.</p></div>
+    <div className="flex flex-wrap items-start justify-between gap-2"><div><h2 className="font-semibold">Consultas pré-anestésicas</h2><p className="text-sm text-muted-foreground">Somente você conclui a avaliação; o sistema não atribui ASA nem aptidão.</p></div><Button variant="outline" onClick={() => void demonstrateMemory()}>Demonstrar memória aprovada</Button></div>
+    {knowledge.map((relation) => <Alert key={relation.id}><AlertDescription>{relation.subject} → {relation.predicate.replaceAll('_', ' ')} → {relation.object} · versão {relation.version}</AlertDescription></Alert>)}
     {cases.length === 0 && <p className="text-sm text-muted-foreground">Nenhum caso exige sua ação agora.</p>}
     {cases.map((item) => <CaseCard key={item.id} item={item}>
       {item.status === 'WAITING_ANESTHESIA' && <Button onClick={() => void start(item.id)}><Stethoscope className="size-4" /> Iniciar consulta</Button>}
@@ -242,12 +293,14 @@ function AssessmentPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () =>
         <div className="grid gap-1.5"><Label>Conclusão</Label><Input value={draft.conclusion} onChange={(event) => setDraft({ ...draft, conclusion: event.target.value })} /></div>
         <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => void addPendency(item.id)}>Registrar pendência</Button><Button onClick={() => void finalize(item.id)}><FileCheck2 className="size-4" /> Finalizar resultado</Button></div>
       </div>}
+      {item.status === 'PENDING' && <div className="grid gap-2"><Button variant="outline" onClick={() => void loadPendencies(item.id)}>Revisar pendências</Button>{(pendencies[item.id] ?? []).map((pendency) => <div key={pendency.id} className="rounded border p-2 text-sm"><p>{pendency.description}</p><Badge variant="outline">{pendency.status}</Badge>{pendency.status === 'EVIDENCE_SUBMITTED' && <Button className="ml-2" size="sm" onClick={() => void acceptEvidence(item.id, pendency.id)}>Aceitar evidência</Button>}</div>)}</div>}
     </CaseCard>)}
   </section>
 }
 
 function RequesterPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => Promise<void> }) {
   const [results, setResults] = useState<Record<string, Awaited<ReturnType<typeof client['mvp.results.current']>>>>({})
+  const [pendencies, setPendencies] = useState<Record<string, Awaited<ReturnType<typeof client['mvp.pendencies.list']>>>>({})
   async function load(caseId: string) {
     const result = await client['mvp.results.current']({ caseId })
     setResults((current) => ({ ...current, [caseId]: result }))
@@ -257,11 +310,21 @@ function RequesterPanel({ cases, refresh }: { cases: CaseItem[]; refresh: () => 
     toast.success('Recebimento confirmado. A marcação da cirurgia continua fora do Antessala.')
     await refresh()
   }
+  async function loadPendencies(caseId: string) {
+    const items = await client['mvp.pendencies.list']({ caseId })
+    setPendencies((current) => ({ ...current, [caseId]: items }))
+  }
+  async function submitEvidence(caseId: string, pendencyId: string) {
+    await client['mvp.pendencies.submitEvidence']({ pendencyId, evidence: 'Documento ou informação conferida pelo serviço solicitante.' })
+    toast.success('Evidência enviada. Ela ainda precisa de revisão clínica.')
+    await loadPendencies(caseId)
+  }
   return <section className="grid gap-3"><h2 className="font-semibold">Resultados do serviço</h2>
     {cases.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum resultado disponível para o seu serviço.</p> : cases.map((item) => <CaseCard key={item.id} item={item}>
       <div className="grid gap-2"><Button variant="outline" onClick={() => void load(item.id)}>Ver resultado</Button>
         {results[item.id] && <div className="rounded-md border p-3 text-sm"><p className="font-medium">Versão {results[item.id]!.version}</p><p>{results[item.id]!.summary}</p><p className="text-muted-foreground">{results[item.id]!.conclusion}</p></div>}
         {item.status === 'READY_FOR_HANDOFF' && <Button onClick={() => void acknowledge(item.id)}><FileCheck2 className="size-4" /> Confirmar recebimento</Button>}
+        {item.status === 'PENDING' && <><Button variant="outline" onClick={() => void loadPendencies(item.id)}>Ver pendências</Button>{(pendencies[item.id] ?? []).map((pendency) => <div key={pendency.id} className="rounded border p-2 text-sm"><p>{pendency.description}</p><Badge variant="outline">{pendency.status}</Badge>{pendency.status === 'OPEN' && <Button className="ml-2" size="sm" onClick={() => void submitEvidence(item.id, pendency.id)}>Enviar evidência</Button>}</div>)}</>}
       </div>
     </CaseCard>)}</section>
 }

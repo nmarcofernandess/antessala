@@ -7,11 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { client } from '@/servicos/client'
 import {
   CLOUD_PROVIDER_DEFAULTS,
-  CLOUD_PROVIDER_LABELS,
   normalizeCloudIaConfig,
   type CloudIaProvider,
 } from '@/hooks/useIaModelConfig'
@@ -38,7 +36,7 @@ function errorMessage(error: unknown): string {
 }
 
 export function ConfiguracoesPagina() {
-  const [provider, setProvider] = useState<CloudIaProvider>('gemini')
+  const provider = 'gemini' as const
   const [drafts, setDrafts] = useState<Record<CloudIaProvider, ProviderDraft>>(EMPTY_DRAFTS)
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
@@ -54,13 +52,12 @@ export function ConfiguracoesPagina() {
         if (!active) return
         const config = normalizeCloudIaConfig(raw)
         if (!config) return
-        setProvider(config.provider)
         setDrafts((current) => ({
           ...current,
-          [config.provider]: {
+          gemini: {
             apiKey: '',
-            modelo: config.modelo,
-            configurado: config.configurado,
+            modelo: config.provider === 'gemini' ? config.modelo : CLOUD_PROVIDER_DEFAULTS.gemini,
+            configurado: config.provider === 'gemini' && config.configurado,
           },
         }))
       })
@@ -136,7 +133,7 @@ export function ConfiguracoesPagina() {
               <div>
                 <CardTitle>Assistente IA</CardTitle>
                 <CardDescription>
-                  Escolha um provedor cloud. Só um fica ativo por vez.
+                  Gemini opcional para sugerir rascunhos durante a entrevista.
                 </CardDescription>
               </div>
             </div>
@@ -148,17 +145,10 @@ export function ConfiguracoesPagina() {
               </div>
             ) : (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="ia-provider">Provedor</Label>
-                  <Select value={provider} onValueChange={(value) => setProvider(value as CloudIaProvider)}>
-                    <SelectTrigger id="ia-provider"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gemini">{CLOUD_PROVIDER_LABELS.gemini}</SelectItem>
-                      <SelectItem value="openrouter">{CLOUD_PROVIDER_LABELS.openrouter}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-1">
+                  <Label>Provedor</Label>
+                  <p className="text-sm font-medium">Google Gemini</p>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="ia-token">Token da API</Label>
                   <div className="relative">

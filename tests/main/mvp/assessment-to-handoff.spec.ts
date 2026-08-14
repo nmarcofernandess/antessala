@@ -6,7 +6,9 @@ import { closeDb, initDb } from '../../../src/main/db/pglite'
 import { createTables } from '../../../src/main/db/schema'
 import {
   acknowledgeDelivery,
+  acceptPendencyEvidence,
   bookCompatibleSlot,
+  bookReturnSlot,
   checkInBooking,
   confirmRequirement,
   createCase,
@@ -21,6 +23,7 @@ import {
   sendResultToRequester,
   startAssessment,
   startNursing,
+  submitPendencyEvidence,
   saveAndSubmitTriage,
 } from '../../../src/main/mvp/service'
 
@@ -88,5 +91,40 @@ describe('MVP assessment, result and handoff', () => {
     await login({ email: 'solicitante@antessala.demo', password: 'demo123' })
     const delivery = await acknowledgeDelivery(item.id)
     expect(delivery.status).toBe('ACKNOWLEDGED')
+  })
+
+  it('requires explicit evidence review and supports a booked return', async () => {
+    await logout()
+    await login({ email: 'recepcao@antessala.demo', password: 'demo123' })
+    const item = await createCase({
+      personName: 'Lúcia Dias', sex: 'F', age: 49, procedure: 'Endoscopia',
+      requesterService: 'Gastroenterologia', externalReference: 'GASTRO-88',
+    })
+    await logout(); await login({ email: 'enfermagem@antessala.demo', password: 'demo123' })
+    await startNursing(item.id)
+    await saveAndSubmitTriage(item.id, {})
+    await confirmRequirement(item.id, { decision: 'CONFIRM', reason: null })
+    await logout(); await login({ email: 'recepcao@antessala.demo', password: 'demo123' })
+    const [slot] = await listCompatibleSlots(item.id)
+    await bookCompatibleSlot(item.id, slot!.id)
+    await checkInBooking(item.id)
+    await logout(); await login({ email: 'anestesia@antessala.demo', password: 'demo123' })
+    await startAssessment(item.id)
+    const pendency = await openPendency(item.id, {
+      description: 'Apresentar avaliação cardiológica', impact: 'BLOCKS_CURRENT_RESULT',
+      ownerRole: 'SOLICITANTE', requiresReturn: true,
+    })
+    await logout(); await login({ email: 'solicitante@antessala.demo', password: 'demo123' })
+    await submitPendencyEvidence(pendency.id, 'Avaliação anexada ao fluxo externo.')
+    await logout(); await login({ email: 'anestesia@antessala.demo', password: 'demo123' })
+    const request = await acceptPendencyEvidence(pendency.id)
+    expect(request?.status).toBe('OPEN')
+    await logout(); await login({ email: 'recepcao@antessala.demo', password: 'demo123' })
+    const [returnSlot] = await listCompatibleSlots(item.id)
+    await bookReturnSlot(item.id, returnSlot!.id)
+    await checkInBooking(item.id)
+    await logout(); await login({ email: 'anestesia@antessala.demo', password: 'demo123' })
+    const encounter = await startAssessment(item.id)
+    expect(encounter.kind).toBe('RETURN')
   })
 })

@@ -1,5 +1,6 @@
-import { randomUUID, scryptSync, timingSafeEqual } from 'node:crypto'
+import { createHash, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto'
 import { execute, queryAll, queryOne, transaction } from '../db/query'
+import { iaEnviarMensagem } from '../ia/cliente'
 import {
   calculateDemoRequirement,
   createDemoCase,
@@ -78,6 +79,26 @@ export type MvpResult = {
   conclusion: string
   reason: string | null
   createdAt: string
+}
+
+export type MvpFieldProposal = {
+  id: string
+  caseId: string
+  fieldPath: string
+  value: boolean | number | string
+  evidence: string
+  explanation: string
+  status: 'DRAFT' | 'ACCEPTED' | 'REJECTED' | 'CORRECTED'
+}
+
+export type MvpKnowledgeRelation = {
+  id: string
+  subject: string
+  predicate: string
+  object: string
+  rationale: string
+  status: 'SUGGESTED' | 'ACTIVE' | 'INACTIVE' | 'SUPERSEDED'
+  version: number
 }
 
 let currentSession: MvpSession | null = null
@@ -251,7 +272,7 @@ export async function listCasesForCurrentRole(): Promise<DemoCase[]> {
     RECEPCAO: ['READY_FOR_SCHEDULING', 'SCHEDULED', 'WAITING_RETURN', 'READY_FOR_HANDOFF'],
     ENFERMAGEM: ['WAITING_NURSING', 'NURSING_IN_PROGRESS', 'TRIAGE_PENDING'],
     ANESTESIOLOGISTA: ['WAITING_ANESTHESIA', 'IN_ASSESSMENT', 'PENDING', 'READY_FOR_HANDOFF'],
-    SOLICITANTE: ['READY_FOR_HANDOFF', 'DELIVERED_TO_REQUESTER'],
+    SOLICITANTE: ['PENDING', 'READY_FOR_HANDOFF', 'DELIVERED_TO_REQUESTER'],
   }
   if (session.role === 'ADMIN') return []
   const rows = await queryAll<CaseRow>(
@@ -443,19 +464,21 @@ export async function checkInBooking(caseId: string): Promise<MvpBooking> {
   return { id: booking.id, caseId, slotId: booking.slot_id, kind: booking.kind, status: 'CHECKED_IN' }
 }
 
-export async function startAssessment(caseId: string): Promise<{ id: string; caseId: string; status: 'OPEN' }> {
+export async function startAssessment(caseId: string): Promise<{ id: string; caseId: string; kind: 'INITIAL' | 'RETURN'; status: 'OPEN' }> {
   const session = requireSession('ANESTESIOLOGISTA')
   const id = randomUUID()
+  const previous = await queryOne<{ count: number }>('SELECT COUNT(*)::int AS count FROM anesthesia_encounters WHERE case_id=$1', caseId)
+  const kind = (previous?.count ?? 0) > 0 ? 'RETURN' : 'INITIAL'
   await transaction(async () => {
     await execute(
       `INSERT INTO anesthesia_encounters (id,case_id,kind,status,started_by)
-       VALUES ($1,$2,'INITIAL','OPEN',$3)`,
-      id, caseId, session.userId,
+       VALUES ($1,$2,$3,'OPEN',$4)`,
+      id, caseId, kind, session.userId,
     )
     await moveCase(caseId, 'IN_ASSESSMENT', 'ASSESSMENT_STARTED')
     await audit('ASSESSMENT_START', 'CASE', caseId)
   })
-  return { id, caseId, status: 'OPEN' }
+  return { id, caseId, kind, status: 'OPEN' }
 }
 
 export async function openPendency(
@@ -484,6 +507,108 @@ export async function openPendency(
     await audit('PENDENCY_OPEN', 'CASE', caseId)
   })
   return { id, caseId, ...input, description: input.description.trim(), status: 'OPEN' }
+}
+
+export async function submitPendencyEvidence(
+  pendencyId: string,
+  evidence: string,
+): Promise<MvpPendency> {
+  const session = requireSession('RECEPCAO', 'ENFERMAGEM', 'SOLICITANTE')
+  const row = await queryOne<{
+    id: string; case_id: string; description: string; impact: MvpPendency['impact']
+    owner_role: MvpPendency['ownerRole']; requires_return: boolean; status: MvpPendency['status']
+    requester_service: string
+  }>(
+    `SELECT p.*,c.requester_service FROM case_pendencies p JOIN preop_cases c ON c.id=p.case_id WHERE p.id=$1`,
+    pendencyId,
+  )
+  if (!row || row.status !== 'OPEN' || row.owner_role !== session.role) throw new Error('FORBIDDEN')
+  if (session.role === 'SOLICITANTE' && row.requester_service !== session.requesterService) throw new Error('NOT_FOUND')
+  if (!evidence.trim()) throw new Error('Evidência vazia.')
+  await execute(
+    `UPDATE case_pendencies SET status='EVIDENCE_SUBMITTED',evidence=$2::jsonb WHERE id=$1`,
+    pendencyId, JSON.stringify({ text: evidence.trim(), submittedBy: session.userId }),
+  )
+  await audit('PENDENCY_EVIDENCE_SUBMIT', 'PENDENCY', pendencyId)
+  return {
+    id: row.id, caseId: row.case_id, description: row.description, impact: row.impact,
+    ownerRole: row.owner_role, requiresReturn: row.requires_return, status: 'EVIDENCE_SUBMITTED',
+  }
+}
+
+export async function listPendencies(caseId: string): Promise<MvpPendency[]> {
+  const session = requireSession('RECEPCAO', 'ENFERMAGEM', 'ANESTESIOLOGISTA', 'SOLICITANTE')
+  const item = await queryOne<{ requester_service: string }>('SELECT requester_service FROM preop_cases WHERE id=$1', caseId)
+  if (!item || (session.role === 'SOLICITANTE' && item.requester_service !== session.requesterService)) throw new Error('NOT_FOUND')
+  const rows = await queryAll<{
+    id: string; case_id: string; description: string; impact: MvpPendency['impact']
+    owner_role: MvpPendency['ownerRole']; requires_return: boolean; status: MvpPendency['status']
+  }>(
+    `SELECT id,case_id,description,impact,owner_role,requires_return,status FROM case_pendencies
+     WHERE case_id=$1 AND ($2::text='ANESTESIOLOGISTA' OR owner_role=$2) ORDER BY created_at`,
+    caseId, session.role,
+  )
+  return rows.map((row) => ({
+    id: row.id, caseId: row.case_id, description: row.description, impact: row.impact,
+    ownerRole: row.owner_role, requiresReturn: row.requires_return, status: row.status,
+  }))
+}
+
+export async function acceptPendencyEvidence(
+  pendencyId: string,
+): Promise<{ id: string; caseId: string; status: 'OPEN' } | null> {
+  const session = requireSession('ANESTESIOLOGISTA')
+  const row = await queryOne<{
+    id: string; case_id: string; impact: MvpPendency['impact']; requires_return: boolean; status: MvpPendency['status']
+  }>('SELECT id,case_id,impact,requires_return,status FROM case_pendencies WHERE id=$1', pendencyId)
+  if (!row || row.status !== 'EVIDENCE_SUBMITTED') throw new Error('EVIDENCE_NOT_SUBMITTED')
+  let request: { id: string; caseId: string; status: 'OPEN' } | null = null
+  await transaction(async () => {
+    await execute(`UPDATE case_pendencies SET status='RESOLVED',resolved_at=NOW() WHERE id=$1`, pendencyId)
+    if (row.impact === 'BLOCKS_CURRENT_RESULT') {
+      if (row.requires_return) {
+        const requestId = randomUUID()
+        await execute(
+          `INSERT INTO return_requests (id,case_id,reason,slot_class,status,requested_by)
+           SELECT $1,$2,'Retorno após pendência',$3,'OPEN',$4
+           FROM scheduling_requirements WHERE case_id=$2`,
+          requestId, row.case_id,
+          (await queryOne<{ slot_class: string }>('SELECT slot_class FROM scheduling_requirements WHERE case_id=$1', row.case_id))!.slot_class,
+          session.userId,
+        )
+        await execute(`UPDATE anesthesia_encounters SET status='CLOSED',closed_at=NOW() WHERE case_id=$1 AND status='OPEN'`, row.case_id)
+        await execute(`UPDATE scheduling_bookings SET status='COMPLETED' WHERE case_id=$1 AND status='CHECKED_IN'`, row.case_id)
+        await moveCase(row.case_id, 'WAITING_RETURN', 'RETURN_REQUESTED')
+        request = { id: requestId, caseId: row.case_id, status: 'OPEN' }
+      } else {
+        await moveCase(row.case_id, 'IN_ASSESSMENT', 'PENDENCY_RESOLVED')
+      }
+    }
+    await audit('PENDENCY_EVIDENCE_ACCEPT', 'PENDENCY', pendencyId)
+  })
+  return request
+}
+
+export async function bookReturnSlot(caseId: string, slotId: string): Promise<MvpBooking> {
+  const session = requireSession('RECEPCAO')
+  const current = await queryOne<CaseRow>('SELECT * FROM preop_cases WHERE id=$1', caseId)
+  const request = await queryOne<{ id: string }>(`SELECT id FROM return_requests WHERE case_id=$1 AND status='OPEN'`, caseId)
+  if (!current || current.status !== 'WAITING_RETURN' || !request) throw new Error('RETURN_NOT_READY')
+  const slots = await listCompatibleSlots(caseId)
+  if (!slots.some((slot) => slot.id === slotId)) throw new Error('SLOT_INCOMPATIBLE')
+  const id = randomUUID()
+  await transaction(async () => {
+    const claimed = await queryOne<{ id: string }>(`UPDATE scheduling_slots SET status='BOOKED' WHERE id=$1 AND status='OPEN' RETURNING id`, slotId)
+    if (!claimed) throw new Error('SLOT_TAKEN')
+    await execute(
+      `INSERT INTO scheduling_bookings (id,case_id,slot_id,kind,status,created_by)
+       VALUES ($1,$2,$3,'RETURN','CONFIRMED',$4)`, id, caseId, slotId, session.userId,
+    )
+    await execute(`UPDATE return_requests SET status='BOOKED' WHERE id=$1`, request.id)
+    await execute(`INSERT INTO case_events (case_id,event_type,actor_id) VALUES ($1,'RETURN_BOOKED',$2)`, caseId, session.userId)
+    await audit('RETURN_BOOK', 'CASE', caseId)
+  })
+  return { id, caseId, slotId, kind: 'RETURN', status: 'CONFIRMED' }
 }
 
 function mapResult(row: {
@@ -603,6 +728,129 @@ export async function acknowledgeDelivery(caseId: string): Promise<{ id: string;
     await audit('RESULT_ACKNOWLEDGE', 'CASE', caseId)
   })
   return { id: delivery.id, status: 'ACKNOWLEDGED' }
+}
+
+type ProposedField = Omit<MvpFieldProposal, 'id' | 'caseId' | 'status'>
+type ProposalGenerator = (transcript: string) => Promise<ProposedField[]>
+
+async function geminiProposalGenerator(transcript: string): Promise<ProposedField[]> {
+  const config = await queryOne<{ provider: string }>('SELECT provider FROM configuracao_ia WHERE id=1')
+  if (config?.provider !== 'gemini') throw new Error('Configure o Gemini para usar sugestões assistivas.')
+  const prompt = [
+    'Extraia apenas fatos explicitamente presentes na transcrição para os campos allergy, cardiovascular, respiratory, medicationsCount e accommodations.',
+    'Responda somente JSON: [{"fieldPath":"...","value":true,"evidence":"trecho literal curto","explanation":"por que o trecho sustenta a proposta"}].',
+    'Não infira negativas, urgência, gravidade, prioridade, duração, ASA, aptidão ou conduta.',
+    `TRANSCRIÇÃO:\n${transcript}`,
+  ].join('\n')
+  const { resposta } = await iaEnviarMensagem(prompt)
+  const raw = resposta.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
+  const parsed = JSON.parse(raw) as unknown
+  if (!Array.isArray(parsed)) throw new Error('Resposta do Gemini fora do contrato.')
+  const allowed = new Set(['allergy', 'cardiovascular', 'respiratory', 'medicationsCount', 'accommodations'])
+  return parsed.map((item) => {
+    if (!item || typeof item !== 'object') throw new Error('Proposta inválida.')
+    const value = item as Record<string, unknown>
+    if (!allowed.has(String(value.fieldPath))) throw new Error('Campo proposto fora da allowlist.')
+    if (!['boolean', 'number', 'string'].includes(typeof value.value)) throw new Error('Valor proposto inválido.')
+    if (!String(value.evidence ?? '').trim() || !String(value.explanation ?? '').trim()) throw new Error('Proposta sem origem ou explicação.')
+    return {
+      fieldPath: String(value.fieldPath),
+      value: value.value as boolean | number | string,
+      evidence: String(value.evidence).trim(),
+      explanation: String(value.explanation).trim(),
+    }
+  })
+}
+
+export async function proposeFieldsFromTranscript(
+  caseId: string,
+  transcript: string,
+  generator: ProposalGenerator = geminiProposalGenerator,
+): Promise<MvpFieldProposal[]> {
+  const session = requireSession('ENFERMAGEM')
+  if (!transcript.trim()) throw new Error('Transcrição vazia.')
+  const proposals = await generator(transcript.trim())
+  const transcriptHash = createHash('sha256').update(transcript).digest('hex')
+  const saved: MvpFieldProposal[] = []
+  await transaction(async () => {
+    for (const proposal of proposals) {
+      const id = randomUUID()
+      await execute(
+        `INSERT INTO ai_field_proposals
+         (id,case_id,field_path,proposed_value,evidence_excerpt,explanation,status,transcript_hash,created_by)
+         VALUES ($1,$2,$3,$4::jsonb,$5,$6,'DRAFT',$7,$8)`,
+        id, caseId, proposal.fieldPath, JSON.stringify(proposal.value), proposal.evidence,
+        proposal.explanation, transcriptHash, session.userId,
+      )
+      saved.push({ id, caseId, ...proposal, status: 'DRAFT' })
+    }
+    await audit('AI_PROPOSALS_CREATE', 'CASE', caseId)
+  })
+  return saved
+}
+
+export async function confirmFieldProposal(
+  proposalId: string,
+  decision: 'ACCEPT' | 'REJECT',
+): Promise<MvpFieldProposal> {
+  const session = requireSession('ENFERMAGEM')
+  const row = await queryOne<{
+    id: string; case_id: string; field_path: string; proposed_value: boolean | number | string
+    evidence_excerpt: string; explanation: string; status: MvpFieldProposal['status']
+  }>('SELECT * FROM ai_field_proposals WHERE id=$1', proposalId)
+  if (!row || row.status !== 'DRAFT') throw new Error('PROPOSAL_NOT_DRAFT')
+  const status = decision === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED'
+  await execute(
+    `UPDATE ai_field_proposals SET status=$2,reviewed_by=$3,reviewed_at=NOW() WHERE id=$1`,
+    proposalId, status, session.userId,
+  )
+  await audit(`AI_PROPOSAL_${decision}`, 'AI_FIELD_PROPOSAL', proposalId)
+  return {
+    id: row.id, caseId: row.case_id, fieldPath: row.field_path, value: row.proposed_value,
+    evidence: row.evidence_excerpt, explanation: row.explanation, status,
+  }
+}
+
+export async function suggestKnowledgeRelation(
+  input: Omit<MvpKnowledgeRelation, 'id' | 'status' | 'version'>,
+): Promise<MvpKnowledgeRelation> {
+  const session = requireSession('ANESTESIOLOGISTA')
+  if (![input.subject, input.predicate, input.object, input.rationale].every((value) => value.trim())) throw new Error('Relação incompleta.')
+  const id = randomUUID()
+  await execute(
+    `INSERT INTO mvp_knowledge_relations (id,subject,predicate,object,rationale,suggested_by)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    id, input.subject.trim(), input.predicate.trim(), input.object.trim(), input.rationale.trim(), session.userId,
+  )
+  await audit('KNOWLEDGE_SUGGEST', 'KNOWLEDGE_RELATION', id)
+  return { id, ...input, status: 'SUGGESTED', version: 1 }
+}
+
+export async function approveKnowledgeRelation(id: string): Promise<MvpKnowledgeRelation> {
+  const session = requireSession('ANESTESIOLOGISTA')
+  const row = await queryOne<{
+    id: string; subject: string; predicate: string; object: string; rationale: string
+    status: MvpKnowledgeRelation['status']; version: number
+  }>(
+    `UPDATE mvp_knowledge_relations SET status='ACTIVE',approved_by=$2,approved_at=NOW()
+     WHERE id=$1 AND status='SUGGESTED' RETURNING *`, id, session.userId,
+  )
+  if (!row) throw new Error('RELATION_NOT_SUGGESTED')
+  await audit('KNOWLEDGE_APPROVE', 'KNOWLEDGE_RELATION', id)
+  return row
+}
+
+export async function searchApprovedKnowledge(term: string): Promise<MvpKnowledgeRelation[]> {
+  requireSession('ENFERMAGEM', 'ANESTESIOLOGISTA')
+  const rows = await queryAll<{
+    id: string; subject: string; predicate: string; object: string; rationale: string
+    status: MvpKnowledgeRelation['status']; version: number
+  }>(
+    `SELECT id,subject,predicate,object,rationale,status,version FROM mvp_knowledge_relations
+     WHERE status='ACTIVE' AND (subject ILIKE $1 OR predicate ILIKE $1 OR object ILIKE $1)
+     ORDER BY approved_at DESC`, `%${term.trim()}%`,
+  )
+  return rows
 }
 
 export async function listFixtureUsers(): Promise<Array<Omit<MvpSession, 'userId'> & { userId: string }>> {
