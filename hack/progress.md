@@ -22,6 +22,8 @@ permanecem como anexos de detalhe, sem assinatura ou gate individual. Em conflit
 - [x] Gemini único e sintético; IA assistiva; memória somente após aprovação e ativação.
 - [x] Produção institucional, dados reais e protocolo do HC declarados fora do escopo.
 - [x] Gates individuais, Spec duplicada e Plan assinado removidos.
+- [x] Matriz literal `demo-workload-v1` fechada, com `desiredBy` em eixo separado.
+- [x] Perfil `PITCH_CRITICAL` separa a demonstração ponta a ponta do hardening posterior.
 - [x] Placeholders antigos de Critic, Warlog, Sprints e minispecs descartados.
 - [ ] Review final de congruência executado no SHA publicado.
 - [ ] Warlog criado e minispecs cortadas.

@@ -147,14 +147,25 @@ type RuleSignalDTO = {
   matched: boolean
   proposedMinutes: number
   appliedMinutes: number
-  capReason: 'DOMAIN_REVIEW_CAP' | 'ACCOMMODATION_GROUP_CAP' | 'GLOBAL_50_CAP' | null
+  capReason: 'DOMAIN_REVIEW_CAP' | 'ACCOMMODATION_GROUP_CAP' | null
   addedCapabilities: ResourceCapability[]
 }
 
 type RuleOutput =
   | {
-      kind: 'UNCLASSIFIABLE'
+      kind: 'INCOMPLETE'
       pendingFieldPaths: string[]
+      ruleSet: { id: 'demo-workload'; version: 1 }
+    }
+  | {
+      kind: 'HUMAN_DEFINITION_REQUIRED'
+      unresolvedFieldPaths: string[]
+      ruleSet: { id: 'demo-workload'; version: 1 }
+    }
+  | {
+      kind: 'OUT_OF_DEMO_RANGE'
+      estimatedMinutes: number
+      signals: RuleSignalDTO[]
       ruleSet: { id: 'demo-workload'; version: 1 }
     }
   | {
@@ -176,10 +187,14 @@ function calculateSchedulingRequirement(
 ```
 
 `now` é injetado. A função não acessa PGlite, React, relógio global, catálogo ou rede.
-`SignalCode`, paths, predicados, incrementos, caps e capabilities são a tabela fechada do
-Analyst; `rule-v1.ts` os declara como constante `satisfies readonly SignalDefinition[]`.
+`SignalCode`, paths, predicados, incrementos, grupos e capabilities são a matriz literal
+`demo-workload-v1` do Analyst; `rule-v1.ts` os declara como constante
+`satisfies readonly SignalDefinition[]`.
 Teste de contrato compara a lista e os paths literalmente para impedir consumo implícito de
-campo novo.
+campo novo. O algoritmo começa em 20, limita `DOMAIN_REVIEW` a três incrementos de cinco,
+aplica `MEDICATION_VOLUME` e `DIAGNOSIS_VOLUME` uma vez, aplica `ACCOMMODATION` uma vez e
+não pontua `DOCUMENT_PENDING`. Total acima de 50 retorna `OUT_OF_DEMO_RANGE`; não existe
+cap global.
 
 #### Tabelas da regra e requisito
 
@@ -955,8 +970,8 @@ Submit final + calculate, sem passo duplicado:
 
 1. procurar receipt e carregar draft/caso pela expected version;
 2. validar completude e executar motor sobre o candidato imutável;
-3. se `UNCLASSIFIABLE`, abortar sem revision `FINAL`, requirement ou evento e manter
-   `NURSING_IN_PROGRESS`;
+3. se `INCOMPLETE`, `HUMAN_DEFINITION_REQUIRED` ou `OUT_OF_DEMO_RANGE`, abortar sem
+   revision `FINAL`, requirement ou evento e manter `NURSING_IN_PROGRESS`;
 4. se `CALCULATED`, inserir revision `FINAL`, rule execution e requirement `CALCULATED`;
 5. manter `NURSING_IN_PROGRESS` e gravar eventos/auditoria/receipt;
 6. commit único.
@@ -1100,12 +1115,13 @@ Nenhum campo clínico participa do DTO.
 #### Motor puro
 
 - 20 minutos sem sinais → QUICK.
-- um domínio com revisão → STANDARD de 25 ajustado ao template de 35.
-- soma 40–50 → EXTENDED.
+- um domínio positivo explícito → STANDARD de 25 ajustado ao template de 35.
+- soma 40–50 → EXTENDED; soma acima de 50 → OUT_OF_DEMO_RANGE sem truncar.
 - cinco medicações e três diagnósticos aplicam incrementos uma vez.
 - accommodations adicionam 10 minutos e capability.
-- UNKNOWN/REFUSED contam como revisão; NEGATIVE não conta.
-- NOT_ASKED obrigatório → UNCLASSIFIABLE.
+- documento pendente é explicado, mas soma zero.
+- `ANSWERED(false)`, `NEGATIVE`, `UNKNOWN`, `REFUSED` e `NOT_PERFORMED` não pontuam.
+- NOT_ASKED obrigatório → INCOMPLETE.
 - snapshot da tabela de `signalCode + fieldPaths + predicate + incremento/capability` é
   literal; campo novo não entra por varredura.
 - mesma entrada/now → mesmo fingerprint/output.
@@ -1215,13 +1231,13 @@ A sequência é topológica, não um Plan executável.
 | Booking e slot duplicarem estado | `base_status` + projeção derivada de booking |
 | Recepção inferir clínica por explicação | operational explanation curada sem paths/fatos |
 | Ocupação ser liberada no start | booking completa, mas occupancy persiste até `slot.ends_at` |
-| Edição pós-publicação regressar estado | requirement/revisão imutáveis no MVP |
+| Edição pós-publicação regressar estado | requirement/revisão imutáveis na PoC; resultado clínico versiona correção separadamente |
 | Grade semanal crescer em complexidade | sem DnD e sem recorrência; janelas datadas |
 
 ## Definition of Complete for Build
 
 - [x] Produto, backend, frontend, validação e operações estão descritos como proposta.
-- [ ] Regra v1 pesquisada e rotulada sem confundir demo com evidência.
+- [x] Regra v1 fechada e rotulada como `DEMO_DECISION`, sem confundir demo com evidência.
 - [ ] DTOs, tabelas, constraints, concorrência e rollback provados no PGlite.
 - [ ] Janelas, capacidade, recursos e bookings validados como `DEMO_DECISION`.
 - [ ] Topologia agenda base → assessment → integração provada no PGlite.

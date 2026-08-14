@@ -36,14 +36,14 @@ originaram.
 | Quem agenda? | `PRODUCT_LAW` | Recepção, usando somente a projeção operacional. |
 | Os números são validados? | `DEMO_DECISION` | Não. São fixtures explícitas para provar o conceito. |
 | O funcionamento do HC foi comprovado? | `UNRESOLVED` | Não. O PRD não afirma agenda, SLA ou protocolo institucional atual. |
-| O contrato está pronto para Build? | `UNRESOLVED` | Não. Ainda depende do Analyst de anamnese e de adversarial. |
+| O contrato está pronto para Build? | `DEMO_DECISION` | Sim para a PoC sintética: a matriz `demo-workload-v1` abaixo é fechada e não reivindica validade clínica. |
 
 ## Source And Scope
 
 ### Dentro
 
 - proposta explicável de carga operacional;
-- confirmação, alteração e substituição auditável da decisão operacional;
+- confirmação ou override auditável antes da publicação;
 - classes demonstrativas de duração;
 - data-alvo administrativa;
 - recursos, capabilities, disponibilidade e bloqueios como conceitos;
@@ -178,8 +178,7 @@ subestimação, sobrestimação, desempenho por subgrupo e impacto na capacidade
 
 ### `UNRESOLVED`
 
-- quais campos são bloqueantes, apenas informativos ou candidatos legítimos de carga;
-- quais combinações exigem definição manual;
+- quais campos e combinações seriam legítimos em uma regra institucional real;
 - distribuição real de duração e capacidade;
 - recursos, accommodations e política de substituição reais;
 - origem autorizada e SLA de cada data-alvo;
@@ -221,15 +220,14 @@ decisão e versão.
 Estados:
 
 - `CONFIRMED`: a enfermagem aceitou a proposta;
-- `OVERRIDDEN`: a enfermagem definiu valor diferente e justificou;
-- `SUPERSEDED`: uma nova decisão auditável substituiu a anterior.
+- `OVERRIDDEN`: a enfermagem definiu valor diferente e justificou.
 
-Existe apenas uma decisão efetiva por caso. Publicação anterior nunca é sobrescrita. Uma
-correção operacional cria nova versão, preserva autor, horário, motivo e valores anterior e
-novo. Se já houver reserva, a compatibilidade precisa ser revalidada; reserva incompatível
-não segue silenciosamente e a recepção escolhe novamente. Correção do conteúdo `FINAL` da
-anamnese é contrato separado: antes da publicação, invalida revisão e proposta e exige nova
-revisão; depois da publicação, a governança institucional continua `UNRESOLVED`.
+Existe apenas uma decisão publicada por caso na PoC. `CONFIRMED` e `OVERRIDDEN` são
+terminais e imutáveis; erro percebido depois da publicação fica visível como exceção e não
+é corrigido silenciosamente, reclassificado ou devolvido à enfermagem. Correção operacional
+pós-publicação e correção do conteúdo `FINAL` pertencem à operação futura. Isso não se
+confunde com resultado anestésico: resultado finalizado admite nova versão de correção ou
+adendo conforme o domínio de avaliação/handoff.
 
 ### `CapacityOffer`
 
@@ -278,15 +276,10 @@ Alvo vencido, alvo fora do horizonte e ausência de capacidade são situações 
 
 ### Boundary de entrada
 
-O Analyst de anamnese é owner da criticidade de cada campo e precisa classificá-lo como:
-
-- bloqueia conclusão;
-- candidato de carga operacional;
-- exige definição humana;
-- informativo, sem efeito sobre agenda.
-
-Este domínio não inventa criticidade a partir do tipo do campo. Enquanto essa matriz não
-estiver fechada, ela permanece fora da promessa da PoC.
+O Analyst de anamnese continua owner da completude. A regra recebe
+`completeness.pendingFieldPaths` já calculado e somente os paths literais desta seção.
+Campo novo, nota livre, CID, nome de doença, nome de medicamento, valor vital ou item fora
+da tabela não entra no cálculo por varredura ou semelhança.
 
 ### Tratamentos obrigatórios
 
@@ -301,16 +294,50 @@ estiver fechada, ela permanece fora da promessa da PoC.
 | achado fora da matriz aprovada | `HUMAN_DEFINITION_REQUIRED` |
 | combinação acima do alcance da demo | `OUT_OF_DEMO_RANGE`; nenhum requisito ou booking na PoC e nenhum truncamento |
 
-### Sinais candidatos
+### Matriz fechada `demo-workload-v1`
 
-Volume de medicamentos, volume de informações a revisar, histórico anestésico, contexto do
-procedimento e necessidades de comunicação/acessibilidade podem ser investigados como
-candidatos de carga. A pesquisa não validou os cortes, pesos ou caps atuais. Diagnóstico,
-medicação, sintoma ou condição isolada nunca determina classe, urgência ou prioridade.
+Toda a matriz é `DEMO_DECISION`. Ela demonstra tradução operacional explicável; não é
+score clínico, protocolo ou modelo validado.
 
-A regra não descarta sinal por posição editorial. Não existe cap clínico implícito de 50
-minutos: quando a proposta ultrapassa o alcance das fixtures, o resultado é
-`OUT_OF_DEMO_RANGE`.
+Predicados auxiliares:
+
+- `positive(a)`: `a.status === 'ANSWERED' && a.value === true`;
+- `current(a)`: `a.status === 'ANSWERED' && a.value.current === true`;
+- `answeredText(a)`: `a.status === 'ANSWERED' && a.value.trim().length > 0`.
+
+`ANSWERED(false)` e `NEGATIVE` não casam. `UNKNOWN`, `REFUSED`, `NOT_PERFORMED` e
+`NOT_APPLICABLE` nunca recebem minutos automáticos. Quando ocorrerem em path obrigatório,
+a completude ou a definição humana decide antes do motor.
+
+| `signalCode` | `fieldPaths` literais | Predicado | Efeito demonstrativo |
+|---|---|---|---|
+| `REQUIRED_FIELD_NOT_ASKED` | `completeness.pendingFieldPaths[*]` | lista não vazia | `INCOMPLETE`; nenhum requisito |
+| `ALLERGY_REVIEW` | `allergies.hasAllergy` | `positive` | `+5`, grupo `DOMAIN_REVIEW` |
+| `ANESTHESIA_HISTORY_REVIEW` | `anesthesia_history.personalComplication`; `anesthesia_history.difficultAirwayHistory`; `anesthesia_history.postoperativeNauseaVomiting`; `anesthesia_history.familyAnesthesiaComplication` | `positive` em qualquer path | `+5`, grupo `DOMAIN_REVIEW` |
+| `CARDIOVASCULAR_REVIEW` | `cardiovascular.chestPain`; `cardiovascular.dyspneaAtRest`; `cardiovascular.syncope`; `cardiovascular.palpitation`; `cardiovascular.edema`; `cardiovascular.knownCardiovascularDisease` | `positive` em qualquer path | `+5`, grupo `DOMAIN_REVIEW` |
+| `RESPIRATORY_REVIEW` | `respiratory.dyspnea`; `respiratory.wheezing`; `respiratory.recentRespiratoryInfection`; `respiratory.chronicCough`; `respiratory.sleepApneaDiagnosis`; `respiratory.usesRespiratorySupport` | `positive` em qualquer path | `+5`, grupo `DOMAIN_REVIEW` |
+| `BLEEDING_THROMBOSIS_REVIEW` | `bleeding_thrombosis.abnormalBleeding`; `bleeding_thrombosis.easyBruising`; `bleeding_thrombosis.priorThrombosis`; `bleeding_thrombosis.familyBleedingDisorder`; `bleeding_thrombosis.receivesAnticoagulantOrAntiplatelet` | `positive` em qualquer path | `+5`, grupo `DOMAIN_REVIEW` |
+| `HABITS_SUBSTANCES_REVIEW` | `habits_substances.tobacco`; `habits_substances.alcohol`; `habits_substances.recreationalSubstances` | `current` nos dois primeiros ou `positive` no último | `+5`, grupo `DOMAIN_REVIEW` |
+| `SPECIAL_CONDITION_REVIEW` | `special_conditions.pregnant`; `special_conditions.lactating`; `special_conditions.otherCondition` | `positive` nos booleanos ou `answeredText` no texto | `+5`, grupo `DOMAIN_REVIEW` |
+| `MEDICATION_VOLUME` | `medications.usesMedication`; `medications.items[*].id` | uso positivo e `items.length >= 5` | `+5` uma vez |
+| `DIAGNOSIS_VOLUME` | `diagnoses.hasDiagnosis`; `diagnoses.items[*].id` | diagnóstico positivo e `items.length >= 3` | `+5` uma vez |
+| `DOCUMENT_PENDING` | `exams_pending.items[*].status` | existe `MISSING` ou `REQUESTED` | `+0`; explicação/pêndencia, nunca peso |
+| `ACCOMMODATION_COMMUNICATION` | `special_conditions.communicationAccommodation` | `answeredText` | grupo `ACCOMMODATION`; `+10` uma vez e `INTERPRETER` |
+| `ACCOMMODATION_MOBILITY` | `special_conditions.mobilityAccommodation` | `answeredText` | grupo `ACCOMMODATION`; `+10` uma vez e `ACCESSIBLE_ROOM` |
+| `ACCOMMODATION_COMPANION` | `special_conditions.legalRepresentativeNeeded` | `positive` | grupo `ACCOMMODATION`; `+10` uma vez e `COMPANION_SPACE` |
+| `DESIRED_BY_PLANNED_DATE` | `procedure_context.plannedDate` | data ISO respondida | `plannedDate - 5` dias úteis da demo |
+| `DESIRED_BY_DEFAULT` | `clinical_anamnesis_revisions.completed_at` | data planejada ausente | `completedAt + 10` dias úteis da demo |
+
+O cálculo começa em 20 minutos. `DOMAIN_REVIEW` aplica no máximo três sinais, na ordem da
+tabela, totalizando até `+15`; sinais adicionais continuam registrados com
+`appliedMinutes=0` e `capReason=DOMAIN_REVIEW_CAP`. Medicação e diagnóstico somam uma vez
+cada. `ACCOMMODATION` soma `+10` uma vez, preservando a união das capabilities. Documento
+pendente soma zero. Não existe `GLOBAL_50_CAP`: total acima de 50 produz
+`OUT_OF_DEMO_RANGE`, sem truncamento.
+
+Mapeamento: `20 → QUICK`; `25–35 → STANDARD`; `40–50 → EXTENDED`. O template normaliza
+25/30 para 35 e 40/45 para 50. `desiredBy` é calculado em eixo separado, nunca altera
+minutos ou classe e nunca é chamado de urgência ou prioridade.
 
 ### Explicação e confirmação
 
@@ -399,7 +426,7 @@ incompatível.
 
 | Ator | Conhece | Decide | Não pode fazer |
 |---|---|---|---|
-| `ENFERMAGEM` | anamnese, lacunas, proposta e explicação | confirmar, alterar ou substituir necessidade inicial | atribuir ASA, aptidão, urgência ou prioridade cirúrgica |
+| `ENFERMAGEM` | anamnese, lacunas, proposta e explicação | confirmar ou alterar a proposta antes da publicação | atribuir ASA, aptidão, urgência ou prioridade cirúrgica |
 | `RECEPCAO` | projeção operacional e capacidade | reservar, cancelar, reagendar, check-in e no-show conforme política | ler clínica, mudar necessidade ou aceitar vaga incompatível |
 | `ANESTESIOLOGISTA` | caso clínico, necessidade reservada e objetivo do retorno | definir necessidade operacional de retorno, conduzir avaliação ou registrar impossibilidade de início | alterar silenciosamente decisão histórica |
 | `ADMIN` | recursos, janelas, bloqueios e saúde técnica | manter capacidade da demo | ler clínica ou mudar necessidade do caso |
@@ -417,7 +444,7 @@ incompatível.
 | conflito de reserva | conflito recuperável | atualizar oferta e selecionar outra vaga |
 | falta de capability | capability indisponível | preservar necessidade e buscar nova oferta |
 | falta dentro do horizonte | fora do horizonte publicado | ampliar consulta ou registrar falta; não inferir inexistência total |
-| decisão operacional corrigida | versão anterior superseded | revalidar reserva e reagendar se incompatível |
+| erro percebido depois da publicação | exceção visível; requirement permanece imutável | fluxo manual fora da PoC; nenhuma reclassificação silenciosa |
 | atraso | decisão humana necessária | check-in, reagendamento ou no-show segundo política explícita |
 | check-in equivocado | presença anulada com motivo | retornar exatamente ao estado anterior, sem apagar o check-in |
 | presença sem encontro | consulta não iniciada | INITIAL volta ao agendamento; RETURN reabre a solicitação |
@@ -437,8 +464,8 @@ incompatível.
 9. MUST separar explicação clínica da projeção mínima da recepção.
 10. MUST confirmar apenas vaga integralmente compatível e ainda disponível.
 11. MUST impedir sobreposição de recurso exclusivo e duplicidade de booking ativo.
-12. MUST preservar cancelamento, conflito, no-show, reagendamento e substituição de decisão
-    como fatos auditáveis.
+12. MUST preservar cancelamento, conflito, no-show e reagendamento como fatos auditáveis;
+    requirement publicado não possui substituição na PoC.
 13. MUST tratar `desiredBy` como alvo administrativo, nunca urgência.
 14. MUST permitir que o requisito do retorno seja definido ou confirmado pelo
     anestesiologista; requisito inicial é apenas referência.
@@ -473,7 +500,7 @@ com o contrato integrado e implementado pela minispec correta.
 - [ ] Enfermagem confirma ou altera antes da publicação.
 - [ ] Correção pré-publicação invalida proposta derivada e exige nova revisão; a proposta
       anterior não pode ser confirmada.
-- [ ] Uma decisão operacional pode ser substituída sem apagar a anterior.
+- [ ] Requirement publicado rejeita correção, nova submissão e reclassificação.
 - [ ] Recepção recebe somente consequência operacional.
 - [ ] Vaga incompatível nunca é confirmada.
 - [ ] Falta de capacidade preserva a necessidade.
@@ -482,6 +509,8 @@ com o contrato integrado e implementado pela minispec correta.
       `WAITING_ANESTHESIA` sem saída.
 - [ ] Anestesiologista define ou confirma o requisito de retorno.
 - [ ] Regra, versão, decisão e override são reconstruíveis.
+- [ ] Teste literal cobre todos os `signalCode`, paths, predicados e efeitos da matriz v1.
+- [ ] `desiredBy` muda a janela consultada sem mudar duração, gravidade ou prioridade.
 - [ ] Nenhum texto afirma validação clínica ou institucional inexistente.
 - [ ] Detalhes físicos permanecem exclusivamente no Build.
 
@@ -489,16 +518,15 @@ com o contrato integrado e implementado pela minispec correta.
 
 Antes do Warlog:
 
-1. `ANALYST-anamnese-e-catalogos.md` precisa fechar a criticidade e o efeito semântico dos
-   campos consumidos.
-2. O adversarial precisa atacar subestimação, definição humana, supersessão, capacidade,
+1. O Writing Plan deve consumir literalmente a matriz v1; alteração de path, predicado ou
+   efeito exige nova versão da regra.
+2. O review final de congruência precisa atacar subestimação, definição humana, capacidade,
    privacidade da explicação e todos os números de demo.
-3. `ANALYST-avaliacao-pendencias-e-handoff.md` precisa fechar prazo, duração, resources e
-   capabilities do retorno sem herança automática.
+3. Prazo, duração, recursos e capabilities do retorno são consumidos do Analyst integrado
+   de avaliação/handoff, sem herança automática.
 4. A operação institucional real permanece fora da PoC; qualquer uso real exige estudo
    local de duração, capacidade, calendário, acessibilidade e erro da regra.
-5. O novo adversarial precisa provar a invalidação pré-publicação e atacar a governança
-   ainda não resolvida para erro descoberto depois da publicação.
+5. Erro descoberto depois da publicação permanece fora da PoC e não autoriza reclassificação.
 
 ## Resultado da investigação
 

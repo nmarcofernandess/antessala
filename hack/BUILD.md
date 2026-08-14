@@ -122,6 +122,7 @@ type AnswerState =
   | 'NOT_APPLICABLE'
   | 'NOT_ASKED'
   | 'REFUSED'
+  | 'NOT_PERFORMED'
 
 type DataClassification =
   | 'FICTIONAL_NON_DERIVED'
@@ -166,6 +167,26 @@ decisão humana. Proposta `DRAFT` nunca alimenta o requisito operacional. Uma
 `KnowledgeRelation` só participa de recuperação quando está `ACTIVE`, possui fonte,
 versão, escopo, limitações, autor, aprovador e recibo de ativação. Aprovar e ativar são
 ações distintas; nenhum caso promove conhecimento automaticamente.
+
+### Regra operacional fechada da PoC
+
+`demo-workload-v1` é uma `DEMO_DECISION` literal, não um modelo clínico:
+
+| Grupo | Predicado permitido | Efeito |
+|---|---|---:|
+| Base | revisão completa | 20 minutos |
+| Revisão de domínio | resposta explicitamente positiva nos paths versionados de alergia, histórico anestésico, cardiovascular, respiratório, sangramento, hábitos ou condições especiais | `+5` por grupo, máximo três grupos |
+| Volume de medicamentos | uso positivo e pelo menos cinco itens | `+5` uma vez |
+| Volume de diagnósticos | presença positiva e pelo menos três itens | `+5` uma vez |
+| Accommodation | comunicação, mobilidade ou acompanhante explicitamente necessários | `+10` uma vez + união de capabilities |
+| Documento pendente | item `MISSING` ou `REQUESTED` | `+0`; somente explicação/pêndencia |
+
+Mapeamento: `20 → QUICK`, `25–35 → STANDARD`, `40–50 → EXTENDED`; acima de 50 retorna
+`OUT_OF_DEMO_RANGE`, sem cap. `ANSWERED(false)`, `NEGATIVE`, `UNKNOWN`, `REFUSED`,
+`NOT_PERFORMED`, texto clínico, CID, medicamento e valor vital não pontuam por inferência.
+Os paths e predicados completos vivem na matriz homônima do Analyst e viram uma constante
+literal testada. `desiredBy` é outro eixo: data planejada menos cinco dias úteis da demo ou
+conclusão da triagem mais dez; ele filtra a janela, mas nunca altera classe ou duração.
 
 ## Backend Blueprint
 
@@ -356,6 +377,32 @@ baixar correção.
 
 ## Frontend Blueprint
 
+### Perfil de entrega do hackathon
+
+O blueprint completo descreve a evolução segura do produto; não exige vinte páginas
+independentes antes do pitch. O Warlog deve primeiro entregar um corte
+`PITCH_CRITICAL` que cumpra o PRD ponta a ponta:
+
+1. cinco contas fixture e criação mínima de conta pelo ADMIN;
+2. entrada de um caso e timeline;
+3. anamnese com 14 seções semânticas sobre renderer configurável comum;
+4. matriz v1, explicação e confirmação/override humano;
+5. slots fixture compatíveis, reserva e conflito;
+6. avaliação, uma pendência/retorno, resultado versionado e recebimento;
+7. uma proposta Gemini sobre transcript sintético e uma recuperação de relação ativa;
+8. PDF, boot offline e E2E do caminho do pitch.
+
+Esse corte pode compor o catálogo lógico abaixo em oito superfícies físicas: `/login`,
+`/`, `/casos`, `/triagem/:caseId`, `/agenda`, `/avaliacao/:caseId`,
+`/resultado/:caseId` e `/admin`. Worklists, criação, detalhe, conhecimento e configuração
+podem ser regiões, tabs ou drawers dessas superfícies, consumindo os mesmos DTOs e guards.
+Não se cria uma rota vazia para satisfazer uma linha do catálogo.
+
+Depois do caminho crítico verde, o Warlog pode abrir `HARDENING` para separar rotas,
+ampliar CRUD de capacidade, cobrir estados raros e completar superfícies administrativas.
+Adiar `HARDENING` não autoriza remover RBAC no main, semântica das respostas, confirmação
+humana, isolamento por serviço, reserva atômica, auditoria essencial ou offline.
+
 ### Active routes
 
 | Superfície | Rota | Papel principal | Trabalho |
@@ -504,7 +551,7 @@ com paths, testes RED e ordem de commits; não existe Spec intermediária.
 | critical | Regra sintética parecer decisão médica | copy operacional, versão/explicação e termos clínicos proibidos |
 | high | Tabelas paralelas divergirem | ownership único acima + teste de arquitetura |
 | high | Widgets omitirem dado consumido | registry exaustivo e contract test entre rule inputs e paths |
-| high | Correção apagar autoria | revisões e eventos append-only antes do FINAL; resultado entregue é imutável no MVP |
+| high | Correção apagar autoria | anamnese/requisito pós-submit rejeitam correção na PoC; resultado corrigido nasce como nova versão vinculada e exige novo handoff |
 | high | Rota escondida ainda consultar dados | registry/capability antes do mount e IPC fail-closed |
 | high | Demo depender da rede | egress policy + teste offline de boot e jornada |
 | medium | Catálogo recortado parecer completo | `coverage_note`, fallback livre e limite visível |
@@ -528,6 +575,7 @@ com paths, testes RED e ordem de commits; não existe Spec intermediária.
 - [x] Oito Builds de domínio incorporados sob uma hierarquia explícita.
 - [x] Ownership, tabelas, fronteiras, transações, rotas e estratégia de prova definidos.
 - [x] IA/memória possuem contrato físico mínimo e não dependem de STT ou embeddings.
+- [x] Perfil `PITCH_CRITICAL` separa o fluxo demonstrável do hardening sem enfraquecer os invariantes P0.
 - [x] Decisões sintéticas estão rotuladas; produção institucional permanece fora do escopo.
 - [ ] Review final de congruência não encontrou bloqueador P0 sem resposta.
 

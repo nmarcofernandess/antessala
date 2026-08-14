@@ -198,22 +198,21 @@ ENTITY: CasoPreAnestesico
 
 ENTITY: Anamnese
 - Attributes: id, caseId, templateVersion, contentVersion, contentJson, status, revision
-- Actions: iniciar, salvar rascunho, encerrar captura, corrigir por adendo/revisão sucessora
+- Actions: iniciar, salvar rascunho e submeter revisão FINAL; correção pós-submit é rejeitada na PoC
 - Relations: pertence a um caso; subsidia proposta operacional e avaliação médica
 - Source of truth: JSONB validado
-- Runtime states: DRAFT; CAPTURE_COMPLETE; revisões imutáveis podem ser EFFECTIVE,
-  SUPERSEDED ou INVALIDATED
-- Invalid states: ausência transformada em negativa; revisão sobrescrita; revisão
-  superseded alimentando nova decisão; captura completa confundida com suficiência clínica
+- Runtime states: DRAFT; CAPTURE_COMPLETE; FINAL imutável
+- Invalid states: ausência transformada em negativa; revisão FINAL sobrescrita ou sucedida
+  na PoC; captura completa confundida com suficiência clínica
 
 ENTITY: RequisitoAgenda
 - Attributes: id, caseId, anamnesisRevisionId, slotClass, durationMinutes,
   bufferMinutes, desiredBy, requiredResourceKinds, requiredCapabilities, reasons,
   ruleSetVersion, status, override nullable
-- Actions: propor, confirmar, alterar com motivo e substituir decisão operacional sem apagar histórico
+- Actions: propor, confirmar ou alterar com motivo antes da publicação
 - Relations: deriva de uma revisão da anamnese; filtra slots
 - Source of truth: snapshot persistido da saída da regra
-- Runtime states: PROPOSED, CONFIRMED, OVERRIDDEN, SUPERSEDED; `INCOMPLETE`,
+- Runtime states: PROPOSED, CONFIRMED, OVERRIDDEN; `INCOMPLETE`,
   `HUMAN_DEFINITION_REQUIRED` e `OUT_OF_DEMO_RANGE` são resultados prévios à publicação
 - Invalid states: CONFIRMED com pendência bloqueante; saída sem regras explicativas
 
@@ -514,8 +513,8 @@ stateDiagram-v2
   documento, catálogo ou IA quando aplicável.
 - MUST: separar `CAPTURE_COMPLETE`, `INFORMATION_RESOLVED`,
   `OPERATIONAL_REQUIREMENT_CONFIRMED` e `MEDICAL_EVALUATION_COMPLETE`.
-- MUST: revisão FINAL ser imutável, mas corrigível por adendo ou sucessora vinculada, com
-  autoria, motivo e impacto controlado nos derivados.
+- MUST: revisão FINAL ser imutável e rejeitar correção ou sucessora na PoC; correção de
+  resultado anestésico é outro domínio e cria nova versão vinculada.
 - MUST NOT: array vazio, silêncio ou default representar resposta negativa.
 - MUST NOT: MET de atividade virar capacidade individual; enfermagem/software concluir
   “controle”, aplicabilidade de gravidez, risco, ASA, aptidão ou conduta.
@@ -531,14 +530,21 @@ stateDiagram-v2
   data-alvo e capacidade permanecem eixos independentes.
 - MUST: a UI chama a saída de requisito de agenda, nunca ASA, risco anestésico ou aptidão.
 - MUST: regra e override são persistidos como snapshot explicável.
+- MUST: `demo-workload-v1` consumir somente a matriz literal versionada: base 20;
+  até três grupos positivos explícitos de revisão a `+5`; volume de medicações `+5` uma
+  vez; volume de diagnósticos `+5` uma vez; accommodations `+10` uma vez; documento
+  pendente `+0`; total acima de 50 vira `OUT_OF_DEMO_RANGE`.
+- MUST: `ANSWERED(false)`, `NEGATIVE`, `UNKNOWN`, `REFUSED`, `NOT_PERFORMED`, CID, nome de
+  doença, nome de medicamento e valores vitais não pontuam por inferência.
+- MUST: `desiredBy` ser calculado separadamente — data planejada menos cinco dias úteis da
+  demo ou conclusão mais dez — e nunca alterar duração, classe, gravidade ou prioridade.
 - MUST NOT: gerar recomendação de suspensão medicamentosa ou decisão médica.
 - MUST NOT: atribuir minutos universais a `UNKNOWN`, `REFUSED` ou documento pendente.
 - MUST: combinação fora do alcance da demo exige definição humana; nenhum cap descarta
   sinal ou força o caso a caber em cinquenta minutos.
 - IF a enfermagem sobrescrever a saída, THEN informa valor anterior, novo valor e motivo.
-- MUST NOT: alterar silenciosamente uma decisão publicada; nova decisão operacional
-  supersede a anterior, preserva histórico e força revalidação de reserva existente.
-- UNRESOLVED: correção do conteúdo FINAL da anamnese pertence ao Analyst dono.
+- MUST NOT: alterar, suceder ou recalcular uma decisão publicada na PoC; erro posterior
+  permanece exceção visível para tratamento manual fora do protótipo.
 
 ### Agenda e concorrência
 
@@ -715,6 +721,8 @@ por um teste relevante em RED.
 - [ ] `RECEPCAO` abre dois casos com o mesmo nome e protocolos distintos.
 - [ ] `ENFERMAGEM` finaliza a anamnese somente quando todos os campos bloqueantes foram tratados.
 - [ ] O requisito persiste versão, explicação, fatos, status e override auditável.
+- [ ] A matriz literal produz QUICK, STANDARD, EXTENDED e OUT_OF_DEMO_RANGE sem inferência
+  de urgência; `desiredBy` prova o eixo independente de antecedência.
 - [ ] Casos sintéticos distintos produzem pelo menos dois tipos de slot diferentes.
 - [ ] `RECEPCAO` vê apenas slots compatíveis e reserva um deles.
 - [ ] Duas tentativas concorrentes não confirmam o mesmo slot.

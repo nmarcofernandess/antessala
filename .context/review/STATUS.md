@@ -29,6 +29,10 @@ Estados: `INCORPORATED`, `REFERENCE_ONLY`, `NEEDS_FINAL_REVIEW`, `ADJUSTED`, `SU
 - STT de 478 MB, embeddings e integração institucional não pertencem ao caminho crítico.
 - Ausência de resposta nunca vira negativa; IA nunca aplica campo ou conhecimento sozinha.
 - Aprovar conhecimento não o ativa; ativação é ação humana separada.
+- `demo-workload-v1` possui matriz literal versionada; `desiredBy` é antecedência
+  administrativa separada da duração.
+- O review deve avaliar primeiro o perfil `PITCH_CRITICAL`; hardening posterior não pode
+  ser confundido com bloqueio da demonstração nem usado para dispensar invariantes P0.
 
 ## Review final
 
