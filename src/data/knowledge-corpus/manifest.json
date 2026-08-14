@@ -10,24 +10,124 @@
       "source_url": "https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/protocolo-de-cirurgia-segura",
       "publisher": "Anvisa e Ministério da Saúde",
       "summary": "A lista de cirurgia segura organiza confirmações compartilhadas antes da indução, antes da incisão e antes da saída.",
-      "tags": ["cirurgia segura", "checklist", "indução", "incisão", "saída", "equipe perioperatória"],
+      "tags": [
+        "cirurgia segura",
+        "checklist",
+        "indução",
+        "incisão",
+        "saída",
+        "equipe perioperatória"
+      ],
       "entities": [
-        { "name": "Segurança perioperatória", "type": "conceito" },
-        { "name": "Lista de cirurgia segura", "type": "documento" },
-        { "name": "Antes da indução", "type": "etapa" },
-        { "name": "Antes da incisão", "type": "etapa" },
-        { "name": "Antes da saída", "type": "etapa" },
-        { "name": "Equipe perioperatória", "type": "funcao" },
-        { "name": "Profilaxia antimicrobiana", "type": "barreira" }
+        {
+          "name": "Segurança perioperatória",
+          "type": "conceito"
+        },
+        {
+          "name": "Lista de cirurgia segura",
+          "type": "documento"
+        },
+        {
+          "name": "Antes da indução",
+          "type": "etapa"
+        },
+        {
+          "name": "Antes da incisão",
+          "type": "etapa"
+        },
+        {
+          "name": "Antes da saída",
+          "type": "etapa"
+        },
+        {
+          "name": "Equipe perioperatória",
+          "type": "funcao"
+        },
+        {
+          "name": "Profilaxia antimicrobiana",
+          "type": "barreira"
+        }
       ],
       "relations": [
-        { "from": "Segurança perioperatória", "to": "Lista de cirurgia segura", "type": "usa", "weight": 1 },
-        { "from": "Lista de cirurgia segura", "to": "Antes da indução", "type": "possui_etapa", "weight": 1 },
-        { "from": "Lista de cirurgia segura", "to": "Antes da incisão", "type": "possui_etapa", "weight": 1 },
-        { "from": "Lista de cirurgia segura", "to": "Antes da saída", "type": "possui_etapa", "weight": 1 },
-        { "from": "Equipe perioperatória", "to": "Lista de cirurgia segura", "type": "executa", "weight": 1 },
-        { "from": "Antes da incisão", "to": "Profilaxia antimicrobiana", "type": "confirma", "weight": 0.9 }
-      ]
+        {
+          "from": "Segurança perioperatória",
+          "to": "Lista de cirurgia segura",
+          "type": "usa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "cirurgia-segura-brasil-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "5",
+            "section": "Documento oficial — página 5"
+          }
+        },
+        {
+          "from": "Lista de cirurgia segura",
+          "to": "Antes da indução",
+          "type": "possui_etapa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "cirurgia-segura-brasil-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "5",
+            "section": "Documento oficial — página 5"
+          }
+        },
+        {
+          "from": "Lista de cirurgia segura",
+          "to": "Antes da incisão",
+          "type": "possui_etapa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "cirurgia-segura-brasil-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "6",
+            "section": "Documento oficial — página 6"
+          }
+        },
+        {
+          "from": "Lista de cirurgia segura",
+          "to": "Antes da saída",
+          "type": "possui_etapa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "cirurgia-segura-brasil-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "7",
+            "section": "Documento oficial — página 7"
+          }
+        },
+        {
+          "from": "Equipe perioperatória",
+          "to": "Lista de cirurgia segura",
+          "type": "executa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "cirurgia-segura-brasil-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "8",
+            "section": "Documento oficial — página 8"
+          }
+        },
+        {
+          "from": "Antes da incisão",
+          "to": "Profilaxia antimicrobiana",
+          "type": "confirma",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "cirurgia-segura-brasil-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "8",
+            "section": "Documento oficial — página 8"
+          }
+        }
+      ],
+      "source_revision": "2013-07-09",
+      "source_pages": "1-12",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Acesso aberto; reprodução textual sem adaptação de conteúdo, com atribuição. Diagramação e marcas não incluídas.",
+      "word_count": 3398,
+      "content_sha256": "30fdafc73a81c000a219dbb9514b4c807afdee09e2c39a38bcbcdf6097ac3c07"
     },
     {
       "id": "checklist-oms-v2",
@@ -37,23 +137,112 @@
       "source_url": "https://www.who.int/teams/integrated-health-services/quality-of-care-and-patient-safety/patient-safety-guidance-and-tools/safe-surgery/tool-and-resources",
       "publisher": "World Health Organization",
       "summary": "A lista da OMS estrutura dezenove verificações em entrada, pausa cirúrgica e saída.",
-      "tags": ["OMS", "Sign In", "Time Out", "Sign Out", "dezenove itens", "segurança cirúrgica"],
+      "tags": [
+        "OMS",
+        "Sign In",
+        "Time Out",
+        "Sign Out",
+        "dezenove itens",
+        "segurança cirúrgica"
+      ],
       "entities": [
-        { "name": "Lista de cirurgia segura", "type": "documento" },
-        { "name": "Sign In", "type": "etapa" },
-        { "name": "Time Out", "type": "etapa" },
-        { "name": "Sign Out", "type": "etapa" },
-        { "name": "Comunicação em equipe", "type": "conceito" },
-        { "name": "Paciente", "type": "pessoa" },
-        { "name": "Equipe perioperatória", "type": "funcao" }
+        {
+          "name": "Lista de cirurgia segura",
+          "type": "documento"
+        },
+        {
+          "name": "Sign In",
+          "type": "etapa"
+        },
+        {
+          "name": "Time Out",
+          "type": "etapa"
+        },
+        {
+          "name": "Sign Out",
+          "type": "etapa"
+        },
+        {
+          "name": "Comunicação em equipe",
+          "type": "conceito"
+        },
+        {
+          "name": "Paciente",
+          "type": "pessoa"
+        },
+        {
+          "name": "Equipe perioperatória",
+          "type": "funcao"
+        }
       ],
       "relations": [
-        { "from": "Lista de cirurgia segura", "to": "Sign In", "type": "possui_etapa", "weight": 1 },
-        { "from": "Lista de cirurgia segura", "to": "Time Out", "type": "possui_etapa", "weight": 1 },
-        { "from": "Lista de cirurgia segura", "to": "Sign Out", "type": "possui_etapa", "weight": 1 },
-        { "from": "Lista de cirurgia segura", "to": "Comunicação em equipe", "type": "fortalece", "weight": 1 },
-        { "from": "Equipe perioperatória", "to": "Paciente", "type": "protege", "weight": 0.9 }
-      ]
+        {
+          "from": "Lista de cirurgia segura",
+          "to": "Sign In",
+          "type": "possui_etapa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "checklist-oms-v2",
+            "source_revision": "WHO Checklist revision 1/2009",
+            "source_pages": "Checklist 1; recursos oficiais 1-3",
+            "section": "Sign In — participantes e momento"
+          }
+        },
+        {
+          "from": "Lista de cirurgia segura",
+          "to": "Time Out",
+          "type": "possui_etapa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "checklist-oms-v2",
+            "source_revision": "WHO Checklist revision 1/2009",
+            "source_pages": "Checklist 1; recursos oficiais 1-3",
+            "section": "Time Out — confirmação compartilhada"
+          }
+        },
+        {
+          "from": "Lista de cirurgia segura",
+          "to": "Sign Out",
+          "type": "possui_etapa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "checklist-oms-v2",
+            "source_revision": "WHO Checklist revision 1/2009",
+            "source_pages": "Checklist 1; recursos oficiais 1-3",
+            "section": "Sign Out — encerramento seguro"
+          }
+        },
+        {
+          "from": "Lista de cirurgia segura",
+          "to": "Comunicação em equipe",
+          "type": "fortalece",
+          "weight": 1,
+          "evidence": {
+            "source_id": "checklist-oms-v2",
+            "source_revision": "WHO Checklist revision 1/2009",
+            "source_pages": "Checklist 1; recursos oficiais 1-3",
+            "section": "Comunicação, interrupção e autoridade para falar"
+          }
+        },
+        {
+          "from": "Equipe perioperatória",
+          "to": "Paciente",
+          "type": "protege",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "checklist-oms-v2",
+            "source_revision": "WHO Checklist revision 1/2009",
+            "source_pages": "Checklist 1; recursos oficiais 1-3",
+            "section": "Comunicação, interrupção e autoridade para falar"
+          }
+        }
+      ],
+      "source_revision": "WHO Checklist revision 1/2009",
+      "source_pages": "Checklist 1; recursos oficiais 1-3",
+      "content_mode": "faithful_structured_paraphrase",
+      "license_note": "Estrutura fiel e paráfrase educativa; sem logotipo ou alegação de endosso da OMS.",
+      "word_count": 1234,
+      "content_sha256": "5f27597764c58091d99410f6790fcb4e16e9fe72849e33ba32a581db3b81a4d0"
     },
     {
       "id": "implantacao-checklist-v2",
@@ -63,24 +252,124 @@
       "source_url": "https://www.who.int/publications/i/item/9789241598590",
       "publisher": "World Health Organization",
       "summary": "Implantação sustentável combina liderança, participação multidisciplinar, coordenação, treinamento e feedback.",
-      "tags": ["implantação", "liderança", "treinamento", "feedback", "adaptação local", "checklist"],
+      "tags": [
+        "implantação",
+        "liderança",
+        "treinamento",
+        "feedback",
+        "adaptação local",
+        "checklist"
+      ],
       "entities": [
-        { "name": "Implementação do checklist", "type": "processo" },
-        { "name": "Lista de cirurgia segura", "type": "documento" },
-        { "name": "Liderança", "type": "conceito" },
-        { "name": "Treinamento", "type": "processo" },
-        { "name": "Feedback", "type": "processo" },
-        { "name": "Comunicação em equipe", "type": "conceito" },
-        { "name": "Equipe perioperatória", "type": "funcao" }
+        {
+          "name": "Implementação do checklist",
+          "type": "processo"
+        },
+        {
+          "name": "Lista de cirurgia segura",
+          "type": "documento"
+        },
+        {
+          "name": "Liderança",
+          "type": "conceito"
+        },
+        {
+          "name": "Treinamento",
+          "type": "processo"
+        },
+        {
+          "name": "Feedback",
+          "type": "processo"
+        },
+        {
+          "name": "Comunicação em equipe",
+          "type": "conceito"
+        },
+        {
+          "name": "Equipe perioperatória",
+          "type": "funcao"
+        }
       ],
       "relations": [
-        { "from": "Implementação do checklist", "to": "Lista de cirurgia segura", "type": "implementa", "weight": 1 },
-        { "from": "Implementação do checklist", "to": "Liderança", "type": "requer", "weight": 1 },
-        { "from": "Implementação do checklist", "to": "Treinamento", "type": "requer", "weight": 1 },
-        { "from": "Implementação do checklist", "to": "Feedback", "type": "usa", "weight": 0.9 },
-        { "from": "Treinamento", "to": "Comunicação em equipe", "type": "fortalece", "weight": 0.9 },
-        { "from": "Equipe perioperatória", "to": "Implementação do checklist", "type": "participa_de", "weight": 1 }
-      ]
+        {
+          "from": "Implementação do checklist",
+          "to": "Lista de cirurgia segura",
+          "type": "implementa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "implantacao-checklist-v2",
+            "source_revision": "2009-04-02",
+            "source_pages": "1-20",
+            "section": "O que está sendo implantado"
+          }
+        },
+        {
+          "from": "Implementação do checklist",
+          "to": "Liderança",
+          "type": "requer",
+          "weight": 1,
+          "evidence": {
+            "source_id": "implantacao-checklist-v2",
+            "source_revision": "2009-04-02",
+            "source_pages": "1-20",
+            "section": "Liderança e champions locais"
+          }
+        },
+        {
+          "from": "Implementação do checklist",
+          "to": "Treinamento",
+          "type": "requer",
+          "weight": 1,
+          "evidence": {
+            "source_id": "implantacao-checklist-v2",
+            "source_revision": "2009-04-02",
+            "source_pages": "1-20",
+            "section": "Treinamento, simulação e observação"
+          }
+        },
+        {
+          "from": "Implementação do checklist",
+          "to": "Feedback",
+          "type": "usa",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "implantacao-checklist-v2",
+            "source_revision": "2009-04-02",
+            "source_pages": "1-20",
+            "section": "Feedback e indicadores úteis"
+          }
+        },
+        {
+          "from": "Treinamento",
+          "to": "Comunicação em equipe",
+          "type": "fortalece",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "implantacao-checklist-v2",
+            "source_revision": "2009-04-02",
+            "source_pages": "1-20",
+            "section": "Comunicação e cultura de segurança"
+          }
+        },
+        {
+          "from": "Equipe perioperatória",
+          "to": "Implementação do checklist",
+          "type": "participa_de",
+          "weight": 1,
+          "evidence": {
+            "source_id": "implantacao-checklist-v2",
+            "source_revision": "2009-04-02",
+            "source_pages": "1-20",
+            "section": "Participação multidisciplinar"
+          }
+        }
+      ],
+      "source_revision": "2009-04-02",
+      "source_pages": "1-20",
+      "content_mode": "substantial_structured_paraphrase",
+      "license_note": "Publicação de 2009 sob direitos reservados; conteúdo original parafraseado, sem figuras, logotipo ou trechos longos.",
+      "word_count": 1140,
+      "content_sha256": "d86ffcf66960899208dafd8a2a30819e59ed2b16646e13b9cc4cafd98f012f96"
     },
     {
       "id": "diretrizes-cirurgia-segura-v2",
@@ -90,23 +379,111 @@
       "source_url": "https://www.who.int/publications/i/item/9789241598552",
       "publisher": "World Health Organization",
       "summary": "Cirurgia segura depende de infraestrutura, prevenção de infecção, anestesia segura, comunicação e aprendizado do serviço.",
-      "tags": ["cuidado perioperatório", "infecção", "anestesia segura", "monitoramento", "comunicação"],
+      "tags": [
+        "cuidado perioperatório",
+        "infecção",
+        "anestesia segura",
+        "monitoramento",
+        "comunicação"
+      ],
       "entities": [
-        { "name": "Segurança perioperatória", "type": "conceito" },
-        { "name": "Infecção do sítio cirúrgico", "type": "risco" },
-        { "name": "Profilaxia antimicrobiana", "type": "barreira" },
-        { "name": "Anestesia segura", "type": "conceito" },
-        { "name": "Comunicação em equipe", "type": "conceito" },
-        { "name": "Monitoramento de resultados", "type": "processo" },
-        { "name": "Higiene das mãos", "type": "barreira" }
+        {
+          "name": "Segurança perioperatória",
+          "type": "conceito"
+        },
+        {
+          "name": "Infecção do sítio cirúrgico",
+          "type": "risco"
+        },
+        {
+          "name": "Profilaxia antimicrobiana",
+          "type": "barreira"
+        },
+        {
+          "name": "Anestesia segura",
+          "type": "conceito"
+        },
+        {
+          "name": "Comunicação em equipe",
+          "type": "conceito"
+        },
+        {
+          "name": "Monitoramento de resultados",
+          "type": "processo"
+        },
+        {
+          "name": "Higiene das mãos",
+          "type": "barreira"
+        }
       ],
       "relations": [
-        { "from": "Segurança perioperatória", "to": "Anestesia segura", "type": "inclui", "weight": 1 },
-        { "from": "Segurança perioperatória", "to": "Comunicação em equipe", "type": "depende_de", "weight": 1 },
-        { "from": "Segurança perioperatória", "to": "Monitoramento de resultados", "type": "depende_de", "weight": 0.9 },
-        { "from": "Profilaxia antimicrobiana", "to": "Infecção do sítio cirúrgico", "type": "reduz_risco_de", "weight": 0.9 },
-        { "from": "Higiene das mãos", "to": "Infecção do sítio cirúrgico", "type": "reduz_risco_de", "weight": 1 }
-      ]
+        {
+          "from": "Segurança perioperatória",
+          "to": "Anestesia segura",
+          "type": "inclui",
+          "weight": 1,
+          "evidence": {
+            "source_id": "diretrizes-cirurgia-segura-v2",
+            "source_revision": "2009-04-03",
+            "source_pages": "1-124",
+            "section": "Segurança como sistema"
+          }
+        },
+        {
+          "from": "Segurança perioperatória",
+          "to": "Comunicação em equipe",
+          "type": "depende_de",
+          "weight": 1,
+          "evidence": {
+            "source_id": "diretrizes-cirurgia-segura-v2",
+            "source_revision": "2009-04-03",
+            "source_pages": "1-124",
+            "section": "Trabalho em equipe e eventos críticos"
+          }
+        },
+        {
+          "from": "Segurança perioperatória",
+          "to": "Monitoramento de resultados",
+          "type": "depende_de",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "diretrizes-cirurgia-segura-v2",
+            "source_revision": "2009-04-03",
+            "source_pages": "1-124",
+            "section": "Monitoramento, incidentes e aprendizagem"
+          }
+        },
+        {
+          "from": "Profilaxia antimicrobiana",
+          "to": "Infecção do sítio cirúrgico",
+          "type": "reduz_risco_de",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "diretrizes-cirurgia-segura-v2",
+            "source_revision": "2009-04-03",
+            "source_pages": "1-124",
+            "section": "Prevenção de infecção do sítio cirúrgico"
+          }
+        },
+        {
+          "from": "Higiene das mãos",
+          "to": "Infecção do sítio cirúrgico",
+          "type": "reduz_risco_de",
+          "weight": 1,
+          "evidence": {
+            "source_id": "diretrizes-cirurgia-segura-v2",
+            "source_revision": "2009-04-03",
+            "source_pages": "1-124",
+            "section": "Prevenção de infecção do sítio cirúrgico"
+          }
+        }
+      ],
+      "source_revision": "2009-04-03",
+      "source_pages": "1-124",
+      "content_mode": "substantial_structured_paraphrase",
+      "license_note": "Publicação de 2009 sob direitos reservados; conteúdo original parafraseado, sem figuras, logotipo ou trechos longos.",
+      "word_count": 1208,
+      "content_sha256": "2ea25332368905f92e32dba9abfd1efa812c96cc6e9a16203f2683bd4b00d253"
     },
     {
       "id": "responsabilidades-anestesia-v2",
@@ -116,24 +493,124 @@
       "source_url": "https://sistemas.cfm.org.br/normas/visualizar/resolucoes/BR/2017/2174",
       "publisher": "Conselho Federal de Medicina",
       "summary": "A avaliação e as decisões anestésicas permanecem sob responsabilidade humana documentada do anestesiologista.",
-      "tags": ["avaliação pré-anestésica", "anestesiologista", "ASA", "decisão humana", "monitorização", "recuperação"],
+      "tags": [
+        "avaliação pré-anestésica",
+        "anestesiologista",
+        "ASA",
+        "decisão humana",
+        "monitorização",
+        "recuperação"
+      ],
       "entities": [
-        { "name": "Avaliação pré-anestésica", "type": "processo" },
-        { "name": "Anestesiologista", "type": "funcao" },
-        { "name": "Decisão humana", "type": "conceito" },
-        { "name": "Classificação ASA", "type": "conceito" },
-        { "name": "Antessala", "type": "sistema" },
-        { "name": "Anestesia segura", "type": "conceito" },
-        { "name": "Recuperação pós-anestésica", "type": "processo" }
+        {
+          "name": "Avaliação pré-anestésica",
+          "type": "processo"
+        },
+        {
+          "name": "Anestesiologista",
+          "type": "funcao"
+        },
+        {
+          "name": "Decisão humana",
+          "type": "conceito"
+        },
+        {
+          "name": "Classificação ASA",
+          "type": "conceito"
+        },
+        {
+          "name": "Antessala",
+          "type": "sistema"
+        },
+        {
+          "name": "Anestesia segura",
+          "type": "conceito"
+        },
+        {
+          "name": "Recuperação pós-anestésica",
+          "type": "processo"
+        }
       ],
       "relations": [
-        { "from": "Anestesiologista", "to": "Avaliação pré-anestésica", "type": "realiza", "weight": 1 },
-        { "from": "Avaliação pré-anestésica", "to": "Decisão humana", "type": "subsidia", "weight": 1 },
-        { "from": "Antessala", "to": "Decisão humana", "type": "nao_substitui", "weight": 1 },
-        { "from": "Antessala", "to": "Classificação ASA", "type": "nao_atribui", "weight": 1 },
-        { "from": "Anestesiologista", "to": "Anestesia segura", "type": "responde_por", "weight": 1 },
-        { "from": "Anestesia segura", "to": "Recuperação pós-anestésica", "type": "continua_em", "weight": 0.8 }
-      ]
+        {
+          "from": "Anestesiologista",
+          "to": "Avaliação pré-anestésica",
+          "type": "realiza",
+          "weight": 1,
+          "evidence": {
+            "source_id": "responsabilidades-anestesia-v2",
+            "source_revision": "Resolução CFM 2.174/2017; DOU 2018-02-27",
+            "source_pages": "2",
+            "section": "Documento oficial — página 2"
+          }
+        },
+        {
+          "from": "Avaliação pré-anestésica",
+          "to": "Decisão humana",
+          "type": "subsidia",
+          "weight": 1,
+          "evidence": {
+            "source_id": "responsabilidades-anestesia-v2",
+            "source_revision": "Resolução CFM 2.174/2017; DOU 2018-02-27",
+            "source_pages": "2",
+            "section": "Documento oficial — página 2"
+          }
+        },
+        {
+          "from": "Antessala",
+          "to": "Decisão humana",
+          "type": "nao_substitui",
+          "weight": 1,
+          "evidence": {
+            "source_id": "responsabilidades-anestesia-v2",
+            "source_revision": "Resolução CFM 2.174/2017; DOU 2018-02-27",
+            "source_pages": "2",
+            "section": "Documento oficial — página 2"
+          }
+        },
+        {
+          "from": "Antessala",
+          "to": "Classificação ASA",
+          "type": "nao_atribui",
+          "weight": 1,
+          "evidence": {
+            "source_id": "responsabilidades-anestesia-v2",
+            "source_revision": "Resolução CFM 2.174/2017; DOU 2018-02-27",
+            "source_pages": "2",
+            "section": "Documento oficial — página 2"
+          }
+        },
+        {
+          "from": "Anestesiologista",
+          "to": "Anestesia segura",
+          "type": "responde_por",
+          "weight": 1,
+          "evidence": {
+            "source_id": "responsabilidades-anestesia-v2",
+            "source_revision": "Resolução CFM 2.174/2017; DOU 2018-02-27",
+            "source_pages": "2",
+            "section": "Documento oficial — página 2"
+          }
+        },
+        {
+          "from": "Anestesia segura",
+          "to": "Recuperação pós-anestésica",
+          "type": "continua_em",
+          "weight": 0.8,
+          "evidence": {
+            "source_id": "responsabilidades-anestesia-v2",
+            "source_revision": "Resolução CFM 2.174/2017; DOU 2018-02-27",
+            "source_pages": "3",
+            "section": "Documento oficial — página 3"
+          }
+        }
+      ],
+      "source_revision": "Resolução CFM 2.174/2017; DOU 2018-02-27",
+      "source_pages": "1-15",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Ato normativo público; transcrição para consulta, com referência à fonte oficial vigente.",
+      "word_count": 4297,
+      "content_sha256": "44d611ebfd57b16605515aad25eac0b7f3554a2a952e22082302890ed80699b8"
     },
     {
       "id": "identificacao-paciente-v2",
@@ -143,24 +620,123 @@
       "source_url": "https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/protocolo-de-identificacao-do-paciente",
       "publisher": "Ministério da Saúde, Anvisa e Fiocruz",
       "summary": "A identificação segura usa ao menos dois identificadores e confirmação ativa antes de cuidados e procedimentos.",
-      "tags": ["identificação", "dois identificadores", "confirmação ativa", "pulseira", "segurança do paciente"],
+      "tags": [
+        "identificação",
+        "dois identificadores",
+        "confirmação ativa",
+        "pulseira",
+        "segurança do paciente"
+      ],
       "entities": [
-        { "name": "Paciente", "type": "pessoa" },
-        { "name": "Identificação do paciente", "type": "processo" },
-        { "name": "Dois identificadores", "type": "regra" },
-        { "name": "Confirmação ativa", "type": "barreira" },
-        { "name": "Administração de medicamentos", "type": "processo" },
-        { "name": "Procedimento cirúrgico", "type": "processo" },
-        { "name": "Segurança perioperatória", "type": "conceito" }
+        {
+          "name": "Paciente",
+          "type": "pessoa"
+        },
+        {
+          "name": "Identificação do paciente",
+          "type": "processo"
+        },
+        {
+          "name": "Dois identificadores",
+          "type": "regra"
+        },
+        {
+          "name": "Confirmação ativa",
+          "type": "barreira"
+        },
+        {
+          "name": "Administração de medicamentos",
+          "type": "processo"
+        },
+        {
+          "name": "Procedimento cirúrgico",
+          "type": "processo"
+        },
+        {
+          "name": "Segurança perioperatória",
+          "type": "conceito"
+        }
       ],
       "relations": [
-        { "from": "Identificação do paciente", "to": "Dois identificadores", "type": "requer", "weight": 1 },
-        { "from": "Identificação do paciente", "to": "Confirmação ativa", "type": "usa", "weight": 1 },
-        { "from": "Identificação do paciente", "to": "Paciente", "type": "protege", "weight": 1 },
-        { "from": "Administração de medicamentos", "to": "Identificação do paciente", "type": "requer", "weight": 1 },
-        { "from": "Procedimento cirúrgico", "to": "Identificação do paciente", "type": "requer", "weight": 1 },
-        { "from": "Identificação do paciente", "to": "Segurança perioperatória", "type": "contribui_para", "weight": 0.9 }
-      ]
+        {
+          "from": "Identificação do paciente",
+          "to": "Dois identificadores",
+          "type": "requer",
+          "weight": 1,
+          "evidence": {
+            "source_id": "identificacao-paciente-v2",
+            "source_revision": "2013",
+            "source_pages": "4",
+            "section": "Documento oficial — página 4"
+          }
+        },
+        {
+          "from": "Identificação do paciente",
+          "to": "Confirmação ativa",
+          "type": "usa",
+          "weight": 1,
+          "evidence": {
+            "source_id": "identificacao-paciente-v2",
+            "source_revision": "2013",
+            "source_pages": "4",
+            "section": "Documento oficial — página 4"
+          }
+        },
+        {
+          "from": "Identificação do paciente",
+          "to": "Paciente",
+          "type": "protege",
+          "weight": 1,
+          "evidence": {
+            "source_id": "identificacao-paciente-v2",
+            "source_revision": "2013",
+            "source_pages": "4",
+            "section": "Documento oficial — página 4"
+          }
+        },
+        {
+          "from": "Administração de medicamentos",
+          "to": "Identificação do paciente",
+          "type": "requer",
+          "weight": 1,
+          "evidence": {
+            "source_id": "identificacao-paciente-v2",
+            "source_revision": "2013",
+            "source_pages": "3",
+            "section": "Documento oficial — página 3"
+          }
+        },
+        {
+          "from": "Procedimento cirúrgico",
+          "to": "Identificação do paciente",
+          "type": "requer",
+          "weight": 1,
+          "evidence": {
+            "source_id": "identificacao-paciente-v2",
+            "source_revision": "2013",
+            "source_pages": "3",
+            "section": "Documento oficial — página 3"
+          }
+        },
+        {
+          "from": "Identificação do paciente",
+          "to": "Segurança perioperatória",
+          "type": "contribui_para",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "identificacao-paciente-v2",
+            "source_revision": "2013",
+            "source_pages": "3",
+            "section": "Documento oficial — página 3"
+          }
+        }
+      ],
+      "source_revision": "2013",
+      "source_pages": "1-12",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Acesso aberto; reprodução textual sem adaptação de conteúdo, com atribuição. Diagramação e marcas não incluídas.",
+      "word_count": 3013,
+      "content_sha256": "b7164277ed635ac4c82629c19a7ab170663b1687a92689d7c4841e113b0df0e5"
     },
     {
       "id": "seguranca-medicamentos-v2",
@@ -170,23 +746,111 @@
       "source_url": "https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/protocolo-de-seguranca-na-prescricao-uso-e-administracao-de-medicamentos",
       "publisher": "Ministério da Saúde, Anvisa, Fiocruz e FHEMIG",
       "summary": "Segurança medicamentosa combina prescrição completa, alergias visíveis, conciliação e barreiras adicionais para alto risco.",
-      "tags": ["medicamentos", "alergia", "conciliação", "alta vigilância", "administração segura"],
+      "tags": [
+        "medicamentos",
+        "alergia",
+        "conciliação",
+        "alta vigilância",
+        "administração segura"
+      ],
       "entities": [
-        { "name": "Segurança de medicamentos", "type": "conceito" },
-        { "name": "Administração de medicamentos", "type": "processo" },
-        { "name": "Alergia medicamentosa", "type": "risco" },
-        { "name": "Conciliação medicamentosa", "type": "processo" },
-        { "name": "Medicamento de alta vigilância", "type": "conceito" },
-        { "name": "Identificação do paciente", "type": "processo" },
-        { "name": "Dupla checagem independente", "type": "barreira" }
+        {
+          "name": "Segurança de medicamentos",
+          "type": "conceito"
+        },
+        {
+          "name": "Administração de medicamentos",
+          "type": "processo"
+        },
+        {
+          "name": "Alergia medicamentosa",
+          "type": "risco"
+        },
+        {
+          "name": "Conciliação medicamentosa",
+          "type": "processo"
+        },
+        {
+          "name": "Medicamento de alta vigilância",
+          "type": "conceito"
+        },
+        {
+          "name": "Identificação do paciente",
+          "type": "processo"
+        },
+        {
+          "name": "Dupla checagem independente",
+          "type": "barreira"
+        }
       ],
       "relations": [
-        { "from": "Segurança de medicamentos", "to": "Administração de medicamentos", "type": "orienta", "weight": 1 },
-        { "from": "Administração de medicamentos", "to": "Identificação do paciente", "type": "requer", "weight": 1 },
-        { "from": "Administração de medicamentos", "to": "Alergia medicamentosa", "type": "verifica", "weight": 1 },
-        { "from": "Conciliação medicamentosa", "to": "Segurança de medicamentos", "type": "fortalece", "weight": 0.9 },
-        { "from": "Medicamento de alta vigilância", "to": "Dupla checagem independente", "type": "pode_requerer", "weight": 0.9 }
-      ]
+        {
+          "from": "Segurança de medicamentos",
+          "to": "Administração de medicamentos",
+          "type": "orienta",
+          "weight": 1,
+          "evidence": {
+            "source_id": "seguranca-medicamentos-v2",
+            "source_revision": "2013",
+            "source_pages": "4",
+            "section": "Documento oficial — página 4"
+          }
+        },
+        {
+          "from": "Administração de medicamentos",
+          "to": "Identificação do paciente",
+          "type": "requer",
+          "weight": 1,
+          "evidence": {
+            "source_id": "seguranca-medicamentos-v2",
+            "source_revision": "2013",
+            "source_pages": "20",
+            "section": "Documento oficial — página 20"
+          }
+        },
+        {
+          "from": "Administração de medicamentos",
+          "to": "Alergia medicamentosa",
+          "type": "verifica",
+          "weight": 1,
+          "evidence": {
+            "source_id": "seguranca-medicamentos-v2",
+            "source_revision": "2013",
+            "source_pages": "9",
+            "section": "Documento oficial — página 9"
+          }
+        },
+        {
+          "from": "Conciliação medicamentosa",
+          "to": "Segurança de medicamentos",
+          "type": "fortalece",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "seguranca-medicamentos-v2",
+            "source_revision": "2013",
+            "source_pages": "26",
+            "section": "Documento oficial — página 26"
+          }
+        },
+        {
+          "from": "Medicamento de alta vigilância",
+          "to": "Dupla checagem independente",
+          "type": "pode_requerer",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "seguranca-medicamentos-v2",
+            "source_revision": "2013",
+            "source_pages": "11",
+            "section": "Documento oficial — página 11"
+          }
+        }
+      ],
+      "source_revision": "2013",
+      "source_pages": "1-46",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Acesso aberto; reprodução textual sem adaptação de conteúdo, com atribuição. Diagramação e marcas não incluídas.",
+      "word_count": 12088,
+      "content_sha256": "1678ba5c3b2bebf5f95100834e8b445e78c460c40c47e373b5cb7fe7482ce19b"
     },
     {
       "id": "prevencao-quedas-v2",
@@ -196,23 +860,112 @@
       "source_url": "https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/protocolo-de-prevencao-de-quedas",
       "publisher": "Ministério da Saúde, Anvisa e Fiocruz",
       "summary": "O risco de queda é reavaliado quando a condição muda e requer medidas ambientais e individualizadas.",
-      "tags": ["quedas", "reavaliação", "sedação", "mobilidade", "ambiente", "transferência"],
+      "tags": [
+        "quedas",
+        "reavaliação",
+        "sedação",
+        "mobilidade",
+        "ambiente",
+        "transferência"
+      ],
       "entities": [
-        { "name": "Risco de queda", "type": "risco" },
-        { "name": "Avaliação de risco", "type": "processo" },
-        { "name": "Anestesia e sedação", "type": "processo" },
-        { "name": "Mobilidade reduzida", "type": "risco" },
-        { "name": "Ambiente seguro", "type": "barreira" },
-        { "name": "Paciente", "type": "pessoa" },
-        { "name": "Comunicação em equipe", "type": "conceito" }
+        {
+          "name": "Risco de queda",
+          "type": "risco"
+        },
+        {
+          "name": "Avaliação de risco",
+          "type": "processo"
+        },
+        {
+          "name": "Anestesia e sedação",
+          "type": "processo"
+        },
+        {
+          "name": "Mobilidade reduzida",
+          "type": "risco"
+        },
+        {
+          "name": "Ambiente seguro",
+          "type": "barreira"
+        },
+        {
+          "name": "Paciente",
+          "type": "pessoa"
+        },
+        {
+          "name": "Comunicação em equipe",
+          "type": "conceito"
+        }
       ],
       "relations": [
-        { "from": "Avaliação de risco", "to": "Risco de queda", "type": "identifica", "weight": 1 },
-        { "from": "Anestesia e sedação", "to": "Risco de queda", "type": "pode_aumentar", "weight": 0.9 },
-        { "from": "Mobilidade reduzida", "to": "Risco de queda", "type": "aumenta", "weight": 1 },
-        { "from": "Ambiente seguro", "to": "Risco de queda", "type": "reduz", "weight": 0.9 },
-        { "from": "Comunicação em equipe", "to": "Paciente", "type": "protege", "weight": 0.8 }
-      ]
+        {
+          "from": "Avaliação de risco",
+          "to": "Risco de queda",
+          "type": "identifica",
+          "weight": 1,
+          "evidence": {
+            "source_id": "prevencao-quedas-v2",
+            "source_revision": "2013",
+            "source_pages": "4",
+            "section": "Documento oficial — página 4"
+          }
+        },
+        {
+          "from": "Anestesia e sedação",
+          "to": "Risco de queda",
+          "type": "pode_aumentar",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "prevencao-quedas-v2",
+            "source_revision": "2013",
+            "source_pages": "10",
+            "section": "Documento oficial — página 10"
+          }
+        },
+        {
+          "from": "Mobilidade reduzida",
+          "to": "Risco de queda",
+          "type": "aumenta",
+          "weight": 1,
+          "evidence": {
+            "source_id": "prevencao-quedas-v2",
+            "source_revision": "2013",
+            "source_pages": "5",
+            "section": "Documento oficial — página 5"
+          }
+        },
+        {
+          "from": "Ambiente seguro",
+          "to": "Risco de queda",
+          "type": "reduz",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "prevencao-quedas-v2",
+            "source_revision": "2013",
+            "source_pages": "7",
+            "section": "Documento oficial — página 7"
+          }
+        },
+        {
+          "from": "Comunicação em equipe",
+          "to": "Paciente",
+          "type": "protege",
+          "weight": 0.8,
+          "evidence": {
+            "source_id": "prevencao-quedas-v2",
+            "source_revision": "2013",
+            "source_pages": "12",
+            "section": "Documento oficial — página 12"
+          }
+        }
+      ],
+      "source_revision": "2013",
+      "source_pages": "1-15",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Acesso aberto; reprodução textual sem adaptação de conteúdo, com atribuição. Diagramação e marcas não incluídas.",
+      "word_count": 4128,
+      "content_sha256": "43490af673da3349c983762dac7a59e2b5235dedfbafba358746d32f07345ace"
     },
     {
       "id": "prevencao-lesao-pressao-v2",
@@ -222,23 +975,111 @@
       "source_url": "https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/protocolo-de-ulcera-por-pressao",
       "publisher": "Ministério da Saúde, Anvisa e Fiocruz",
       "summary": "Prevenção de lesão por pressão exige avaliação do risco, inspeção, redução de pressão e continuidade na transferência.",
-      "tags": ["lesão por pressão", "imobilidade", "pele", "reposicionamento", "perioperatório"],
+      "tags": [
+        "lesão por pressão",
+        "imobilidade",
+        "pele",
+        "reposicionamento",
+        "perioperatório"
+      ],
       "entities": [
-        { "name": "Lesão por pressão", "type": "risco" },
-        { "name": "Imobilidade", "type": "risco" },
-        { "name": "Inspeção da pele", "type": "processo" },
-        { "name": "Reposicionamento", "type": "barreira" },
-        { "name": "Procedimento cirúrgico", "type": "processo" },
-        { "name": "Segurança perioperatória", "type": "conceito" },
-        { "name": "Comunicação em equipe", "type": "conceito" }
+        {
+          "name": "Lesão por pressão",
+          "type": "risco"
+        },
+        {
+          "name": "Imobilidade",
+          "type": "risco"
+        },
+        {
+          "name": "Inspeção da pele",
+          "type": "processo"
+        },
+        {
+          "name": "Reposicionamento",
+          "type": "barreira"
+        },
+        {
+          "name": "Procedimento cirúrgico",
+          "type": "processo"
+        },
+        {
+          "name": "Segurança perioperatória",
+          "type": "conceito"
+        },
+        {
+          "name": "Comunicação em equipe",
+          "type": "conceito"
+        }
       ],
       "relations": [
-        { "from": "Imobilidade", "to": "Lesão por pressão", "type": "aumenta_risco_de", "weight": 1 },
-        { "from": "Inspeção da pele", "to": "Lesão por pressão", "type": "detecta_precocemente", "weight": 0.9 },
-        { "from": "Reposicionamento", "to": "Lesão por pressão", "type": "reduz_risco_de", "weight": 1 },
-        { "from": "Procedimento cirúrgico", "to": "Imobilidade", "type": "pode_prolongar", "weight": 0.8 },
-        { "from": "Comunicação em equipe", "to": "Segurança perioperatória", "type": "fortalece", "weight": 0.9 }
-      ]
+        {
+          "from": "Imobilidade",
+          "to": "Lesão por pressão",
+          "type": "aumenta_risco_de",
+          "weight": 1,
+          "evidence": {
+            "source_id": "prevencao-lesao-pressao-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "4",
+            "section": "Documento oficial — página 4"
+          }
+        },
+        {
+          "from": "Inspeção da pele",
+          "to": "Lesão por pressão",
+          "type": "detecta_precocemente",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "prevencao-lesao-pressao-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "6",
+            "section": "Documento oficial — página 6"
+          }
+        },
+        {
+          "from": "Reposicionamento",
+          "to": "Lesão por pressão",
+          "type": "reduz_risco_de",
+          "weight": 1,
+          "evidence": {
+            "source_id": "prevencao-lesao-pressao-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "10",
+            "section": "Documento oficial — página 10"
+          }
+        },
+        {
+          "from": "Procedimento cirúrgico",
+          "to": "Imobilidade",
+          "type": "pode_prolongar",
+          "weight": 0.8,
+          "evidence": {
+            "source_id": "prevencao-lesao-pressao-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "5",
+            "section": "Documento oficial — página 5"
+          }
+        },
+        {
+          "from": "Comunicação em equipe",
+          "to": "Segurança perioperatória",
+          "type": "fortalece",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "prevencao-lesao-pressao-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "15",
+            "section": "Documento oficial — página 15"
+          }
+        }
+      ],
+      "source_revision": "2013-07-09",
+      "source_pages": "1-21",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Acesso aberto; reprodução textual sem adaptação de conteúdo, com atribuição. Terminologia histórica preservada.",
+      "word_count": 7516,
+      "content_sha256": "b3874eaeee24600ab291b58446ff2bdb71169262879f45007deb2635ca0e4074"
     },
     {
       "id": "higiene-maos-v2",
@@ -248,24 +1089,123 @@
       "source_url": "https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/protocolo-de-higiene-das-maos",
       "publisher": "Ministério da Saúde, Anvisa e Fiocruz",
       "summary": "Os cinco momentos orientam a higiene das mãos; luvas não substituem a prática.",
-      "tags": ["higiene das mãos", "cinco momentos", "luvas", "prevenção de infecção", "preparação alcoólica"],
+      "tags": [
+        "higiene das mãos",
+        "cinco momentos",
+        "luvas",
+        "prevenção de infecção",
+        "preparação alcoólica"
+      ],
       "entities": [
-        { "name": "Higiene das mãos", "type": "barreira" },
-        { "name": "Cinco momentos", "type": "regra" },
-        { "name": "Luvas", "type": "recurso" },
-        { "name": "Infecção do sítio cirúrgico", "type": "risco" },
-        { "name": "Paciente", "type": "pessoa" },
-        { "name": "Segurança perioperatória", "type": "conceito" },
-        { "name": "Treinamento", "type": "processo" }
+        {
+          "name": "Higiene das mãos",
+          "type": "barreira"
+        },
+        {
+          "name": "Cinco momentos",
+          "type": "regra"
+        },
+        {
+          "name": "Luvas",
+          "type": "recurso"
+        },
+        {
+          "name": "Infecção do sítio cirúrgico",
+          "type": "risco"
+        },
+        {
+          "name": "Paciente",
+          "type": "pessoa"
+        },
+        {
+          "name": "Segurança perioperatória",
+          "type": "conceito"
+        },
+        {
+          "name": "Treinamento",
+          "type": "processo"
+        }
       ],
       "relations": [
-        { "from": "Higiene das mãos", "to": "Cinco momentos", "type": "segue", "weight": 1 },
-        { "from": "Luvas", "to": "Higiene das mãos", "type": "nao_substituem", "weight": 1 },
-        { "from": "Higiene das mãos", "to": "Infecção do sítio cirúrgico", "type": "reduz_risco_de", "weight": 1 },
-        { "from": "Higiene das mãos", "to": "Paciente", "type": "protege", "weight": 0.9 },
-        { "from": "Treinamento", "to": "Higiene das mãos", "type": "sustenta", "weight": 0.8 },
-        { "from": "Higiene das mãos", "to": "Segurança perioperatória", "type": "fortalece", "weight": 0.9 }
-      ]
+        {
+          "from": "Higiene das mãos",
+          "to": "Cinco momentos",
+          "type": "segue",
+          "weight": 1,
+          "evidence": {
+            "source_id": "higiene-maos-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "3",
+            "section": "Documento oficial — página 3"
+          }
+        },
+        {
+          "from": "Luvas",
+          "to": "Higiene das mãos",
+          "type": "nao_substituem",
+          "weight": 1,
+          "evidence": {
+            "source_id": "higiene-maos-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "11",
+            "section": "Documento oficial — página 11"
+          }
+        },
+        {
+          "from": "Higiene das mãos",
+          "to": "Infecção do sítio cirúrgico",
+          "type": "reduz_risco_de",
+          "weight": 1,
+          "evidence": {
+            "source_id": "higiene-maos-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "4",
+            "section": "Documento oficial — página 4"
+          }
+        },
+        {
+          "from": "Higiene das mãos",
+          "to": "Paciente",
+          "type": "protege",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "higiene-maos-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "3",
+            "section": "Documento oficial — página 3"
+          }
+        },
+        {
+          "from": "Treinamento",
+          "to": "Higiene das mãos",
+          "type": "sustenta",
+          "weight": 0.8,
+          "evidence": {
+            "source_id": "higiene-maos-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "13",
+            "section": "Documento oficial — página 13"
+          }
+        },
+        {
+          "from": "Higiene das mãos",
+          "to": "Segurança perioperatória",
+          "type": "fortalece",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "higiene-maos-v2",
+            "source_revision": "2013-07-09",
+            "source_pages": "13",
+            "section": "Documento oficial — página 13"
+          }
+        }
+      ],
+      "source_revision": "2013-07-09",
+      "source_pages": "1-16",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Acesso aberto; reprodução textual sem adaptação de conteúdo, com atribuição. Diagramação e marcas não incluídas.",
+      "word_count": 3610,
+      "content_sha256": "397a5e88749e003f098f79dca10702d80fa6936de08ba773d41ab81fd8ea1c51"
     }
   ]
 }
