@@ -9,25 +9,25 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 
 | Artefato | Pesquisa web | Recon técnico | Adversarial | Estado | Último SHA revisado | Próxima ação |
 |---|---|---|---|---|---|---|
-| `hack/ANALYST.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Reconciliar somente depois dos oito Analysts. |
-| `hack/analysis.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Integrar IA/memória e remover fechamentos não provados. |
-| `ANALYST-caso-e-encaminhamento.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `5d768bc` (base) | Atacar intake, referência, correção, cancelamento e handoff. |
-| `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `5d768bc` (base) | Separar semântica de criptografia/DDL e atacar sessão e escopo. |
-| `ANALYST-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Pesquisar widgets, campos, completude, catálogos e licenças. |
-| `ANALYST-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Separar evidência de `DEMO_DECISION`; pesquisar carga e capacidade. |
-| `ANALYST-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Pesquisar avaliação, pendência, retorno, resultado e entrega. |
-| `ANALYST-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Integrar IA/memória e aguardar contratos dos domínios. |
-| `ANALYST-arquitetura-offline-e-prova.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RECON_REQUIRED` | `5d768bc` (base) | Reconciliar com `.context/architecture.yaml` e política de rede opcional. |
-| `ANALYST-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | — | Pesquisar privacidade, consentimento, proveniência e promoção de conhecimento. |
-| `hack/BUILD.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Ressintetizar somente depois dos oito pares e Surface Blueprints. |
-| `BUILD-caso-e-encaminhamento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Validar intake e provar contratos físicos no PGlite. |
-| `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Validar segurança local, fixtures e guards IPC. |
-| `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Aguardar pesquisa clínica; depois provar schema e round-trip. |
-| `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Provar compatibilidade PGlite, locks, corridas e decisões de demo. |
-| `BUILD-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `5d768bc` (base) | Aguardar research; depois provar transações e isolamento por serviço. |
-| `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Corrigir após os domínios; então criar Surface Blueprints. |
-| `BUILD-arquitetura-offline-e-prova.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `5d768bc` (base) | Refazer política IPC/rede/IA e provar o runtime PGlite. |
-| `BUILD-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | — | Permanecer DRAFT/BLOCKED até o Analyst fechar e Marco assinar. |
+| `hack/ANALYST.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Reconciliar somente depois dos oito Analysts. |
+| `hack/analysis.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Ressintetizar depois das rodadas dos oito domínios; a integração de IA ainda é provisória. |
+| `ANALYST-caso-e-encaminhamento.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `7b8cdc4` | Atacar intake, referência, correção, cancelamento e handoff. |
+| `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `7b8cdc4` | Separar semântica de criptografia/DDL e atacar sessão e escopo. |
+| `ANALYST-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar widgets, campos, completude, catálogos e licenças. |
+| `ANALYST-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Separar evidência de `DEMO_DECISION`; pesquisar carga e capacidade. |
+| `ANALYST-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar avaliação, pendência, retorno, resultado e entrega. |
+| `ANALYST-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Compor IA/memória somente após os contratos dos domínios. |
+| `ANALYST-arquitetura-offline-e-prova.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RECON_REQUIRED` | `7b8cdc4` | Reconciliar com `.context/architecture.yaml` e política de rede opcional. |
+| `ANALYST-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar privacidade, consentimento, proveniência e promoção de conhecimento. |
+| `hack/BUILD.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Ressintetizar somente depois dos oito pares e Surface Blueprints. |
+| `BUILD-caso-e-encaminhamento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Validar intake e provar contratos físicos no PGlite. |
+| `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Validar segurança local, fixtures e guards IPC. |
+| `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar pesquisa clínica; depois provar schema e round-trip. |
+| `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Provar compatibilidade PGlite, locks, corridas e decisões de demo. |
+| `BUILD-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar research; depois provar transações e isolamento por serviço. |
+| `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Corrigir após os domínios; então criar Surface Blueprints. |
+| `BUILD-arquitetura-offline-e-prova.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Refazer política IPC/rede/IA e provar o runtime PGlite. |
+| `BUILD-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Permanecer DRAFT/BLOCKED até o Analyst fechar e Marco assinar. |
 
 ## Como atualizar
 
