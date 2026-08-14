@@ -11,7 +11,12 @@ export function useAppVersion(): string | null {
       setVersion(cached)
       return
     }
-    window.electron.ipcRenderer
+    const ponte = window.electron?.ipcRenderer
+    if (!ponte) {
+      setVersion(null)
+      return
+    }
+    ponte
       .invoke('app:version')
       .then((v: string) => {
         cached = v

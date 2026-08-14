@@ -27,7 +27,9 @@ import { CarimboSintetico, Inicial, Rotulo, SeloClasse, TituloTela } from '@/vit
 
 const ABRE = emMinutos('08:00')
 const FECHA = emMinutos('16:00')
-const PX_POR_MIN = 1.55
+const PX_POR_MIN = 1.9
+/** Abaixo desta altura a vaga não comporta duas linhas e colapsa em uma só. */
+const ALTURA_MINIMA_DUAS_LINHAS = 52
 
 /**
  * S06 / S07 — Agenda e fila operacional.
@@ -139,6 +141,7 @@ function Grade() {
             const top = (emMinutos(v.inicio) - ABRE) * PX_POR_MIN + 20
             const alturaTotal = (c.minutos + c.buffer) * PX_POR_MIN
             const alturaConsulta = c.minutos * PX_POR_MIN
+            const compacto = alturaConsulta < ALTURA_MINIMA_DUAS_LINHAS
 
             return (
               <div
@@ -161,8 +164,13 @@ function Grade() {
                         <span className="shrink-0 font-mono text-[11px] font-medium tabular-nums">
                           {v.inicio}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13px] font-medium text-foreground">
+                        <span
+                          className={cn(
+                            'min-w-0 flex-1',
+                            compacto && 'flex items-baseline gap-2 truncate',
+                          )}
+                        >
+                          <span className="block shrink-0 truncate text-[13px] font-medium text-foreground">
                             {caso.nome}
                           </span>
                           <span className="block truncate text-[11px] text-muted-foreground">
