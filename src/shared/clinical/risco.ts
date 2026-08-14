@@ -1,11 +1,9 @@
 /**
- * Classificação de risco pré-anestésico.
+ * Paridade histórica do classificador do protótipo anterior.
  *
- * Porte TypeScript fiel do protótipo validado em
- * /Volumes/Vader/Marco/antessala/src/lib/risco.js. Esta função é pura: não
- * conhece React, banco, rede, cadastro de paciente ou motor de fila.
- *
- * LEI: dado ausente vira pendência; nunca vira valor presumido.
+ * A lógica é pura e permanece testada para permitir uma decisão consciente de migração,
+ * mas não possui validação clínica do HCFMRP nem consumidor ativo. Não usar como
+ * protocolo, requisito de agenda ou decisão do produto antes do PASS da MiniSpec 002.
  */
 
 export type SexoRisco = string | null
@@ -23,7 +21,7 @@ export interface RegraRisco {
 }
 
 export interface PessoaRisco {
-  /** Valor embutido no registro; nunca é chave para uma tabela de pacientes. */
+  /** Snapshot consumido pelo protótipo legado; identidade canônica ainda não definida. */
   idade?: number | null
   sexo?: SexoRisco
 }
@@ -87,7 +85,7 @@ export const CORTES = {
   metsAdequado: 4,
   leeIntermediario: 1,
   leeAlto: 3,
-  /** Mantido por paridade com o protótipo; ainda não participa do cálculo. */
+  /** Mantido por paridade histórica; ainda não participa do cálculo. */
   idadeAtencao: 65,
 } as const
 
@@ -139,6 +137,7 @@ function numeroFinito(valor: unknown): number | null {
   return typeof valor === 'number' && Number.isFinite(valor) ? valor : null
 }
 
+/** @deprecated Compatibilidade histórica não aprovada para uso clínico ou operacional. */
 export function classificarRisco(
   entrada: EntradaRisco,
   gruposRisco: readonly GrupoRisco[] = [],

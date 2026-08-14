@@ -1,104 +1,125 @@
 # Antessala
 
-Aplicativo desktop para triagem pré-anestésica, com persistência clínica local e sem
-dependência de servidor. Este repositório está na etapa de **preparação do terreno**: a
-casca foi reduzida, os contratos clínicos foram plantados e os pontos de encaixe foram
-declarados. As quatro telas finais e o motor de ordenação da fila ainda não fazem parte
-desta entrega.
+Protótipo para investigar e demonstrar **triagem aplicada ao agendamento da consulta
+pré-anestésica**.
 
-## Leis do produto
+O produto ainda não está liberado para construção clínica. A hipótese mais provável é
+que solicitações com necessidades diferentes cheguem à alocação de vagas sem informação
+operacional suficiente — ou sem uma regra que use essa informação — para diferenciar
+prioridade de acesso, esforço esperado, recurso necessário e pendências.
 
-- A pessoa **não é cadastrada**. Nome, sexo, idade e plano pertencem a um registro
-  autônomo e descartável.
-- Não existe busca, deduplicação ou aviso de nome repetido. Dois registros iguais são
-  duas entradas válidas.
-- Não existe evolução, série temporal ou leitura que dependa de atendimento anterior.
-- O esqueleto provisório da jornada é append-only; o contrato canônico chegará pela
-  Spec 002.
-- O app não decide a especialidade de destino.
+> **Estado atual: `NO-GO PARA BUILD`.** A descoberta está autorizada dentro do Analyst;
+> nenhuma minispec de construção foi liberada. Código existente não transforma hipótese
+> em requisito.
 
-A definição completa está em
-[`specs/000-produto-antessala/analysis.md`](specs/000-produto-antessala/analysis.md).
+## O que o Antessala pretende provar
 
-## O que existe nesta etapa
+Se a investigação confirmar a hipótese, o protótipo deverá transformar uma solicitação
+sintética de consulta pré-anestésica em um perfil operacional revisado por humano, capaz
+de orientar a procura por uma vaga compatível.
 
-### Fundação ativa
+O Antessala não é:
 
-- Electron + React 19, Tailwind CSS v4 e componentes shadcn/ui;
-- PGlite como Postgres embarcado;
-- IPC tipado com `@egoist/tipc`;
-- três rotas ativas: Início (`/`), Assistente IA (`/ia`) e Configurações
-  (`/configuracoes`);
-- seletor de tema claro, escuro ou sistema no rodapé da interface;
-- assistente cloud direto, sem tool calling, RAG ou modelo local;
-- editor rich text genérico com TipTap e contrato puro de contexto da IA;
-- exportação HTML → PDF pelo motor de impressão do Electron, com recursos remotos
-  bloqueados.
+- pulseira ou classificação por cores de pronto atendimento;
+- fila física de pessoas aguardando chamada no mesmo dia;
+- gestão do centro cirúrgico;
+- substituto do anestesiologista;
+- liberação automática para anestesia ou cirurgia;
+- prescrição automática de exames ou suspensão de medicamentos;
+- prova de integração com sistemas do HC.
 
-### Esqueleto clínico
+Risco clínico, prioridade de acesso, complexidade, esforço de consulta, prontidão da
+solicitação e recurso de agenda são eixos diferentes até que evidência do hospital prove
+o contrário.
 
-- tabela `registros`, com a pessoa embutida e anamnese versionada em JSONB;
-- tabela provisória `registro_jornada`, append-only, reservada para reconciliação com a
-  Spec 002;
-- oito widgets portados do DietFlow: rotina alimentar, hidratação, sono, Bristol,
-  problemas de saúde, medicações, adesão e observações gerais;
-- contrato de serialização `{ _v: 2, blocos: [...] }`, validação e renderização textual;
-- composer/drawer dos widgets refeito com shadcn/ui;
-- CID-10 completo (14.793 itens), 382 medicamentos, 35 classes terapêuticas, 12 grupos
-  de risco, 94 atividades MET e 14 comorbidades;
-- classificador de risco e parecer clínico portados como funções puras.
+## Fonte de verdade
 
-O registro dos oito widgets existe, mas a **seleção clínica ativa** e o catálogo de
-templates estão deliberadamente vazios. Essa decisão chega depois por
-`hack/specs/02-quais-widgets/`. O contrato detalhado do porte está em
-[`specs/001-preparar-ambiente/mapa-esquemas.md`](specs/001-preparar-ambiente/mapa-esquemas.md).
+O projeto possui exatamente quatro documentos canônicos:
 
-## O que foi escondido
+1. [`hack/PRD.md`](hack/PRD.md) — problema, hipótese, promessa e limites;
+2. [`hack/ANALYST.md`](hack/ANALYST.md) — evidências obrigatórias e portão `PASS/NO-GO`;
+3. [`hack/BUILD.md`](hack/BUILD.md) — plano mestre, dependências e estratégia técnica;
+4. [`hack/WARLOG.md`](hack/WARLOG.md) — decisões, invalidações, provas e pendências.
 
-Memória, RAG, knowledge graph e importadores continuam no repositório, compilam e mantêm
-seus contratos IPC registrados, mas não têm rota, menu, inicialização ou tarefa no boot.
-Eles são material de roadmap para uma futura base de conteúdo científico. Sem adaptador
-explícito, embeddings retornam `null`; metadata/enrichment cloud só rodam por ação do
+Cada sprint possui apenas `spec.md` e `writing-plan.md`:
+
+| Sprint | Estado | Objetivo |
+|---|---|---|
+| [`001-caso-triagem-classificacao`](hack/minispecs/001-caso-triagem-classificacao/spec.md) | bloqueado | construir caso, coleta, régua explicável e decisão humana aprovadas |
+| [`002-capacidade-agenda-booking`](hack/minispecs/002-capacidade-agenda-booking/spec.md) | bloqueado | traduzir o requisito em capacidade e executar o caminho de agenda aprovado |
+| [`003-handoff-prova-final`](hack/minispecs/003-handoff-prova-final/spec.md) | bloqueado | fechar o handoff real e lacrar a prova end-to-end |
+
+Os documentos antigos em `specs/`, `hack/specs/` e os HTMLs de planejamento foram
+removidos porque cristalizavam o produto errado. Permanecem recuperáveis no histórico
+Git, mas não possuem autoridade.
+
+## O que já sabemos — e o que não sabemos
+
+Está confirmado que o desafio trata da consulta pré-anestésica, que casos apresentam
+riscos e complexidades diferentes e que são agendados de forma semelhante. Também há
+evidência institucional da existência de Ambulatório de Pré-Anestesia e de atendimento
+ambulatorial previamente agendado no HCFMRP.
+
+Ainda não sabemos, entre outras coisas:
+
+- quem cria, completa, revisa e agenda a solicitação;
+- quais sistemas e identificadores participam;
+- o que exatamente é “semelhante”: ordem, antecedência, duração, modalidade, recurso ou
+  visibilidade;
+- se o produto recomenda um tipo de vaga, mantém agenda própria ou integra uma agenda;
+- quais protocolos, campos, widgets, classes ou tempos são aprovados;
+- se a cirurgia possui data antes da consulta pré-anestésica;
+- qual baseline permitirá medir melhora.
+
+Essas lacunas são trabalho do Analyst, não licença para adivinhar.
+
+## Fundação técnica existente
+
+A preparação anterior deixou uma base reaproveitável:
+
+- Electron, React 19, Tailwind CSS v4 e shadcn/ui;
+- PGlite como Postgres embarcado e IPC tipado com `@egoist/tipc`;
+- primeiro boot local sem download de modelo;
+- editor rich text, exportação HTML → PDF e tema claro/escuro/sistema;
+- contrato de anamnese versionado, composer e oito widgets técnicos portados do
+  DietFlow;
+- CID-10, medicamentos, classes terapêuticas, grupos de risco, MET e comorbidades em
+  arquivos locais versionados;
+- IA cloud opcional; Memória/RAG/importadores e STT preservados como código dormente;
+- testes Vitest e Playwright.
+
+Essa fundação prova infraestrutura, não adequação clínica.
+
+## Legado provisório — não construir em cima
+
+O schema, os handlers e os tipos atuais de `registros` e `registro_jornada` nasceram da
+hipótese invalidada de pessoa descartável, jornada no mesmo dia e fila por
+urgência/espera. Eles continuam no código apenas para que a correção seja feita com mapa
+de consumidores e decisão de migração aprovada pelo Analyst.
+
+Também permanecem vazios, de propósito:
+
+| Ponto de encaixe legado | Decisão futura |
+|---|---|
+| `src/shared/extensions/catalogo-widgets.ts` | catálogo aprovado do Sprint 001 |
+| `src/shared/extensions/motor-fila.ts` | contrato de capacidade/agenda do Sprint 002 |
+
+Os oito widgets portados são infraestrutura disponível, não o formulário aprovado. O
+classificador e o parecer existentes são hipóteses legadas, não protocolo médico.
+
+Branches antigas de motor e widgets estão em quarentena conforme o
+[`WARLOG`](hack/WARLOG.md); não devem ser mergeadas ou cherry-pickadas em bloco.
+
+## Offline e integrações
+
+O primeiro boot cria o schema e carrega catálogos a partir do bundle, sem baixar modelo
+ou consultar banco remoto. A IA cloud só usa rede após configuração e ação explícita do
 usuário.
 
-A gravação/transcrição de voz também foi preservada como código dormente, por decisão de
-produto posterior à spec: poderá alimentar transcrições e preenchimento assistido no
-futuro. Ela não está ligada à interface ativa, ao IPC, ao boot nem aos recursos do
-instalador desta etapa.
-
-Reativar a página de Memória exige apenas recolocá-la nas rotas/menu e fazer a revisão de
-produto correspondente; a camada dormente já participa do `typecheck`.
-
-## O que foi removido
-
-- terminal embutido e harness de shell;
-- CLI;
-- servidor MCP e tool-server HTTP;
-- cron;
-- modelo local, `llama.cpp` e seus downloads;
-- assistente Maiá e suas permissões de sistema;
-- galeria;
-- onboarding/wizard herdado;
-- orquestração antiga da IA, tool calling e dependências sem consumidor ativo;
-- backup legado do FlowKit, que só conhecia tabelas/documentos herdados e não
-  restaurava o banco clínico autônomo;
-- documentação operacional e seeds de conhecimento do FlowKit.
-- manuais de instalação e propostas de ícone do EscalaFlow/FlowKit que não eram
-  usados pelo empacotador.
-
-Essas peças aumentavam o boot, a superfície de permissões, o tamanho instalado e a
-manutenção sem participar da triagem.
-
-## Limite offline
-
-O primeiro boot cria o schema e carrega os catálogos a partir de arquivos versionados no
-próprio repositório/bundle. Esse caminho não usa `fetch`, embeddings, LLM nem banco
-remoto; o carregador de embeddings também está configurado para não buscar modelos na
-internet.
-
-O Assistente IA é opcional e cloud: Gemini ou OpenRouter só acessam a rede depois que o
-usuário configura um token e executa uma ação explícita de teste ou conversa. Nenhuma
-chave é necessária para abrir o app ou usar a persistência clínica local.
+Offline é uma propriedade real da demonstração atual, não uma afirmação sobre a
+arquitetura de produção do HCFMRP. Até existir contrato fornecido pelo hospital, PEP,
+agenda, mapa cirúrgico e outros sistemas serão apenas fronteiras mockadas e visivelmente
+identificadas.
 
 ## Como rodar
 
@@ -113,39 +134,21 @@ npm run dev
 
 | Comando | O que faz |
 |---|---|
-| `npm run dev` | Abre o Electron com hot reload |
-| `npm test` | Executa os testes Vitest |
-| `npm run typecheck` | Valida TypeScript do processo principal e do renderer |
-| `npm run build` | Gera o build de produção |
-| `npm run test:e2e` | Executa o fluxo Electron coberto pelo Playwright |
-| `npm run pack` | Empacota em diretório, sem instalador |
-| `npm run dist:mac` | Gera `.dmg` e `.zip` para macOS |
+| `npm run dev` | abre o Electron com hot reload |
+| `npm test` | executa os testes Vitest |
+| `npm run typecheck` | valida TypeScript do processo principal e do renderer |
+| `npm run build` | gera o build de produção |
+| `npm run test:e2e` | executa o fluxo Electron coberto pelo Playwright |
+| `npm run pack` | empacota em diretório, sem instalador |
 
-Para testes isolados, `ANTESSALA_DB_PATH=/caminho/temporario` troca o diretório do
-banco. `ANTESSALA_HEADLESS=1` impede a exibição da janela sem mudar o bootstrap.
+`ANTESSALA_DB_PATH=/caminho/temporario` isola o banco em testes.
+`ANTESSALA_HEADLESS=1` impede a exibição da janela sem alterar o bootstrap.
 
-## Pontos de encaixe reservados
+## Regra de contribuição
 
-| Frente futura | Ponto de encaixe | Fonte da decisão |
-|---|---|---|
-| Widgets/templates específicos | `src/shared/extensions/catalogo-widgets.ts` | `hack/specs/02-quais-widgets/` |
-| Motor de urgência, espera e ordenação | `src/shared/extensions/motor-fila.ts` | `specs/002-motor-da-fila/` |
-
-Esses arquivos estão vazios de propósito. Não use o template legado dos oito widgets
-como decisão clínica e não implemente ordenação fora da spec do motor.
-
-Os tipos, tabelas e handlers de registro/jornada existentes nesta etapa são provisórios.
-Não construa integração sobre eles antes de reconciliá-los com a branch
-`codex/motor-fila-logica-v2`.
-
-## Documentação
-
-- [`docs/PLANO.html`](docs/PLANO.html) — produto e divisão das frentes;
-- [`docs/INVENTARIO.html`](docs/INVENTARIO.html) — inventário das bases doadoras;
-- [`specs/001-preparar-ambiente/spec.md`](specs/001-preparar-ambiente/spec.md) — spec
-  desta preparação;
-- [`specs/001-preparar-ambiente/relatorio.md`](specs/001-preparar-ambiente/relatorio.md)
-  — decisões, números e provas da execução.
+Trabalho em branch `codex/*`, com PR contra `main`. Antes de criar schema, tela, widget,
+regra clínica, score ou agenda, leia na ordem `PRD → ANALYST → BUILD → WARLOG → spec e
+writing plan da minispec`. Sem `PASS` explícito do Analyst, a mudança não começa.
 
 ## Stack
 
@@ -155,6 +158,6 @@ Não construa integração sobre eles antes de reconciliá-los com a branch
 | Build | electron-vite + TypeScript |
 | UI | Tailwind CSS v4 + shadcn/ui + TipTap |
 | Banco | PGlite (Postgres embarcado) |
-| IPC | `@egoist/tipc`, com chamada direta e tipada |
+| IPC | `@egoist/tipc` |
 | IA opcional | Vercel AI SDK + Gemini/OpenRouter |
 | Testes | Vitest + Playwright |

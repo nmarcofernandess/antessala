@@ -78,7 +78,7 @@ describe('primeiro boot clínico offline', () => {
     expect(after?.quantidade).toBe(15_330)
   })
 
-  it('não cria tabela de paciente e permite nomes duplicados', async () => {
+  it('preserva o schema legado sem tabela de paciente e aceita nomes duplicados', async () => {
     const patientTable = await queryOne<{ exists: boolean }>(
       `SELECT EXISTS (
         SELECT 1 FROM information_schema.tables WHERE table_name IN ('patient', 'patients', 'pacientes')

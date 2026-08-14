@@ -26,7 +26,7 @@ const grave = {
   capacidade: { met: 2, atividade: 'Caminhar devagar' },
 } satisfies EntradaRisco
 
-describe('parecer em texto — paridade com o protótipo', () => {
+describe('parecer em texto — paridade histórica não aprovada', () => {
   it('resume o paciente em uma linha legível', () => {
     expect(resumoPaciente(grave)).toBe('71 anos · feminino · procedimento de porte alto')
   })

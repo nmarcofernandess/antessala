@@ -78,7 +78,7 @@ describe('serialização da anamnese', () => {
 })
 
 describe('templates', () => {
-  it('deixa o catálogo ativo vazio até hack/specs/02-quais-widgets', () => {
+  it('deixa o catálogo ativo vazio até o contrato clínico da MiniSpec 002', () => {
     expect(ACTIVE_ANAMNESE_TEMPLATES).toEqual([])
     expect(ACTIVE_ANAMNESE_TEMPLATES).not.toContain(LEGACY_DIETFLOW_BASIC_TEMPLATE)
     expect(createEmptyAnamnese()).toEqual({ _v: 2, blocos: [] })

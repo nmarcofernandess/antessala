@@ -5,8 +5,8 @@ import type {
   RegistroAutonomo,
 } from '../../../src/shared/clinical/registro'
 
-describe('contrato do registro autônomo', () => {
-  it('mantém a pessoa embutida e não expõe vínculo de paciente', () => {
+describe('compatibilidade provisória do registro legado', () => {
+  it('preserva o snapshot embutido do legado sem patientId', () => {
     expectTypeOf<RegistroAutonomo>().toMatchTypeOf<PessoaDoRegistro>()
     const keys: Array<keyof RegistroAutonomo> = [
       'id', 'nome', 'sexo', 'idade', 'plano', 'anamnese',
@@ -15,7 +15,7 @@ describe('contrato do registro autônomo', () => {
     expect(keys).not.toContain('patientId')
   })
 
-  it('declara estados sem fornecer ordenação ou transição', () => {
+  it('preserva os estados legados sem fornecer ordenação ou transição', () => {
     const states: EstadoJornada[] = [
       'aguardando_triagem',
       'anamnese_em_andamento',

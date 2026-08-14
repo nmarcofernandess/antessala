@@ -1,6 +1,6 @@
 import type { AnamneseContent } from '../anamnese'
 
-/** Pessoa descartável embutida no próprio registro; não é cadastro. */
+/** Snapshot do registro legado; não representa o paciente institucional canônico. */
 export interface PessoaDoRegistro {
   nome: string
   sexo: string
@@ -9,10 +9,10 @@ export interface PessoaDoRegistro {
 }
 
 /**
- * Estados persistíveis entregues pelo analyst.
+ * Estados persistíveis da hipótese anterior, preservados só por compatibilidade.
  *
- * Este contrato não define transições, relógio, score ou ordenação. O motor que
- * fará isso pertence a `specs/002-motor-da-fila/`.
+ * Não use estes tipos como fonte do novo fluxo. O Analyst decidirá se serão
+ * mantidos, adaptados, migrados, desativados ou removidos.
  */
 export type EstadoJornada =
   | 'aguardando_triagem'

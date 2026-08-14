@@ -2,7 +2,7 @@
   "name": "antessala",
   "productName": "Antessala",
   "version": "0.1.0",
-  "description": "Triagem pre-anestesica offline: anamnese estruturada e fila por urgencia e espera",
+  "description": "Prototipo de triagem aplicada ao agendamento da consulta pre-anestesica",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -21,7 +21,6 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npx playwright test tests/e2e/app-flow.spec.ts",
     "test:e2e:ui": "npx playwright test --ui",
-    "db:reset": "node scripts/db-reset.mjs",
     "pack": "npm run build && electron-builder --dir",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:win": "npm run build && electron-builder --win --publish never",

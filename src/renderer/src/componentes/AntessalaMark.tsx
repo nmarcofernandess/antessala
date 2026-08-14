@@ -1,9 +1,6 @@
 import type { SVGProps } from 'react'
 
-/**
- * Marca do Antessala: tres pessoas na fila de espera.
- * A da frente e solida — e a proxima a ser chamada.
- */
+/** Marca provisória herdada; a composição não define fila física nem prioridade. */
 export function AntessalaMark(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 64 64" aria-hidden="true" fill="none" {...props}>
