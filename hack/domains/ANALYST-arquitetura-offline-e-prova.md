@@ -1,11 +1,12 @@
 # ANALYST — Arquitetura offline e prova
 
-## State
+## Estado documental
 
-- Documento: `ANALYST-arquitetura-offline-e-prova.md`
-- Estado: `RECON_REQUIRED — ASSINATURA PENDENTE`
-- Escopo: Electron/PGlite local, migration, seed, catálogos, IPC, guardas, política de rede, segurança e prova.
-- Ambiente prometido: um Mac, uma instalação, dados sintéticos, sem integração institucional.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## TL;DR
 
@@ -37,7 +38,7 @@ Fontes normativas:
 - `hack/PRD.md:211-239` exige estados, aceite verificável e fluxo ponta a ponta.
 - `hack/domains/ANALYST-acesso-e-auditoria.md` é a fonte semântica de autenticação local,
   contas fixture, autoridade, escopo, revogação e auditoria. Detalhes físicos só poderão
-  vir do Build depois da assinatura.
+  vir do BUILD integrado e do Writing Plan da fatia.
 - `src/main/db/pglite.ts:12-48` define a persistência embarcada e o diretório do banco.
 - `src/main/db/schema.ts:8-24` e `src/main/db/schema.ts:31-164` mostram DDL atual para configuração, IA, RAG e chat.
 - `src/main/db/schema.ts:239-246` mostra a criação sequencial de tabelas por `CREATE TABLE IF NOT EXISTS`.
@@ -138,7 +139,7 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 
 - O comportamento pertence semanticamente a
   `hack/domains/ANALYST-acesso-e-auditoria.md`; representação física só poderá vir do Build
-  assinado, e esta fatia não a inventa.
+  integrado, e esta fatia não a inventa.
 - `auth.login` valida e-mail e senha contra `usuarios`, cria a `CurrentSession` em memória
   no main e devolve a `SessaoPublica` redigida.
 - O `ActorContext` entregue aos serviços é uma projeção imutável da `CurrentSession`;
@@ -265,32 +266,14 @@ O Build deve fechar:
 Persistem perguntas bloqueadoras sobre fronteira IPC, rede opcional, áudio/transcrição,
 consentimento, promoção de memória e compatibilidade PGlite do Build proposto.
 
-## Grill Verdict
+## Resultado da investigação
 
-`RECON_REQUIRED — ASSINATURA PENDENTE`.
+Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
-A arquitetura offline ainda não está fechada. O escopo continua limitado a um Mac e dados
-sintéticos, sem alegar prontuário, sync ou operação hospitalar.
+## Estado de consolidação
 
-## Recommended Next Phase
-
-Após as assinaturas anteriores e deste Analyst, formalizar
-`BUILD-arquitetura-offline-e-prova.md` e submetê-lo ao Critic junto da síntese. Sem
-assinatura de Marco, não criar Warlog, MiniSpec, Spec, Plan, teste ou código.
-
-## Contrato de encerramento deste arquivo
-
-- [ ] Boot, persistência, migrations, seed, rede, IPC, segurança e prova reconciliados com o HEAD.
-- [x] Repetição da demo isolada no harness, sem operação destrutiva no produto.
-- [x] Reuso, riscos e fronteira futura explícitos.
-- [ ] Revisado e assinado por Marco.
-
-- Artefato: `ANALYST-arquitetura-offline-e-prova.md`
-- Próxima fase autorizada após as assinaturas anteriores e desta revisão: Build formal e Critic
-- Estado: `RECON_REQUIRED`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Sem assinatura válida de Marco, este arquivo não terminou e não libera Build.
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

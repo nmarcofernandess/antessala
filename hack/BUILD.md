@@ -3,15 +3,15 @@
 ## State
 
 - Tipo: síntese técnica Product → Backend → Frontend → Validation
-- Estado: `INVALIDATED_BY_CHANGE — BLOCKED_BY_ANALYST_REVIEW`
-- Autoridade de execução: nenhuma
+- Estado: `READY_FOR_FINAL_CONGRUENCE_REVIEW`
+- Autoridade: especificação técnica integrada do hackathon
 - Fonte do produto: [PRD.md](PRD.md)
 - Fonte analítica: [analysis.md](analysis.md) e oito Analysts de domínio
-- Próximo gate formal: Critic, somente depois da assinatura de Marco
+- Próximo passo: review final de congruência; depois, Warlog
 
-Este BUILD foi redigido antecipadamente por ordem direta de Marco para permitir a revisão
-do sistema inteiro. Ele não é Spec, Plan, lista de tarefas nem autorização para escrever
-teste ou código.
+Este BUILD incorpora os oito Builds de domínio e, junto do PRD e do Analyst integrado,
+substitui uma Spec separada. Os Builds de domínio são anexos técnicos: em conflito, este
+arquivo prevalece. O Warlog corta fatias; cada minispec recebe diretamente um Writing Plan.
 
 ## Goal
 
@@ -31,11 +31,23 @@ reserva, autoria rastreável e primeiro boot sem rede.
 | Avaliação, pendências e handoff | [ANALYST](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | [BUILD](domains/BUILD-avaliacao-pendencias-e-handoff.md) |
 | Superfícies e configurações | [ANALYST](domains/ANALYST-superficies-e-configuracoes.md) | [BUILD](domains/BUILD-superficies-e-configuracoes.md) |
 | Arquitetura offline e prova | [ANALYST](domains/ANALYST-arquitetura-offline-e-prova.md) | [BUILD](domains/BUILD-arquitetura-offline-e-prova.md) |
-| IA, memória e conhecimento | [ANALYST](domains/ANALYST-ia-memoria-e-conhecimento.md) | [BUILD DRAFT/BLOCKED](domains/BUILD-ia-memoria-e-conhecimento.md) |
+| IA, memória e conhecimento | [ANALYST](domains/ANALYST-ia-memoria-e-conhecimento.md) | [BUILD de detalhe](domains/BUILD-ia-memoria-e-conhecimento.md) |
 
-Em divergência, a ordem de reconciliação é: PRD assinado → `analysis.md` assinado →
-Analyst dono do domínio → BUILD do mesmo domínio → esta síntese. Nenhum consumidor escolhe
-silenciosamente a versão que preferir.
+Hierarquia: PRD aprovado → `analysis.md` → este `BUILD.md` → Build de domínio → código e
+testes. Nenhum Writing Plan escolhe silenciosamente uma versão divergente.
+
+### Recibo de integração dos domínios
+
+| Domínio | Contrato físico integrado |
+|---|---|
+| Caso | `preop_cases` como agregado, snapshots, eventos, handoff, receipts e CAS. |
+| Acesso | usuários locais, sessão main-only, capabilities, escopo por serviço e auditoria sanitizada. |
+| Anamnese | revisão versionada, respostas semânticas, 14 widgets, catálogos e publicação separada. |
+| Classificação/agenda | requirement explicável, override, capacidade, ocupação, booking e concorrência. |
+| Avaliação/handoff | encontros, pendências discriminadas, retorno, documentos metadata-only, resultado e entrega. |
+| Superfícies | registry único de rotas/capabilities, projeções por papel e estados completos. |
+| Arquitetura | migrations/checksums, seed offline, TIPC allowlisted, network policy e harness repetível. |
+| IA/memória | Gemini sintético, proposta por campo, decisão humana e relações aprovadas/ativadas em ações separadas. |
 
 ## Current Terrain
 
@@ -47,8 +59,8 @@ silenciosamente a versão que preferir.
 - CID, medicamentos, MET e comorbidades já são assets offline com hash.
 - Não existem autenticação, autorização, caso canônico, agenda, avaliação ou telas por
   papel.
-- IA cloud está ativa e opcional; knowledge/RAG/grafo/importadores têm backend IPC-callable
-  sem superfície; gravação está dormente e STT está incompleto. Ver
+- IA cloud está ativa e opcional; knowledge/RAG/grafo/importadores permanecem no código,
+  mas foram contidos no router ativo; gravação está dormente e STT está incompleto. Ver
   [`.context/architecture.yaml`](../.context/architecture.yaml).
 
 ## Recommended Architecture
@@ -110,6 +122,32 @@ type AnswerState =
   | 'NOT_APPLICABLE'
   | 'NOT_ASKED'
   | 'REFUSED'
+
+type DataClassification =
+  | 'FICTIONAL_NON_DERIVED'
+  | 'SYNTHETIC_DERIVED'
+  | 'ANONYMIZED'
+  | 'PSEUDONYMIZED'
+  | 'IDENTIFIABLE'
+  | 'SENSITIVE_HEALTH'
+  | 'TEMPORARY_AUDIO'
+
+type ProposalEvidence =
+  | 'SUPPORTED'
+  | 'AMBIGUOUS'
+  | 'CONFLICTING'
+  | 'NO_EVIDENCE'
+  | 'OUT_OF_SCOPE'
+
+type FieldProposalStatus = 'DRAFT' | 'ACCEPTED' | 'REJECTED' | 'CORRECTED'
+
+type KnowledgeRelationStatus =
+  | 'SUGGESTED'
+  | 'APPROVED_INACTIVE'
+  | 'ACTIVE'
+  | 'REJECTED'
+  | 'SUPERSEDED'
+  | 'RETIRED'
 ```
 
 Labels PT-BR pertencem à apresentação. Estado de sessão, anamnese, requisito, slot,
@@ -121,6 +159,13 @@ Nenhum domínio declara `Role`, `CanonicalRole` ou outra união equivalente. `Cu
 e `ActorContext` possuem owner único em `src/main/auth/*`; são tipos main-only e jamais são
 exportados por `shared`, preload ou renderer. Serviços recebem o `ActorContext` derivado por
 `requireSession`, nunca um `CommandContext` vindo do payload.
+
+Uma `FieldProposal` identifica `caseId`, `anamnesisRevisionId`, `widgetType`, `fieldPath`,
+`proposedAnswer`, `sourceExcerpt`, `evidence`, `instructionVersion`, `model`, `status` e a
+decisão humana. Proposta `DRAFT` nunca alimenta o requisito operacional. Uma
+`KnowledgeRelation` só participa de recuperação quando está `ACTIVE`, possui fonte,
+versão, escopo, limitações, autor, aprovador e recibo de ativação. Aprovar e ativar são
+ações distintas; nenhum caso promove conhecimento automaticamente.
 
 ## Backend Blueprint
 
@@ -137,7 +182,8 @@ exportados por `shared`, preload ou renderer. Serviços recebem o `ActorContext`
 | `src/main/db/seed.ts` e manifestos | assets e fixtures sintéticos | arquitetura offline coordena |
 | `src/main/tipc.ts` | apenas composição de routers | todos os domínios |
 | `src/main/export/pdf.ts` | motor genérico PDF | avaliação consome sem mover autoria ao exportador |
-| IA, memória, RAG e grafo | contrato físico ainda bloqueado | IA, memória e conhecimento |
+| `src/shared/ai/*`, `src/main/ai/*` | intenção Gemini, transcript, propostas e decisões humanas | IA, memória e conhecimento |
+| `src/shared/knowledge/*`, `src/main/knowledge/*` | fontes e relações versionadas, ativação e recuperação | IA, memória e conhecimento |
 
 ### Database ownership
 
@@ -153,6 +199,8 @@ exportados por `shared`, preload ou renderer. Serviços recebem o `ActorContext`
 | Reserva | `scheduling_bookings`, `scheduling_command_receipts` | agenda |
 | Avaliação | `anesthesia_encounters`, `case_pendencies`, `return_requests`, `return_request_pendencies`, `assessment_command_receipts` | avaliação |
 | Resultado | `preop_results`, `case_documents`, `result_deliveries` | avaliação/handoff |
+| IA assistiva | `ai_invocations`, `case_transcripts`, `ai_field_proposals` | IA/memória |
+| Conhecimento | `knowledge_sources`, `knowledge_relations`, `curated_examples`, `knowledge_events` | IA/memória |
 
 Nenhum domínio cria tabela paralela de caso, migração, sessão ou auditoria. Toda FK clínica
 aponta para `preop_cases`, nunca para paciente. O profissional solicitante é snapshot do
@@ -206,6 +254,11 @@ superfícies. Os namespaces canônicos são `auth.*`, `usuarios.*`, `auditoria.*
 `scheduling.bookings.*`, `scheduling.capacity.*`, `encounters.*`, `pendencies.*`,
 `documents.*`, `returnRequests.*`, `results.*`, `deliveries.*`, `config.*`, `localHealth.*`
 e `home.*`. Nenhum domínio escreve string equivalente à mão, traduz nome ou cria alias.
+
+O domínio assistivo acrescenta `ai.transcripts.*`, `ai.proposals.*`,
+`knowledge.sources.*` e `knowledge.relations.*`. A configuração alvo aceita somente Gemini;
+OpenRouter não aparece no registry, na UI nem em fallback. Toda intenção cloud carrega
+finalidade fechada e classificação de dado; na PoC, somente fixture sintética é permitida.
 
 As worklists e configurações também possuem um único contrato de leitura:
 `cases.listForActor`, `encounters.list`, `pendencies.listAssigned`,
@@ -273,6 +326,13 @@ clínico, SQL, stack, senha e token nunca atravessam a fronteira.
 8. Entregar/confirmar: resultado FINAL/hash vigente + escopo do serviço + estado/eventos.
 9. Cancelar caso: locks e versões do caso, handoff e booking + liberação da capacidade +
    `closedAt` + evento/auditoria, tudo ou nada.
+10. Gerar propostas: snapshot da revisão DRAFT + transcript revisado + schema dos widgets +
+    relações `KNOWLEDGE_ACTIVE`; Gemini devolve lote validado e cada campo persiste `DRAFT`
+    com origem, evidência, modelo e versão da instrução. Lote inválido não escreve parcialmente.
+11. Decidir proposta: capability + owner do campo + versão esperada; aceitar/corrigir aplica
+    uma operação da anamnese e grava decisão na mesma transação; rejeitar não cria negativa.
+12. Curar conhecimento: sugerir → aprovar inativo → ativar são comandos separados.
+    Retirar/superseder remove a relação de novas buscas sem apagar histórico.
 
 Lock otimista, constraints e idempotência são complementares. Um deles não substitui os
 outros.
@@ -317,6 +377,9 @@ baixar correção.
 | Capacidade | `/configuracoes/agenda` | `ADMIN` | recursos, janelas e bloqueios |
 | Catálogos | `/configuracoes/catalogos` | `ADMIN` | versão, hash e integridade read-only |
 | Auditoria | `/configuracoes/auditoria` | `ADMIN` | eventos sanitizados |
+| Assistência da entrevista | integrada em `/casos/:caseId/triagem` | `ENFERMAGEM` | transcript sintético/digitado, gerar e decidir propostas por campo |
+| Conhecimento | `/conhecimento` | `ANESTESIOLOGISTA` | consultar, sugerir, aprovar, ativar, superseder e retirar relações |
+| Configuração de IA | `/configuracoes/ia` | `ADMIN` | Gemini, modelo, segredo e saúde técnica sem conteúdo clínico |
 
 Router, sidebar e breadcrumbs consomem um único registry de superfícies/capabilities. Uma
 rota proibida não monta página nem dispara query. `ADMIN` não vê conteúdo clínico.
@@ -327,12 +390,12 @@ rota proibida não monta página nem dispara query. `ADMIN` não vê conteúdo c
 - `CaseHeader`, `CaseTimeline`, `CaseWorklist` e `ResourceStateView` são compostos
   compartilhados; cada papel recebe DTO próprio.
 - O composer reutiliza shell e DnD, mas o template ativo contém somente os 14 widgets
-  pré-anestésicos.
+  pré-anestésicos. Propostas de IA aparecem ao lado do campo-alvo, nunca aplicadas em lote.
 - A agenda usa `WeeklyAgendaGrid` próprio e `AccessibleSlotTable` sobre a mesma projeção;
   não adiciona FullCalendar nem aceita drag-and-drop.
-- Tema claro/escuro/sistema continua disponível. IA, memória, transcrição e revisão de
-  sugestões terão superfície somente depois do Analyst correspondente e dos Surface
-  Blueprints; o router futuro será uma allowlist, não o spread do backend legado.
+- Tema claro/escuro/sistema continua disponível. Para o hack, a entrada da IA pode ser um
+  transcript sintético digitado; o STT de 478 MB não é dependência nem download do boot.
+  Conhecimento usa busca textual local como piso; embeddings não são necessários à prova.
 
 ### Required UI states
 
@@ -389,6 +452,7 @@ demo fora de qualquer caso clínico, mas logs e IPC nunca retornam senha.
 | Renderer | cinco menus/homes, todos os estados, teclado, light/dark/system |
 | Network | boot e jornada com egress HTTP/HTTPS/WS bloqueado |
 | E2E | encaminhamento → triagem → reserva → avaliação → pendência/retorno → resultado → recebimento |
+| IA/memória | Gemini sintético gera propostas com origem; decisão humana por campo; falha cloud não bloqueia; relação aprovada só aparece após ativação; busca vazia não conclui |
 
 O E2E troca de contas no mesmo Mac. Ele prova o produto local sequencial, não operação
 hospitalar multiusuário.
@@ -402,6 +466,8 @@ flowchart TD
   auth --> cases["Caso e encaminhamento"]
   catalog --> anamnesis["Anamnese"]
   cases --> anamnesis
+  anamnesis --> ai["IA assistiva e conhecimento"]
+  ai --> requirement
   anamnesis --> requirement["Requisito operacional"]
   auth --> capacity["Capacidade e agenda"]
   requirement --> booking["Reserva"]
@@ -414,8 +480,8 @@ flowchart TD
   surfaces --> proof["Prova ponta a ponta"]
 ```
 
-Essa topologia informa o futuro Warlog e as minispecs. Não é um Plan executável e não
-autoriza batching de implementação.
+Essa topologia informa o Warlog e as minispecs. Cada fatia gera um Writing Plan executável
+com paths, testes RED e ordem de commits; não existe Spec intermediária.
 
 ## Rollback / Containment
 
@@ -453,30 +519,24 @@ autoriza batching de implementação.
 - Não existe editor livre de widgets, regras ou catálogos clínicos.
 - Não existe integração hospitalar, nuvem, Supabase, Stripe ou multiusuário real nesta fase.
 - Não existe decisão clínica autônoma, promoção automática de caso para memória global nem
-  base universal de relações clínicas. IA/transcrição/autopreenchimento são assistivos e
-  permanecem bloqueados até o novo Analyst ser pesquisado e assinado.
+  base universal de relações clínicas. IA, transcript e autopreenchimento são assistivos;
+  Gemini recebe somente fixtures sintéticas e sua falha preserva o caminho manual.
 
-## Definition Of BUILD Review Complete
+## Definition Of BUILD Ready For Warlog
 
-- [x] Oito Analysts possuem BUILD pareado; IA/memória está explicitamente DRAFT/BLOCKED.
-- [ ] Research e recon fecharam as lacunas dos Analysts.
-- [ ] Tabelas, DTOs, ações e transações foram provados no runtime PGlite.
-- [ ] Surface Blueprints e reconstrução cega fecharam a experiência.
-- [ ] Critic revisou os oito BUILDs e esta síntese.
-- [ ] Marco assinou o PRD e o Analyst.
-- [ ] Marco assinou BUILD + Critic e autorizou Warlog.
+- [x] PRD aprovado e Analyst integrado.
+- [x] Oito Builds de domínio incorporados sob uma hierarquia explícita.
+- [x] Ownership, tabelas, fronteiras, transações, rotas e estratégia de prova definidos.
+- [x] IA/memória possuem contrato físico mínimo e não dependem de STT ou embeddings.
+- [x] Decisões sintéticas estão rotuladas; produção institucional permanece fora do escopo.
+- [ ] Review final de congruência não encontrou bloqueador P0 sem resposta.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `BUILD.md` e oito `domains/BUILD-*.md`
-- Próxima fase autorizada após assinatura: Critic corrigido e Warlog-base
-- Estado: `INVALIDATED_BY_CHANGE`
-- Autoriza implementação: `NÃO`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração exigida: “Aprovo o BUILD e o Critic corrigido e autorizo o Warlog-base.”
+- Artefato canônico: `BUILD.md`.
+- Estado: `READY_FOR_FINAL_CONGRUENCE_REVIEW`.
+- Anexos consumidos: oito `domains/BUILD-*.md`.
+- Gate individual por anexo: inexistente.
+- Próximo passo: review final; sem P0 aberto, criar Warlog e Writing Plans por minispec.

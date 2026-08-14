@@ -4,7 +4,7 @@ truth_labels:
   PRODUCT_LAW: "Decisão de produto definida por Marco; só muda com reabertura explícita do PRD."
   EVIDENCE_BACKED: "Afirmação sustentada por fonte ou recon verificável."
   DEMO_DECISION: "Escolha sintética para provar o conceito; não descreve protocolo do hospital."
-  UNRESOLVED: "Questão que ainda exige pesquisa, decisão ou assinatura."
+  UNRESOLVED: "Questão que ainda exige pesquisa ou decisão; não bloqueia a PoC quando o contrato a mantém fora do escopo."
 
 identity:
   name: "Antessala"
@@ -110,7 +110,7 @@ ai_memory_and_knowledge:
     - "Decisão de um caso não se torna regra global automaticamente."
     - "IA não conclui urgência, gravidade, prioridade cirúrgica, aptidão ou conduta clínica."
   contract_owner: "hack/domains/ANALYST-ia-memoria-e-conhecimento.md"
-  unresolved: "Campos, estados, permissões, proveniência e relações só ficam canônicos após pesquisa, adversarial e assinatura do Analyst dono."
+  unresolved: "Campos, estados, permissões, proveniência e relações operacionais futuras exigem pesquisa; a PoC usa apenas o mínimo sintético consolidado no Analyst e no BUILD."
 
 clinical_limits:
   classification: "PRODUCT_LAW"
@@ -142,10 +142,7 @@ definition_of_done:
     - "Ao menos um uso real de IA e um uso real de memória são demonstrados."
     - "IA e memória permanecem assistivas, auditáveis e dependentes de confirmação humana."
 
-approval:
-  controller: "hack/CONTRATO-DE-APROVACAO.md"
-  status: "PENDING"
-  signed_by: null
-  signed_at: null
-  reviewed_git_revision: null
-  statement: null
+execution_state:
+  source: "hack/status.json"
+  current: "final_congruence_review"
+  individual_signature_gate: false

@@ -1,15 +1,12 @@
 # Build: Caso e encaminhamento
 
-> **DRAFT INVALIDADO POR MUDANÇA MATERIAL NO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+## Estado documental
 
-## State
-
-- Sources consumed: `hack/PRD.md`, `domains/ANALYST-caso-e-encaminhamento.md`,
-  recon do Antessala e referência de JSON versionado do DietFlow
-- Blueprint status: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE + RECON_REQUIRED`
-- Architecture verdict: `UNRESOLVED`; os contratos físicos ainda não foram provados no PGlite
-- This is not Plan: este arquivo fecha contratos e sequência de dependências, não cria
-  subtarefas executáveis.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
 ## Sources Consumed
 
@@ -75,7 +72,7 @@ flowchart TD
 | `src/renderer/src/paginas/recepcao/EncaminhamentosPagina.tsx` | create | Lista e empty state da recepção. | medium |
 | `src/renderer/src/paginas/recepcao/NovoCasoPagina.tsx` | create | Captura de snapshots. | medium |
 | `src/renderer/src/paginas/casos/CasoPagina.tsx` | create | Detalhe, timeline e handoff role-scoped. | medium |
-| `src/renderer/src/App.tsx` | adapt | Rotas assinadas pelo mapa de sprints. | medium |
+| `src/renderer/src/App.tsx` | adapt | Rotas definidas pelo Warlog e pelo Writing Plan. | medium |
 | `src/main/db/clinical-schema.ts` | contain | Impedir que o legado ganhe novas dependências. | high |
 
 ## Product Blueprint
@@ -739,7 +736,7 @@ fecha `cases.correctIntake` de forma irreversível no MVP.
 5. Add role-scoped case detail and handoff receipt.
 6. Add E2E and verify the legacy boundary.
 
-This is dependency order for Build. Plan must later split it into signed executable tasks.
+This is dependency order for Build. The Writing Plan must split it into executable, testable tasks.
 
 ## Rollback And Containment
 
@@ -747,7 +744,7 @@ This is dependency order for Build. Plan must later split it into signed executa
 - New routes can remain unregistered until the minispec is complete.
 - A failed UI rollout leaves legacy code untouched.
 - Rollback disables new routes/actions; it does not drop data.
-- Destructive removal of `registros` requires a later signed migration after consumer proof.
+- Destructive removal of `registros` requires a later migration after consumer proof.
 
 ## Risks
 
@@ -769,25 +766,14 @@ This is dependency order for Build. Plan must later split it into signed executa
 | DietFlow | envelope JSON versionado e contrato headless onde necessário | `patientId`, cadastro mestre, deduplicação e histórico longitudinal |
 | EscalaFlow | nenhuma peça necessária para identidade do caso | schema, atores e regras de escala; PDF pertence ao domínio de resultado |
 
-## Go / No-Go Verdict
+## Resultado da investigação
 
-- Technical design: `UNRESOLVED`; requer research, recon PGlite e adversarial.
-- Plan or execution: `NO-GO` até as revisões e assinaturas exigidas.
+Este anexo foi incorporado em `hack/BUILD.md`. Provas de runtime pertencem aos Writing
+Plans e ao QA das minispecs; não existe gate individual neste arquivo.
 
----
+## Estado de consolidação
 
-## Contrato de encerramento deste arquivo
-
-- Artefato: `domains/BUILD-caso-e-encaminhamento.md`
-- Próxima fase autorizada: `NENHUMA`; aguardar reconciliação transversal, novo adversarial
-  e assinatura do Analyst; depois refazer este Build
-- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE`
-- Assinatura do Analyst por Marco: `PENDENTE`
-- Assinatura deste Build por Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração exigida: “Aprovo o Build de caso e encaminhamento para síntese canônica.”
-
-Sem assinatura válida de Marco, este Build não terminou e não autoriza Plan ou código.
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

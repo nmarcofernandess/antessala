@@ -4,9 +4,9 @@ Prova de conceito para transformar a anamnese pré-anestésica de enfermagem em 
 necessidade operacional de agenda explicável e conduzir o caso até o resultado voltar ao
 serviço solicitante.
 
-> Nenhum gate está aprovado. O PRD aguarda assinatura; Analysts e Builds ainda exigem as
-> rodadas indicadas no [tracker único](.context/review/STATUS.md) antes de qualquer
-> assinatura. O [estado mecânico](hack/status.json) mantém o código de produto bloqueado.
+> O PRD está aprovado. Analyst e BUILD foram consolidados e aguardam o review final de
+> congruência. Código começa somente depois do Warlog, do Writing Plan da primeira
+> minispec e de um teste relevante observado em RED.
 
 ## Problema e objetivo
 
@@ -67,10 +67,10 @@ origem e continua rascunho até confirmação humana. Conhecimento global só na
 promoção explícita e versionada; identidade, narrativa integral e decisão isolada de um
 caso nunca viram regra automática.
 
-Uso de rede é opcional, informado e iniciado pela pessoa. Sem IA ou internet, caso,
-agenda e handoff continuam funcionando. O contrato completo permanece no
-[Analyst de IA, memória e conhecimento](hack/domains/ANALYST-ia-memoria-e-conhecimento.md),
-ainda sujeito a pesquisa e adversarial.
+Uso de rede é opcional, informado e iniciado pela pessoa. A PoC usa Gemini somente com
+fixtures sintéticas e sem fallback de provedor. Sem IA ou internet, caso, agenda e handoff
+continuam funcionando. O contrato completo está no
+[Analyst de IA, memória e conhecimento](hack/domains/ANALYST-ia-memoria-e-conhecimento.md).
 
 ## Base técnica atual
 
@@ -93,12 +93,12 @@ fontes e autoridade.
 | [PRD](hack/PRD.md) | qual produto, problema, promessa e fronteira |
 | [Analyst integrado](hack/analysis.md) e [índice](hack/ANALYST.md) | qual é a verdade lógica ponta a ponta |
 | `hack/domains/ANALYST-*.md` | quais entidades, campos, estados, regras, papéis e falhas pertencem a cada domínio |
-| [Build integrado](hack/BUILD.md) e `hack/domains/BUILD-*.md` | como um Analyst assinado será traduzido para este repositório |
+| [BUILD integrado](hack/BUILD.md) | especificação técnica e autoridade para arquitetura, dados, UI e prova |
+| `hack/domains/ANALYST-*.md` e `hack/domains/BUILD-*.md` | anexos de detalhe sem gate individual |
 | [.context/product.yaml](.context/product.yaml) | resumo estável do produto e Definition of Done |
-| [.context/workflow.yaml](.context/workflow.yaml) | método, gates e momento futuro dos documentos de tela |
+| [.context/workflow.yaml](.context/workflow.yaml) | fluxo PRD → Analyst → BUILD → Warlog → Writing Plans → código |
 | [.context/review/STATUS.md](.context/review/STATUS.md) | única fila de pesquisa, recon e review por artefato |
-| [status.json](hack/status.json) e [progress.md](hack/progress.md) | gate mecânico e recibo humano da fase |
-| [Contrato de aprovação](hack/CONTRATO-DE-APROVACAO.md) | o que constitui assinatura válida de Marco |
+| [status.json](hack/status.json) e [progress.md](hack/progress.md) | estado operacional e próxima ação |
 
 `.context` é mapa cognitivo. Não substitui PRD, Analyst ou Build.
 
@@ -106,46 +106,18 @@ fontes e autoridade.
 
 ```mermaid
 flowchart LR
-    PRD["PRD assinado"]
-
-    subgraph ANALYST_PHASE["Fase Analyst"]
-        LAW["Leis do produto<br/>definidas por Marco"]
-        WEB["Research científico,<br/>regulatório e operacional"]
-        CODE["Recon do código<br/>e bases doadoras"]
-        DOMAIN["Analysts de domínio"]
-        ADV_A["Adversarial por domínio"]
-        SYNTH["analysis.md<br/>síntese ponta a ponta"]
-
-        LAW --> DOMAIN
-        WEB --> DOMAIN
-        CODE --> DOMAIN
-        DOMAIN --> ADV_A
-        ADV_A --> SYNTH
-    end
-
-    subgraph BUILD_PHASE["Fase Build"]
-        DBUILD["Builds de domínio"]
-        SURF["Blueprints de superfície<br/>uma documentação por tela"]
-        WIREFRAME["Wireframe navegável<br/>reconstrução cega"]
-        INTEGRATED["BUILD.md integrado"]
-        CRITIC["Critic técnico e UX"]
-
-        DBUILD --> SURF
-        SURF --> WIREFRAME
-        WIREFRAME --> INTEGRATED
-        INTEGRATED --> CRITIC
-    end
-
-    PRD --> ANALYST_PHASE
-    SYNTH --> SIGN_A{"Marco assina?"}
-    SIGN_A -->|"sim"| BUILD_PHASE
-    CRITIC --> SIGN_B{"Marco assina?"}
-    SIGN_B -->|"sim"| WARLOG["Warlog corta em sprints"]
+    PRD["PRD aprovado"] --> ANALYST["analysis.md integrado"]
+    ANALYST --> BUILD["BUILD.md integrado"]
+    BUILD --> REVIEW["Review final de congruência"]
+    REVIEW --> WARLOG["Warlog corta minispecs"]
+    WARLOG --> WP["Writing Plan da fatia"]
+    WP --> RED["TDD RED"]
+    RED --> CODE["Implementação"]
+    CODE --> QA["QA"]
 ```
 
-Research e adversarial pertencem ao Analyst. Analyst define comportamento sem escolher
-tabela ou componente. Build traduz contratos fechados para arquitetura, DTOs, IPC,
-transações, componentes e testes; não preenche lacuna analítica por conta própria.
+Research e adversarial melhoram os artefatos canônicos; não são gates separados. PRD,
+Analyst e BUILD juntos são a especificação. Não existe `spec.md` por minispec.
 
 ### Review com GPT Pro
 
@@ -157,31 +129,19 @@ transações, componentes e testes; não preenche lacuna analítica por conta pr
 
 A resposta bruta é material de trabalho, não documentação do produto.
 
-### Quando nascem os documentos de tela
-
-`ANALYST-superficies` identifica as superfícies e seus trabalhos. Analysts fecham
-semântica; Builds fecham DTOs e arquitetura. Só durante o fechamento do Build cada tela
-com trabalho próprio recebe um Surface Blueprint em `hack/surfaces/`. Um modelo limpo
-tenta reconstruir o wireframe apenas com esse pacote. Invenção necessária reabre o Build.
-Nenhum Surface Blueprint deve existir antes disso.
-
 ### Do Build ao código
 
 ```text
-Build integrado + Critic assinados
-→ Warlog
-→ Sprints
-→ MiniSpec
-→ Spec assinada
-→ Plan assinado
+review final sem P0
+→ Warlog corta minispecs
+→ writing-plan.md da fatia
 → primeiro teste TDD em RED
 → implementação
 → QA da minispec
 → QA final
 ```
 
-Nenhuma seta avança sem a assinatura exigida de Marco. Uma IA nunca assina, presume
-aprovação nem transforma pedido de revisão em autorização.
+O Writing Plan define paths, passos e testes; não redecide produto ou arquitetura.
 
 ## Comandos atuais
 
@@ -199,12 +159,7 @@ Mermaid e `git diff --check`; CI pesado só roda quando a superfície alterada j
 
 ---
 
-## Contrato de encerramento
+## Estado
 
-- Artefato: `README.md`.
-- Gate: definido em `hack/status.json` e `hack/CONTRATO-DE-APROVACAO.md`.
-- Estado: `AGUARDANDO_ASSINATURA`.
-- Assinatura de Marco: `PENDENTE`.
-- Data, revisão Git e declaração: `PENDENTES`.
-
-Sem assinatura válida, este arquivo não promove fase nem autoriza implementação.
+Consulte [status.json](hack/status.json) para a fase operacional e
+[STATUS.md](.context/review/STATUS.md) para o review final.

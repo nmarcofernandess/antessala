@@ -539,10 +539,7 @@ known_risks:
       - ".github/workflows/dist.yml:1-8"
     statement: "Distribuicao macOS e ad hoc, sem assinatura Developer ID ou notarizacao."
 
-approval:
-  controller: "hack/CONTRATO-DE-APROVACAO.md"
-  status: "PENDING"
-  signed_by: null
-  signed_at: null
-  reviewed_git_revision: null
-  statement: null
+execution_state:
+  source: "hack/status.json"
+  current: "final_congruence_review"
+  note: "Inventário técnico; não cria gate nem substitui o BUILD integrado."

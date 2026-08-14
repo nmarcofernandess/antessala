@@ -1,13 +1,12 @@
 # Analyst — Classificação operacional e agenda
 
-## State
+## Estado documental
 
-- Source: `hack/PRD.md`, Analysts de anamnese, caso, acesso e avaliação
-- Route: `analyst_prd`
-- Phase budget: `forensic`
-- Research round: `2026-08-14`, incorporada após verificação de fontes primárias
-- Confidence: `medium` no contrato semântico; `low` em números e operação institucional
-- Verdict: `ADVERSARIAL_REQUIRED`; assinatura de Marco pendente
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## TL;DR
 
@@ -287,7 +286,7 @@ O Analyst de anamnese é owner da criticidade de cada campo e precisa classific�
 - informativo, sem efeito sobre agenda.
 
 Este domínio não inventa criticidade a partir do tipo do campo. Enquanto essa matriz não
-estiver fechada, ela bloqueia a assinatura deste Analyst.
+estiver fechada, ela permanece fora da promessa da PoC.
 
 ### Tratamentos obrigatórios
 
@@ -461,7 +460,7 @@ correspondente será owner de:
 - estratégia, arquivos e comandos de teste.
 
 Nenhum detalhe físico existente no Build atual ganha validade enquanto não for reconciliado
-com este contrato e assinado na fase correta.
+com o contrato integrado e implementado pela minispec correta.
 
 ## Acceptance Criteria
 
@@ -488,7 +487,7 @@ com este contrato e assinado na fase correta.
 
 ## Dependencies And Open Questions
 
-Antes da assinatura:
+Antes do Warlog:
 
 1. `ANALYST-anamnese-e-catalogos.md` precisa fechar a criticidade e o efeito semântico dos
    campos consumidos.
@@ -501,31 +500,14 @@ Antes da assinatura:
 5. O novo adversarial precisa provar a invalidação pré-publicação e atacar a governança
    ainda não resolvida para erro descoberto depois da publicação.
 
-## Grill Verdict
+## Resultado da investigação
 
-- Verdict: `ADVERSARIAL_REQUIRED`
-- Research result: a diferenciação de carga é plausível; a fórmula e todos os números são
-  `DEMO_DECISION`, não evidência clínica ou institucional.
-- Remaining blockers: criticidade dos campos da anamnese, adversarial e assinatura de Marco.
-- Next stage: adversarial depois da reconciliação com o research da anamnese; não iniciar Build.
+Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
-## Recommended Next Phase
+## Estado de consolidação
 
-Manter `BUILD-classificacao-e-agenda.md` bloqueado e invalidado por esta mudança material.
-Depois da pesquisa da anamnese, executar adversarial deste contrato. Não iniciar Warlog,
-Sprint, Spec, Plan, TDD ou implementação.
-
----
-
-## Contrato de encerramento deste arquivo
-
-- Artefato: `hack/domains/ANALYST-classificacao-e-agenda.md`
-- Gate: Analyst de classificação e agenda → Build do domínio
-- Estado: `ADVERSARIAL_REQUIRED`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração futura exigida: “Aprovo o Analyst de classificação e agenda e autorizo seu
-consumo pelo Build.”
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

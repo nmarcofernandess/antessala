@@ -5,13 +5,15 @@
 - Source: `hack/PRD.md` v5, decisões diretas de Marco e recon do código
 - Route: `analyst_prd`
 - Phase budget: `forensic`
-- Confidence: `medium` para leis do produto; `low` para domínios sem pesquisa/recon/adversarial
+- Confidence: `medium`; leis do produto e decisões da demo estão fechadas, enquanto
+  operação institucional futura permanece explicitamente fora do escopo
 - Created: `2026-08-14`
 - Mode: `hybrid`
-- Verdict: `INVALIDATED_BY_CHANGE`; IA/memória entrou no MVP e os reviews ainda estão pendentes
+- Verdict: `CONSOLIDATED_FOR_BUILD`
 
-Documento invalidado não é fonte normativa para Analyst, Build, Spec, Plan ou código.
-Decisão reaproveitada precisa ser reintroduzida, classificada e justificada no artefato dono.
+Este é o Analyst integrado e a fonte semântica única do hackathon. Os oito dossiês de
+domínio são anexos de evidência e detalhe. Em conflito, este arquivo prevalece; a divergência
+deve ser corrigida no anexo, nunca escolhida silenciosamente por um Writing Plan.
 
 ## TL;DR
 
@@ -20,8 +22,8 @@ encaminhamento ao recebimento do resultado pelo serviço solicitante. Cinco fun�
 com contas locais: recepção, enfermagem, anestesiologista, solicitante e administrador. O
 produto separa dado clínico, requisito operacional de agenda, reserva e decisão médica.
 IA pode propor preenchimento e recuperar conhecimento aprovado, sempre como rascunho
-auditável que depende de confirmação humana. Este documento está em reconciliação; não
-afirma reproduzir o fluxo ou protocolo institucional do HC.
+auditável que depende de confirmação humana. O documento especifica uma PoC sintética e
+não afirma reproduzir o fluxo, o protocolo ou a arquitetura institucional do HC.
 
 ## Phase 0 Grill
 
@@ -96,18 +98,23 @@ anterior. O Build deve migrar ou substituir essa superfície; nenhum estado anti
 do produto. O registry, o composer, o seed offline, os helpers de banco e o PDF são bases
 reutilizáveis.
 
-### Dossiês canônicos por domínio
+### Dossiês incorporados por domínio
 
-| Domínio | Analyst | Build subsequente |
+| Domínio | Analyst de detalhe | Decisão incorporada nesta síntese |
 |---|---|---|
-| Caso e encaminhamento | [ANALYST-caso-e-encaminhamento](domains/ANALYST-caso-e-encaminhamento.md) | [BUILD-caso-e-encaminhamento](domains/BUILD-caso-e-encaminhamento.md) |
-| Acesso e auditoria | [ANALYST-acesso-e-auditoria](domains/ANALYST-acesso-e-auditoria.md) | [BUILD-acesso-e-auditoria](domains/BUILD-acesso-e-auditoria.md) |
-| Anamnese e catálogos | [ANALYST-anamnese-e-catalogos](domains/ANALYST-anamnese-e-catalogos.md) | [BUILD-anamnese-e-catalogos](domains/BUILD-anamnese-e-catalogos.md) |
-| Classificação e agenda | [ANALYST-classificacao-e-agenda](domains/ANALYST-classificacao-e-agenda.md) | [BUILD-classificacao-e-agenda](domains/BUILD-classificacao-e-agenda.md) |
-| Avaliação, pendências e handoff | [ANALYST-avaliacao-pendencias-e-handoff](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | [BUILD-avaliacao-pendencias-e-handoff](domains/BUILD-avaliacao-pendencias-e-handoff.md) |
-| Superfícies e configurações | [ANALYST-superficies-e-configuracoes](domains/ANALYST-superficies-e-configuracoes.md) | [BUILD-superficies-e-configuracoes](domains/BUILD-superficies-e-configuracoes.md) |
-| Arquitetura offline e prova | [ANALYST-arquitetura-offline-e-prova](domains/ANALYST-arquitetura-offline-e-prova.md) | [BUILD-arquitetura-offline-e-prova](domains/BUILD-arquitetura-offline-e-prova.md) |
-| IA, memória e conhecimento | [ANALYST-ia-memoria-e-conhecimento](domains/ANALYST-ia-memoria-e-conhecimento.md) | [BUILD-ia-memoria-e-conhecimento](domains/BUILD-ia-memoria-e-conhecimento.md) |
+| Caso e encaminhamento | [ANALYST-caso-e-encaminhamento](domains/ANALYST-caso-e-encaminhamento.md) | Caso autônomo, snapshots, lifecycle, correção pré-publicação, handoffs e idempotência. |
+| Acesso e auditoria | [ANALYST-acesso-e-auditoria](domains/ANALYST-acesso-e-auditoria.md) | Login local, cinco papéis, escopo por serviço, revogação fail-closed e auditoria sanitizada. |
+| Anamnese e catálogos | [ANALYST-anamnese-e-catalogos](domains/ANALYST-anamnese-e-catalogos.md) | Respostas semânticas, proveniência, 14 grupos de coleta e catálogos assumidos como recortes. |
+| Classificação e agenda | [ANALYST-classificacao-e-agenda](domains/ANALYST-classificacao-e-agenda.md) | QUICK/STANDARD/EXTENDED como carga da consulta, regra demonstrativa explicável, override e capacidade. |
+| Avaliação, pendências e handoff | [ANALYST-avaliacao-pendencias-e-handoff](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | Encontro, pendência com impacto, retorno explícito, resultado versionado e entrega ao solicitante. |
+| Superfícies e configurações | [ANALYST-superficies-e-configuracoes](domains/ANALYST-superficies-e-configuracoes.md) | Rotas por papel, worklists, estados de UI e configurações mínimas da demo. |
+| Arquitetura offline e prova | [ANALYST-arquitetura-offline-e-prova](domains/ANALYST-arquitetura-offline-e-prova.md) | Electron/PGlite, primeiro boot offline, IPC protegido, seed determinístico e prova repetível. |
+| IA, memória e conhecimento | [ANALYST-ia-memoria-e-conhecimento](domains/ANALYST-ia-memoria-e-conhecimento.md) | Gemini sintético, proposta por campo, confirmação humana e conhecimento aprovado/ativado separadamente. |
+
+Os estados antigos de research, adversarial ou assinatura dentro dos anexos não são gates.
+Eles registram a maturidade histórica da investigação. Para o hack, lacunas institucionais
+foram convertidas em limites explícitos ou `DEMO_DECISION`; nenhuma delas autoriza alegação
+de protocolo clínico ou operação real.
 
 ## Evidence Matrix
 
@@ -643,7 +650,7 @@ stateDiagram-v2
 | high | Widgets herdados marcam defaults como completos | `tests/shared/anamnese/widgets.spec.ts:28-49` | Novo envelope e semântica de resposta; nenhum default clínico afirmativo. |
 | medium | Catálogo de medicamentos é recorte | `src/data/catalogos/README.md:21-38` | Fallback textual explícito e limite declarado; não alegar cobertura nacional. |
 | high | IA envia histórico sem anonimização automática | `src/main/ia/cliente.ts:52-108` | Consentimento, minimização, ação explícita e revisão humana no novo domínio. |
-| high | Knowledge legado preservado não possui lifecycle clínico de aprovação/ativação | módulos e tabelas permanecem, mas foram contidos no IPC ativo | Só reexpor por router mínimo após Analyst e Build assinados. |
+| high | Knowledge legado preservado não possui lifecycle clínico de aprovação/ativação | módulos e tabelas permanecem, mas foram contidos no IPC ativo | Só reexpor pelo contrato mínimo do BUILD e pelo Writing Plan da fatia. |
 | medium | Configuração de IA guarda segredo local | `src/main/db/schema.ts:14-24` | Definir proteção do segredo no Build; nunca logar ou exportar token. |
 | medium | DDL idempotente não evolui schema existente | `src/main/db/schema.ts:211-233` | Ledger de migrations local e testes de upgrade. |
 | medium | TIPC aceita inputs TS sem validação geral | `src/main/tipc.ts:265-400` | Zod compartilhado em todo command/query novo. |
@@ -691,8 +698,10 @@ flowchart LR
   handoff --> proof["Prova ponta a ponta"]
 ```
 
-Os BUILDs de domínio fecham os contratos técnicos. O [BUILD principal](BUILD.md) sintetiza
-as dependências. Nenhum deles substitui Spec, Plan ou primeiro teste TDD.
+Os BUILDs de domínio preservam os contratos técnicos detalhados. O [BUILD principal](BUILD.md)
+reconcilia e prevalece sobre eles. PRD + Analyst integrado + BUILD integrado formam a
+especificação; depois do Warlog, cada minispec recebe diretamente um Writing Plan e começa
+por um teste relevante em RED.
 
 ## Acceptance Criteria
 
@@ -734,10 +743,10 @@ as dependências. Nenhum deles substitui Spec, Plan ou primeiro teste TDD.
 - [ ] O E2E percorre encaminhamento, triagem, reserva, avaliação, resultado e recebimento.
 - [ ] Nenhuma tela chama requisito operacional de risco clínico, ASA ou aptidão.
 
-## Open Questions
+## Limites futuros não bloqueantes
 
-As perguntas abaixo bloqueiam a prontidão dos Analysts e precisam de research ou decisão
-explícita antes de assinatura:
+As perguntas abaixo pertencem à transformação da PoC em operação institucional. Não
+bloqueiam o hack e não podem ser respondidas por invenção:
 
 - Qual protocolo e quais pesos o HC validará para uso assistencial?
 - Quais sistemas institucionais fornecerão identidade, encaminhamento, agenda e prontuário?
@@ -750,27 +759,23 @@ explícita antes de assinatura:
 
 ## Grill Verdict
 
-- Verdict: `INVALIDATED_BY_CHANGE`
-- Why: novo domínio de IA/memória, pesquisas clínicas, recon técnico e adversariais ainda estão pendentes.
-- Next stage: corrigir o primeiro artefato indicado no tracker; não promover Build.
-- Approval status: `PENDENTE`
+- Verdict: `CONSOLIDATED_FOR_BUILD`
+- Why: os oito domínios foram incorporados, decisões de demo foram rotuladas e lacunas de
+  produção foram retiradas do caminho crítico sem serem apresentadas como resolvidas.
+- Next stage: fechar o BUILD técnico integrado e submetê-lo a um review final de congruência.
 
 ## Recommended Next Phase
 
-Executar a próxima pesquisa indicada em [`.context/review/STATUS.md`](../.context/review/STATUS.md),
-corrigir o artefato canônico e repetir o adversarial. Warlog, sprints, specs, plans, testes
-e código continuam bloqueados.
+Reconciliar [BUILD.md](BUILD.md) com os oito Builds de domínio. Depois do review final de
+congruência, o Warlog corta fatias verticais. Nenhuma Spec separada será criada: cada
+minispec deriva seu Writing Plan diretamente do PRD, deste Analyst e do BUILD.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `analysis.md` e oito dossiês de domínio
-- Próxima fase autorizada após assinatura: Build formal e Critic
-- Estado: `INVALIDATED_BY_CHANGE`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração exigida: “Aprovo o Analyst completo e autorizo o Build formal.”
+- Artefato canônico: `analysis.md`.
+- Estado: `CONSOLIDATED_FOR_BUILD`.
+- Anexos consumidos: oito `domains/ANALYST-*.md`.
+- Gate individual por anexo: inexistente.
+- Próximo checkpoint: congruência do `BUILD.md`, sem assinatura intermediária.

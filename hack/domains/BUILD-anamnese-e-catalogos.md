@@ -1,20 +1,12 @@
 # Build — Anamnese pré-anestésica e catálogos
 
-> **DRAFT INVALIDADO PELO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
->
-> Campos, seeds, regras, constraints e catálogos dependentes de `UNRESOLVED` ou
-> `DEMO_DECISION` são somente inventário histórico deste rascunho. Não adquirem autoridade
-> por aparecerem abaixo e não podem ser consumidos por Spec, Plan ou código. Em especial,
-> estão invalidados: proibição de `ANSWERED(false)`, `metMin/metMax` individual,
-> `controlled`, `pregnancyApplicable`, FINAL incorrigível, catálogo fictício obrigatório e
-> acoplamento entre encerramento da captura e publicação do requisito.
+## Estado documental
 
-## State
-
-- Source: `hack/domains/ANALYST-anamnese-e-catalogos.md`
-- Status: `INVALIDATED_BY_CHANGE — ASSINATURA PENDENTE`
-- Scope: arquitetura do domínio; não é Plan nem catálogo de tarefas
-- Confidence: `low` até pesquisa clínica, licença e recon PGlite
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
 ## Goal
 
@@ -717,7 +709,7 @@ pode ser reordenado ou deletado. Cada Answer tem um componente comum com opçõe
 10. Executar provas de contrato, banco, RBAC, renderer, offline e PDF.
 
 Esta sequência é dependência arquitetural. Plan a converterá em subtarefas somente depois do
-Build, Warlog, Sprints e Spec assinados.
+BUILD integrado, Warlog e Writing Plan da fatia.
 
 ## Rollback / Containment
 
@@ -749,21 +741,15 @@ Build, Warlog, Sprints e Spec assinados.
 - [ ] Contratos clínicos pesquisados e validados.
 - [ ] Tabelas, DTOs, commands, queries e constraints provados no runtime.
 - [ ] Estados, sequência e rollback aprovados pelo adversarial.
-- [ ] Analyst do domínio assinado por Marco.
+- [x] Conteúdo da PoC incorporado ao Analyst integrado.
 - [ ] Critic revisar este blueprint.
-- [ ] Marco assinar Build + Critic antes do Warlog.
+- [ ] Review final de congruência do BUILD integrado antes do Warlog.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `hack/domains/BUILD-anamnese-e-catalogos.md`
-- Próxima fase após assinatura do Analyst: Critic do domínio
-- Estado: `INVALIDATED_BY_CHANGE — ASSINATURA PENDENTE`
-- Assinatura de Marco: `PENDENTE`
-- Data da revisão humana: `PENDENTE`
-- Revisão Git examinada por Marco: `PENDENTE`
-- Declaração de Marco: `PENDENTE`
-
-Declaração futura exigida após Critic: “Aprovo o Build de anamnese e catálogos corrigido e
-autorizo seu registro no Warlog.”
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

@@ -1,16 +1,12 @@
 # Analyst: Superfícies, navegação, componentes e configurações
 
-## State
+## Estado documental
 
-- Source: `hack/PRD.md`, decisão de Marco sobre acesso local e recon do renderer atual.
-- Route: `analyst_prd`.
-- Phase budget: `forensic`.
-- Confidence: `low` enquanto IA/memória e os demais domínios não forem reconciliados.
-- Created: `2026-08-14`.
-- Review state: `INVALIDATED_BY_CHANGE`.
-- Content verdict: `EM REVISÃO`; o catálogo de superfícies está incompleto.
-- Governance state: `BLOQUEADO`.
-- Build correspondente: `hack/domains/BUILD-superficies-e-configuracoes.md`.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## TL;DR
 
@@ -130,9 +126,9 @@ Como renderer, preciso derivar rota, navegação, componente e ação da sessão
 |---|---|---|---|
 | Context / entry | `src/renderer/src/main.tsx` | Providers globais. | Inserir AuthProvider; preservar ThemeProvider/Tooltip/Toaster. |
 | Routes | `src/renderer/src/App.tsx` | Router/casca. | Substituir lista de três rotas pelo mapa canônico deste Analyst. |
-| Auth contracts | `hack/domains/ANALYST-acesso-e-auditoria.md` | autoridade, capability, escopo, revogação e redaction; DTO físico aguarda Build assinado |
+| Auth contracts | `hack/domains/ANALYST-acesso-e-auditoria.md` | autoridade, capability, escopo, revogação e redaction; DTO físico vive no BUILD integrado |
 | Agenda contracts | `hack/domains/ANALYST-classificacao-e-agenda.md` | requisito, booking, slots e capacidade sem inventar DTO físico |
-| Assessment contracts | `hack/domains/ANALYST-avaliacao-pendencias-e-handoff.md` | encontro, pendência, documento, retorno, resultado e entrega sem depender de Build não assinado |
+| Assessment contracts | `hack/domains/ANALYST-avaliacao-pendencias-e-handoff.md` | encontro, pendência, documento, retorno, resultado e entrega; forma física vive no BUILD integrado |
 | Backend projections | `src/main/tipc.ts` | Dados para telas. | Compor routers de casos, agenda, avaliação, configuração; DTO mínimo por papel. |
 | Local fetch state | `src/renderer/src/hooks/useApiData.ts` | Loading/error simples. | Reusar só em reads simples; criar `useMutationState` e resource hooks de domínio. |
 | Shell | `src/renderer/src/componentes/AppSidebar.tsx` | Menu e tema. | Derivar menu das capabilities específicas da sessão; manter tema; não publicar o chat genérico como superfície clínica. |
@@ -516,7 +512,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 | Users, roles, status, password reset | only `origin=ADMIN`; fixtures read-only | Required to prepare extra demo accounts without drifting the five boot fixtures. |
 | Services and procedures | no, read-only fixtures | Required as stable synthetic snapshots; changing them needs seed/version review. |
 | Requester professionals | no master cadastro | Name/specialty/contact are captured in the referral snapshot. |
-| Slot classes/durations/buffers | no, read-only fixtures | `QUICK 20+5`, `STANDARD 35+5`, `EXTENDED 50+10` são `DEMO_DECISION`, ainda sujeitas a pesquisa, adversarial e assinatura. |
+| Slot classes/durations/buffers | no, read-only fixtures | `QUICK 20+5`, `STANDARD 35+5`, `EXTENDED 50+10` são `DEMO_DECISION` congeladas para a PoC, não evidência institucional. |
 | Resources, dated availability windows and blocks | yes | Admin prepares capacity without changing classification semantics or exposing a recurrence editor. |
 | CID, medications, MET, comorbidities | no, read-only integrity | Versioned clinical catalogs must not drift through ad-hoc UI. |
 | Widget definitions/templates | no, read-only version/link | Clinical form changes require versioned artifact and tests. |
@@ -707,33 +703,14 @@ Futuro, fora do hack:
 - integração com prontuário, diretório e agenda do HC;
 - suporte responsivo real a tablet/celular.
 
-## Grill Verdict
+## Resultado da investigação
 
-- Verdict: `INVALIDATED_BY_CHANGE`.
-- Why: IA, memória, gravação e transcrição passaram a integrar a prova de conceito e ainda não estão compostas nas superfícies.
-- Governance constraint: o Build correspondente não pode ser aprovado antes da assinatura deste Analyst.
-- Next stage: aguardar os Analysts de domínio, inclusive IA/memória, fecharem campos, regras e permissões; então reconciliar este Analyst. Nenhuma Spec ou Plan nasce agora.
+Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
-## Recommended Next Phase
+## Estado de consolidação
 
-Executar primeiro a rodada indicada no tracker. Depois dos Analysts fecharem, este documento
-define quais trabalhos precisam de superfície; o Build correspondente e os Surface
-Blueprints só nascem no momento previsto pelo workflow.
-
----
-
-## Contrato de encerramento deste arquivo
-
-- Artefato: `hack/domains/ANALYST-superficies-e-configuracoes.md`.
-- Conteúdo MVP: `EM REVISÃO`.
-- Próxima fase material: `hack/domains/BUILD-superficies-e-configuracoes.md`.
-- Próxima fase autorizada: `NENHUMA SEM ASSINATURA`.
-- Estado: `INVALIDATED_BY_CHANGE`.
-- Assinatura de Marco: `PENDENTE`.
-- Data: `PENDENTE`.
-- Revisão Git examinada: `PENDENTE`.
-- Declaração: `PENDENTE`.
-
-Declaração exigida: “Aprovo o Analyst de superfícies e configurações e autorizo seu Build correspondente.”
-
-Sem essa assinatura, o artefato não terminou e não autoriza Spec, Plan, teste ou código.
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

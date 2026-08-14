@@ -1,11 +1,12 @@
 # BUILD — Arquitetura offline e prova
 
-## State
+## Estado documental
 
-- Documento: blueprint de arquitetura; **não é Plan nem autorização para código**.
-- Estado: `INVALIDATED_BY_CHANGE — RECON_REQUIRED`.
-- Pré-requisito: `ANALYST-arquitetura-offline-e-prova.md` aprovado por Marco.
-- Alvo: Electron local em um Mac, PGlite, dados sintéticos e demonstração offline.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
 ## Sources Consumed
 
@@ -440,20 +441,12 @@ Qualquer piloto real reinicia em PRD → Analyst → Build com threat model e co
 - [ ] Arquivos, schema, IPC e DTOs reconciliados com o HEAD.
 - [ ] Boot, migrations, seed, rede, IA opcional e prova revisados.
 - [ ] Validação, rollback e compatibilidade PGlite atacados pelo Critic.
-- [ ] Analyst deste domínio assinado por Marco.
-- [ ] Build revisado e assinado por Marco.
+- [x] Conteúdo da PoC incorporado ao Analyst e ao BUILD integrados.
+- [ ] Review final de congruência do BUILD integrado.
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-Este blueprint não autoriza MiniSpec, Spec, Plan, teste ou código.
-
-- Artefato: `BUILD-arquitetura-offline-e-prova.md`
-- Próxima fase autorizada após assinatura do Analyst, deste Build e do Critic: Warlog-base
-- Estado: `INVALIDATED_BY_CHANGE`
-- Assinatura do Analyst por Marco: `PENDENTE`
-- Assinatura deste Build por Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Sem assinaturas válidas de Marco, a arquitetura permanece rascunho bloqueado.
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

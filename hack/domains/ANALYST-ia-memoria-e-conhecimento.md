@@ -1,16 +1,12 @@
 # Analyst — IA, memória e conhecimento
 
-## State
+## Estado documental
 
-- Estado: `ADVERSARIAL_REQUIRED` para a PoC sintética; uso real continua fora do escopo e bloqueado.
-- Fase: Analyst; este documento não autoriza Build, Spec, Plan, teste ou código.
-- Fonte de produto: direção explícita de Marco para a prova de conceito, ainda não
-  incorporada a um PRD assinado.
-- Pesquisa científica, regulatória, de privacidade e operacional: `IN_REVIEW`; fontes
-  centrais verificadas, contratos institucionais, STT e operação real permanecem abertos.
-- Recon técnico do HEAD: `RECON_REQUIRED` após contenção dos handlers de conhecimento.
-- Adversarial: `PENDENTE`.
-- Assinatura de Marco: `PENDENTE`.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## Legenda de autoridade
 
@@ -19,7 +15,7 @@
 | `PRODUCT_LAW` | Lei declarada por Marco que nenhuma implementação pode contrariar. |
 | `EVIDENCE_BACKED` | Fato verificado no código ou em artefato canônico; não prova validade clínica. |
 | `DEMO_DECISION` | Escolha delimitada para a prova de conceito; não descreve protocolo do HC. |
-| `UNRESOLVED` | Pesquisa, decisão ou assinatura ainda necessária. |
+| `UNRESOLVED` | Pesquisa ou decisão ainda necessária para operação futura. |
 
 ## TL;DR
 
@@ -52,7 +48,7 @@ clínico real. Operação real exige novo ciclo institucional, contratual e regu
 | Privacidade e autorização de captura estão comprovadas? | `UNRESOLVED` | O caminho sintético foi delimitado; base legal, retenção, terceiros e operação real continuam abertos. |
 | O conhecimento clínico está validado? | `UNRESOLVED` | Não. A demo usa relações sintéticas ou aprovadas e não se apresenta como protocolo. |
 
-O Grill não passa para assinatura enquanto os itens `UNRESOLVED` exigidos para a demo não
+O contrato da PoC não passa ao Warlog enquanto os itens `UNRESOLVED` exigidos para a demo não
 forem pesquisados, delimitados e submetidos a adversarial.
 
 ## Problema e promessa
@@ -542,7 +538,7 @@ Fontes primárias verificadas nesta rodada:
 
 ## Pesquisa e adversarial obrigatórios
 
-Antes de mudar o estado para `READY_FOR_MARCO`, pesquisar e verificar:
+Para uma operação institucional futura, pesquisar e verificar:
 
 1. autorização de captura, indicação visual, revogação e retenção de gravação/transcrição;
 2. LGPD, base legal, minimização e direitos para uso com dados reais;
@@ -574,28 +570,15 @@ Antes de mudar o estado para `READY_FOR_MARCO`, pesquisar e verificar:
 
 Este domínio exige Build pareado porque atravessa Electron main/renderer, áudio, PGlite,
 rede opcional, segredo, autorização, auditoria, anamnese e conhecimento. Entretanto, o
-Build não pode escolher schema, DTOs, IPC, componentes ou retenção antes de a pesquisa e a
-assinatura fecharem este Analyst.
+O Build integrado fecha somente a arquitetura mínima da PoC sintética. Schema, DTOs, IPC,
+componentes ou retenção para operação real exigem novo ciclo de pesquisa.
 
 O arquivo pareado existe apenas como mapa de terreno e bloqueios:
 [BUILD-ia-memoria-e-conhecimento.md](BUILD-ia-memoria-e-conhecimento.md).
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `hack/domains/ANALYST-ia-memoria-e-conhecimento.md`.
-- Estado: `ADVERSARIAL_REQUIRED` para a PoC sintética.
-- Pesquisa obrigatória: `IN_REVIEW`; fontes centrais incorporadas e lacunas reais delimitadas.
-- Recon técnico: `RECON_REQUIRED` contra o próximo SHA publicado.
-- Adversarial: `PENDENTE`.
-- Autoriza Build definitivo: `NÃO`.
-- Autoriza implementação: `NÃO`.
-- Assinatura de Marco: `PENDENTE`.
-- Data: `PENDENTE`.
-- Revisão Git examinada: `PENDENTE`.
-- Declaração: `PENDENTE`.
-
-Declaração futura exigida: “Aprovo o Analyst de IA, memória e conhecimento e autorizo o
-fechamento do Build correspondente.”
-
-Sem pesquisa registrada, adversarial e assinatura válida de Marco, este Analyst não
-terminou e não libera nenhuma fase posterior.
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

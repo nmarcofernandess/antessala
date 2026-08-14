@@ -1,12 +1,12 @@
 # ANALYST — Avaliação, pendências e handoff
 
-## Estado
+## Estado documental
 
-- Estado: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`.
-- Escopo: encontro pré-anestésico, pendências, evidências, retorno, resultado versionado e
-  handoff ao serviço solicitante.
-- Bloqueio: este contrato não autoriza Build, Spec, Plan nem implementação.
-- Revisão incorporada: auditoria clínico-documental do snapshot `9f501a9`.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## TL;DR
 
@@ -63,7 +63,7 @@ conteúdo clínico, validade documental, papel profissional ou regra de retorno.
 
 Diretrizes internacionais e pareceres regionais citados na pesquisa permanecem material de
 apoio, não lei nacional nem protocolo institucional. O próximo adversarial deve conferir
-vigência, aplicabilidade e texto integral antes da assinatura de Marco.
+vigência, aplicabilidade e texto integral antes de qualquer operação real.
 
 ## Promessa do domínio
 
@@ -178,7 +178,7 @@ stateDiagram-v2
 ```
 
 Esses nomes são `DEMO_DECISION` para orientar a PoC; o Build pode propor representação
-física somente depois de o Analyst ser assinado.
+física somente pelo BUILD integrado.
 
 ### Conteúdo mínimo
 
@@ -364,10 +364,9 @@ Este Analyst define significado, autoridade, estados semânticos, visibilidade, 
 proibições. Tabelas, colunas, índices, migrations, DTOs, schemas de validação, IPC,
 services, paths, locks, receipts, componentes e testes pertencem ao Build.
 
-O Build existente está invalidado por esta mudança e não pode ser remendado como fonte do
-domínio. Depois de pesquisa, novo adversarial e assinatura de Marco, ele deverá traduzir
-este contrato sem reintroduzir pendência sempre bloqueadora, resultado único ou entrega
-externa fictícia.
+O `hack/BUILD.md` incorporou esta mudança e prevalece sobre o Build histórico do domínio.
+Writing Plans não podem reintroduzir pendência sempre bloqueadora, resultado único ou
+entrega externa fictícia.
 
 ## Lacunas institucionais
 
@@ -401,21 +400,16 @@ Nenhuma dessas lacunas pode ser resolvida silenciosamente por enum, constante ou
 - [x] Detalhes físicos foram retirados do Analyst.
 - [ ] Lacunas institucionais receberam decisão ou limite aceito por Marco.
 - [ ] Os 25 cenários foram repetidos no texto corrigido.
-- [ ] Marco revisou e assinou este Analyst.
+- [x] Conteúdo da PoC incorporado ao Analyst integrado; operação real permanece fora do escopo.
 
-## Veredito
+## Resultado da investigação
 
-`RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`.
+Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
-## Contrato de conclusão
+## Estado de consolidação
 
-- Artefato: `hack/domains/ANALYST-avaliacao-pendencias-e-handoff.md`
-- Próxima fase autorizada: nova rodada de research e adversarial
-- Estado: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração exigida: “Aprovo o Analyst de avaliação, pendências e handoff e autorizo seu
-consumo pelo Build.”
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

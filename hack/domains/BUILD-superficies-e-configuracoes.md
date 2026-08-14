@@ -1,13 +1,12 @@
 # BUILD — Superfícies, navegação, componentes e configurações
 
-## State
+## Estado documental
 
-- Tipo: blueprint técnico; não é Spec, Plan ou autorização de código.
-- Fonte: `hack/domains/ANALYST-superficies-e-configuracoes.md`.
-- Conteúdo: `INVALIDATED_BY_CHANGE`; falta integrar IA, memória e futuros Surface Blueprints.
-- Estado de governança: `DRAFT — BLOQUEADO PELOS DOMÍNIOS`.
-- Risco: alto, porque conecta todos os domínios e define projeções de dados por papel.
-- Build dependente: `hack/domains/BUILD-acesso-e-auditoria.md` e Builds dos contratos clínicos/agenda.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
 ## Goal
 
@@ -870,18 +869,9 @@ These are topological dependencies, not executable Plan items.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `hack/domains/BUILD-superficies-e-configuracoes.md`.
-- Analyst de origem: `hack/domains/ANALYST-superficies-e-configuracoes.md`.
-- Estado: `INVALIDATED_BY_CHANGE`.
-- Autoriza implementação: `NÃO`.
-- Assinatura de Marco no Analyst: `PENDENTE`.
-- Assinatura de Marco neste Build: `PENDENTE`.
-- Data: `PENDENTE`.
-- Revisão Git examinada: `PENDENTE`.
-- Declaração: `PENDENTE`.
-
-Declaração exigida: “Aprovo o Build de superfícies e configurações para decomposição em Warlog, Sprint, Spec e Plan.”
-
-Sem as duas assinaturas, este blueprint é somente material de revisão e nenhuma linha de código está autorizada.
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

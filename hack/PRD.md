@@ -4,11 +4,11 @@
 
 **Hacka Health 2026 · Desafio 1 · HCFMRP-USP**
 **Versão:** 5.0 · 14/08/2026
-**Estado:** `AGUARDANDO ASSINATURA DE MARCO`
+**Estado:** `APPROVED_PRODUCT_BASELINE`
 **Confiança:** média
-**Rota:** Taskgen → PRD → Analyst → Build + Critic → Warlog → Sprints → por minispec:
-Spec assinada → Plan assinado → TDD RED → código → QA assinado → QA final assinado
-**Próxima fase:** `hack/ANALYST.md`
+**Rota:** PRD → Analyst integrado → BUILD integrado → review final → Warlog → minispecs →
+Writing Plans → TDD RED → código → QA
+**Próxima fase:** review final de congruência de `hack/analysis.md` + `hack/BUILD.md`
 
 ---
 
@@ -20,7 +20,7 @@ Spec assinada → Plan assinado → TDD RED → código → QA assinado → QA f
 - Phase budget: `forensic`
 - Execution strategy: `per_unit`
 - Created: `2026-08-14`
-- Status: `gathering`, aguardando assinatura de Marco
+- Status: `approved`; aprovação explícita de Marco registrada em `2026-08-14`
 
 ## Lei deste documento
 
@@ -296,10 +296,10 @@ identificável do encaminhamento ao handoff final.
 - [x] Critérios de aceitação definidos.
 - [x] Próxima fase definida.
 - [x] Contrato de autenticação do MVP definido.
-- [ ] Marco assinou esta revisão e autorizou o Analyst.
+- [x] Marco aprovou esta revisão como baseline do hackathon.
 
-O conteúdo do PRD está redigido. O artefato só termina quando Marco assinar esta revisão.
-Sem assinatura, o Analyst permanece bloqueado.
+O conteúdo do PRD está aprovado. Analyst e BUILD podem detalhar sua execução sem alterar
+problema, goal, atores ou fronteiras.
 
 ## Risks
 
@@ -333,22 +333,17 @@ O Analyst deve fechar, sem alterar este PRD:
 
 ## Next Phase
 
-Depois da assinatura de Marco, o trabalho segue em `hack/ANALYST.md`. Enquanto qualquer
-gate obrigatório do Analyst estiver aberto, Build, Warlog, Sprints, Specs, Plans, testes e
-código permanecem proibidos.
+O PRD é a baseline de produto; `analysis.md` consolida a semântica e `BUILD.md` é a
+especificação técnica. Depois do review final de congruência,
+o Warlog corta o BUILD em minispecs e cada fatia recebe um Writing Plan executável.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Registro de decisão
 
-- Artefato: `PRD.md`
-- Próxima fase autorizada: Analyst forense
-- Estado: `AGUARDANDO_ASSINATURA`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração exigida: “Aprovo este PRD e autorizo o início do Analyst.”
-
-Sem assinatura válida de Marco, o PRD permanece `gathering` em `status.json`.
+- Decisão: `APPROVED_BY_MARCO`.
+- Data: `2026-08-14`.
+- Baseline Git ao registrar a decisão: `452e0e3c6eed4b7504093b7a98c10a5687b89ef7`.
+- Escopo: o conteúdo de produto está aprovado e congelado para o hackathon.
+- Mudança futura de problema, goal, atores ou fronteiras reabre o PRD; correções técnicas
+  seguem em `analysis.md` e `BUILD.md` sem novo gate individual.

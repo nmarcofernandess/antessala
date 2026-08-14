@@ -1,13 +1,12 @@
 # Build — Classificação operacional e agenda
 
-> **DRAFT INVALIDADO POR MUDANÇA MATERIAL NO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+## Estado documental
 
-## State
-
-- Source: `hack/domains/ANALYST-classificacao-e-agenda.md`
-- Status: `INVALIDATED_BY_ANALYST_CHANGE + RECON_REQUIRED`
-- Scope: arquitetura do domínio; não é Plan nem catálogo de tarefas
-- Confidence: `low`; regras e capacidade são `DEMO_DECISION` e os locks ainda não foram provados
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
 ## Goal
 
@@ -1227,22 +1226,15 @@ A sequência é topológica, não um Plan executável.
 - [ ] Janelas, capacidade, recursos e bookings validados como `DEMO_DECISION`.
 - [ ] Topologia agenda base → assessment → integração provada no PGlite.
 - [ ] Superfície semanal confirmada pelos futuros Surface Blueprints.
-- [ ] Analyst do domínio assinado por Marco.
+- [x] Conteúdo da PoC incorporado ao Analyst integrado.
 - [ ] Critic revisar este blueprint.
-- [ ] Marco assinar Build + Critic antes do Warlog.
+- [ ] Review final de congruência do BUILD integrado antes do Warlog.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `hack/domains/BUILD-classificacao-e-agenda.md`
-- Próxima fase autorizada: `NENHUMA`; aguardar Analyst reconciliado, adversarial e
-  assinatura de Marco; depois refazer este Build e somente então executar Critic
-- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração futura exigida após Analyst assinado, Build refeito e Critic: “Aprovo o Build de
-classificação e agenda corrigido e autorizo seu registro no Warlog.”
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

@@ -1,29 +1,25 @@
 # Build — IA, memória e conhecimento
 
-## State
+## Estado documental
 
-- Estado: `DRAFT`, `INVALIDATED_BY_ANALYST_CHANGE`.
-- Bloqueios: `BLOCKED_BY_ANALYST_ADVERSARIAL`, `BLOCKED_BY_RECON`,
-  `BLOCKED_BY_ANALYST_SIGNATURE`.
-- `AUTHORIZA_IMPLEMENTACAO = NÃO`.
-- Natureza: recon técnico e agenda de decisões físicas; não é blueprint fechado.
-- Analyst de origem:
-  [ANALYST-ia-memoria-e-conhecimento.md](ANALYST-ia-memoria-e-conhecimento.md).
-- Assinatura de Marco no Analyst: `PENDENTE`.
-- Assinatura de Marco neste Build: `PENDENTE`.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
-## Propósito deste rascunho
+## Propósito deste anexo
 
-O projeto pareia cada Analyst com um Build. Este arquivo mantém o pareamento sem fingir que
-as respostas físicas já existem. Ele registra somente:
+Este arquivo preserva o recon e os riscos que sustentam o contrato integrado em
+`hack/BUILD.md`. A síntese já fechou a arquitetura mínima da PoC:
 
 1. capacidades comprovadas no HEAD;
 2. incompatibilidades entre o legado e o novo contrato;
 3. restrições que já vêm das leis do produto;
-4. perguntas que o Build deverá fechar depois da pesquisa e assinatura.
+4. limites que o Writing Plan não pode violar.
 
-Não há escolha canônica de tabela, migration, DTO, canal TIPC, serviço, componente, modelo,
-provedor, retenção ou arquivo-alvo neste estado.
+Tabelas, namespaces, provider Gemini único, superfícies e transações canônicas vivem em
+`hack/BUILD.md`; este anexo não cria alternativa paralela.
 
 ## Fontes consumidas
 
@@ -71,7 +67,7 @@ ser repetido no SHA que receber o futuro Build; nome de módulo não prova expos
 | Painel global de IA | Facilita enviar conteúdo clínico sem contexto, minimização ou explicação de rede. |
 | Memória automática configurável | Contraria a proibição de promoção implícita de casos para memória global. |
 
-Nenhuma tabela ou handler legado é declarado canônico por este rascunho. Reuso exige
+Nenhuma tabela ou handler legado é declarado canônico por este anexo. Reuso exige
 adaptação comprovada; nome semelhante não basta.
 
 ## Restrições físicas já obrigatórias
@@ -96,9 +92,9 @@ Estas restrições decorrem de leis do produto e não dependem da escolha de arq
 14. Conteúdo não confiável não amplia tools, rede, campos, papel ou transição, e a IA não
     recebe ferramenta mutadora.
 
-## Decisões físicas bloqueadas
+## Decisões físicas consumidas pelo BUILD integrado
 
-| Área | O que falta no Analyst/research | O que o Build deverá definir depois |
+| Área | Limite preservado | Decisão integrada |
 |---|---|---|
 | Autorização de captura | Texto apresentado, revogação e separação da base legal. | Persistência, lifecycle, UI e prova do recibo. |
 | Áudio | Política de retenção e STT permitido. | Limites, formato, diretório temporário, descarte e isolamento. |
@@ -129,9 +125,9 @@ Estas restrições decorrem de leis do produto e não dependem da escolha de arq
 
 Divergência entre owners retorna ao Analyst; este Build não resolve conflito silenciosamente.
 
-## Arquitetura a decidir após desbloqueio
+## Detalhamento obrigatório nos Writing Plans
 
-O Build definitivo deverá fechar, sem deixar valores implícitos:
+Cada Writing Plan deverá materializar, sem deixar valores implícitos:
 
 - migrations e ownership de cada entidade;
 - DTOs discriminados e validação runtime para transcript, proposta, decisão e relação;
@@ -165,8 +161,8 @@ O Build definitivo deverá fechar, sem deixar valores implícitos:
 15. OpenRouter não aparece em configuração, rota, fallback ou chamada do produto-alvo.
 16. Prompt injection não ganha efeito sem ação humana autorizada.
 
-Esta lista define resultados, não nomes de testes ou arquivos; o Plan só poderá fazê-lo após
-Build e Critic assinados.
+Esta lista define resultados. O Writing Plan da minispec escolhe arquivos e testes dentro
+da arquitetura já consolidada.
 
 ## Riscos abertos
 
@@ -182,36 +178,18 @@ Build e Critic assinados.
 | Chat global capturar contexto indevido | Alta | `CONFIRMADO`; superfície ativa atual não é reutilizável como está. |
 | Embeddings ausentes degradarem silenciosamente | Média | `CONFIRMADO`; modo textual deve ser explícito e testado. |
 
-## Critérios para retirar os bloqueios
+## Recibo de incorporação
 
-Este Build só pode ser completado quando:
+- [x] Gemini único e fixtures sintéticas foram fixados.
+- [x] Propostas por campo, decisão humana e proveniência foram integradas.
+- [x] Aprovação e ativação de conhecimento foram separadas.
+- [x] Falha de cloud preserva o fluxo manual.
+- [x] STT grande e embeddings foram retirados do caminho crítico.
+- [x] O `hack/BUILD.md` é a autoridade física única.
 
-- [ ] o tracker registrar pesquisa e adversarial do Analyst;
-- [ ] todas as perguntas obrigatórias para a demo estiverem resolvidas ou delimitadas;
-- [ ] Marco assinar o Analyst;
-- [ ] o recon técnico for atualizado contra o SHA de implementação pretendido;
-- [ ] os owners dos outros domínios aceitarem as fronteiras;
-- [ ] o Build físico completo passar pelo Critic;
-- [ ] Marco assinar este Build.
+## Estado de consolidação
 
-Somente depois podem existir Warlog, MiniSpec, Spec, Plan e primeiro teste TDD em `RED`.
-
-## Contrato de encerramento deste arquivo
-
-- Artefato: `hack/domains/BUILD-ia-memoria-e-conhecimento.md`.
-- Estado: `DRAFT`, `INVALIDATED_BY_ANALYST_CHANGE`.
-- Bloqueios: `BLOCKED_BY_ANALYST_ADVERSARIAL`, `BLOCKED_BY_RECON`,
-  `BLOCKED_BY_ANALYST_SIGNATURE`.
-- Contrato físico: `NÃO_FECHADO`.
-- `AUTHORIZA_IMPLEMENTACAO = NÃO`.
-- Assinatura de Marco no Analyst: `PENDENTE`.
-- Assinatura de Marco neste Build: `PENDENTE`.
-- Data: `PENDENTE`.
-- Revisão Git examinada: `PENDENTE`.
-- Declaração: `PENDENTE`.
-
-Declaração futura exigida: “Aprovo o Build de IA, memória e conhecimento e autorizo sua
-revisão pelo Critic; nenhuma fase posterior pode saltar o fluxo forense.”
-
-Sem a pesquisa e as duas assinaturas, este arquivo é somente um rascunho de recon e nenhuma
-linha de código está autorizada.
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

@@ -1,15 +1,12 @@
 # BUILD — Acesso, papéis e auditoria
 
-> **DRAFT INVALIDADO POR MUDANÇA MATERIAL NO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+## Estado documental
 
-## State
-
-- Tipo: blueprint técnico; não é Spec, Plan ou autorização de código.
-- Fonte: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Conteúdo: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE + RECON_REQUIRED`.
-- Estado de governança: `BLOQUEADO PELO ANALYST E PELA REVISÃO TÉCNICA`.
-- Risco: alto, porque define autenticação, autorização e auditoria transversal.
-- Próxima fase material depois das assinaturas: Critic; somente depois, Warlog e o restante do fluxo forense.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
 ## Goal
 
@@ -507,10 +504,10 @@ Essa ordem é dependência técnica; o Plan futuro transforma cada passo em tare
 
 ## Recommended Next Phase
 
-Depois das assinaturas de Marco no Analyst e neste Build, submeter este blueprint ao Critic.
+O BUILD integrado absorve este blueprint e segue para a revisão final de congruência.
 O fluxo forense literal é `PRD → Analyst → Build → Critic → Warlog → Sprints/Minispecs →
 Spec → Plan → primeiro teste TDD → implementação → QA`. Nenhuma fase posterior é
-autorizada enquanto a anterior não estiver fechada e assinada.
+autorizada enquanto a anterior não estiver fechada no Writing Plan e no QA.
 
 ## Rollback / Containment
 
@@ -543,19 +540,9 @@ autorizada enquanto a anterior não estiver fechada e assinada.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `hack/domains/BUILD-acesso-e-auditoria.md`.
-- Analyst de origem: `hack/domains/ANALYST-acesso-e-auditoria.md`.
-- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE`.
-- Autoriza implementação: `NÃO`.
-- Assinatura de Marco no Analyst: `PENDENTE`.
-- Assinatura de Marco neste Build: `PENDENTE`.
-- Data: `PENDENTE`.
-- Revisão Git examinada: `PENDENTE`.
-- Declaração: `PENDENTE`.
-
-Declaração exigida: “Aprovo o Build de acesso e auditoria e autorizo sua revisão pelo Critic;
-as fases posteriores devem seguir o fluxo forense declarado.”
-
-Sem as duas assinaturas, este blueprint é somente material de revisão e nenhuma linha de código está autorizada.
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

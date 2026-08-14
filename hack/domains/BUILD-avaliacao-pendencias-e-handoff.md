@@ -1,14 +1,12 @@
 # BUILD — Avaliação, pendências e handoff
 
-> **DRAFT INVALIDADO: O ANALYST ALTEROU PENDÊNCIA, EVIDÊNCIA, RETORNO, VERSIONAMENTO DO
-> RESULTADO E HANDOFF. ESTE BUILD NÃO PODE SER USADO NEM REMENDADO COMO FONTE.**
+## Estado documental
 
-## State
-
-- Documento: blueprint; **não é Plan nem autorização para código**.
-- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE — REWRITE_REQUIRED — ASSINATURA PENDENTE`.
-- Pré-requisito: `ANALYST-avaliacao-pendencias-e-handoff.md` aprovado por Marco.
-- Dependências: caso canônico, acesso/capabilities e agenda/booking reconciliados no Build principal.
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/BUILD.md`.
+- Gate ou assinatura individual: inexistente.
+- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
+- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
 
 ## Sources Consumed
 
@@ -1375,33 +1373,14 @@ destrutiva não pertence ao MVP.
 - **PDF exportado sai do controle do app; o MVP registra hash e não promete revogação.**
 - **Dados reais exigem threat model e aprovação fora do hackathon.**
 
-## Grill Verdict
+## Resultado da investigação
 
-`RESEARCH_REQUIRED — ASSINATURA PENDENTE`.
+Este anexo foi incorporado em `hack/BUILD.md`. Provas de runtime pertencem aos Writing
+Plans e ao QA das minispecs; não existe gate individual neste arquivo.
 
-## Definition Of Build Complete
+## Estado de consolidação
 
-- [ ] Check-in, encontro, pendência, retorno, resultado e entrega pesquisados.
-- [ ] Tabelas, constraints, unions, inputs e outputs provados no runtime.
-- [ ] Capabilities e row/service guards reconciliados com acesso e superfícies.
-- [ ] Transações, idempotência, redaction e testes provados no runtime.
-- [x] Resultado `DRAFT` e promessa de adendo removidos da proposta.
-- [ ] Ordem agenda base → assessment → integração provada sem ciclo no PGlite.
-- [ ] Analyst assinado por Marco.
-- [ ] Build revisado e assinado por Marco.
-
-## Contrato de conclusão
-
-Este arquivo não cria MiniSpec, Spec, Plan, teste ou código.
-
-- Artefato: `hack/domains/BUILD-avaliacao-pendencias-e-handoff.md`
-- Próxima fase autorizada: revisão humana
-- Status: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE — ASSINATURA PENDENTE`
-- Assinatura do Analyst por Marco: `PENDENTE`
-- Assinatura deste Build por Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração exigida: “Aprovo o Build de avaliação, pendências e handoff e autorizo seu
-consumo pelo Warlog.”
+- Estado: `INCORPORATED_IN_BUILD`.
+- Autoridade canônica: `hack/BUILD.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.

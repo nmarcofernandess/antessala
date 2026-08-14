@@ -3,16 +3,16 @@
 ## Estado
 
 - Documento analítico ativo: [analysis.md](analysis.md)
-- Fonte congelável após assinatura: [PRD.md](PRD.md)
+- Fonte de produto aprovada: [PRD.md](PRD.md)
 - Profundidade: `forensic`
-- Estado de revisão: `INVALIDATED_BY_CHANGE`
+- Estado de revisão: `CONSOLIDATED_FOR_BUILD`
 - Tracker único: [`.context/review/STATUS.md`](../.context/review/STATUS.md)
-- Transição formal: bloqueada até as assinaturas anteriores do Taskgen e do PRD, além da
-  assinatura deste conjunto por Marco
+- Autoridade: [analysis.md](analysis.md) prevalece; dossiês são anexos de detalhe sem gate
+  individual
 
 Este arquivo é o índice estável para ferramentas e leitores que procuram
-`hack/ANALYST.md`. A análise consolidada vive em `analysis.md`; os contratos completos
-vivem nos oito dossiês abaixo. Nenhum Build pode compensar uma lacuna do Analyst.
+`hack/ANALYST.md`. A análise consolidada vive em `analysis.md`; os contratos detalhados
+vivem nos oito dossiês abaixo. Nenhum Build pode alterar uma lei do Analyst.
 
 ## Sistema coberto
 
@@ -135,45 +135,39 @@ imutáveis; correção, adendo ou supersessão criam sucessoras e preservam o hi
 O estado autoritativo de pesquisa, recon e adversarial está somente no
 [tracker](../.context/review/STATUS.md). Esta tabela mapeia ownership; não declara readiness.
 
-## Gate semântico antes do BUILD formal
+## Recibo de consolidação
 
-- [x] Oito domínios possuem Analyst e Build pareados; o novo Build de IA está explicitamente bloqueado.
-- [ ] Alegações clínicas, regulatórias e operacionais passaram por pesquisa.
-- [ ] Recon técnico distingue capacidade existente de arquitetura proposta.
-- [ ] Cada domínio passou por adversarial e corrigiu seus achados.
-- [ ] Analysts contêm semântica; detalhes físicos pertencem aos Builds.
-- [ ] Surface Blueprints e reconstrução cega fecharam a experiência durante a fase Build.
-- [ ] A síntese ponta a ponta foi reconciliada depois dessas correções.
-- [ ] Marco assinou o Analyst consolidado e os oito dossiês.
+- [x] Oito domínios foram incorporados em `analysis.md`.
+- [x] Leis, evidências, decisões da demo e limites futuros estão separados.
+- [x] Recon técnico distingue capacidade existente de arquitetura proposta.
+- [x] Lacunas institucionais foram declaradas fora do escopo, não respondidas por invenção.
+- [x] `analysis.md` é a única autoridade semântica integrada.
+- [x] Dossiês não possuem gate ou assinatura individual.
 
 ## Ordem obrigatória
 
 ```text
-PRD assinado
-→ Analyst assinado
-→ BUILD + Critic assinados
-→ Warlog-base assinado
-→ Sprints assinadas
-→ Spec da minispec assinada
-→ Plan assinado
+PRD aprovado
+→ Analyst integrado
+→ BUILD integrado
+→ review final de congruência
+→ Warlog corta minispecs
+→ Writing Plan da minispec
 → primeiro teste TDD em RED
 → implementação
-→ QA assinado
+→ QA da minispec
+→ próxima minispec
+→ QA final
 ```
 
-Os BUILDs de domínio foram redigidos por ordem direta para permitir revisão conjunta. Isso
-não promoveu a fase, não criou Plan e não autorizou uma linha de implementação.
+Os BUILDs de domínio são anexos técnicos consumidos pela síntese integrada. Não existe Spec
+separada: PRD + Analyst + BUILD formam o contrato do produto.
 
 ---
 
-## Contrato de encerramento deste arquivo
+## Estado de consolidação
 
-- Artefato: `ANALYST.md`, `analysis.md` e oito `ANALYST-*.md`
-- Próxima fase autorizada após assinatura: BUILD formal e Critic
-- Estado: `INVALIDATED_BY_CHANGE`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração exigida: “Aprovo o Analyst completo e autorizo o BUILD formal.”
+- Estado: `CONSOLIDATED_FOR_BUILD`.
+- Autoridade semântica: [analysis.md](analysis.md).
+- Anexos: oito Analysts de domínio, sem gate individual.
+- Próximo artefato: [BUILD.md](BUILD.md).

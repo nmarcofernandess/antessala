@@ -1,13 +1,12 @@
 # Analyst — Caso e encaminhamento
 
-## State
+## Estado documental
 
-- Source: `hack/PRD.md`, leis de Marco e Analysts relacionados
-- Route: `analyst_prd`
-- Phase budget: `forensic`
-- Adversarial reviewed: SHA `9f501a9d67806d3511ebdb9b0a560cd564c27dee`
-- Confidence: `high` nas leis de caso autônomo; `medium` no contrato corrigido até novo adversarial
-- Verdict: `ADVERSARIAL_REQUIRED`; assinatura de Marco pendente
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## TL;DR
 
@@ -480,8 +479,7 @@ recuperações, privacidade e invariantes. O Build será owner de:
 - componentes, rotas, Surface Blueprints e estratégia de testes;
 - prova PGlite de upgrade, concorrência, rollback e autorização.
 
-O Build atual foi escrito antes destas correções e permanece invalidado. Nenhum de seus
-detalhes físicos resolve ou substitui este contrato.
+O `hack/BUILD.md` incorporou estas correções. Nenhum detalhe físico substitui este contrato.
 
 ## Dependencies And Open Questions
 
@@ -493,34 +491,16 @@ Antes de novo adversarial:
 4. acesso e superfícies precisam aplicar o escopo mínimo do solicitante;
 5. IA precisa tornar propostas e resumos dependentes do contexto `STALE`;
 6. `hack/analysis.md` precisa manter owners e glossário únicos;
-7. o Build correspondente continua bloqueado e deve ser refeito somente após assinatura.
+7. o Build integrado prevalece sobre qualquer contrato físico antigo deste anexo.
 
-## Grill Verdict
+## Resultado da investigação
 
-- Verdict: `ADVERSARIAL_REQUIRED`
-- Adversarial result: cinco blockers e seis achados adicionais foram incorporados
-  semanticamente; nenhum deles foi tratado como prova de implementação.
-- Remaining blockers: reconciliação transversal, novo adversarial no SHA corrigido e
-  assinatura de Marco.
-- Next stage: nenhum Build, Warlog, Sprint, Spec, Plan, TDD ou código.
+Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
-## Recommended Next Phase
+## Estado de consolidação
 
-Reconciliar os Analysts dependentes e repetir o adversarial dos 18 cenários. Somente um novo
-review sem blocker pode levar este artefato a `READY_FOR_MARCO`. Nenhuma assinatura é
-inferida.
-
----
-
-## Contrato de encerramento deste arquivo
-
-- Artefato: `hack/domains/ANALYST-caso-e-encaminhamento.md`
-- Gate: Analyst de caso e encaminhamento → Build do domínio
-- Estado: `ADVERSARIAL_REQUIRED`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração futura exigida: “Aprovo o Analyst de caso e encaminhamento e autorizo seu
-consumo pelo Build.”
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

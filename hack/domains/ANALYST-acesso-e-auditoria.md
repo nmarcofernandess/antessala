@@ -1,14 +1,12 @@
 # Analyst — Acesso, papéis e auditoria
 
-## State
+## Estado documental
 
-- Source: `hack/PRD.md`, decisões explícitas de Marco e Analysts relacionados
-- Route: `analyst_prd`
-- Phase budget: `forensic`
-- Adversarial reviewed: SHA `9f501a9d67806d3511ebdb9b0a560cd564c27dee`
-- Confidence: `high` nos papéis e no menor privilégio; `medium` no contrato corrigido até novo adversarial
-- Verdict: `ADVERSARIAL_REQUIRED`; assinatura de Marco pendente
-- Head reality: autenticação, RBAC e auditoria canônicos ainda não existem no produto executável
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## TL;DR
 
@@ -401,8 +399,8 @@ não interferência, redaction, falhas e limites. O Build será owner de:
 - derivação do PDF canônico e entrega selada;
 - testes de chamadas diretas, concorrência, rollback e egress.
 
-O Build atual antecede estas correções e permanece invalidado. Parâmetro criptográfico,
-nome de tabela, path, componente ou lock não completa lacuna semântica.
+O `hack/BUILD.md` incorporou estas correções. Parâmetro criptográfico, nome de tabela,
+path, componente ou lock não substitui a semântica consolidada.
 
 ## Dependencies And Open Questions
 
@@ -413,35 +411,17 @@ Antes de novo adversarial:
 3. arquitetura deve permitir somente intenção cloud explícita e sintética da prova;
 4. IA deve consumir esta matriz e deixar de adiar a separação autorizativa ao Build;
 5. síntese deve incorporar revogação em voo, auditoria allowlisted e limites do PGlite;
-6. Builds de acesso e avaliação permanecem invalidados até os Analysts serem assinados;
+6. o BUILD integrado prevalece sobre contratos físicos antigos destes anexos;
 7. os 24 cenários precisam de novo ataque no SHA reconciliado.
 
-## Grill Verdict
+## Resultado da investigação
 
-- Verdict: `ADVERSARIAL_REQUIRED`
-- Adversarial result: findings confirmados foram incorporados semanticamente; o HEAD ainda
-  não implementa autenticação, RBAC ou auditoria canônicos.
-- Remaining blockers: reconciliação transversal, novo adversarial, research/recon dos
-  domínios dependentes e assinatura de Marco.
-- Next stage: nenhum Build, Warlog, Sprint, Spec, Plan, TDD ou código.
+Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
-## Recommended Next Phase
+## Estado de consolidação
 
-Reconciliar caso, avaliação, superfícies, arquitetura, IA e `hack/analysis.md`; depois repetir
-os 24 cenários. Somente novo review sem blocker pode levar este artefato a
-`READY_FOR_MARCO`.
-
----
-
-## Contrato de encerramento deste arquivo
-
-- Artefato: `hack/domains/ANALYST-acesso-e-auditoria.md`
-- Gate: Analyst de acesso e auditoria → Build do domínio
-- Estado: `ADVERSARIAL_REQUIRED`
-- Assinatura de Marco: `PENDENTE`
-- Data: `PENDENTE`
-- Revisão Git examinada: `PENDENTE`
-- Declaração: `PENDENTE`
-
-Declaração futura exigida: “Aprovo o Analyst de acesso e auditoria e autorizo seu consumo
-pelo Build.”
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

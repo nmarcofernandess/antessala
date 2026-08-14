@@ -1,14 +1,12 @@
 # Analyst — Anamnese pré-anestésica e catálogos
 
-## State
+## Estado documental
 
-- Source: `hack/PRD.md`, código Antessala e código DietFlow
-- Route: `analyst_prd`
-- Phase budget: `forensic`
-- Confidence: `low` para o conteúdo clínico até pesquisa de fontes e licenças
-- Created: `2026-08-14`
-- Mode: `hybrid` — recon do legado e construção do contrato do protótipo
-- Verdict: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`
+- Papel: `REFERENCE_APPENDIX`.
+- Consumido por: `hack/analysis.md`.
+- Gate ou assinatura individual: inexistente.
+- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
+- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
 
 ## TL;DR
 
@@ -73,7 +71,7 @@ parecido nunca vira código verdadeiro. O fluxo separa `CAPTURE_COMPLETE`,
 `MEDICAL_EVALUATION_COMPLETE`. Uma revisão final é imutável, mas erro não é incorrigível:
 correção cria adendo ou versão substitutiva vinculada, sem apagar o original. O formato
 físico, os comandos e a repercussão pós-publicação pertencem ao Build somente depois que a
-semântica for assinada.
+semântica estiver consolidada no Analyst integrado.
 
 ## Current Terrain
 
@@ -615,7 +613,7 @@ Legenda:
 
 `NOT_APPLICABLE` é aceito **somente** por regra de aplicabilidade versionada. Negativa
 explícita pode ser `ANSWERED(false)` ou uma apresentação `NEGATIVE`, desde que preserve
-pergunta, escopo e proveniência; o Build só escolherá uma forma canônica após assinatura.
+pergunta, escopo e proveniência; o BUILD integrado escolhe a forma canônica da PoC.
 Quando o controlador de um campo `C` está `UNKNOWN` ou `REFUSED`, o dependente pode
 permanecer `NOT_ASKED` sem bloquear; a completude reporta o controlador como tratado porém
 indeterminado e não inventa aplicabilidade. Se o controlador for corrigido depois, o
@@ -829,8 +827,8 @@ sequenceDiagram
 ## Handoff semântico bloqueado
 
 O Build deverá traduzir este domínio em contratos físicos somente depois de pesquisa,
-adversarial multiprofissional e assinatura. Nenhum path, tabela, DTO, seed, componente ou
-constraint descrito no Build atual possui autoridade enquanto depender de `UNRESOLVED` ou
+adversarial multiprofissional para operação real. Nenhum path, tabela, DTO, seed, componente ou
+constraint deste anexo sobrepõe o BUILD integrado quando depender de `UNRESOLVED` ou
 `DEMO_DECISION`.
 
 ## Acceptance Criteria
@@ -898,33 +896,14 @@ procedimentos; repercussão de correção após requisito/reserva; divergências
 proveniência de IA; quem confirma a necessidade operacional; e compatibilização jurídica
 institucional das normas profissionais no fluxo real.
 
-## Grill Verdict
+## Resultado da investigação
 
-- Verdict: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`
-- Why: fontes centrais foram incorporadas, mas protocolo local, competências operacionais,
-  licenças, campos obrigatórios e correção pós-publicação continuam abertos.
-- Next stage: review adversarial multiprofissional da versão corrigida; não Build.
+Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
-## Recommended Next Phase
+## Estado de consolidação
 
-Publicar a versão corrigida e repetir os casos de mesa com anestesiologista, enfermeiro,
-técnico se existir na operação, segurança/informática clínica e jurídico/LGPD. Testar ao
-menos: alergia não perguntada, medicamento desconhecido, recusa sobre gravidez, “controle”
-apenas relatado, via aérea difícil informada, vital não medido, catálogo sem correspondência,
-divergência entre fontes, correção pós-final e sugestão de IA. Nenhuma implementação ou
-Spec é autorizada.
-
----
-
-## Contrato de encerramento deste arquivo
-
-- Artefato: `hack/domains/ANALYST-anamnese-e-catalogos.md`
-- Gate: Analyst de anamnese e catálogos → Build do domínio
-- Estado: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`
-- Assinatura de Marco: `PENDENTE`
-- Data da revisão humana: `PENDENTE`
-- Revisão Git examinada por Marco: `PENDENTE`
-- Declaração de Marco: `PENDENTE`
-
-Declaração exigida: “Aprovo o Analyst de anamnese e catálogos e autorizo seu consumo pelo
-Build.”
+- Estado: `INCORPORATED_IN_ANALYSIS`.
+- Autoridade canônica: `hack/analysis.md`.
+- Gate individual: inexistente.
+- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.

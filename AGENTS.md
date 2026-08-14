@@ -6,17 +6,17 @@ vivem no PRD, nos Analysts, nos Builds e em `.context`. Em conflito, siga a hier
 
 ## Estado e trabalho permitido
 
-Nenhuma assinatura de Marco foi registrada. Consulte
-[`hack/status.json`](hack/status.json) e [o tracker](.context/review/STATUS.md) antes de
-agir. Nesta fase, o trabalho permitido é documental: pesquisar, fazer recon, atacar os
-contratos e corrigir seus owners canônicos. Não escrever código de produto.
+Marco aprovou o PRD. O Analyst e o BUILD integrados aguardam a revisão final de
+congruência antes do Warlog. Consulte [`hack/status.json`](hack/status.json) e
+[o tracker](.context/review/STATUS.md) antes de agir. Até o Warlog definir as fatias e a
+fatia ativa possuir um Writing Plan com o primeiro teste em RED, não escreva código de
+produto.
 
 ## Leitura obrigatória
 
 1. [`.context/manifest.yaml`](.context/manifest.yaml);
 2. [`hack/PRD.md`](hack/PRD.md), sem alterá-lo sem reabertura explícita;
-3. [`hack/CONTRATO-DE-APROVACAO.md`](hack/CONTRATO-DE-APROVACAO.md),
-   [`hack/status.json`](hack/status.json) e [`hack/progress.md`](hack/progress.md);
+3. [`hack/status.json`](hack/status.json) e [`hack/progress.md`](hack/progress.md);
 4. [`.context/product.yaml`](.context/product.yaml),
    [`.context/workflow.yaml`](.context/workflow.yaml) e
    [`.context/review/STATUS.md`](.context/review/STATUS.md);
@@ -78,9 +78,8 @@ demonstrar:
 - PDF usa `printToPDF` em janela isolada e bloqueada para rede.
 - A casca ativa possui `/`, `/ia` e `/configuracoes`; o fluxo clínico ainda não existe.
 - Anamnese, memória, RAG, grafo, importadores e gravação/transcrição têm peças reutilizáveis,
-  mas não formam contrato pronto. Os handlers de conhecimento continuam chamáveis por IPC
-  apesar de não terem rota; STT não possui canais registrados e seu modelo não integra o
-  bundle.
+  mas não formam contrato pronto. Os handlers legados de conhecimento foram contidos no
+  router ativo; STT não possui canais registrados e seu modelo não integra o bundle.
 - Autenticação, RBAC no processo principal, schema canônico, ledger de migrations e
   superfícies por papel permanecem incompletos.
 - A janela principal usa `contextIsolation: true` e `nodeIntegration: false`, mas ainda
@@ -106,8 +105,9 @@ autorização para reativar produto legado.
 12. IA sugere e explica; não decide ASA, aptidão, urgência, gravidade ou conduta.
 13. Caso individual, identidade e narrativa integral nunca viram memória global
     automaticamente.
-14. Não escreva código antes de Spec e Plan assinados e do primeiro teste TDD em RED.
-15. Não avance gate sem assinatura explícita de Marco; IA nunca assina nem presume.
+14. Não escreva código antes do Warlog, do Writing Plan da fatia e do primeiro teste TDD em RED.
+15. Não crie Spec paralela nem gate individual: PRD, Analyst integrado e BUILD integrado são
+    o contrato; o tracker registra a maturidade sem fingir aprovação.
 16. Não crie documentação paralela quando um artefato canônico já possui a regra.
 17. Após research ou adversarial, corrija o owner canônico e atualize o tracker; não
     arquive a resposta bruta.
@@ -116,20 +116,21 @@ autorização para reativar produto legado.
 20. Todo uso opcional de rede deve ser explícito, informado, auditável e dispensável para
     caso, agenda e handoff.
 
-## Gates e documentos futuros
+## Fluxo de execução
 
 Analyst define semântica; Build traduz para arquitetura. Build não inventa resposta que o
-Analyst deixou aberta. Surface Blueprints só nascem durante o fechamento do Build, em
-`hack/surfaces/`, depois de contratos semânticos e DTOs fechados. Um wireframe reconstruído
-às cegas ataca a completude antes de Critic e assinatura.
+Analyst deixou aberta. O contrato das superfícies vive no BUILD integrado. Documento de
+tela separado só nasce durante um Writing Plan quando sua necessidade for demonstrada;
+não se cria uma segunda fonte de verdade.
 
 ```text
-PRD assinado
-→ Analyst assinado
-→ Builds + Surface Blueprints + wireframe + Build integrado + Critic assinados
-→ Warlog → Sprints
-→ por MiniSpec: Spec assinada → Plan assinado → TDD RED → código → QA assinado
-→ QA final assinado
+PRD aprovado
+→ Analyst integrado
+→ BUILD integrado
+→ review final de congruência
+→ Warlog corta minispecs verticais
+→ por minispec: writing-plan.md → TDD RED → código → QA
+→ QA final do fluxo ponta a ponta
 ```
 
 ## Comandos reais
@@ -155,12 +156,7 @@ autorizam merge; merge exige ordem explícita de Marco.
 
 ---
 
-## Contrato de encerramento
+## Estado deste adaptador
 
-- Artefato: `AGENTS.md`.
-- Gate: definido em `hack/status.json` e `hack/CONTRATO-DE-APROVACAO.md`.
-- Estado: `AGUARDANDO_ASSINATURA`.
-- Assinatura de Marco: `PENDENTE`.
-- Data, revisão Git e declaração: `PENDENTES`.
-
-Sem assinatura válida, este adaptador não promove fase nem autoriza implementação.
+Este arquivo acompanha o fluxo registrado em `hack/status.json`. Ele não cria gate,
+aprovação ou autorização própria.
