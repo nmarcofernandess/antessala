@@ -61,7 +61,8 @@ ADMIN | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE
 
 - Paciente e médico solicitante não autenticam no MVP.
 - `ADMIN` administra a operação, mas não herda leitura clínica.
-- `SOLICITANTE` enxerga somente os casos do serviço ao qual sua conta está vinculada.
+- `SOLICITANTE` enxerga somente pendências atribuídas e resultado/entrega do serviço ao
+  qual sua conta está vinculada; não possui acompanhamento geral do caso.
 - Autorização é aplicada no processo principal; esconder botão não é controle de acesso.
 
 ### Estado canônico do caso
@@ -83,6 +84,10 @@ RECEIVED_AT_RECEPTION
 `CANCELLED` é terminal e exige motivo. Os dossiês podem possuir estados internos próprios
 para sessão, slot, reserva, revisão, encontro, pendência ou resultado; eles não substituem
 o estado do caso.
+
+Antes do encontro, `WAITING_ANESTHESIA` possui saídas explícitas: anulação de check-in volta
+ao estado anterior; presença sem início devolve INITIAL ao agendamento ou reabre RETURN;
+cancelamento terminal exige fato e motivo próprios.
 
 ### Fronteiras
 

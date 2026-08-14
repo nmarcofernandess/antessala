@@ -256,7 +256,8 @@ stateDiagram-v2
 As páginas não criam estados paralelos. `loading`, `dirty`, `submitting` e
 `version conflict` são estados de interface; o lifecycle acima é estado persistido do
 caso. Cancelamento administrativo existe somente até `SCHEDULED`, conforme a matriz do
-Analyst de caso; depois do check-in, o MVP não inventa encerramento clínico.
+Analyst de caso; depois do check-in, anulação, presença sem início e impossibilidade de
+iniciar possuem recuperação explícita sem inventar resultado clínico.
 
 ## Canonical Surface Catalog
 
@@ -279,7 +280,8 @@ Analyst de caso; depois do check-in, o MVP não inventa encerramento clínico.
 - Reception: `Novas entradas`, `Aguardando triagem`, `Prontos para agendar`, `Consultas hoje`.
 - Nursing: `Aguardando triagem`, `Em rascunho`, `Com pendência de dado`, `Necessidade calculada aguardando decisão`.
 - Anesthesiologist: `Hoje`, `Aguardando avaliação`, `Com pendência`, `Retornos`.
-- Requester: `Em avaliação`, `Com pendência`, `Resultados novos` do serviço.
+- Requester: somente `Pendências atribuídas` e `Resultados novos` do serviço; não existe
+  acompanhamento geral do caso antes do resultado.
 - Admin: atalhos para usuários, cadastros, capacidade, catálogos e auditoria; nenhuma métrica clínica.
 - States: loading skeleton, zero work with role-specific message, error with retry.
 
@@ -293,20 +295,26 @@ Analyst de caso; depois do check-in, o MVP não inventa encerramento clínico.
   serviço são carimbados pelo main, não digitados.
 - Output: caso criado em `WAITING_NURSING` e protocolo visível/imprimível; `RECEIVED_AT_RECEPTION` permanece registrado como evento imediatamente anterior.
 - Components: `CaseIntakeForm`, selects de cadastro, resumo antes de confirmar.
-- States: pristine, dirty, validation error, submitting, created, duplicate source reference,
-  catalog unavailable.
+- States: pristine, dirty, validation error, submitting, created, possible source-reference
+  reentry, catalog unavailable.
 - Rule: nome, idade e identificador da pessoa nunca acionam deduplicação. Somente a mesma
-  `sourceReference` não vazia dentro do mesmo serviço indica reentrada do mesmo documento;
-  referência diferente ou ausente abre outro caso.
+  `sourceReference` não vazia dentro do mesmo serviço gera alerta não bloqueante. A
+  recepção escolhe abrir o caso existente ou confirma que é novo encaminhamento; a segunda
+  escolha sempre cria outro caso e registra o motivo.
 
 ### S03 — Detalhe do caso (`/casos/:casoId`)
 
-- Actor: qualquer papel autorizado ao caso.
+- Actor: `RECEPCAO`, `ENFERMAGEM` ou `ANESTESIOLOGISTA` conforme responsabilidade.
+  `SOLICITANTE` não abre detalhe geral; usa apenas Pendências e Resultado.
 - Header: protocolo, paciente embutido, procedimento, serviço, estado, responsáveis atuais e
   próximos derivados do lifecycle.
 - Sections: `Resumo`, `Linha do tempo`, e atalhos autorizados para Triagem/Agendamento/Avaliação/Resultado.
-- Reception DTO omite conteúdo clínico; requester DTO omite anamnese; admin não acessa.
-- Actions conforme capability e estado, nunca conforme botão visível: correção do intake exige `case:intake:correct`, estado até `NURSING_IN_PROGRESS`/`TRIAGE_PENDING`, ausência de revisão `FINAL`/`COMPLETE` e ausência de requirement `CALCULATED` ou publicado. `NURSING_IN_PROGRESS` sozinho não autoriza: após `submitFinal`, esse estado permanece enquanto a decisão está pendente, mas a correção já é recusada. Em `READY_FOR_SCHEDULING` ou depois também é recusada porque o MVP não reclassifica requisito. Cancelamento exige `case:cancel`; cumprimento/registro de evidência de pendência exige `pendency:evidence:register` e ownership/escopo no main.
+- Reception projection omite conteúdo clínico; admin e solicitante não acessam esta rota.
+- Actions conforme capability e estado, nunca conforme botão visível. Correção concorrente
+  ao submit tem vencedor único. Antes da publicação, erro descoberto depois de `FINAL`
+  invalida revisão/proposta com motivo, abre novo draft e devolve o trabalho à enfermagem;
+  artefatos inválidos permanecem históricos e nunca alimentam agenda. Cancelamento do caso,
+  cancelamento da reserva e anulação de check-in são ações distintas.
 - States: loading, not found, forbidden, stale/reload, case closed.
 - Timeline is domain journey, not security audit.
 
@@ -314,7 +322,7 @@ Analyst de caso; depois do check-in, o MVP não inventa encerramento clínico.
 
 - Actor: `ENFERMAGEM`.
 - Rows: protocolo, paciente, procedimento, serviço, chegada, completude e status, incluindo
-  `CALCULATED_AWAITING_DECISION` enquanto o caso ainda está `NURSING_IN_PROGRESS` após o
+  `PROPOSAL_AWAITING_DECISION` enquanto o caso ainda está `NURSING_IN_PROGRESS` após o
   submit final.
 - Filters: busca por protocolo/nome, procedimento, serviço, estado; default “aguardando”.
 - Actions: em `WAITING_NURSING`, aceitar primeiro com `handoffs.acknowledge` e, somente após
@@ -344,10 +352,15 @@ Analyst de caso; depois do check-in, o MVP não inventa encerramento clínico.
 
 - Actor: `ENFERMAGEM`; read-only para anestesiologista após submissão.
 - Structure: case context, completion summary, Composer de widgets, source/provenance, validation list, ação de submissão final e, depois do cálculo, decisão explícita de confirmar ou sobrescrever com justificativa.
-- Output em duas etapas: `clinicalAnamnesis.submitFinal` grava a revisão `FINAL` imutável e o `SchedulingRequirementDTO` `CALCULATED` no mesmo commit; `scheduling.requirements.confirm` ou `override` publica a necessidade e só então move o caso para `READY_FOR_SCHEDULING`.
+- Output em duas etapas: `clinicalAnamnesis.submitFinal` grava a revisão final efetiva e o
+  resultado `PROPOSED`, `HUMAN_DEFINITION_REQUIRED` ou `OUT_OF_DEMO_RANGE`; somente
+  `confirm` ou `override` de proposta válida publica a necessidade e move o caso para
+  `READY_FOR_SCHEDULING`.
 - `TRIAGE_PENDING` significa exclusivamente incompletude registrada por `clinicalAnamnesis.markPending` com paths ausentes e motivo; `resume` volta ao draft `NURSING_IN_PROGRESS`. Submit final nunca produz `TRIAGE_PENDING`.
-- Se o intake for corrigido antes da revisão `FINAL`, `clinicalAnamnesis.rebaseCaseContext` atualiza somente o contexto do `DRAFT`. Depois de `FINAL + CALCULATED`, não existe edição, adendo nem rebase; a superfície segue para confirm/override em modo somente leitura.
-- States: loading, draft clean, draft dirty, autosave/saving, incomplete, ready, submit confirmation, calculating atomically, calculated awaiting decision, confirming/overriding, published/read-only, version conflict, save error.
+- Correção aplica a matriz de impacto à revisão conjunta do contexto. Em `DRAFT`, exige
+  revisão dos consumidores `STALE`. Depois de `FINAL` e antes da publicação, invalida a
+  revisão/proposta anterior e abre novo draft; não edita a final anterior.
+- States: loading, draft clean, draft dirty, autosave/saving, incomplete, ready, submit confirmation, proposing atomically, proposal awaiting decision, confirming/overriding, published/read-only, version conflict, save error.
 - Não existe prévia de classificação mutável. Antes da submissão há apenas validação/completude; depois dela a tela renderiza o requirement canônico calculado e exige uma decisão auditável.
 - A saída clínica e os campos exatos pertencem ao Analyst de widgets/classificação; esta superfície não adiciona campo por conta própria.
 
@@ -371,6 +384,9 @@ Analyst de caso; depois do check-in, o MVP não inventa encerramento clínico.
 - Components: `ScheduleToolbar`, `WeeklyAgendaGrid`, `AccessibleSlotTable`, `BookingDrawer`.
 - States: loading, available, no compatible slot, slot selected, confirming, `CONFIRMED`, `CHECKED_IN`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, concurrent conflict/reload.
 - Confirmar, reagendar, cancelar e no-show exigem `scheduling:booking:manage`; check-in é command explícito da `RECEPCAO` sob `scheduling:booking:check-in` e só habilita entre `slot.startsAt - 30 minutos` e `slot.consultationEndsAt`. `COMPLETED` é publicado atomicamente quando o anestesiologista inicia o encounter após o check-in, não por ação desta tela; a occupancy permanece até `slot.endsAt`.
+- Antes do encontro, a tela permite anular check-in equivocado com motivo. Presença sem
+  início ou impossibilidade registrada devolve INITIAL ao agendamento e reabre RETURN; a
+  UI nunca comprime isso em no-show ou resultado clínico.
 - Rule: só slots retornados pelo backend como compatíveis podem ser selecionados; UI não calcula capacidade.
 
 ### S08 — Avaliações do anestesiologista (`/avaliacoes`)
@@ -526,12 +542,15 @@ Case detail is reached from worklists and need not become a permanent menu item.
 18. A fixture retired in a new version remains renderable in historical case snapshots but cannot be selected for new cases.
 19. Configurations with clinical meaning are versioned/read-only; admin does not edit JSON.
 20. Admin settings never expose clinical case content.
-21. Reception projections omit anamnese; requester projections omit anamnese and other services; admin projections omit cases.
+21. Reception projections omit anamnese; requester has only assigned pendency and final-result projections for its service; admin projections omit cases.
 22. `WeeklyAgendaGrid` and its accessible table display backend-provided `SlotCardDTO[]`; neither derives slot validity.
 23. A rota `Configurações` não expõe controles cloud herdados sem contrato aprovado de segredo, rede, permissão e falha segura.
 24. Menus são derivados de `SessaoPublica.capabilities` e `navAccess`; `CurrentSession`/`ActorContext` nunca chegam ao renderer, e papel é fixture de concessões, não atalho de autorização.
-25. Toda query do `SOLICITANTE` exige `serviceId` da sessão no main e retorna payload já redigido; nunca busca todos os serviços para esconder linhas no JSX.
-26. S05 não publica na submissão: `FINAL + CALCULATED` são atômicos e apenas `confirm/override` publica o requirement.
+25. `SOLICITANTE` não possui query geral de casos. Pendência e resultado exigem `serviceId`
+    da sessão no main e retornam payload redigido; mudança de serviço revoga leituras e
+    replay não devolve projeção antiga.
+26. S05 não publica na submissão: revisão final efetiva + resultado classificatório são uma
+    unidade; apenas `confirm/override` de proposta vigente publica a necessidade.
 27. S09 cria pendência e registra `requiresReturn`; somente o service cria `ReturnRequest`
     após o último bloqueio, e somente a recepção agenda, reagenda e registra check-in.
 28. Os cinco estados de `BookingDTO` — `CONFIRMED`, `CHECKED_IN`, `CANCELLED`, `COMPLETED`, `NO_SHOW` — têm representação explícita e não são comprimidos em booleanos.
@@ -540,8 +559,11 @@ Case detail is reached from worklists and need not become a permanent menu item.
 31. `/agenda` e `/agendamentos` exigem capabilities de operação da recepção; anestesiologista usa `/avaliacoes`.
 32. Resultados/handoff usam `anyOf` de status, conteúdo ou entrega para entrada, mas cada leitura e ação exige sua capability exata no main.
 33. Correção/cancelamento do caso, check-in, gestão de pendência, registro de evidência, leitura de status/conteúdo, delivery, export e acknowledge nunca compartilham um guard genérico.
-34. `cases.correctIntake` exige capability, estado pré-publicação, zero revisão `FINAL`/`COMPLETE` e zero requirement `CALCULATED`/publicado; a UI remove/desabilita a ação e o main reaplica todos os gates atomicamente.
-35. `clinicalAnamnesis.rebaseCaseContext` só aceita anamnese `DRAFT` pré-FINAL após correção do intake; revisão `FINAL`/requirement `CALCULATED` são imutáveis e não possuem mutação corretiva.
+34. `correctIntake × submitFinal` tem vencedor único. Se o erro for descoberto depois da
+    finalização e antes da publicação, a UI oferece invalidação auditável e nova revisão,
+    nunca edição da revisão anterior.
+35. Correção de pessoa, encaminhamento, procedimento ou serviço mostra os consumidores
+    obsoletos; handoff, anamnese e propostas dependentes exigem revisão explícita.
 36. S04 sempre confirma `handoffs.acknowledge` antes de chamar
     `clinicalAnamnesis.start`; visibilidade da linha não substitui a transição.
 37. `/pendencias` é a worklist compartilhada por ownership. A query nunca retorna pendência
@@ -612,23 +634,29 @@ Case detail is reached from worklists and need not become a permanent menu item.
 - [ ] O fluxo completo passa por S02 → S05 → S07 → S09 → S11 sem rota improvisada.
 - [ ] O detalhe do caso mostra o próximo responsável e apenas seções autorizadas.
 - [ ] S03 guarda separadamente correção (`case:intake:correct`), cancelamento (`case:cancel`) e evidência de pendência (`pendency:evidence:register`).
-- [ ] Correção de intake funciona nos estados permitidos apenas sem revisão `FINAL`/`COMPLETE` e sem requirement `CALCULATED`/publicado; falha sem efeito logo após `submitFinal`, ainda que o caso permaneça `NURSING_IN_PROGRESS`.
+- [ ] Correção e submit concorrentes têm vencedor único; erro descoberto depois da finalização
+      e antes da publicação invalida final/proposta anteriores e exige nova revisão.
 - [ ] Recepção não vê widgets/respostas clínicas em tela ou payload.
-- [ ] Solicitante não vê casos de outro serviço nem anamnese.
+- [ ] Solicitante não possui detalhe/listagem geral; vê somente pendência própria e resultado
+      final do serviço atual.
 - [ ] Admin não vê casos; vê usuários, operação, agenda, catálogos e auditoria.
 - [ ] Usuário `origin=FIXTURE` aparece somente leitura; todos os fluxos administrativos de
       edição/reset/status usam conta `origin=ADMIN`.
-- [ ] Entrada permite nomes iguais e casos de conteúdo igual; bloqueia somente a mesma
-  referência documental não vazia dentro do mesmo serviço.
+- [ ] Entrada permite nomes, conteúdo e referência iguais; referência repetida gera alerta
+      e confirmação de novo encaminhamento, nunca bloqueio automático.
 - [ ] Triagem diferencia rascunho, incompleto, pronto, submitted, conflito e erro.
 - [ ] S04 exige `handoffs.acknowledge` concluído antes de `clinicalAnamnesis.start`.
-- [ ] Submit da triagem grava `FINAL + CALCULATED` atomically; somente confirmação/override publica e libera S06.
+- [ ] Submit grava revisão final efetiva + resultado classificatório; somente proposta
+      vigente confirmada/alterada publica e libera S06.
 - [ ] `TRIAGE_PENDING` nasce somente de incompletude com paths/motivo e volta ao draft por `resume`.
-- [ ] Correção pré-FINAL pode fazer rebase do contexto do `DRAFT`; depois de `FINAL + CALCULATED`, edição, adendo e rebase falham sem efeito.
+- [ ] Correção aplica a matriz de impacto; revisão final inválida permanece histórica e não
+      alimenta agenda, enquanto nova revisão é produzida.
 - [ ] Agendamento oferece somente slots compatíveis e trata falta de vaga/conflito.
 - [ ] S06 mostra em uma única fila discriminada casos `INITIAL READY_FOR_SCHEDULING` e
       retornos `READY_FOR_BOOKING`, sem perder a origem da need.
 - [ ] Agenda representa os cinco estados de `BookingDTO`; check-in exige `scheduling:booking:check-in`, separado das demais ações `scheduling:booking:manage`.
+- [ ] Check-in equivocado, abandono e impossibilidade de início possuem ações, motivos e
+      destinos distintos; nenhum caso fica preso aguardando encontro.
 - [ ] Avaliação trata rascunho, pendência, `ReturnRequest` e conclusão; anestesiologista não escolhe vaga de retorno.
 - [ ] `/pendencias` mostra a cada papel somente pendências `OPEN` atribuídas; solicitante é
       filtrado também por `serviceId`, e owner incorreto falha mesmo por chamada direta.

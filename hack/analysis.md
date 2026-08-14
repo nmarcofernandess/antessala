@@ -188,12 +188,13 @@ ENTITY: CasoPreAnestesico
 
 ENTITY: Anamnese
 - Attributes: id, caseId, templateVersion, contentVersion, contentJson, status, revision
-- Actions: iniciar, salvar rascunho, rebasear contexto ainda em rascunho e finalizar uma vez
+- Actions: iniciar, salvar rascunho, revisar contexto, finalizar, invalidar uma finalização
+  pré-publicação e produzir substituta sem apagar histórico
 - Relations: pertence a um caso; produz um requisito
 - Source of truth: JSONB validado
-- Runtime states: DRAFT, COMPLETE
-- Invalid states: COMPLETE com NOT_ASKED obrigatório; rebase após revisão FINAL; nova edição
-  ou revisão depois do submit
+- Runtime states: DRAFT, COMPLETE; revisões podem ser FINAL_EFFECTIVE ou INVALIDATED
+- Invalid states: COMPLETE com NOT_ASKED obrigatório; revisão invalidada alimentando agenda,
+  avaliação, IA ou memória; duas revisões finais efetivas
 
 ENTITY: RequisitoAgenda
 - Attributes: id, caseId, anamnesisRevisionId, slotClass, durationMinutes,
@@ -318,7 +319,7 @@ ENTITY: EventoAuditoria
 ### Responsabilidade ponta a ponta
 
 Responsabilidade é derivada; não existe `currentOwnerRole` livre no caso. A matriz detalhada
-e os comandos vivem no [Analyst de caso](domains/ANALYST-caso-e-encaminhamento.md#responsibility-matrix).
+e os comandos vivem no [Analyst de caso](domains/ANALYST-caso-e-encaminhamento.md#atores-e-ownership).
 
 | Estado | Quem age agora |
 |---|---|
@@ -326,7 +327,8 @@ e os comandos vivem no [Analyst de caso](domains/ANALYST-caso-e-encaminhamento.m
 | `WAITING_NURSING` | enfermagem aceita o handoff e inicia a triagem |
 | `NURSING_IN_PROGRESS`, `TRIAGE_PENDING` | enfermagem |
 | `READY_FOR_SCHEDULING`, `SCHEDULED` | recepção |
-| `WAITING_ANESTHESIA`, `IN_ASSESSMENT` | anestesiologista |
+| `WAITING_ANESTHESIA` | recepção para anulação/interrupção operacional; anestesiologista para iniciar ou registrar impossibilidade de início |
+| `IN_ASSESSMENT` | anestesiologista |
 | `PENDING` | papéis responsáveis pelas pendências abertas; sem retorno presencial, anestesiologista retoma a revisão |
 | `WAITING_RETURN` | recepção até check-in |
 | `READY_FOR_HANDOFF` sem entrega `SENT` | recepção registra o envio ao serviço solicitante |
@@ -420,6 +422,9 @@ stateDiagram-v2
   READY_FOR_SCHEDULING --> SCHEDULED: reserva atômica
   SCHEDULED --> READY_FOR_SCHEDULING: cancelamento da reserva ou falta
   SCHEDULED --> WAITING_ANESTHESIA: check-in INITIAL pela recepção
+  WAITING_ANESTHESIA --> SCHEDULED: check-in equivocado anulado
+  WAITING_ANESTHESIA --> READY_FOR_SCHEDULING: consulta INITIAL não iniciada
+  WAITING_ANESTHESIA --> WAITING_RETURN: consulta RETURN não iniciada
   WAITING_ANESTHESIA --> IN_ASSESSMENT: anestesiologista inicia
   IN_ASSESSMENT --> PENDING: exame ou informação pendente
   PENDING --> IN_ASSESSMENT: anestesiologista retoma revisão sem retorno presencial
@@ -463,9 +468,13 @@ stateDiagram-v2
 - MUST: pessoa, procedimento e solicitante são snapshots do momento do caso.
 - MUST: correção após handoff cria evento e nova versão; nunca apaga autoria anterior.
 - MUST NOT: existir `patientId` ou comparação automática com outro caso.
-- IF a `sourceReference` opcional do papel repetir no mesmo serviço, THEN a criação falha
-  como reentrada do mesmo documento; referência diferente/ausente cria outro caso e nenhum
-  campo da pessoa participa da unicidade.
+- MUST: `sourceReference` é proveniência, não identidade. Coincidência gera alerta
+  não bloqueante; a recepção pode reconhecer o caso existente ou confirmar um novo
+  encaminhamento, que sempre recebe caso próprio.
+- MUST: toda correção declara os consumidores obsoletos e qual revisão do contexto passa a
+  ser corrente; handoff pendente antigo não pode ser aceito silenciosamente.
+- MUST: `correctIntake` e `submitFinal` têm vencedor único. Correção vencedora torna a
+  submissão obsoleta; submissão vencedora recusa a correção concorrente sem efeito parcial.
 
 ### Anamnese
 
@@ -474,10 +483,12 @@ stateDiagram-v2
 - MUST: cada resposta registra fonte, autor, função e horário.
 - MUST: todo campo consumido por regra pertence a um widget versionado.
 - MUST: finalizar calcula a completude no processo principal.
-- MUST: `submitFinal` rejeita `INCOMPLETE`; quando aceito, cria a única revisão
+- MUST: `submitFinal` rejeita `INCOMPLETE`; quando aceito, cria a única revisão final efetiva
   COMPLETE/FINAL e o resultado `PROPOSED`, `HUMAN_DEFINITION_REQUIRED` ou
-  `OUT_OF_DEMO_RANGE` no mesmo commit. Depois disso a anamnese não aceita save, amend,
-  supersede ou rebase.
+  `OUT_OF_DEMO_RANGE` no mesmo commit.
+- MUST: erro de intake descoberto antes da publicação invalida a revisão e proposta
+  anteriores, preserva-as como história, impede seu consumo e exige nova revisão da
+  enfermagem. Não é evolução entre casos nem edição silenciosa.
 - MUST NOT: array vazio representar resposta negativa.
 - MUST NOT: widget nutricional herdado entrar no template por conveniência.
 - IF um campo obrigatório estiver `NOT_ASKED`, THEN o resultado é `INCOMPLETE`, nenhum
@@ -516,6 +527,9 @@ stateDiagram-v2
 - IF o paciente faltar em booking `INITIAL`, THEN a reserva vira `NO_SHOW` e o caso retorna
   a `READY_FOR_SCHEDULING`; IF for `RETURN`, THEN o caso permanece `WAITING_RETURN` e a
   mesma solicitação volta a `READY_FOR_BOOKING`.
+- MUST: check-in equivocado pode ser anulado antes do encontro; presença sem início ou
+  impossibilidade de iniciar registra interrupção e devolve INITIAL ao agendamento ou
+  reabre RETURN. Cancelamento terminal posterior exige fato e motivo distintos.
 
 ### Avaliação e handoff
 
@@ -536,11 +550,31 @@ stateDiagram-v2
   finalização são rejeitados no MVP.
 - MUST: `finalizedBy + finalizedAt + contentHash` são proveniência e integridade local, não
   assinatura digital; o PDF declara que usa dados sintéticos e não é assinado digitalmente.
-- MUST: solicitante lê somente casos do seu serviço.
+- MUST: solicitante não acompanha o caso completo antes do resultado; lê apenas pendência
+  explicitamente atribuída ao próprio serviço, resultado final e estado da entrega.
+- MUST: mudança do serviço solicitante revoga futuras leituras e comandos do serviço
+  anterior e replay algum devolve projeção antiga.
 - MUST NOT: ADMIN herdar acesso clínico por ser administrador.
 - IF houver pendência aberta, THEN a avaliação não conclui.
 - IF o solicitante confirmar recebimento, THEN o caso chega a
   `DELIVERED_TO_REQUESTER`.
+
+### Vocabulário operacional
+
+- cancelamento do caso encerra o caso; cancelamento da reserva apenas libera a marcação;
+- anulação de check-in corrige presença registrada por engano;
+- presença sem início registra comparecimento sem encontro;
+- handoff inicial é recepção → enfermagem; entrega final é resultado → solicitante;
+- anamnese concluída, proposta operacional, necessidade publicada, booking consumido e
+  encontro concluído são fatos distintos.
+
+### Idempotência transversal
+
+- MUST: a intenção idempotente inclui domínio, comando, ator, escopo e conteúdo lógico.
+- MUST: mesmo efeito confirmado não se repete; conteúdo divergente sob a mesma chave falha.
+- MUST: replay revalida autorização atual; recibo prova efeito e nunca concede acesso.
+- MUST: falha sem mutação não vira recibo de efeito e comando fora de ordem não fica em
+  buffer; depois do predecessor legítimo, nova tentativa é reavaliada.
 
 ### IA, memória e conhecimento
 

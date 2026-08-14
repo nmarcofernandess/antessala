@@ -71,7 +71,7 @@ está fechado.
 
 ## Product Promise
 
-Cada integrante da demonstração entra com uma credencial simples preparada localmente e vê apenas o trabalho que lhe pertence. A recepção não lê respostas clínicas; a enfermagem não agenda; o anestesiologista não reescreve a entrevista de enfermagem; o solicitante enxerga somente os casos do seu serviço e o resultado autorizado; o administrador gerencia contas e configuração sem virar um superusuário clínico. Depois, a apresentação consegue reconstruir quem fez cada mudança, em qual papel, quando e sobre qual objeto.
+Cada integrante da demonstração entra com uma credencial simples preparada localmente e vê apenas o trabalho que lhe pertence. A recepção não lê respostas clínicas; a enfermagem não agenda; o anestesiologista não reescreve a entrevista de enfermagem; o solicitante enxerga somente pendências atribuídas e o resultado autorizado do próprio serviço; o administrador gerencia contas e configuração sem virar um superusuário clínico. Depois, a apresentação consegue reconstruir quem fez cada mudança, em qual papel, quando e sobre qual objeto.
 
 ## Story de Usuario
 
@@ -79,7 +79,8 @@ Cada integrante da demonstração entra com uma credencial simples preparada loc
 - Como integrante da recepção, quero entrar e ver somente entradas e agendamentos, para cumprir meu trabalho sem interpretar dados clínicos.
 - Como enfermeiro, quero abrir as triagens atribuídas ao meu setor e registrar a anamnese, para produzir a necessidade operacional da vaga.
 - Como anestesiologista, quero ver a anamnese preservada e registrar minha própria avaliação, para tomar e explicar uma decisão médica sem apagar autoria anterior.
-- Como integrante do serviço solicitante, quero acompanhar somente casos do meu serviço e receber o resultado, para continuar o planejamento do procedimento.
+- Como integrante do serviço solicitante, quero cumprir pedidos atribuídos ao meu serviço e
+  receber o resultado final, sem acessar o restante do caso.
 - Como apresentador, quero trocar de papel de forma previsível, para demonstrar o handoff ponta a ponta no mesmo Mac.
 
 ## Story Tecnica
@@ -274,12 +275,12 @@ stateDiagram-v2
 | Capacidade | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE | ADMIN |
 |---|:---:|:---:|:---:|:---:|:---:|
 | Criar encaminhamento/caso | sim | não | não | não | não |
-| Ler identidade e encaminhamento operacional | sim | sim | sim | apenas próprio serviço | não |
+| Ler identidade e encaminhamento operacional | sim | sim | sim | não; somente projeção mínima de pendência própria | não |
 | Ler respostas clínicas da anamnese | não | sim | sim | não | não |
 | Criar/editar rascunho da anamnese | não | sim | não | não | não |
 | Abrir fila de triagem | não | sim | não | não | não |
 | Submeter triagem | não | sim | não | não | não |
-| Ler categoria operacional da vaga | sim | sim | sim | status sem explicação clínica | não |
+| Ler categoria operacional da vaga | sim | sim | sim | não | não |
 | Criar/reagendar/cancelar reserva | sim | não | não | não | não |
 | Registrar check-in da consulta | sim | não | não | não | não |
 | Criar/editar avaliação anestésica | não | não | sim | não | não |
@@ -294,7 +295,9 @@ stateDiagram-v2
 | Ler auditoria de segurança sanitizada | não | não | não | não | sim |
 
 14. Permissão de interface e permissão de handler precisam concordar; ocultar um botão nunca substitui o guard.
-15. `SOLICITANTE` só lê casos cujo `servico_solicitante_id` coincide com o snapshot da sessão.
+15. `SOLICITANTE` não possui listagem ou detalhe geral do caso. Lê somente pendência
+    explicitamente atribuída ao próprio serviço, resultado final e entrega; toda projeção
+    exige que o serviço corrente coincida com o alvo.
 16. `ADMIN` não lê anamnese, avaliação ou resultado clínico por ser administrador.
 17. A recepção recebe apenas identificador operacional, classe demonstrativa, duração,
     ocupação, capabilities, data-alvo, status/autoria da decisão, motivo operacional
@@ -305,25 +308,31 @@ stateDiagram-v2
     executa `submitFinal` para `COMPLETE`. Depois disso não existe escrita na anamnese; o
     anestesiologista apenas lê o snapshot submetido e registra informação própria por
     `assessment:write`.
+19. Corrigir o serviço solicitante revoga imediatamente futuras leituras e comandos do
+    serviço anterior, redireciona destinos correntes e impede replay de devolver projeção
+    antiga. Acesso anterior permanece apenas como auditoria histórica.
+20. Idempotência nunca substitui autorização: toda repetição revalida sessão, papel e
+    escopo; recibo prova efeito, não concede leitura. Mesma chave com intenção divergente
+    falha, e falha sem mutação não é memorizada como efeito concluído.
 
 ### Administração de usuários
 
-19. Somente `ADMIN` chama `usuarios.*` e `auditoria.*`.
-20. O sistema impede desativar o próprio usuário da sessão e impede desativar **ou trocar a
+21. Somente `ADMIN` chama `usuarios.*` e `auditoria.*`.
+22. O sistema impede desativar o próprio usuário da sessão e impede desativar **ou trocar a
     função** do último `ADMIN` ativo; o guard conta admins ativos dentro da mesma transação.
-21. Usuário nunca é apagado fisicamente; desativação preserva referências e auditoria.
-22. Troca para `SOLICITANTE` exige `servico_solicitante_id`; troca para outro papel limpa esse campo.
-23. Redefinir senha exige uma nova senha completa; não existe leitura do valor anterior.
-24. E-mail de usuário existente não pode ser reutilizado, mesmo se a conta estiver inativa.
+23. Usuário nunca é apagado fisicamente; desativação preserva referências e auditoria.
+24. Troca para `SOLICITANTE` exige `servico_solicitante_id`; troca para outro papel limpa esse campo.
+25. Redefinir senha exige uma nova senha completa; não existe leitura do valor anterior.
+26. E-mail de usuário existente não pode ser reutilizado, mesmo se a conta estiver inativa.
 
 ### Auditoria
 
-25. Mutação de domínio e evento de sucesso são gravados na mesma transação.
-26. Login, logout, falha de login, negação, criação/desativação de usuário, redefinição de senha, alteração de papel e todas as mutações clínicas/operacionais são auditáveis.
-27. `mudancas_json` contém nomes de campos e valores operacionais seguros; senha, hash, token, HTML/PDF, anamnese integral, parecer integral e anexos são proibidos.
-28. UPDATE e DELETE de `auditoria_eventos` falham por trigger.
-29. A consulta de auditoria pagina por `(ocorrido_em, id)` e filtra período, ator, papel, ação, entidade e resultado.
-30. A linha de auditoria não substitui a jornada clínica do caso; são trilhas diferentes com consumidores diferentes.
+27. Mutação de domínio e evento de sucesso são gravados na mesma transação.
+28. Login, logout, falha de login, negação, criação/desativação de usuário, redefinição de senha, alteração de papel e todas as mutações clínicas/operacionais são auditáveis.
+29. `mudancas_json` contém nomes de campos e valores operacionais seguros; senha, hash, token, HTML/PDF, anamnese integral, parecer integral e anexos são proibidos.
+30. UPDATE e DELETE de `auditoria_eventos` falham por trigger.
+31. A consulta de auditoria pagina por `(ocorrido_em, id)` e filtra período, ator, papel, ação, entidade e resultado.
+32. A linha de auditoria não substitui a jornada clínica do caso; são trilhas diferentes com consumidores diferentes.
 
 ## Architecture Risks
 

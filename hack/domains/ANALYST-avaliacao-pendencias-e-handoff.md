@@ -68,7 +68,7 @@ para concluir somente após todos os bloqueios.
 Como responsável por uma pendência, quero receber um pedido exato e registrar uma resposta
 compatível.
 
-Como solicitante, quero acessar apenas os casos do meu serviço e confirmar o resultado
+Como solicitante, quero acessar apenas pendências atribuídas ao meu serviço e confirmar o resultado
 final recebido.
 
 ## Story Técnica
@@ -120,6 +120,7 @@ append-only, para impedir check-in, retomada, retorno, conclusão ou handoff inv
 |---|---|---|
 | confirmar, reagendar, cancelar e registrar no-show | `scheduling:booking:manage` | `RECEPCAO` |
 | fazer check-in | `scheduling:booking:check-in` | `RECEPCAO`; janela do booking |
+| anular check-in equivocado | `scheduling:booking:check-in` | `RECEPCAO`; encontro ainda não iniciado; motivo obrigatório |
 | ler encontro | `assessment:read` | caso autorizado |
 | iniciar, salvar, retomar e finalizar | `assessment:write` | `ANESTESIOLOGISTA` |
 | abrir e cancelar pendência | `pendency:manage` | `ANESTESIOLOGISTA` |
@@ -153,6 +154,9 @@ O enum canônico não muda:
 ```mermaid
 stateDiagram-v2
   SCHEDULED --> WAITING_ANESTHESIA: check-in INITIAL
+  WAITING_ANESTHESIA --> SCHEDULED: check-in equivocado anulado
+  WAITING_ANESTHESIA --> READY_FOR_SCHEDULING: INITIAL não iniciado
+  WAITING_ANESTHESIA --> WAITING_RETURN: RETURN não iniciado
   WAITING_ANESTHESIA --> IN_ASSESSMENT: start INITIAL ou RETURN
   IN_ASSESSMENT --> PENDING: pendência aberta
   PENDING --> IN_ASSESSMENT: resumeReview sem retorno
@@ -173,6 +177,21 @@ stateDiagram-v2
   `COMPLETED`.
 - Cancelamento ou no-show de `RETURN` reabre a mesma solicitação e mantém
   `WAITING_RETURN`.
+
+### Interrupção antes do encontro
+
+Enquanto não existe encontro iniciado:
+
+- a recepção anula check-in equivocado e retorna booking/caso exatamente ao estado anterior;
+- a recepção registra comparecimento seguido de saída antes da consulta;
+- o anestesiologista registra impossibilidade de iniciar, com motivo operacional seguro e
+  sem produzir conclusão clínica;
+- INITIAL não iniciado volta a `READY_FOR_SCHEDULING`; RETURN não iniciado reabre a mesma
+  solicitação em `WAITING_RETURN`;
+- se houver desistência do caso, a recepção registra primeiro a interrupção e depois o
+  cancelamento terminal com motivo distinto de cancelamento da reserva;
+- check-in, anulação, comparecimento e interrupção permanecem fatos auditáveis; nenhum é
+  apagado ou convertido em resultado anestésico.
 
 ### `AnesthesiaEncounter`
 
@@ -436,6 +455,10 @@ autorizado; nenhum papel recebe bytes/path, e `ADMIN` não recebe nem os metadad
 22. `results.getCurrent` usa `result:content:read`; recepção nunca o chama.
 23. Export e entrega carregam o `FINAL` internamente sob suas capabilities específicas,
     sem criar permissão genérica de conteúdo.
+24. Check-in equivocado, abandono e impossibilidade de início possuem saída antes do
+    encontro; nenhum caso permanece em `WAITING_ANESTHESIA` sem owner.
+25. Solicitante acessa somente pendência própria, resultado final e entrega do próprio
+    serviço; não recebe navegação geral do caso antes do resultado.
 
 ## Architecture Risks
 
@@ -471,6 +494,10 @@ cumprimento.
       `WAITING_ANESTHESIA`.
 - [ ] `encounters.start` marca booking `COMPLETED` sem liberar ocupação antes de
       `slot.endsAt`.
+- [ ] Check-in equivocado pode ser anulado antes do encontro e volta ao estado anterior sem
+      apagar o fato.
+- [ ] Abandono ou impossibilidade de iniciar devolve INITIAL ao agendamento e reabre RETURN;
+      nenhum resultado clínico é criado.
 - [ ] Booking de retorno é derivado por `scheduling_bookings.return_request_id`; a tabela
       `return_requests` não possui `booking_id`.
 - [ ] `blocking` e payload genérico falham.

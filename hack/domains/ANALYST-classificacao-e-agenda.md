@@ -192,9 +192,10 @@ subestimação, sobrestimação, desempenho por subgrupo e impacto na capacidade
 
 ### `OperationalNeedProposal`
 
-Proposta não publicada produzida a partir de uma revisão final da anamnese. Preserva a
-versão da regra, as categorias de sinais utilizadas, os limites encontrados e a sugestão
-de duração/capabilities. Nunca contém ASA, risco, urgência ou aptidão.
+Proposta não publicada produzida a partir de uma revisão final efetiva da anamnese e de uma
+revisão conhecida do contexto do caso. Preserva essas âncoras, a versão da regra, as
+categorias de sinais utilizadas, os limites encontrados e a sugestão de
+duração/capabilities. Nunca contém ASA, risco, urgência ou aptidão.
 
 Estados:
 
@@ -203,6 +204,8 @@ Estados:
 - `HUMAN_DEFINITION_REQUIRED`: estado semântico, combinação ou caso não pode ser convertido
   de forma segura pela regra;
 - `OUT_OF_DEMO_RANGE`: a necessidade não cabe nas três fixtures sem truncamento.
+- `INVALIDATED`: a revisão da anamnese ou o contexto-fonte perdeu vigência antes da
+  publicação; a proposta permanece histórica e nunca pode ser confirmada.
 
 `INCOMPLETE` não gera requisito. `HUMAN_DEFINITION_REQUIRED` não atribui gravidade: pede
 que a enfermagem defina e justifique uma consequência operacional que caiba honestamente
@@ -226,7 +229,8 @@ Existe apenas uma decisão efetiva por caso. Publicação anterior nunca é sobr
 correção operacional cria nova versão, preserva autor, horário, motivo e valores anterior e
 novo. Se já houver reserva, a compatibilidade precisa ser revalidada; reserva incompatível
 não segue silenciosamente e a recepção escolhe novamente. Correção do conteúdo `FINAL` da
-anamnese é contrato separado e continua `UNRESOLVED` no Analyst dono.
+anamnese é contrato separado: antes da publicação, invalida revisão e proposta e exige nova
+revisão; depois da publicação, a governança institucional continua `UNRESOLVED`.
 
 ### `CapacityOffer`
 
@@ -380,6 +384,10 @@ incompatível.
 - reagendamento é explícito, não move a reserva silenciosamente;
 - no-show inicial devolve o caso ao agendamento;
 - no-show de retorno preserva a solicitação de retorno;
+- check-in equivocado pode ser anulado antes do encontro e retorna booking/caso ao estado
+  anterior, preservando o fato e o motivo;
+- presença sem início ou impossibilidade de iniciar não consome a consulta: INITIAL volta
+  ao agendamento e RETURN reabre a mesma solicitação;
 - check-in, tolerância de atraso e no-show são políticas de demo exibidas como tais;
 - atraso depende de decisão humana, não de uma regra implícita do relógio.
 
@@ -389,9 +397,9 @@ incompatível.
 |---|---|---|---|
 | `ENFERMAGEM` | anamnese, lacunas, proposta e explicação | confirmar, alterar ou substituir necessidade inicial | atribuir ASA, aptidão, urgência ou prioridade cirúrgica |
 | `RECEPCAO` | projeção operacional e capacidade | reservar, cancelar, reagendar, check-in e no-show conforme política | ler clínica, mudar necessidade ou aceitar vaga incompatível |
-| `ANESTESIOLOGISTA` | caso clínico, necessidade reservada e objetivo do retorno | definir necessidade operacional de retorno e conduzir avaliação | alterar silenciosamente decisão histórica |
+| `ANESTESIOLOGISTA` | caso clínico, necessidade reservada e objetivo do retorno | definir necessidade operacional de retorno, conduzir avaliação ou registrar impossibilidade de início | alterar silenciosamente decisão histórica |
 | `ADMIN` | recursos, janelas, bloqueios e saúde técnica | manter capacidade da demo | ler clínica ou mudar necessidade do caso |
-| `SOLICITANTE` | status e resultado autorizados do próprio serviço | cumprir solicitações e receber resultado | reservar ou interpretar requisito da enfermagem |
+| `SOLICITANTE` | somente pendência atribuída e resultado autorizado do próprio serviço | cumprir solicitações e receber resultado | acompanhar o caso, reservar ou interpretar requisito da enfermagem |
 | Sistema | entrada permitida e regra versionada | propor, validar compatibilidade e detectar conflito | publicar sozinho ou decidir clínica |
 | IA | conteúdo explicitamente permitido | sugerir rascunho com origem | escolher pesos, publicar requisito ou agir sobre agenda |
 
@@ -407,6 +415,9 @@ incompatível.
 | falta dentro do horizonte | fora do horizonte publicado | ampliar consulta ou registrar falta; não inferir inexistência total |
 | decisão operacional corrigida | versão anterior superseded | revalidar reserva e reagendar se incompatível |
 | atraso | decisão humana necessária | check-in, reagendamento ou no-show segundo política explícita |
+| check-in equivocado | presença anulada com motivo | retornar exatamente ao estado anterior, sem apagar o check-in |
+| presença sem encontro | consulta não iniciada | INITIAL volta ao agendamento; RETURN reabre a solicitação |
+| fonte da proposta invalidada | `INVALIDATED` | impedir confirmação e aguardar nova revisão/proposta |
 
 ## Rules And Invariants
 
@@ -428,6 +439,10 @@ incompatível.
 14. MUST permitir que o requisito do retorno seja definido ou confirmado pelo
     anestesiologista; requisito inicial é apenas referência.
 15. MUST NOT afirmar que a demo reproduz protocolo, agenda ou SLA do HCFMRP-USP.
+16. MUST invalidar toda proposta cuja revisão de anamnese ou contexto-fonte perdeu vigência;
+    proposta inválida nunca é confirmada, alterada ou publicada.
+17. MUST tratar anulação de check-in e presença sem início como fatos distintos de
+    cancelamento da reserva e cancelamento do caso.
 
 ## Boundary With Build
 
@@ -452,11 +467,15 @@ com este contrato e assinado na fase correta.
 - [ ] Há saída explícita para definição humana e fora da faixa da demo.
 - [ ] Nenhum caso é truncado para caber em 50 minutos.
 - [ ] Enfermagem confirma ou altera antes da publicação.
+- [ ] Correção pré-publicação invalida proposta derivada e exige nova revisão; a proposta
+      anterior não pode ser confirmada.
 - [ ] Uma decisão operacional pode ser substituída sem apagar a anterior.
 - [ ] Recepção recebe somente consequência operacional.
 - [ ] Vaga incompatível nunca é confirmada.
 - [ ] Falta de capacidade preserva a necessidade.
 - [ ] Conflito, cancelamento, reagendamento, check-in e no-show têm recuperação explícita.
+- [ ] Check-in equivocado, abandono e impossibilidade de iniciar não deixam o caso em
+      `WAITING_ANESTHESIA` sem saída.
 - [ ] Anestesiologista define ou confirma o requisito de retorno.
 - [ ] Regra, versão, decisão e override são reconstruíveis.
 - [ ] Nenhum texto afirma validação clínica ou institucional inexistente.
@@ -474,8 +493,8 @@ Antes da assinatura:
    capabilities do retorno sem herança automática.
 4. A operação institucional real permanece fora da PoC; qualquer uso real exige estudo
    local de duração, capacidade, calendário, acessibilidade e erro da regra.
-5. A correção do conteúdo `FINAL` da anamnese precisa ser resolvida por seu domínio sem
-   permitir mutação silenciosa.
+5. O novo adversarial precisa provar a invalidação pré-publicação e atacar a governança
+   ainda não resolvida para erro descoberto depois da publicação.
 
 ## Grill Verdict
 

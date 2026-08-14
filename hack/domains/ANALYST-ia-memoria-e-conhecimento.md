@@ -204,12 +204,14 @@ Esta seção define significado, não tabela, arquivo, DTO físico ou canal IPC.
 
 ### `FieldProposal`
 
-- Aponta para caso, revisão do transcript, versão do widget e campo-alvo.
+- Aponta para caso, revisão do contexto do intake, revisão do transcript, versão do widget e
+  campo-alvo.
 - Contém valor semântico proposto, estado de resposta proposto, trechos exatos de origem,
   relações aprovadas consultadas, explicação, provedor/modelo e horário da geração.
 - Estados: `DRAFT`, `ACCEPTED`, `REJECTED`, `CORRECTED`, `STALE`, `INVALID`.
 - Aceite/correção registra ator, horário e valor efetivamente aplicado.
-- Mudar transcript, schema ou dado-fonte torna a proposta não decidida `STALE`.
+- Mudar transcript, schema, dado-fonte ou qualquer campo de intake consumido torna a
+  proposta não decidida `STALE`.
 - `INVALID` nunca pode ser aplicado; `DRAFT` nunca aparece como resposta clínica confirmada.
 
 ### `OperationalSignalSummary`
@@ -372,6 +374,7 @@ acesso; este Analyst define apenas a separação de responsabilidades.
 | Saída fora do schema | Marcar `INVALID`, não aplicar e registrar falha sanitizada. |
 | Fonte ausente | Não exibir proposta como aplicável. |
 | Transcript/schema mudou | Marcar propostas pendentes `STALE`. |
+| Intake ou revisão final perdeu vigência | Marcar propostas e resumos dependentes `STALE`; nenhum derivado inválido entra na anamnese, agenda ou memória. |
 | RAG/grafo sem resultado | Exibir ausência de conhecimento aprovado, sem inferir negativo. |
 | Relações ativas conflitantes | Mostrar conflito e exigir decisão humana; não calcular desempate opaco. |
 | Tentativa de promoção automática | Rejeitar e auditar o evento de segurança. |
@@ -421,6 +424,8 @@ memória de texto livre e extração automática de grafo não satisfazem o prod
 - [ ] Enfermagem aceita um, corrige outro e rejeita outro; só os dois primeiros afetam o
       rascunho, com autoria reconstruível.
 - [ ] Campo não mencionado permanece `NOT_ASKED`; “não sei” e recusa preservam semântica.
+- [ ] Correção de idade, sexo, encaminhamento, procedimento ou serviço torna `STALE` toda
+      proposta/resumo que consumiu a revisão anterior e exige nova decisão humana.
 - [ ] Resumo mostra sinais, lacunas e relações consultadas sem atribuir ASA, aptidão,
       gravidade, urgência ou prioridade.
 - [ ] Uma relação manual é versionada, aprovada e recuperada com fonte e aprovador.

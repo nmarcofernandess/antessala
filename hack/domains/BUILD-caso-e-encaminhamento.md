@@ -1,10 +1,12 @@
 # Build: Caso e encaminhamento
 
+> **DRAFT INVALIDADO POR MUDANÇA MATERIAL NO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+
 ## State
 
 - Sources consumed: `hack/PRD.md`, `domains/ANALYST-caso-e-encaminhamento.md`,
   recon do Antessala e referência de JSON versionado do DietFlow
-- Blueprint status: `DRAFT — RESEARCH_REQUIRED + RECON_REQUIRED + ADVERSARIAL_REQUIRED`
+- Blueprint status: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE + RECON_REQUIRED`
 - Architecture verdict: `UNRESOLVED`; os contratos físicos ainda não foram provados no PGlite
 - This is not Plan: este arquivo fecha contratos e sequência de dependências, não cria
   subtarefas executáveis.
@@ -777,8 +779,9 @@ This is dependency order for Build. Plan must later split it into signed executa
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `domains/BUILD-caso-e-encaminhamento.md`
-- Próxima fase autorizada após aprovação conjunta: inclusão no Build canônico
-- Estado: `DRAFT_RESEARCH_REQUIRED`
+- Próxima fase autorizada: `NENHUMA`; aguardar reconciliação transversal, novo adversarial
+  e assinatura do Analyst; depois refazer este Build
+- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE`
 - Assinatura do Analyst por Marco: `PENDENTE`
 - Assinatura deste Build por Marco: `PENDENTE`
 - Data: `PENDENTE`

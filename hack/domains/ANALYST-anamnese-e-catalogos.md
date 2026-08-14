@@ -64,10 +64,11 @@ nenhum dado é comparado com atendimento anterior.
 Como sistema, o Antessala deve persistir uma anamnese autônoma em JSONB, validada por um
 registry versionado. Cada resposta carrega estado semântico e proveniência. Catálogos
 mestres são assets versionados, carregados no PGlite no primeiro boot e referenciados por ID;
-texto livre é preservado como fallback sem fingir correspondência. `submitFinal` encerra o
-agregado em um único commit: cria a única revisão `FINAL`, marca a anamnese `COMPLETE` e
-cria o requisito de agenda `CALCULATED`. Depois desse commit, a anamnese não aceita edição,
-reabertura nem revisão adicional no MVP.
+texto livre é preservado como fallback sem fingir correspondência. `submitFinal` rejeita
+conteúdo incompleto e, quando aceito, cria uma revisão final efetiva e um resultado
+`PROPOSED`, `HUMAN_DEFINITION_REQUIRED` ou `OUT_OF_DEMO_RANGE`. Erro de intake descoberto
+antes da publicação invalida essa revisão e seus derivados sem apagar a história e exige
+nova revisão da enfermagem.
 
 ## Current Terrain
 
@@ -150,7 +151,8 @@ ENTITY: Anamnese
 - Attributes: id, caseId, envelopeVersion, templateId, templateVersion, status,
   draftVersion, finalRevision
 - Actions: iniciar, salvar rascunho, submeter versão final
-- Relations: 1 caso, no máximo 1 revisão FINAL, 14 widgets e 1 requisito CALCULATED
+- Relations: 1 caso, no máximo 1 revisão FINAL efetiva, revisões invalidadas históricas,
+  14 widgets e 1 resultado classificatório vigente
 - Source of truth: snapshot JSONB validado
 - Runtime states: DRAFT, COMPLETE
 - Invalid states: COMPLETE com campo obrigatório NOT_ASKED; mais de uma revisão FINAL;
@@ -322,19 +324,21 @@ data planejada, lateralidade e notas clínicas. Procedimento, serviço e indica�
 estar presentes para finalizar; data e lateralidade admitem `NOT_APPLICABLE` conforme a
 matriz abaixo. Consumidores: perguntas condicionais e resumo do caso.
 
-Ao iniciar o draft, o agregado ancora `caseVersion` e `contextFingerprint`. Enquanto a
-anamnese estiver `DRAFT` e ainda não existir revisão `FINAL` nem requisito
-`CALCULATED`, uma correção de `procedure_snapshot` ou `requester_snapshot` marca o contexto
-`STALE`; não copia automaticamente o novo texto para uma resposta clínica. A enfermagem
-precisa executar `rebaseCaseContext` explicitamente: o comando atualiza a âncora sem tocar
-nas respostas e incrementa a versão técnica do draft.
+Ao iniciar o draft, a anamnese ancora a revisão conjunta de pessoa, encaminhamento,
+procedimento e solicitante. Toda correção aplica a matriz semântica do Analyst de caso:
+idade/data de nascimento, sexo, conteúdo do encaminhamento, procedimento ou serviço tornam
+os consumidores dependentes `STALE`; correção ortográfica ou de proveniência exige ao menos
+reconhecimento explícito. Texto novo nunca é copiado automaticamente para resposta clínica.
 
-Depois que existir revisão `FINAL` ou requisito `CALCULATED`, o contexto também é terminal:
-`cases.correctIntake` deve rejeitar qualquer patch de pessoa, encaminhamento, procedimento
-ou solicitante, inclusive se o caso ainda estiver `NURSING_IN_PROGRESS`, com
-`INVALID_TRANSITION`. Não há rebase final, reabertura, segunda revisão nem reclassificação
-no MVP. Esse cross-guard pertence à mesma transação do write de caso e precisa verificar os
-dois artefatos antes de alterar snapshot, versão ou evento.
+Enquanto estiver `DRAFT`, a enfermagem revisa a mudança, preserva respostas não afetadas
+com sua proveniência e reconfirma ou corrige as afetadas antes de submeter. `submitFinal` e
+`correctIntake` têm vencedor único e comparam a mesma revisão do contexto.
+
+Se o intake incorreto for descoberto depois da revisão final e antes da publicação da
+necessidade, a revisão e a proposta derivada tornam-se `INVALIDATED`, deixam de alimentar
+agenda, avaliação, PDF, IA ou memória e permanecem históricas. Abre-se novo draft ancorado
+no contexto corrigido; somente nova revisão da enfermagem pode voltar a ser efetiva. Isso é
+correção dentro do caso, não evolução longitudinal ou edição silenciosa da revisão anterior.
 
 ### 2. `allergies@1`
 
@@ -770,11 +774,11 @@ sequenceDiagram
     A-->>N: bloqueia e lista campos
   else "captura suficiente"
     A->>A: executa regras sobre candidato imutável
-    alt "resultado não classificável"
-      A-->>N: aborta sem FINAL nem requisito e mantém NURSING_IN_PROGRESS
-    else "requisito calculado"
-      A->>DB: commit único: FINAL + COMPLETE + requisito CALCULATED
-      A-->>N: mantém caso NURSING_IN_PROGRESS para revisão humana do requisito
+    alt "resultado INCOMPLETE"
+      A-->>N: aborta sem FINAL nem proposta e mantém NURSING_IN_PROGRESS
+    else "entrevista completa"
+      A->>DB: commit único: FINAL efetiva + COMPLETE + resultado classificatório
+      A-->>N: mantém caso NURSING_IN_PROGRESS para decisão humana quando aplicável
       A-->>M: disponibiliza snapshot clínico final com origem
     end
   end
@@ -795,21 +799,18 @@ sequenceDiagram
 - MUST congelar a revisão usada pela classificação.
 - MUST projetar procedimento/serviço do caso como read-only; o widget não duplica esses
   snapshots no JSONB.
-- MUST executar `submitFinal` e o cálculo do requisito no mesmo commit: sucesso cria
-  exatamente uma revisão `FINAL`, muda a anamnese `DRAFT → COMPLETE`, cria um requisito
-  `CALCULATED` e mantém o caso `NURSING_IN_PROGRESS`; falha cria nenhum desses artefatos.
-- IF o fingerprint do procedimento/serviço do caso mudar enquanto a anamnese estiver
-  `DRAFT` e não existir revisão `FINAL` nem requisito `CALCULATED`, THEN marcar o contexto
-  `STALE` e exigir `rebaseCaseContext` explícito antes de salvar ou submeter.
-- MUST permitir `rebaseCaseContext` somente em `DRAFT`, antes de existir revisão `FINAL` ou
-  requisito `CALCULATED`.
-- IF existir revisão `FINAL` ou requisito `CALCULATED`, THEN `saveDraft`,
-  `rebaseCaseContext`, nova submissão e correção dos snapshots do caso falham com
-  `INVALID_TRANSITION`; não há reabertura ou revisão adicional no MVP.
-- MUST o serviço de caso, inclusive quando o caso estiver `NURSING_IN_PROGRESS`, bloquear
-  qualquer `cases.correctIntake` de pessoa, encaminhamento, procedimento ou solicitante na
-  mesma transação se encontrar revisão `FINAL` ou requisito
-  `CALCULATED/CONFIRMED/OVERRIDDEN`.
+- MUST executar `submitFinal` e a classificação da revisão como uma única unidade: sucesso
+  cria uma revisão `FINAL` efetiva, muda `DRAFT → COMPLETE` e produz `PROPOSED`,
+  `HUMAN_DEFINITION_REQUIRED` ou `OUT_OF_DEMO_RANGE`; `INCOMPLETE` não cria nenhum deles.
+- MUST ancorar o draft na revisão conjunta do contexto e aplicar, a cada correção, a matriz
+  de impacto do Analyst de caso a anamnese, classificação, IA e resumo.
+- MUST exigir revisão explícita de todo consumidor `STALE` antes de salvar ou submeter.
+- MUST garantir vencedor único entre `submitFinal` e `correctIntake`; nenhum resultado
+  parcial é aceito.
+- IF a correção ocorrer depois da revisão final e antes da publicação, THEN invalidar a
+  revisão e proposta anteriores, preservar histórico e abrir novo draft coerente.
+- IF a necessidade já estiver publicada, THEN correção material não é escondida por
+  override; bloqueia o uso e segue governança ainda `UNRESOLVED` para operação real.
 - IF um item catalogado for retirado, THEN manter label e revisão capturados no snapshot.
 - IF um procedimento não estiver catalogado, THEN usar `catalogId=null`, preservar nome e
   aplicar o template geral completo.
@@ -824,7 +825,7 @@ sequenceDiagram
 | critical | DTO livre perde identidade do catálogo | `src/shared/anamnese/widgets/medicacoes.ts:19-38` | Persistir `catalogId` e snapshot do label. |
 | high | Registro legado não representa caso/encaminhamento | `src/main/db/clinical-schema.ts:3-25` | Nova entidade de caso; legado somente leitura/migração. |
 | high | Atualização substitui JSONB sem controle de versão | `src/main/tipc.ts:303-313` | Commands com versão esperada, um único FINAL e aggregate terminal. |
-| high | Correção do caso poderia invalidar evidência já calculada | Contrato transversal `preop_cases` + requisito | Cross-guard transacional rejeita a correção com `INVALID_TRANSITION` após FINAL/CALCULATED. |
+| high | Correção do caso pode invalidar evidência já finalizada | contrato transversal de contexto | Vencedor único; antes da publicação, invalidar revisão e derivados e exigir nova revisão. |
 | high | Catálogo medicamentoso é recorte e licença é pendente | `src/data/catalogos/README.md:27-38` | Alegação limitada à demo; fallback livre; não redistribuir publicamente sem revisão. |
 | medium | Blocos snapshot/resultado carregam semântica nutricional | `src/shared/anamnese/types.ts:56-98` | Template pré-anestésico aceita somente widget blocks. |
 | medium | HTML histórico pode vazar para export | `src/shared/anamnese/text-formatter.ts:40-62` | DTO novo usa texto puro e escaping no export. |
@@ -856,17 +857,16 @@ sequenceDiagram
 - [ ] Cada item ativo mostra autoria de criação/última alteração e remoções permanecem no log.
 - [ ] `DraftOperation` rejeita path livre, patch vazio, campo desconhecido e mutação de item por `SET_ANSWER`.
 - [ ] Tabaco e álcool negativos são `NEGATIVE`; `ANSWERED {current:false}` é recusado.
-- [ ] Procedimento/serviço vêm do caso e não aparecem no JSONB; correção pré-final bloqueia
-      o draft até `rebaseCaseContext` explícito.
+- [ ] Pessoa, encaminhamento, procedimento e serviço vêm da revisão corrente do caso;
+      correção aplica a matriz de impacto e bloqueia consumidores obsoletos até revisão.
 - [ ] `ProcedureContextProjectionDTO` sempre contém `procedure.catalogId` e
       `requestingService.serviceId`; somente `procedure.code` pode ser nulo.
-- [ ] `rebaseCaseContext` só funciona em `DRAFT`, antes de qualquer revisão `FINAL` ou
-      requisito `CALCULATED`.
-- [ ] `submitFinal` grava, no mesmo commit, a única revisão `FINAL`, anamnese `COMPLETE` e
-      requisito `CALCULATED`; o caso permanece `NURSING_IN_PROGRESS`.
+- [ ] `submitFinal × correctIntake` possui vencedor único para qualquer segmento corrigível.
+- [ ] `submitFinal` grava a revisão final efetiva, anamnese `COMPLETE` e um resultado
+      classificatório coerente; o caso permanece `NURSING_IN_PROGRESS`.
 - [ ] Recepção recebe somente requisito operacional e pendência administrativa.
-- [ ] Depois de FINAL/CALCULATED, save, rebase, segunda submissão e correção dos snapshots
-      do caso falham `INVALID_TRANSITION` sem alterar anamnese, requisito ou caso.
+- [ ] Erro descoberto depois da finalização e antes da publicação invalida revisão/proposta
+      anteriores, abre novo draft e impede consumo dos artefatos inválidos.
 - [ ] Um novo encaminhamento cria novo caso mesmo com nome idêntico.
 - [ ] O boot carrega catálogos sem rede e o app funciona com dados sintéticos.
 - [ ] Nenhuma saída usa ASA, RCRI, aptidão ou orientação de suspensão medicamentosa.
