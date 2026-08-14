@@ -1,10 +1,10 @@
 {
   "schema_version": "antessala.status.v2",
-  "updated_at": "2026-08-14T07:10:37-03:00",
+  "updated_at": "2026-08-14T07:16:45-03:00",
   "product": "Antessala",
   "mode": "hackathon_poc",
-  "current_phase": "final_congruence_review",
-  "decision": "needs_correction_verification",
+  "current_phase": "minispec_writing_plans",
+  "decision": "implementation_authorized_after_tdd_red",
   "canonical_flow": [
     "prd",
     "analyst",
@@ -34,27 +34,27 @@
     "build": {
       "artifact": "BUILD.md",
       "appendices": "domains/BUILD-*.md",
-      "status": "adjusted_after_external_review",
+      "status": "used_for_warlog",
       "individual_gates": false
     },
     "final_congruence_review": {
       "tracker": "../.context/review/STATUS.md",
-      "status": "corrections_pending_recheck",
-      "blocking_condition": "verify_confirmed_fixes_on_published_head"
+      "status": "passed_local_recheck",
+      "blocking_condition": null
     },
     "warlog": {
       "artifact": "WARLOG.md",
-      "status": "not_created",
+      "status": "created",
       "starts_after": "final_congruence_review"
     },
     "minispecs": {
       "path": "minispecs/<id>/writing-plan.md",
-      "status": "not_cut",
+      "status": "three_slices_cut",
       "spec_file": false,
       "plan_approval_gate": false
     },
     "implementation": {
-      "status": "blocked_until_writing_plan_and_tdd_red",
+      "status": "waiting_first_tdd_red",
       "requires": ["writing_plan", "tdd_red"]
     },
     "qa": {
@@ -81,9 +81,9 @@
     "evidence_may_be_fabricated": false
   },
   "next_action": {
-    "artifact": "BUILD.md",
-    "action": "verify_congruence_corrections_on_published_head",
-    "on_success": "create_WARLOG_and_cut_minispecs",
-    "on_p0": "correct_canonical_artifact_and_repeat_review"
+    "artifact": "minispecs/001-fluxo-ate-agenda/writing-plan.md",
+    "action": "write_first_failing_contract_test",
+    "on_success": "implement_minispec_001",
+    "on_p0": "stop_and_reopen_canonical_contract"
   }
 }
