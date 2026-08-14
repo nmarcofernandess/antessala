@@ -148,11 +148,11 @@ export function WidgetAlergias({
  */
 function LinhaClassificacao({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return (
-    <div className="grid gap-x-4 gap-y-1.5 @2xl:grid-cols-[164px_minmax(0,1fr)] @2xl:items-center">
+    <div className="grid gap-x-4 gap-y-1.5 @3xl:grid-cols-[164px_minmax(0,1fr)] @3xl:items-center">
       <div>
         <EtiquetaSecao>{rotulo}</EtiquetaSecao>
       </div>
-      <div className="max-w-[560px]">{children}</div>
+      <div>{children}</div>
     </div>
   )
 }
@@ -204,7 +204,7 @@ function CartaoAlergia({
 
       {/* Indentado até o texto do cabeçalho: a classificação pertence ao que
           está escrito acima, e o alinhamento é quem diz isso. */}
-      <div className="mt-3.5 space-y-2 border-t pt-3.5 @2xl:ml-7">
+      <div className="mt-3.5 space-y-2 border-t pt-3.5 @3xl:ml-7">
         <LinhaClassificacao rotulo="Gravidade documentada">
           <Escolha
             opcoes={GRAVIDADES.map((g) => ({

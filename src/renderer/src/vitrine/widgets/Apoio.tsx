@@ -548,8 +548,9 @@ export function WidgetContexto({
       </div>
 
       <div>
-        <label htmlFor={campoObservacao}>
-          <EtiquetaSecao>Observação do encaminhamento — transcrição, não avaliação</EtiquetaSecao>
+        <label htmlFor={campoObservacao} className="flex flex-wrap items-baseline gap-x-2">
+          <EtiquetaSecao>Observação do encaminhamento</EtiquetaSecao>
+          <span className="text-[11px] text-muted-foreground">transcrição, não avaliação</span>
         </label>
         <Textarea
           id={campoObservacao}

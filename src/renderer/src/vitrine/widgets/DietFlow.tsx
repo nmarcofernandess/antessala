@@ -831,7 +831,7 @@ export function WidgetRotina({
                 className="relative grid items-center gap-x-3 gap-y-0.5 px-3 py-2 sm:grid-cols-[2.75rem_7.5rem_minmax(0,1fr)]"
               >
                 <span
-                  className="absolute -left-[20px] top-1/2 size-2 -translate-y-1/2 rounded-full border-2 border-background bg-muted-foreground"
+                  className="absolute -left-[21px] top-1/2 size-2.5 -translate-y-1/2 rounded-full border-2 border-background bg-muted-foreground"
                   aria-hidden
                 />
                 <span className="font-mono text-[11px] tabular-nums text-muted-foreground">

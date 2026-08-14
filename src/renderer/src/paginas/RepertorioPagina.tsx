@@ -72,13 +72,10 @@ export function RepertorioPagina() {
         <div className="mt-8 space-y-8">
           {GRUPOS_MONTADOS.map((g) => (
             <section key={g.rotulo}>
+              {/* Sem contagem ao lado do rótulo: em versalete monoespaçado o
+                  número gruda na etiqueta e é lido como parte do nome. */}
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b pb-2">
-                <span className="flex items-baseline gap-2.5">
-                  <Rotulo>{g.rotulo}</Rotulo>
-                  <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                    {g.itens.length}
-                  </span>
-                </span>
+                <Rotulo>{g.rotulo}</Rotulo>
                 <span className="text-[11.5px] text-muted-foreground">{g.nota}</span>
               </div>
 

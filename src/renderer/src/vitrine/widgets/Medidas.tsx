@@ -132,7 +132,7 @@ function CampoMedida({
       className={cn(
         // A altura é a mesma nos três estados: aferido, vazio e não aferido.
         // É o que impede a grade de pular quando o link de recusa aparece.
-        'flex h-full min-h-[6.5rem] flex-col justify-between rounded-lg border bg-card px-4 py-3',
+        'flex h-full min-h-[5.75rem] flex-col justify-between rounded-lg border bg-card px-4 py-3',
         naoAferida && 'border-dashed bg-muted/20',
       )}
     >
@@ -159,8 +159,10 @@ function CampoMedida({
           </Button>
         </div>
       ) : (
-        <div>
-          <div className="flex items-baseline gap-1.5">
+        // A recusa mora na mesma linha do valor: ela aparece e some sem mover
+        // o número de lugar nem mudar a altura do cartão.
+        <div className="flex items-baseline justify-between gap-x-3">
+          <span className="flex items-baseline gap-1.5">
             <Input
               type="number"
               inputMode="decimal"
@@ -179,20 +181,17 @@ function CampoMedida({
               className="h-10 w-[5.75rem] font-mono text-xl tabular-nums"
             />
             <span className="text-xs text-muted-foreground">{def.unidade}</span>
-          </div>
+          </span>
 
-          {/* Slot reservado: o link some quando o valor entra, o cartão não encolhe. */}
-          <div className="mt-1.5 h-5">
-            {!aferida && (
-              <button
-                type="button"
-                onClick={() => onChange({ estado: 'NAO_REALIZADO' })}
-                className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
-              >
-                não foi aferido
-              </button>
-            )}
-          </div>
+          {!aferida && (
+            <button
+              type="button"
+              onClick={() => onChange({ estado: 'NAO_REALIZADO' })}
+              className="shrink-0 text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+            >
+              não foi aferido
+            </button>
+          )}
         </div>
       )}
     </div>
