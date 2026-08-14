@@ -24,12 +24,12 @@ function stubMatchMedia() {
   })) as unknown as typeof window.matchMedia
 }
 
-describe('Dashboard — MVP liberado', () => {
+describe('Dashboard — esqueleto neutro', () => {
   beforeEach(() => {
     stubMatchMedia()
   })
 
-  it('apresenta o fluxo decidido sem carregar IA ou memória', async () => {
+  it('não inventa status, dados de memória nem contrato clínico ou de agenda', async () => {
     const invoke = vi.fn(async (channel: string) => {
       if (channel === 'app:version') return '1.0.0'
       return undefined
@@ -47,9 +47,9 @@ describe('Dashboard — MVP liberado', () => {
     )
 
     expect(screen.getByTestId('dashboard-skeleton')).toBeInTheDocument()
-    expect(screen.getByText('Fluxo do MVP definido')).toBeInTheDocument()
+    expect(screen.getByText('Estrutura inicial')).toBeInTheDocument()
     expect(screen.getByText(
-      /A primeira entrega conecta recepção e enfermagem/,
+      /Nenhum papel, widget, protocolo ou modelo de agenda é definido nesta tela/,
     )).toBeInTheDocument()
 
     expect(screen.queryByText('Status do sistema')).not.toBeInTheDocument()

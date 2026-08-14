@@ -4,8 +4,9 @@ export const MOTOR_FILA_SPEC_PATH =
 /**
  * Ponto de encaixe legado, intencionalmente vazio.
  *
- * O produto antigo previa ordenação de fila física. A MiniSpec 002 implementa booking
- * por compatibilidade de slot, sem reutilizar este nome como decisão de domínio.
+ * O produto antigo previa ordenação de fila física; essa hipótese foi invalidada. A
+ * MiniSpec 003 decidirá o contrato de requisito/capacidade de agenda depois dos gates,
+ * sem reutilizar este nome como decisão de domínio.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MotorFilaExtensionPoint {}

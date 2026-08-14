@@ -1,243 +1,164 @@
-# ANALYST — decisões para o MVP de hoje
+# ANALYST — Antessala
 
-**Estado:** `READY FOR BUILD`
-**Produto:** Electron local, dados sintéticos, demonstração no Mac
-**Minispec liberada:** `001-caso-triagem-classificacao`
-**Última revisão:** 14/08/2026
+## Barreira obrigatória antes do Build
+
+**Estado:** `IN PROGRESS`
+**Decisão atual:** `NO-GO PARA BUILD`
+**Entrada congelada:** `hack/PRD.md`
+**Saída futura:** `hack/BUILD.md`
 
 ---
 
-## 0. Mandato
+## 1. Mandato
 
-O Analyst deixou de exigir prova hospitalar impossível antes do hack. Sua função agora é
-manter o MVP pequeno, coerente e demonstrável.
+O Analyst fecha o produto de ponta a ponta. Ele não escreve código, não antecipa schema e
+não empurra decisões para o Build.
 
-Regras:
+O fluxo do PRD é lei. Não aguardaremos entrevistas, APIs ou documentos do hospital para
+produzir o protótipo. Quando faltar uma informação institucional, o Analyst tomará uma
+**decisão explícita para a demonstração**, limitará a alegação e preservará a fronteira
+futura.
 
-1. decisão explícita deste PRD vale para a demo;
-2. dado e agenda são sintéticos;
-3. regra clínica é apresentada como regra do protótipo;
-4. nenhum requisito de piloto/produção bloqueia o build;
-5. dúvida de implementação é resolvida pela opção local mais simples e reversível;
-6. só parar por impossibilidade técnica real de concluir a narrativa.
+O Build só nasce quando todas as decisões obrigatórias abaixo estiverem fechadas e
+rastreáveis.
 
-## 1. Veredito
-
-> **PASS PARA BUILD.** Existe produto suficiente para construir e apresentar.
-
-O fluxo, os papéis, as categorias, os estados e a arquitetura da demonstração estão
-decididos. Não é necessário perguntar ao HC antes de implementar.
-
-## 2. Fluxo canônico
+## 2. Ordem imutável
 
 ```text
-encaminhamento chega à recepção
-→ recepção abre caso
-→ enfermagem faz anamnese
-→ sistema sugere RAPIDO, NORMAL ou ESTENDIDO
-→ enfermagem confirma ou corrige
-→ recepção agenda vaga compatível
-→ anestesiologista avalia
-→ conclui ou cria pendência/retorno
-→ resultado é entregue ao serviço solicitante
+PRD congelado
+→ Analyst completo
+→ Build
+→ Warlog
+→ Sprints
+→ Spec de uma sprint
+→ Plan dessa spec
+→ primeiro teste TDD
+→ código
 ```
 
-O que acontece antes do encaminhamento e a marcação da cirurgia ficam fora.
+Qualquer artefato posterior já presente no repositório é rascunho sem autoridade.
 
-## 3. Modelo mínimo
+## 3. Como uma decisão passa
 
-### Caso
+Cada decisão do Analyst deve declarar:
 
-```text
-id
-paciente: nome, sexo, idade
-serviço/médico solicitante
-procedimento proposto
-observação do encaminhamento
-estado
-tipo de slot sugerido
-tipo de slot confirmado
-motivo de override opcional
-timestamps
-```
+| Campo | Obrigatório |
+|---|---:|
+| Pergunta respondida | sim |
+| Decisão | sim |
+| Tipo: lei do PRD, decisão da demo ou evidência do repositório | sim |
+| Ator responsável | sim |
+| Dados de entrada e saída | sim |
+| Quem lê e quem altera | sim |
+| Estado e falhas | sim |
+| Contrato persistido ou DTO | quando houver dado |
+| Teste futuro que provará a decisão | sim |
+| Limite da alegação | sim |
 
-### Anamnese
+Não passam expressões como “configurável”, “depois integra”, “o sistema alerta” ou “usa o
+componente existente” sem dono, contrato, comportamento e prova.
 
-Usa o envelope JSONB e o composer existentes. O catálogo ativo da demo pode começar com
-os oito widgets portados e ser reduzido se algum não contribuir para a narrativa.
+## 4. Dossiês obrigatórios
 
-### Slot
+O Analyst principal é este índice. Os detalhes vivem em cinco dossiês, todos canônicos e
+todos obrigatórios:
 
-```text
-id
-data/hora
-tipo: RAPIDO | NORMAL | ESTENDIDO
-duração em minutos
-profissional sintético
-status: DISPONIVEL | RESERVADO | BLOQUEADO
-caso reservado opcional
-```
+| Dossiê | Conteúdo | Estado |
+|---|---|---|
+| [Fluxo e domínio](analyst/01-fluxo-e-dominio.md) | fronteiras, identidades, estados, handoffs, falhas | `IN PROGRESS` |
+| [Atores e permissões](analyst/02-atores-e-permissoes.md) | logins, RBAC, ownership e visibilidade | `IN PROGRESS` |
+| [Widgets e dados](analyst/03-widgets-e-dados.md) | catálogo, DTOs, proveniência e terminologias | `IN PROGRESS` |
+| [Classificação e agenda](analyst/04-classificacao-e-agenda.md) | saídas, regras, slots, capacidade e concorrência | `IN PROGRESS` |
+| [Arquitetura e prova](analyst/05-arquitetura-e-prova.md) | fonte de verdade, segurança, reuso e testes | `IN PROGRESS` |
 
-### Avaliação
+## 5. Matriz mestra de rastreabilidade
 
-```text
-caso
-resultado: CONCLUIDO | PENDENTE | RETORNO
-pendências/observações
-resumo final
-timestamp
-```
+Antes do PASS, cada ação crítica deve ocupar uma linha:
 
-### Evento da jornada
+| Ator | Evento | Superfície | Campo/widget | Fonte | Regra | Saída | Estado | Permissão | Persistência | Teste |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Recepção | encaminhamento entregue | a definir | a definir | documento | a definir | caso aberto | a definir | a definir | a definir | a definir |
+| Enfermagem | caso recebido | a definir | anamnese | relato/aferição | a definir | necessidade de vaga | a definir | a definir | a definir | a definir |
+| Recepção | triagem concluída | a definir | resumo operacional | triagem | compatibilidade | reserva | a definir | a definir | a definir | a definir |
+| Anestesiologista | paciente comparece | a definir | avaliação | caso + consulta | decisão médica | conclusão/pendência | a definir | a definir | a definir | a definir |
+| Serviço solicitante | avaliação concluída | a definir | resultado | avaliação | handoff | recebimento | terminal a definir | leitura | a definir | a definir |
 
-Append-only: caso, estado anterior, novo estado, ator simulado, motivo e timestamp.
+As células `a definir` são trabalho ativo, não permissão para o Build.
 
-## 4. Estados
+## 6. Gates de saída
 
-| Estado | Próximos estados válidos |
-|---|---|
-| `RECEBIDO` | `EM_TRIAGEM` |
-| `EM_TRIAGEM` | `PRONTO_PARA_AGENDAR` |
-| `PRONTO_PARA_AGENDAR` | `AGENDADO` |
-| `AGENDADO` | `EM_AVALIACAO` |
-| `EM_AVALIACAO` | `PENDENTE`, `CONCLUIDO` |
-| `PENDENTE` | `AGENDADO_RETORNO`, `CONCLUIDO` |
-| `AGENDADO_RETORNO` | `EM_AVALIACAO` |
-| `CONCLUIDO` | `ENTREGUE_AO_SOLICITANTE` |
-| `ENTREGUE_AO_SOLICITANTE` | terminal |
+### Produto e domínio
 
-Não construir motor genérico de workflow. Um contrato tipado e transições explícitas
-bastam.
+- [ ] O fluxo canônico está descrito por ator, entrada, ação, saída e próximo responsável.
+- [ ] Paciente, encaminhamento, caso, anamnese, agendamento e avaliação têm identidades
+  inequívocas.
+- [ ] A máquina de estados cobre caminho feliz, informação ausente, falta de vaga,
+  pendência, retorno, cancelamento e handoff.
+- [ ] Cada estado tem owner, entrada, saída, ações permitidas e terminalidade.
+- [ ] A fronteira com triagem geral, prontuário e marcação cirúrgica está congelada.
 
-## 5. Categorias da triagem
+### Atores e permissões
 
-| Categoria | Regra operacional da demo |
-|---|---|
-| `RAPIDO` | precisa acessar uma vaga mais próxima/protegida |
-| `NORMAL` | usa vaga padrão |
-| `ESTENDIDO` | precisa de vaga com maior duração |
+- [ ] Os logins necessários à demonstração estão definidos.
+- [ ] Cada campo tem criador, editor, leitor, confirmador e regra de correção.
+- [ ] A recepção não interpreta nem altera dados clínicos.
+- [ ] A enfermagem não conclui avaliação médica.
+- [ ] O anestesiologista não altera silenciosamente a entrevista de enfermagem.
+- [ ] O serviço solicitante recebe somente o conteúdo autorizado.
+- [ ] A matriz RBAC cobre interface e fronteira de dados.
 
-A implementação usa regras determinísticas simples sobre as respostas da anamnese e o
-procedimento sintético. Cada resultado retorna razões legíveis. A enfermagem confirma ou
-altera.
+### Widgets e dados
 
-Não transformar a categoria em ASA, aptidão cirúrgica ou protocolo oficial.
+- [ ] O catálogo de widgets está completo.
+- [ ] Cada widget tem ID, versão, DTO, validação, defaults, completude e resumo.
+- [ ] Cada campo distingue negativo, desconhecido, não aplicável e não perguntado.
+- [ ] Cada campo tem proveniência e owner.
+- [ ] Cada dado consumido por uma regra existe em um widget ou no contexto do procedimento.
+- [ ] Procedimentos, medicamentos, CID, exames e demais catálogos foram auditados.
+- [ ] Perguntas específicas por procedimento têm modelo e fallback definidos.
 
-## 6. Papéis e superfícies
+### Classificação e agenda
 
-### Recepção
+- [ ] A saída operacional rápida, normal e estendida tem nome, significado e efeito.
+- [ ] Complexidade, antecedência, prontidão e decisão médica não foram misturadas.
+- [ ] Regras, explicações, versão, override e reclassificação estão definidos.
+- [ ] Informação ausente nunca é tratada como normal.
+- [ ] Recurso, capacidade, duração, slot, bloqueio e reserva estão definidos.
+- [ ] Falta de capacidade, reagendamento, retorno e falta do paciente têm fluxo.
+- [ ] Dupla reserva e demais corridas têm contrato de prevenção e recuperação.
+- [ ] O calendário foi tratado como projeção, não como fonte de verdade.
 
-- cria caso;
-- envia para triagem;
-- vê categoria confirmada e pendências operacionais;
-- agenda slot compatível;
-- não edita a anamnese clínica.
+### Arquitetura e prova
 
-### Enfermagem
+- [ ] A arquitetura do protótipo foi escolhida e não se apresenta como arquitetura do HC.
+- [ ] A fonte de verdade e o funcionamento offline foram definidos por operação.
+- [ ] O reuso de Antessala, DietFlow e EscalaFlow foi classificado em copiar, adaptar ou
+  rejeitar.
+- [ ] Segurança, dados sintéticos, auditoria, retenção e exportação estão definidos.
+- [ ] Testes de domínio, contrato, RBAC, concorrência e ponta a ponta estão enumerados.
+- [ ] A prova demonstra casos que exigem tratamentos de agenda diferentes.
+- [ ] Métricas da demo medem o que ela realmente executa.
 
-- abre caso aguardando triagem;
-- preenche anamnese;
-- vê explicação da sugestão;
-- confirma ou altera categoria.
+### Entrega documental
 
-### Anestesiologista
+- [ ] Nenhuma decisão obrigatória ficou “para o Build”.
+- [ ] A matriz mestra não contém `a definir`.
+- [ ] Todos os cinco dossiês estão `COMPLETE`.
+- [ ] O Analyst narra o fluxo simples, o fluxo com pendência e o fluxo sem vaga.
+- [ ] O escopo futuro do Build pode ser escrito sem inventar domínio.
 
-- vê agenda e resumo do caso;
-- inicia avaliação;
-- conclui ou cria pendência/retorno;
-- escreve resumo final.
+## 7. Veredito atual
 
-### Serviço solicitante
+O PRD está pronto. O Analyst não está.
 
-- vê casos concluídos;
-- recebe o resumo;
-- confirma handoff.
+Portanto:
 
-No MVP, os papéis são modos da interface. Não implementar autenticação real.
+- Build: proibido;
+- Warlog: não iniciado;
+- Sprints: rascunhos;
+- Specs: rascunhos;
+- Plans: rascunhos;
+- testes e código: proibidos.
 
-## 7. Agenda
-
-PGlite é a autoridade única. Slots são seedados. O calendário é uma projeção; pode ser
-uma lista/grade simples se isso for mais rápido que instalar FullCalendar.
-
-Leis:
-
-- só slot disponível e compatível pode ser reservado;
-- reserva e mudança do caso acontecem na mesma transação;
-- reservar slot já ocupado falha com mensagem clara;
-- caso pendente não recebe vaga nova até voltar a pronto;
-- ausência de vaga compatível aparece como estado, não erro técnico.
-
-## 8. Fixtures obrigatórias
-
-1. **Carlos — RÁPIDO:** caso com sinal de necessidade de acesso antecipado.
-2. **Marina — NORMAL:** caso padrão e completo.
-3. **Joana — ESTENDIDO:** caso que demanda avaliação mais longa.
-4. **Paulo — PENDENTE:** informação/exame faltante e retorno posterior.
-
-Todos os nomes, dados, regras e agendas são fictícios.
-
-## 9. Arquitetura decidida
-
-```text
-Electron
-→ React/shadcn existente
-→ TIPC direto
-→ PGlite local
-→ seed sintético
-```
-
-- sem Next.js;
-- sem Supabase;
-- sem Stripe;
-- sem deploy;
-- sem sync;
-- sem API hospitalar;
-- sem login real;
-- sem IA no caminho crítico.
-
-Se o projeto vencer, essas decisões serão reavaliadas para produto real.
-
-## 10. Reuso autorizado
-
-- composer e widgets existentes;
-- catálogos offline existentes;
-- PGlite, query helpers e IPC;
-- PDF, se couber no final;
-- componentes shadcn e tema;
-- funções puras do classificador somente como matéria-prima, nunca como protocolo oficial;
-- padrões visuais de agenda já disponíveis, se economizarem tempo.
-
-Não portar DietFlow, EscalaFlow ou Studio em bloco.
-
-## 11. Gate de cada minispec
-
-### MiniSpec 001
-
-`PASS`: caso + anamnese + sugestão explicável + confirmação humana funcionando.
-
-### MiniSpec 002
-
-`PASS` automático depois da 001: agenda sintética + compatibilidade + booking atômico.
-
-### MiniSpec 003
-
-`PASS` automático depois da 002: avaliação + pendência/retorno + handoff + demo final.
-
-Não existe nova rodada de descoberta entre os sprints.
-
-## 12. Definition of Done do hack
-
-- fluxo completo demonstrável;
-- dados sintéticos claramente identificados;
-- estados e decisões visíveis;
-- três categorias provadas;
-- override humano provado;
-- slot incompatível/ocupado recusado;
-- pendência e retorno provados;
-- handoff final provado;
-- testes, typecheck e build verdes;
-- interface suficiente para prints e pitch.
-
-Tudo que for necessário para homologação hospitalar fica no backlog pós-vitória e não
-bloqueia esta entrega.
+O próximo trabalho é preencher os cinco dossiês e eliminar cada `a definir`. Só então este
+documento pode mudar para `READY FOR BUILD`.

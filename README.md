@@ -1,95 +1,52 @@
 # Antessala
 
-MVP Electron para demonstrar **triagem aplicada ao agendamento da consulta
-pré-anestésica**.
+Produto para diferenciar o agendamento da consulta pré-anestésica a partir da anamnese de
+enfermagem.
 
-> **Estado: `READY FOR BUILD`.** O fluxo do hack está decidido e usa somente dados
-> sintéticos no Mac.
+> **Estado: `ANALYST IN PROGRESS`. Nenhum Build, teste novo ou código está autorizado.**
 
-## Fluxo
+## Problema
+
+A recepção precisa reservar a consulta pré-anestésica, mas não deve interpretar dados
+clínicos. A enfermagem coleta a anamnese, porém essa avaliação precisa virar uma orientação
+operacional de agenda: vaga rápida, normal ou estendida.
+
+## Fluxo canônico
 
 ```text
-encaminhamento do médico solicitante
-→ recepção abre caso
-→ enfermagem realiza anamnese
-→ confirma slot RAPIDO, NORMAL ou ESTENDIDO
-→ recepção agenda vaga compatível
-→ anestesiologista conclui ou cria pendência/retorno
+médico indica procedimento e entrega encaminhamento
+→ recepção recebe o encaminhamento
+→ enfermagem realiza a anamnese
+→ triagem define a necessidade da vaga
+→ recepção agenda uma vaga compatível
+→ anestesiologista conclui ou registra pendência e retorno
 → resultado volta ao serviço solicitante
 ```
 
-A triagem geral do SUS acontece antes e não pertence ao produto. A marcação da cirurgia
-acontece depois e também fica fora.
+A triagem geral do SUS acontece antes. A marcação da cirurgia acontece depois. As duas
+ficam fora do Antessala.
 
-## Documentação canônica
+## Documentação
 
-1. [`hack/PRD.md`](hack/PRD.md) — produto e leis do MVP;
-2. [`hack/ANALYST.md`](hack/ANALYST.md) — decisões de domínio e arquitetura;
-3. [`hack/BUILD.md`](hack/BUILD.md) — plano mestre;
-4. [`hack/WARLOG.md`](hack/WARLOG.md) — histórico das decisões.
+1. [`hack/PRD.md`](hack/PRD.md) — contrato do produto, congelado;
+2. [`hack/ANALYST.md`](hack/ANALYST.md) — fase ativa e barreira do Build;
+3. [`hack/analyst/`](hack/analyst/) — dossiês de domínio, atores, dados, agenda e prova;
+4. [`hack/BUILD.md`](hack/BUILD.md) — rascunho bloqueado;
+5. [`hack/WARLOG.md`](hack/WARLOG.md) — rascunho bloqueado;
+6. [`hack/minispecs/`](hack/minispecs/) — possíveis sprints, ainda sem autorização.
 
-Três sprints, cada um com `spec.md` e `writing-plan.md`:
-
-| Sprint | Estado | Entrega |
-|---|---|---|
-| [`001-caso-triagem-classificacao`](hack/minispecs/001-caso-triagem-classificacao/spec.md) | pronto | caso, anamnese, classificação e override |
-| [`002-capacidade-agenda-booking`](hack/minispecs/002-capacidade-agenda-booking/spec.md) | depois da 001 | slots sintéticos e booking compatível |
-| [`003-handoff-prova-final`](hack/minispecs/003-handoff-prova-final/spec.md) | depois da 002 | avaliação, pendência/retorno e handoff |
-
-## Fundação pronta
-
-- Electron + React 19 + shadcn/ui;
-- PGlite embarcado e IPC tipado;
-- composer e oito widgets de anamnese;
-- CID-10, medicamentos, MET e catálogos locais;
-- primeiro boot sem download de modelo;
-- tema claro/escuro/sistema;
-- exportação PDF;
-- IA opcional e memória/RAG dormentes;
-- Vitest e Playwright.
-
-## Arquitetura do hack
+## Sequência obrigatória
 
 ```text
-Electron renderer
-→ TIPC
-→ PGlite local
-→ seed sintético
+PRD → Analyst → Build → Warlog → Sprints → Spec → Plan → TDD → código
 ```
 
-- um único Mac;
-- papéis simulados por modos da interface;
-- nenhuma API hospitalar;
-- nenhum dado real;
-- nenhuma rede obrigatória no fluxo;
-- nenhuma alegação de homologação clínica.
+Não se cria artefato de uma fase antes que a anterior esteja concluída. O Analyst só libera
+o Build quando fechar o fluxo ponta a ponta, os dados, os DTOs dos widgets, os papéis, as
+permissões, a classificação, a agenda, a arquitetura e a estratégia de prova.
 
-## Categorias
+## Fundação técnica existente
 
-- `RAPIDO`: acesso antecipado;
-- `NORMAL`: vaga padrão;
-- `ESTENDIDO`: consulta com maior duração.
-
-A regra do protótipo é explicável e a enfermagem pode sobrescrever a sugestão.
-
-## O que não entra agora
-
-- Next.js, Supabase, Stripe ou deploy web;
-- autenticação/RBAC institucional;
-- FHIR, PEP ou agenda real;
-- sync multiusuário;
-- centro cirúrgico;
-- app do paciente;
-- protocolo oficial do HC.
-
-Isso é pós-vitória. O hack precisa demonstrar o fluxo completo no Mac.
-
-## Comandos
-
-```bash
-npm install
-npm run dev
-npm test
-npm run typecheck
-npm run build
-```
+O repositório já contém Electron, React, PGlite, IPC, widgets de anamnese, catálogos
+offline, tema, PDF e testes. Isso é inventário, não autorização para construir o produto.
+O Analyst decidirá o que será copiado, adaptado, mantido ou rejeitado.

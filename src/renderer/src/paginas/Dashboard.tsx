@@ -10,6 +10,11 @@ import { PageHeader } from '@/componentes/PageHeader'
 import { useAppVersion } from '@/hooks/useAppVersion'
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/app-info'
 
+/**
+ * Superfície neutra enquanto o contrato operacional está em descoberta.
+ *
+ * Não antecipa papéis, widgets, decisão clínica nem arquitetura de agenda.
+ */
 export function Dashboard() {
   const appVersion = useAppVersion()
 
@@ -32,15 +37,14 @@ export function Dashboard() {
 
         <Card data-testid="dashboard-skeleton">
           <CardHeader>
-            <CardTitle>Fluxo do MVP definido</CardTitle>
+            <CardTitle>Estrutura inicial</CardTitle>
             <CardDescription>
-              Encaminhamento, triagem, slot compatível, avaliação e handoff final.
+              A fundação técnica está pronta; o produto clínico aguarda validação do Analyst.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              A primeira entrega conecta recepção e enfermagem para classificar casos em
-              rápido, normal ou estendido.
+              Nenhum papel, widget, protocolo ou modelo de agenda é definido nesta tela.
             </p>
           </CardContent>
         </Card>

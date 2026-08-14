@@ -37,5 +37,6 @@ Limites conhecidos:
 - A origem está documentada, mas a licença de redistribuição dos dados ainda
   precisa de confirmação antes de uma distribuição pública.
 
-Esses catálogos são matéria-prima da demonstração. A MiniSpec 001 seleciona o conjunto
-mínimo e apresenta as regras como regras do protótipo, não como protocolo oficial.
+Esses catálogos são matéria-prima. O dossiê
+`hack/analyst/03-widgets-e-dados.md` deve auditar cobertura, licença, contratos e uso antes
+que qualquer spec selecione o conjunto do produto.

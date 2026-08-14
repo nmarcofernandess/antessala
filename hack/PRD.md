@@ -1,211 +1,269 @@
-# PRD canônico — Antessala
+# PRD — Antessala
 
-## Triagem para definir o slot da consulta pré-anestésica
+## Agendamento diferenciado da consulta pré-anestésica
 
 **Hacka Health 2026 · Desafio 1 · HCFMRP-USP**
-**Versão:** 3.0 · 14/08/2026
-**Estado:** `READY FOR BUILD`
-**Entrega:** MVP demonstrável em Electron, executado localmente no Mac
+**Versão:** 4.0 · 14/08/2026
+**Estado:** `READY FOR ANALYST`
+**Confiança:** média
+**Rota:** PRD → Analyst → Build → Warlog → Sprints → Spec → Plan → TDD → código
+**Próxima fase:** `hack/ANALYST.md`
 
 ---
 
-## 0. Lei deste documento
+## 1. Lei deste documento
 
-Este é o único PRD. O fluxo descrito aqui é a decisão de produto do hackathon. Não depende
-de entrevista, screen-share, API, validação da TI ou acesso a dado real para ser construído.
+Este PRD define o produto. O fluxo abaixo é a decisão canônica do hackathon.
 
-O MVP usa pessoas, agendas, encaminhamentos e dados clínicos **inteiramente sintéticos**.
-Ele demonstra uma solução possível para o desafio; não afirma ser integração homologada
-ou protocolo oficial do HCFMRP.
+Depois desta revisão, o PRD fica congelado. O Analyst pode esclarecer o domínio e tomar
+decisões técnicas, mas não pode mudar o problema, os atores, a fronteira ou a promessa do
+produto. Uma mudança desse porte exige reabrir formalmente o PRD.
 
-Se o projeto vencer e receber investimento, arquitetura web, banco compartilhado,
-autenticação institucional, integrações e validação clínica entram numa fase posterior.
-Nada disso bloqueia a entrega de hoje.
+Este documento não define banco, telas, widgets, algoritmo, classes clínicas, permissões,
+agenda ou arquitetura. Essas respostas pertencem ao Analyst.
 
-## 1. O fluxo é este
+## 2. Problema
 
-```text
-paciente passa pela triagem geral do SUS
-→ consulta com o médico do serviço solicitante
-→ médico indica um procedimento e emite encaminhamento para consulta pré-anestésica
-→ paciente entrega o encaminhamento na recepção
-→ recepção abre o caso e encaminha para a enfermagem
-→ enfermagem realiza anamnese pré-anestésica
-→ triagem define o tipo de slot: RÁPIDO, NORMAL ou ESTENDIDO
-→ paciente retorna à recepção
-→ recepção encontra e reserva vaga compatível com o tipo indicado
-→ paciente comparece à consulta com o anestesiologista
-→ anestesiologista conclui a avaliação ou registra exames/retornos necessários
-→ quando concluído, o resultado volta ao serviço médico solicitante
-→ serviço solicitante marca a cirurgia imediatamente ou comunica a data depois
-```
+Pacientes encaminhados para consulta pré-anestésica têm necessidades diferentes, mas o
+agendamento não dispõe de informação estruturada para reservar uma vaga compatível com o
+tempo e a antecedência exigidos por cada caso.
 
-### 1.1 Exemplo narrativo canônico
+Na prática, a recepção recebe o encaminhamento, mas não deve interpretar dados clínicos. A
+enfermagem coleta a anamnese, porém essa avaliação precisa chegar ao agendamento como uma
+orientação operacional clara. Sem essa ponte, casos diferentes disputam vagas semelhantes.
 
-Dr. João, gastroenterologista, indica uma endoscopia. O paciente recebe encaminhamento
-para a consulta pré-anestésica, entrega-o na recepção e passa pela enfermagem. A anamnese
-indica qual tipo de vaga ele necessita. A recepção agenda uma vaga compatível. No dia, o
-anestesiologista avalia, solicita pendências se necessário e conclui. O resultado retorna
-à secretaria do Dr. João, que conduz a marcação da cirurgia.
+## 3. Objetivo
 
-Os nomes e dados da demo são fictícios.
+Transformar a triagem de enfermagem em uma necessidade de agendamento compreensível pela
+recepção, permitindo reservar a consulta pré-anestésica na categoria de vaga adequada.
 
-## 2. Fronteiras
+O produto também deve acompanhar a consulta do anestesiologista até a conclusão ou a
+abertura de pendências e devolver o resultado ao serviço que solicitou o procedimento.
 
-### O Antessala começa
+## 4. Fluxo canônico
 
-Quando a recepção recebe o encaminhamento para consulta pré-anestésica.
+1. O paciente passa pela triagem geral do SUS. Essa etapa já existe e fica fora do produto.
+2. O paciente consulta o médico do serviço solicitante.
+3. O médico indica um procedimento e entrega um encaminhamento para consulta
+   pré-anestésica.
+4. O paciente entrega o encaminhamento à recepção.
+5. A recepção registra a entrada e direciona o paciente à enfermagem.
+6. A enfermagem realiza a anamnese pré-anestésica.
+7. A triagem produz uma necessidade operacional de vaga: rápida, normal ou estendida.
+8. O paciente retorna à recepção.
+9. A recepção reserva uma vaga compatível com a necessidade indicada e com a capacidade
+   disponível.
+10. Na data marcada, o anestesiologista avalia o paciente.
+11. O anestesiologista conclui a avaliação ou solicita exames, informações e retornos.
+12. Quando a avaliação termina, o resultado volta ao médico ou à secretaria do serviço
+   solicitante.
+13. O serviço solicitante conduz a marcação da cirurgia, imediatamente ou depois.
 
-### O Antessala termina
+### Exemplo canônico
 
-Quando a avaliação pré-anestésica concluída ou sua pendência é entregue ao serviço
-solicitante.
+Dr. João, gastroenterologista, indica uma endoscopia. O paciente leva o encaminhamento à
+recepção, passa pela anamnese de enfermagem e recebe uma indicação operacional de vaga. A
+recepção agenda a consulta correspondente. O anestesiologista avalia o paciente, resolve
+eventuais pendências e devolve o resultado à secretaria do Dr. João. A secretaria conduz a
+marcação do procedimento.
 
-### Fora do produto
+## 5. Usuários e atores
+
+| Ator | Responsabilidade no fluxo |
+|---|---|
+| Paciente | entrega o encaminhamento, responde à anamnese e comparece à consulta |
+| Médico solicitante | indica o procedimento e emite o encaminhamento |
+| Recepção | recebe o encaminhamento e agenda a vaga indicada |
+| Enfermagem | realiza a anamnese e produz a necessidade operacional da vaga |
+| Anestesiologista | realiza a avaliação, registra pendências e conclui o parecer |
+| Serviço solicitante | recebe o resultado e conduz a marcação da cirurgia |
+
+O Analyst definirá quais atores precisam de login, quais ações cada papel pode executar e
+quais dados cada papel pode ver.
+
+## 6. Histórias de usuário
+
+### Paciente
+
+- Como paciente encaminhado, quero passar pela triagem e sair com um próximo passo claro,
+  para não depender de interpretações diferentes em cada balcão.
+- Como paciente com pendências, quero saber o que falta e como retornar, para não perder o
+  caminho até a avaliação concluída.
+
+### Recepção
+
+- Como recepcionista, quero receber uma categoria operacional de vaga, para agendar sem
+  interpretar informação clínica.
+- Como recepcionista, quero ver apenas horários compatíveis, para não reservar uma consulta
+  inadequada.
+
+### Enfermagem
+
+- Como enfermeiro, quero registrar a anamnese completa e transformar os achados em uma
+  necessidade de agendamento explicável.
+- Como enfermeiro, quero identificar dados ausentes antes do agendamento, para não tratar
+  silêncio como ausência de risco.
+
+### Anestesiologista
+
+- Como anestesiologista, quero receber o caso com a origem dos dados e o resumo da triagem,
+  para avaliar sem reconstruir a história do paciente.
+- Como anestesiologista, quero registrar conclusão, pendências e retornos, para que o caso
+  tenha continuidade até o serviço solicitante.
+
+### Serviço solicitante
+
+- Como integrante do serviço solicitante, quero receber o resultado da avaliação, para
+  continuar o planejamento do procedimento.
+
+## 7. Histórias técnicas
+
+Estas histórias descrevem obrigações do produto, não soluções de implementação.
+
+- Como sistema, preciso preservar a identidade do caso durante todos os handoffs.
+- Como sistema, preciso separar dado clínico de instrução operacional de agenda.
+- Como sistema, preciso impedir que um papel altere dados pertencentes a outro.
+- Como sistema, preciso representar informação ausente, negativa, desconhecida e não
+  aplicável sem confundi-las.
+- Como sistema, preciso registrar autoria, horário e motivo das decisões relevantes.
+- Como sistema, preciso garantir que uma vaga não seja confirmada para dois casos.
+- Como sistema, preciso manter pendências e retornos ligados ao caso original.
+- Como sistema, preciso entregar ao serviço solicitante um resultado compreensível e
+  rastreável.
+
+## 8. Escopo
+
+### Dentro
+
+- entrada do encaminhamento;
+- identificação do caso;
+- anamnese pré-anestésica de enfermagem;
+- definição da necessidade operacional da vaga;
+- agendamento da consulta pré-anestésica;
+- avaliação do anestesiologista;
+- pendências e retornos ligados à avaliação;
+- entrega do resultado ao serviço solicitante.
+
+### Fora
 
 - triagem geral do SUS;
 - consulta que indicou o procedimento;
-- prontuário institucional completo;
-- decisão de realizar o procedimento;
-- gestão de sala e mapa cirúrgico;
+- classificação de emergência;
+- fila física e ordem de chamada no mesmo dia;
+- decisão automática de aptidão anestésica;
 - marcação da cirurgia;
-- comunicação oficial do hospital;
-- integração real com sistemas do HC.
+- gestão de sala, equipe ou mapa cirúrgico;
+- substituição do prontuário hospitalar;
+- integrações institucionais reais no protótipo;
+- uso de dados reais de pacientes.
 
-## 3. Os quatro papéis da demonstração
+## 9. Comportamento atual
 
-O MVP roda em uma única aplicação e não exige autenticação real. Um seletor de papel ou
-navegação entre superfícies simula os handoffs.
+A recepção recebe o encaminhamento, mas não dispõe de uma tradução operacional estruturada
+da anamnese. Pacientes com necessidades diferentes podem ser encaminhados a vagas
+semelhantes. O problema observado está na ligação entre triagem e agendamento; este PRD não
+afirma qual sistema, formulário ou agenda o hospital usa hoje.
 
-| Papel | Faz no MVP |
-|---|---|
-| Recepção | recebe encaminhamento, abre caso, acompanha status e agenda slot compatível |
-| Enfermagem | realiza anamnese, vê sugestão e confirma/corrige o tipo de slot |
-| Anestesiologista | consulta caso agendado, registra pendência, retorno ou conclusão |
-| Serviço solicitante | recebe o resumo final e confirma o handoff |
+## 10. Comportamento desejado
 
-Paciente participa da narrativa e fornece dados, mas não precisa de login ou app próprio.
+O encaminhamento entra no produto, percorre recepção, enfermagem, agendamento e avaliação
+anestésica, e termina com um resultado entregue ao serviço solicitante. Cada ator recebe a
+informação necessária para cumprir sua parte sem assumir a responsabilidade de outro.
 
-## 4. A decisão operacional
+A triagem diferencia pelo menos três necessidades de agenda: vaga rápida, vaga normal e
+vaga estendida. O Analyst definirá os nomes canônicos, os critérios, a duração, a
+antecedência e o tratamento de exceções.
 
-A saída da triagem é uma destas três categorias:
+## 11. Padrão e contrato do sistema
 
-| Tipo | Significado no MVP | Consequência na agenda |
-|---|---|---|
-| `RAPIDO` | caso deve acessar avaliação mais cedo | procura vaga protegida/mais próxima compatível |
-| `NORMAL` | caso segue o fluxo padrão | procura vaga padrão disponível |
-| `ESTENDIDO` | avaliação demanda mais tempo | procura vaga de duração estendida |
+O produto organiza um caso que atravessa setores. Cada etapa recebe uma entrada, registra
+uma ação, produz uma saída e identifica o próximo responsável. Informação clínica permanece
+com os papéis clínicos; a recepção recebe somente a consequência operacional necessária
+para agendar.
 
-Essas categorias são regras de demonstração do Antessala, não classificação oficial do
-HC. A enfermagem sempre pode corrigir a sugestão e registrar o motivo.
+Toda passagem relevante precisa ser rastreável. Pendências mantêm o caso aberto. A conclusão
+só ocorre quando o resultado chega ao serviço solicitante.
 
-O sistema também registra pendências. Caso sem informação mínima não é agendado como se
-estivesse normal.
+## 12. Contexto técnico
 
-## 5. Jornada do caso
+O repositório atual oferece uma base Electron local, persistência embarcada, widgets de
+anamnese e catálogos offline. Esses recursos são candidatos, não decisões do PRD. O Analyst
+deve provar o que serve, o que precisa mudar e o que deve ficar fora.
 
-```text
-RECEBIDO
-→ EM_TRIAGEM
-→ PRONTO_PARA_AGENDAR
-→ AGENDADO
-→ EM_AVALIACAO
-→ PENDENTE
-→ AGENDADO_RETORNO
-→ EM_AVALIACAO
-→ CONCLUIDO
-→ ENTREGUE_AO_SOLICITANTE
-```
+A demonstração deve usar dados sintéticos. O PRD não escolhe schema, biblioteca de agenda,
+modelo de autenticação, algoritmo de classificação ou arquitetura de produção.
 
-`PENDENTE` e `AGENDADO_RETORNO` são opcionais. Um caso pode ir de `EM_AVALIACAO`
-diretamente para `CONCLUIDO`.
+## 13. Dados e contratos
 
-## 6. Capacidades do MVP
+O produto precisa representar encaminhamento, caso, anamnese, necessidade de agenda,
+reserva, avaliação, pendência, retorno e resultado. O Analyst definirá identidades,
+relacionamentos, DTOs, versões, proveniência, permissões e persistência.
 
-### C1 · Receber encaminhamento
+Nenhum campo pode surgir no Build sem origem, responsável, consumidor e teste futuro.
 
-Criar caso sintético com paciente, médico/serviço solicitante, procedimento e observação.
+## 14. UX e estados
 
-### C2 · Realizar anamnese
+Cada papel precisa de uma superfície coerente com sua responsabilidade. A interface deve
+mostrar o próximo passo, dados ausentes, ausência de vaga, pendência, retorno e conclusão
+sem depender apenas de cor.
 
-Usar o composer e os widgets existentes, ativando somente o conjunto necessário à demo.
+O Analyst definirá a máquina de estados. Este PRD exige apenas que o caso continue
+identificável do encaminhamento ao handoff final.
 
-### C3 · Sugerir e confirmar tipo de slot
+## 15. Critérios de aceitação do produto
 
-Aplicar regra determinística de demonstração, mostrar as razões e permitir correção pela
-enfermagem.
+- Um caso percorre o fluxo completo do encaminhamento ao retorno ao serviço solicitante.
+- A recepção agenda sem precisar interpretar comorbidades, medicamentos ou exames.
+- A enfermagem registra a anamnese e entrega uma necessidade operacional explicável.
+- Casos com necessidades diferentes recebem opções de agenda diferentes.
+- Informação obrigatória ausente aparece como pendência; nunca vira resposta negativa.
+- O anestesiologista conclui a avaliação ou registra pendência e retorno.
+- O serviço solicitante recebe o resultado final do caso.
+- A autoria e a sequência dos handoffs podem ser reconstruídas.
+- A demonstração usa somente dados sintéticos.
 
-### C4 · Agendar
+## 16. Definition of Complete do PRD
 
-Exibir agenda sintética com vagas `RAPIDO`, `NORMAL` e `ESTENDIDO`; oferecer somente vagas
-compatíveis e impedir dupla reserva.
+- [x] Problema definido.
+- [x] Objetivo definido.
+- [x] Fluxo ponta a ponta definido.
+- [x] Atores identificados.
+- [x] Histórias de usuário definidas.
+- [x] Histórias técnicas definidas.
+- [x] Escopo interno e externo definido.
+- [x] Critérios de aceitação definidos.
+- [x] Próxima fase definida.
 
-### C5 · Realizar avaliação pré-anestésica
+O PRD está completo para alimentar o Analyst. Ele não autoriza Build.
 
-Permitir ao anestesiologista registrar:
+## 17. Riscos
 
-- concluído sem pendência;
-- exame ou informação necessária;
-- retorno necessário;
-- observação e resumo final.
+- Confundir urgência clínica com categoria operacional de agenda.
+- Fazer a recepção interpretar dados clínicos.
+- Criar uma anamnese que não fornece todos os dados consumidos pela decisão.
+- Escolher widgets antes de fechar seus contratos e responsáveis.
+- Modelar uma agenda visual antes de definir capacidade, duração e concorrência.
+- Encerrar o fluxo na triagem e esquecer consulta, pendências, retorno e handoff.
+- Tratar a arquitetura local da demonstração como arquitetura hospitalar.
 
-### C6 · Entregar ao solicitante
+## 18. Perguntas abertas delegadas ao Analyst
 
-Mostrar o caso concluído ao serviço solicitante e registrar que o resultado foi entregue.
-A cirurgia permanece fora do sistema.
+O Analyst deve fechar, sem alterar este PRD:
 
-### C7 · Explicar
+- identidade de paciente, encaminhamento, caso e avaliação;
+- papéis, logins, permissões e propriedade de cada campo;
+- catálogo de widgets, campos, DTOs, validações e proveniência;
+- dados do procedimento e perguntas condicionais;
+- catálogos clínicos necessários e suas limitações;
+- contrato da classificação e da explicação;
+- contrato da agenda, capacidade, slots, concorrência e reagendamento;
+- estados, eventos, pendências, retornos e handoffs;
+- documentos, exportações e assinatura;
+- arquitetura da demonstração e fronteira com uma versão futura;
+- segurança, auditoria e dados sintéticos;
+- estratégia de testes e prova ponta a ponta.
 
-Em qualquer caso, mostrar anamnese relevante, tipo sugerido, decisão humana, vaga
-escolhida, pendências e linha do tempo.
+## 19. Próxima fase
 
-## 7. As superfícies mínimas
-
-1. **Recepção** — entrada do encaminhamento, casos aguardando triagem e casos prontos
-   para agendar.
-2. **Triagem** — anamnese, razões da sugestão e confirmação do tipo de slot.
-3. **Agenda** — vagas por tipo e booking do caso.
-4. **Avaliação** — agenda do anestesiologista, pendências, retornos e conclusão.
-5. **Handoff** — resumo final recebido pelo serviço solicitante.
-
-Podem ser páginas, etapas ou drawers. O Build escolhe a composição mais rápida usando a
-casca existente.
-
-## 8. Dados e funcionamento
-
-- Electron + React + shadcn/ui existentes;
-- PGlite local como fonte de verdade da demo;
-- seed com casos, profissionais e agenda sintéticos;
-- primeiro boot sem acesso obrigatório à internet;
-- nenhum dado real de paciente;
-- nenhuma API hospitalar;
-- nenhuma autenticação real obrigatória;
-- IA, transcrição e RAG fora do caminho crítico.
-
-## 9. Critérios de sucesso da demo
-
-- Um encaminhamento percorre todo o fluxo até o handoff final.
-- Três casos sintéticos resultam em `RAPIDO`, `NORMAL` e `ESTENDIDO`.
-- A enfermagem entende e pode alterar a recomendação.
-- A recepção só vê vagas compatíveis com o tipo confirmado.
-- Uma vaga não pode ser reservada duas vezes.
-- Caso pendente não desaparece e pode voltar à avaliação.
-- O anestesiologista conclui ou pede retorno.
-- O serviço solicitante recebe o resultado final.
-- A linha do tempo explica tudo que aconteceu.
-- A demo abre e funciona no Mac sem depender de integração externa.
-
-## 10. Não fazer antes da entrega
-
-- Next.js, Supabase, Stripe ou deploy web;
-- integração com PEP, FHIR, agenda ou WhatsApp;
-- login institucional e RBAC de produção;
-- sync multiusuário/offline;
-- protocolo clínico definitivo;
-- catálogo completo de procedimentos;
-- gestão do centro cirúrgico;
-- app do paciente;
-- burocracia de piloto hospitalar.
-
-Esses itens são pós-vitória. Hoje o objetivo é um produto local demonstrável que conte a
-história inteira sem mentir sobre ser produção.
+O trabalho segue em `hack/ANALYST.md`. Enquanto qualquer gate obrigatório do Analyst
+estiver aberto, Build, Warlog, Sprints, Specs, Plans, testes e código permanecem proibidos.

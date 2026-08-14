@@ -122,7 +122,8 @@ export function AnamneseComposer({
 
       {value.blocos.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Nenhum bloco foi adicionado. Adicione os blocos necessários à triagem.
+          Nenhum bloco foi adicionado. A seleção clínica aguarda o PASS do Analyst para
+          o Sprint 001.
         </div>
       ) : null}
 
