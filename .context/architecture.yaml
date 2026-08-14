@@ -1,12 +1,12 @@
 schema_version: 1
 artifact: antessala-current-architecture
-reviewed_revision: 9f501a9d67806d3511ebdb9b0a560cd564c27dee
+reviewed_revision: 316b402
 proof_scope: >-
-  Recon estatico read-only do commit congelado. Foram inspecionados documentos,
+  O recon estatico read-only do commit congelado 9f501a9 inspecionou documentos,
   arvore Git nao truncada, entrypoints, rotas, handlers IPC, persistencia, rede,
-  empacotamento, STT, knowledge e testes presentes. Nao foram instaladas
-  dependencias nem executados build, aplicacao, typecheck, testes unitarios, E2E
-  ou empacotamento nesta revisao.
+  empacotamento, STT, knowledge e testes presentes. O commit 316b402 conteve os
+  handlers nao publicados; nele passaram 11 testes focados e npm run typecheck.
+  Build, aplicacao, E2E e empacotamento nao foram executados.
 allowed_statuses:
   - ACTIVE
   - DORMANT
@@ -71,22 +71,24 @@ trust_boundary:
     reuse_boundary: "Manter contextIsolation e nodeIntegration=false; revisar sandbox, navegacao e permissoes antes de dados clinicos reais."
   preload:
     status: INCOMPLETE
-    summary: "O preload expoe invoke, on e removeAllListeners genericos, apesar do comentario afirmar allowlist."
+    summary: "O preload expoe somente invoke e rejeita em runtime qualquer canal fora da lista compartilhada de 17 procedimentos publicados; autenticacao e autorizacao ainda nao existem."
     evidence:
-      - "src/preload/index.ts:1-17"
-    reuse_boundary: "O cliente TIPC pode ser mantido, mas a ponte deve ser estreitada antes de uma fronteira multiusuario."
+      - "src/preload/index.ts:1-18"
+      - "src/shared/active-ipc-channels.ts:1-27"
+      - "tests/shared/active-ipc-channels.spec.ts:1-26"
+    reuse_boundary: "Manter a allowlist unica e reduzir canais conforme superficies; ela limita reachability, mas nao substitui sessao, capability ou escopo."
   electron_permissions:
     status: INCOMPLETE
     summary: "Nao foram encontrados permission request/check handlers explicitos; captura de audio dormente dependeria do comportamento padrao do Electron e do sistema operacional."
     evidence:
-      - "src/main/index.ts:24-195"
+      - "src/main/index.ts:24-188"
       - "src/renderer/src/hooks/useAudioRecorder.ts:4-84"
     reuse_boundary: "Definir politica explicita antes de ativar microfone ou qualquer nova permissao do Electron."
   authorization:
     status: INCOMPLETE
     summary: "O HEAD nao possui login, sessao, papeis, capabilities nem guards de autorizacao IPC."
     evidence:
-      - "src/main/tipc.ts:373-409"
+      - "src/main/tipc.ts:265-284"
       - "src/main/db/schema.ts:8-24"
     reuse_boundary: "Nao publicar superficies clinicas sobre o router atual sem o contrato de acesso aprovado."
 
@@ -115,11 +117,11 @@ persistence:
     reuse_boundary: "Reset continua fora do produto; provas devem usar somente diretorio temporario proprio."
   clinical_legacy:
     status: INCOMPLETE
-    summary: "registros, prioridade e registro_jornada pertencem a hipotese invalidada e sao provisórios."
+    summary: "registros, prioridade e registro_jornada pertencem a hipotese invalidada e continuam no schema, mas seus handlers foram retirados do router ativo."
     evidence:
       - "src/main/db/clinical-schema.ts:3-9"
       - "src/main/db/clinical-schema.ts:10-52"
-    reuse_boundary: "Nao ampliar nem usar como fonte canônica de caso, jornada, fila ou paciente."
+    reuse_boundary: "Nao ampliar nem usar como fonte canônica de caso, jornada, fila ou paciente; schema legado nao equivale a superficie chamavel."
   knowledge_tables:
     status: ACTIVE
     summary: "Tabelas de fontes, chunks, memorias, entidades, relacoes e jobs de importacao sao criadas no boot normal; somente a superficie esta dormente."
@@ -173,10 +175,12 @@ ipc:
     reuse_boundary: "Usar client['procedimento'](input); nao adicionar .invoke() no codigo de produto."
   registered_surface:
     status: INCOMPLETE
-    summary: "O router registrado expoe contratos clinicos provisorios, PDF e os 35 procedimentos de memoria, arquivos, RAG, grafo, cloud e jobs sem sessao ou guard de papel."
+    summary: "O router ativo registra somente os 17 canais da casca publicada: configuracao/chat/conversas de IA e versao do app. Knowledge, filesystem, grafo, jobs, registros, catalogos e PDF foram retirados. Os canais restantes continuam sem sessao ou guard de papel."
     evidence:
-      - "src/main/tipc.ts:373-409"
-    reuse_boundary: "Criar allowlist e autorizacao do produto antes de considerar o router uma fronteira confiavel."
+      - "src/main/tipc.ts:265-284"
+      - "src/shared/active-ipc-channels.ts:1-27"
+      - "tests/main/active-router-surface.spec.ts:1-19"
+    reuse_boundary: "A allowlist fechou handlers invisiveis; criar sessao, capability, escopo e redacao antes de considerar os canais visiveis uma fronteira confiavel."
 
 network:
   renderer_policy:
@@ -206,6 +210,12 @@ network:
     paths:
       - chat
       - connection_test
+    evidence:
+      - "src/main/tipc.ts:104-130"
+    reuse_boundary: "Continuam explicitamente acionaveis pelas superficies visiveis e ainda precisam de sessao, finalidade, minimizacao e segredo adequado."
+  contained_source_egress:
+    status: DORMANT
+    paths:
       - rag_metadata
       - rag_text_correction
       - knowledge_enrichment
@@ -213,42 +223,43 @@ network:
       - bulk_import_auto_metadata
       - bulk_import_auto_enrich
     evidence:
-      - "src/main/tipc.ts:104-130"
       - "src/main/knowledge/router.ts:367-478"
-      - "src/main/knowledge/bulk-import.ts:241-760"
-    reuse_boundary: "A UI atual nao descreve toda esta superficie. Nenhum caminho legado pode permanecer publicamente chamavel no produto canônico."
+      - "src/main/knowledge/bulk-import.ts:241-603"
+      - "tests/main/active-router-surface.spec.ts:8-18"
+    reuse_boundary: "Fonte permanece para adaptacao futura, mas nenhum desses caminhos pertence ao router ativo."
   dormant_stt_download:
     status: INCOMPLETE
     summary: "O downloader direto existe, mas canais ia.stt nao sao registrados e sidecar/modelo nao entram no bundle."
     evidence:
       - "src/main/stt/catalog.ts:8-23"
       - "src/main/stt/download.ts:15-79"
-      - "src/main/tipc.ts:373-409"
+      - "src/main/tipc.ts:265-284"
       - "electron-builder.yml:6-14"
     reuse_boundary: "Nao reativar sem hash/assinatura, limite, consentimento e decisao explicita de empacotamento."
 
 pdf_and_files:
   pdf_export:
-    status: INCOMPLETE
+    status: DORMANT
     service_status: ACTIVE
-    ipc_status: ACTIVE
+    ipc_status: REMOVED
     user_surface_status: DORMANT
-    summary: "O backend recebe HTML do renderer, abre save dialog e imprime em janela efemera com JavaScript e rede bloqueados; nao existe superficie ativa que o acione."
+    summary: "A primitiva isolada de PDF continua em fonte e testada, mas o canal que aceitava HTML do renderer foi retirado e nao existe superficie ativa."
     evidence:
-      - "src/main/tipc.ts:398-400"
       - "src/main/export/pdf.ts:16-25"
       - "src/main/export/pdf.ts:38-91"
-    reuse_boundary: "Reutilizar a janela isolada, nao o contrato de HTML arbitrario. O documento final deve nascer de dado canônico autorizado no main e ter limites de carga."
+      - "tests/main/active-router-surface.spec.ts:8-18"
+    reuse_boundary: "Reutilizar a janela isolada somente quando um documento canônico autorizado no main substituir HTML arbitrario e houver limites de carga."
   local_file_access:
-    status: INCOMPLETE
+    status: DORMANT
     parser_status: ACTIVE
-    ipc_status: ACTIVE
+    ipc_status: REMOVED
     user_surface_status: DORMANT
-    summary: "Handlers registrados aceitam caminhos fornecidos diretamente pelo renderer; o dialogo e opcional e nao existe limite geral de tamanho, entradas ZIP, expansao ou profundidade."
+    summary: "Parsers e handlers permanecem em fonte, mas knowledge deixou o router ativo. O contrato legado ainda aceitaria paths arbitrarios se fosse reativado."
     evidence:
       - "src/main/knowledge/router.ts:202-237"
       - "src/main/knowledge/router.ts:300-335"
       - "src/renderer/src/App.tsx:49-58"
+      - "tests/main/active-router-surface.spec.ts:8-18"
     reuse_boundary: "Reutilizar parsers somente com path emitido por capacidade autorizada, canonicalizacao, limites de recurso, auditoria e finalidade fechada."
 
 audio_and_transcription:
@@ -268,7 +279,7 @@ audio_and_transcription:
       - "src/main/stt/download.ts:15-48"
       - "src/main/stt/download.ts:51-79"
       - "src/renderer/src/servicos/stt.ts:3-15"
-      - "src/main/tipc.ts:373-409"
+      - "src/main/tipc.ts:265-284"
       - "electron-builder.yml:8-12"
       - ".github/workflows/dist.yml:3-8"
     reuse_boundary: "Nao declarar transcricao funcional nem expor download de 478 MB; qualquer retorno exige acao explicita e degradacao segura."
@@ -300,7 +311,7 @@ cloud_ai:
       - "src/main/ia/discovery.ts:24-62"
       - "src/main/ia/session-processor.ts:1-18"
       - "src/shared/ia-context.ts:96-164"
-      - "src/main/tipc.ts:373-409"
+      - "src/main/tipc.ts:265-284"
     reuse_boundary: "Nao reativar promocao automatica de conversa ou memoria; adaptar somente apos o Analyst de IA e conhecimento."
 
 memory_rag_graph:
@@ -312,13 +323,12 @@ memory_rag_graph:
       - "src/main/db/schema.ts:239-246"
     reuse_boundary: "Nao chamar de dormente no nivel de persistencia."
   hidden_backend:
-    status: ACTIVE
-    summary: "Apesar do nome dormantKnowledgeRouter, seus 35 procedimentos sao espalhados no router IPC registrado e alcancam banco, filesystem, cloud, grafo e jobs."
+    status: DORMANT
+    summary: "Os 35 procedimentos continuam definidos em dormantKnowledgeRouter, mas o spread foi retirado do router ativo; nao sao mais alcancaveis pelo preload publicado."
     evidence:
       - "src/main/knowledge/router.ts:542-582"
-      - "src/main/tipc.ts:7-7"
-      - "src/main/tipc.ts:373-375"
-    reuse_boundary: "Tratar como backend alcancavel, nao como codigo morto; restringir ou desligar antes de dados clinicos."
+      - "tests/main/active-router-surface.spec.ts:8-18"
+    reuse_boundary: "Manter contido; reativacao exige router canônico, autorizacao, limites de filesystem/rede e governanca de conhecimento."
   user_surface:
     status: DORMANT
     summary: "Memorias, documentos, RAG playground e grafo possuem componentes, mas nao aparecem em rota ou menu."
@@ -331,11 +341,11 @@ memory_rag_graph:
   retrieval:
     status: INCOMPLETE
     backend_status: ACTIVE
-    ipc_status: ACTIVE
+    ipc_status: REMOVED
     user_surface_status: DORMANT
     chat_integration_status: INCOMPLETE
     vector_status: INCOMPLETE
-    summary: "Chunking, FTS e trigram funcionam localmente e o handler esta registrado; sem adapter, embeddings retornam null. O chat ativo nao usa RAG, memoria, grafo ou documentos."
+    summary: "Chunking, FTS e trigram permanecem em fonte; o handler saiu do router ativo. Sem adapter, embeddings retornam null, e o chat ativo nao usa RAG, memoria, grafo ou documentos."
     evidence:
       - "src/main/knowledge/embeddings.ts:1-79"
       - "src/main/knowledge/ingest.ts:60-108"
@@ -345,9 +355,9 @@ memory_rag_graph:
   importers:
     status: INCOMPLETE
     parser_status: ACTIVE
-    ipc_status: ACTIVE
+    ipc_status: REMOVED
     user_surface_status: DORMANT
-    summary: "Parsers de texto, PDF, HTML, CSV, JSON e ZIP existem e handlers registrados aceitam paths do renderer. UI esta dormente e a fronteira de filesystem/recursos esta incompleta."
+    summary: "Parsers de texto, PDF, HTML, CSV, JSON e ZIP existem; seus handlers sairam do router ativo. UI continua dormente e a fronteira legada de filesystem/recursos segue inadequada para reativacao."
     evidence:
       - "src/main/importers/importer-registry.ts:19-59"
       - "src/main/importers/pdf-importer.ts:5-21"
@@ -382,7 +392,7 @@ memory_rag_graph:
     evidence:
       - "src/main/ia/session-processor.ts:46-160"
       - "src/main/ia/session-processor.ts:162-222"
-      - "src/main/tipc.ts:373-409"
+      - "src/main/tipc.ts:265-284"
     reuse_boundary: "Nao reutilizar como esta; dado de caso nunca vira memoria global sem promocao humana explicita."
 
 removed_legacy:
@@ -419,7 +429,16 @@ removed_legacy:
   reuse_boundary: "Nao reintroduzir runtime FlowKit para implementar o Antessala; headless nao e terminal e shell-input e fossil sem consumidor."
 
 verification:
-  executed: []
+  executed:
+    - command: "npm test -- tests/shared/active-ipc-channels.spec.ts tests/main/active-router-surface.spec.ts"
+      result: "PASS: 2 files, 11 tests"
+      revision: "316b402"
+    - command: "npm run typecheck"
+      result: "PASS"
+      revision: "316b402"
+    - command: "npm test"
+      result: "PASS: 53 files, 227 tests"
+      revision: "316b402"
   commands:
     install: "npm install"
     development: "npm run dev"
@@ -436,28 +455,32 @@ verification:
     - "vitest.config.ts:13-27"
     - "playwright.config.ts:3-10"
     - "tests/e2e/app-flow.spec.ts:4-80"
-  note: "Nenhum comando foi executado neste recon do SHA 9f501a9. O typecheck anterior pertence a outra revisao e nao foi transportado. Nao existe script lint no HEAD."
+  note: "O recon original do SHA 9f501a9 nao executou comandos. As provas acima pertencem exclusivamente ao commit de contencao 316b402. Nao existe script lint no HEAD."
 
 known_risks:
   - id: generic-preload
     status: INCOMPLETE
-    evidence: "src/preload/index.ts:3-16"
-    statement: "Renderer pode invocar canais arbitrarios e remover listeners globais."
+    evidence:
+      - "src/preload/index.ts:1-18"
+      - "src/shared/active-ipc-channels.ts:1-27"
+    statement: "Allowlist fechada impede canais arbitrarios, mas os 17 canais publicados ainda nao possuem autenticacao ou capability."
   - id: sandbox-disabled
     status: INCOMPLETE
     evidence: "src/main/index.ts:40-45"
     statement: "A janela principal nao usa sandbox."
   - id: hidden-router-is-callable
-    status: INCOMPLETE
-    evidence: "src/main/tipc.ts:373-375"
-    statement: "Ocultar rota nao desabilita handlers de memoria, arquivos, jobs, cloud ou grafo."
+    status: DORMANT
+    evidence: "tests/main/active-router-surface.spec.ts:8-18"
+    statement: "Knowledge, arquivos, jobs, cloud avancada e grafo foram retirados do router ativo; fonte permanece contida."
   - id: arbitrary-file-path
-    status: INCOMPLETE
+    status: DORMANT
     evidence: "src/main/knowledge/router.ts:238-335"
-    statement: "Handlers aceitam paths do renderer sem exigir que tenham sido emitidos por dialogo autorizado."
+    statement: "Contrato legado aceita paths do renderer, mas seus handlers nao estao no router ativo. Reativacao continua proibida sem nova fronteira."
   - id: importer-resource-limits
     status: INCOMPLETE
-    evidence: "src/main/importers/pdf-importer.ts:5-21; src/main/importers/zip-importer.ts:11-62"
+    evidence:
+      - "src/main/importers/pdf-importer.ts:5-21"
+      - "src/main/importers/zip-importer.ts:11-62"
     statement: "Importadores nao provam limites gerais de arquivo, paginas, entradas ZIP ou tamanho descompactado."
   - id: plaintext-cloud-token
     status: INCOMPLETE
@@ -489,7 +512,9 @@ known_risks:
     statement: "O downloader dormente aponta para um modelo de 478 MB."
   - id: stt-download-integrity
     status: INCOMPLETE
-    evidence: "src/main/stt/catalog.ts:8-23; src/main/stt/download.ts:15-79"
+    evidence:
+      - "src/main/stt/catalog.ts:8-23"
+      - "src/main/stt/download.ts:15-79"
     statement: "Downloader STT dormente nao verifica hash ou assinatura antes de extrair o modelo."
   - id: inline-migration-errors
     status: INCOMPLETE
@@ -497,15 +522,21 @@ known_risks:
     statement: "Retrofits ignoram qualquer erro e nao possuem ledger."
   - id: theme-config-drift
     status: INCOMPLETE
-    evidence: "src/main/config/app-config.ts:23-24; src/renderer/src/main.tsx:10-17"
+    evidence:
+      - "src/main/config/app-config.ts:23-24"
+      - "src/renderer/src/main.tsx:10-17"
     statement: "APP_CONFIG declara dark, mas o renderer usa system."
   - id: pdf-arbitrary-html
-    status: INCOMPLETE
-    evidence: "src/main/tipc.ts:398-400; src/main/export/pdf.ts:16-91"
-    statement: "Handler recebe HTML e filename do renderer e nao prova limite de tamanho, frequencia ou vinculo com documento canônico."
+    status: DORMANT
+    evidence:
+      - "src/main/export/pdf.ts:16-91"
+      - "tests/main/active-router-surface.spec.ts:8-18"
+    statement: "Canal de HTML arbitrario foi retirado; primitiva PDF permanece contida ate existir documento canônico e limites."
   - id: local-distribution-trust
     status: INCOMPLETE
-    evidence: "electron-builder.yml:15-25; .github/workflows/dist.yml:1-8"
+    evidence:
+      - "electron-builder.yml:15-25"
+      - ".github/workflows/dist.yml:1-8"
     statement: "Distribuicao macOS e ad hoc, sem assinatura Developer ID ou notarizacao."
 
 approval:
