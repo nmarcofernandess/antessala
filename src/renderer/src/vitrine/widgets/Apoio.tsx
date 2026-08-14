@@ -51,7 +51,7 @@ import type {
 /* ══════════════ trilho de pergunta ══════════════ */
 
 /** Moldura única para uma sequência de perguntas — uma borda, não três. */
-function ListaPerguntas({ children, className }: { children: ReactNode; className?: string }) {
+export function ListaPerguntas({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div className={cn('overflow-hidden rounded-lg border bg-card', className)}>{children}</div>
   )
@@ -63,7 +63,7 @@ function ListaPerguntas({ children, className }: { children: ReactNode; classNam
  * `[&>div]:py-0`. `tom` diz de qual natureza é o positivo: atenção quando é
  * achado clínico, primary quando é recurso que a vaga precisa ter.
  */
-function LinhaPergunta({
+export function LinhaPergunta({
   destaque,
   tom = 'atencao',
   icone: Icone,

@@ -203,3 +203,33 @@ export type DadosObservacoes = {
   autor?: string
   horario?: string
 }
+
+/* ══════════════ operacionais ══════════════ */
+
+/**
+ * `fasting_guidance` — registro de que a orientação de jejum aconteceu.
+ *
+ * O widget não declara quantas horas de jejum são necessárias: essa é regra
+ * clínica e institucional, e o produto não a possui. Ele registra o processo —
+ * se alguém orientou, quem orientou e o que o paciente ficou em dúvida.
+ */
+export type DadosJejum = {
+  orientado: Resposta<boolean>
+  orientadoPor?: string
+  duvidaRegistrada?: string
+}
+
+export type FormaRetorno = 'ACOMPANHADO' | 'SOZINHO' | 'TRANSPORTE_SANITARIO'
+
+/**
+ * `escort_and_transport` — acompanhante e retorno.
+ *
+ * É requisito de vaga, não achado clínico: quando positivo, a recepção precisa
+ * de espaço para acompanhante, e isso é o que ela vê — nunca o motivo.
+ */
+export type DadosAcompanhante = {
+  temAcompanhante: Resposta<boolean>
+  nomeAcompanhante?: string
+  formaRetorno: Resposta<FormaRetorno>
+  contato?: string
+}

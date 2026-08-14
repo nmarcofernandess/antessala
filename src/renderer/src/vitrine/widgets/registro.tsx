@@ -15,6 +15,7 @@ import {
   CalendarClock,
   Cigarette,
   ClipboardList,
+  Clock,
   Droplets,
   FileText,
   Gauge,
@@ -24,6 +25,7 @@ import {
   Stethoscope,
   Syringe,
   UserRound,
+  Users,
   Wind,
   type LucideIcon,
 } from 'lucide-react'
@@ -46,9 +48,12 @@ import {
   WidgetHabitos,
   WidgetObservacoes,
 } from './Apoio'
+import { CASOS } from '../dados'
+import { WidgetAcompanhante, WidgetJejum } from './Operacional'
 import { positiva, responder, tratada } from './tipos'
 import type {
   DadosAcomodacao,
+  DadosAcompanhante,
   DadosAlergias,
   DadosCapacidadeFuncional,
   DadosCardiovascular,
@@ -58,6 +63,7 @@ import type {
   DadosExames,
   DadosHabitos,
   DadosHistoriaAnestesica,
+  DadosJejum,
   DadosMedicacoes,
   DadosObservacoes,
   DadosRespiratorio,
@@ -122,12 +128,19 @@ const def = <D,>(w: {
 
 /* ══════════════ o caso ══════════════ */
 
+/**
+ * O caso em tela deriva do primeiro caso da fila, não de uma cópia paralela.
+ * Antes eram duas fontes com três grafias diferentes do mesmo procedimento, o
+ * que fazia a anamnese e a agenda discordarem sobre o que a paciente vai operar.
+ */
+const CASO = CASOS[0]
+
 export const PACIENTE = {
-  nome: 'Marta Ribeiro Alves',
-  idade: 78,
-  codigo: 'ANT-4A91C2',
-  procedimento: 'Artroplastia total de quadril',
-  servico: 'Ortopedia',
+  nome: CASO.nome,
+  idade: CASO.idade,
+  codigo: CASO.codigo,
+  procedimento: CASO.procedimento,
+  servico: CASO.servico,
   solicitante: 'Dr. Aurélio Prado · CRM-SP 118432',
 }
 
@@ -539,25 +552,51 @@ export const WIDGETS: DefWidget[] = [
     tratado: (d) => d.nota.trim().length > 0,
     resumo: (d) => (d.nota ? 'Observação registrada' : 'Sem observação'),
   }),
+
+  def<DadosJejum>({
+    tipo: 'fasting_guidance',
+    nome: 'Orientação de jejum',
+    descricao: 'Se a orientação já aconteceu e quem a deu.',
+    categoria: 'apoio',
+    icone: Clock,
+    Componente: WidgetJejum,
+    dadosIniciais: () => ({
+      orientado: responder(true),
+      orientadoPor: 'Enf. Renata Duarte',
+      duvidaRegistrada: 'Perguntou se pode tomar o remédio da pressão com um gole de água.',
+    }),
+    tratado: (d) => tratada(d.orientado),
+    resumo: (d) =>
+      positiva(d.orientado) ? 'Paciente orientado' : 'Orientação ainda não realizada',
+  }),
+
+  def<DadosAcompanhante>({
+    tipo: 'escort_and_transport',
+    nome: 'Acompanhante e retorno',
+    descricao: 'Se vem acompanhado e como volta para casa.',
+    categoria: 'apoio',
+    icone: Users,
+    Componente: WidgetAcompanhante,
+    dadosIniciais: () => ({
+      temAcompanhante: responder(true),
+      nomeAcompanhante: 'Beatriz Alves, filha',
+      formaRetorno: responder<'ACOMPANHADO' | 'SOZINHO' | 'TRANSPORTE_SANITARIO'>('ACOMPANHADO'),
+      contato: '(16) 99xxx-xxxx',
+    }),
+    tratado: (d) => tratada(d.temAcompanhante) && tratada(d.formaRetorno),
+    resumo: (d) =>
+      positiva(d.temAcompanhante)
+        ? `Acompanhado${d.nomeAcompanhante ? ` · ${d.nomeAcompanhante}` : ''}`
+        : d.formaRetorno.valor === 'SOZINHO'
+          ? 'Retorna sozinho'
+          : 'Sem acompanhante',
+    // Sem `sinal`: acompanhante é capability da vaga, não tempo de entrevista.
+    // Os dez minutos de acomodação já existem uma vez na regra e não se somam
+    // de novo aqui — o cálculo de minutos permanece exatamente o de antes.
+  }),
 ]
 
-/** Ordem em que o protocolo pré-anestésico abre a entrevista. */
-export const PROTOCOLO = [
-  'procedure_context',
-  'allergies',
-  'anesthesia_history',
-  'cardiovascular',
-  'respiratory',
-  'bleeding_thrombosis',
-  'medications',
-  'diagnoses',
-  'accommodations',
-  'vital_signs',
-  'functional_capacity',
-  'habits_substances',
-  'exams_pending',
-  'clinical_notes',
-]
+/** A composição da entrevista agora vive em `protocolos.ts`, por procedimento. */
 
 export function widgetPorTipo(tipo: string): DefWidget | undefined {
   return WIDGETS.find((w) => w.tipo === tipo)
