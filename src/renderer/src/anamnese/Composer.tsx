@@ -122,8 +122,8 @@ export function AnamneseComposer({
 
       {value.blocos.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Nenhum bloco foi adicionado. O catálogo clínico ativo será definido em
-          {' '}hack/specs/02-quais-widgets/.
+          Nenhum bloco foi adicionado. A seleção clínica aguarda o PASS do Analyst para
+          o Sprint 002.
         </div>
       ) : null}
 

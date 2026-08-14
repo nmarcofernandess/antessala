@@ -1,3 +1,7 @@
+/**
+ * Formatador histórico do protótipo anterior, preservado apenas para paridade e migração.
+ * O texto não é parecer médico nem protocolo aprovado e não possui consumidor ativo.
+ */
 import type { EntradaRisco, ResultadoRisco } from './risco'
 
 const PORTE_ROTULO = {
@@ -31,7 +35,7 @@ function rotuloSexo(valor: string | null | undefined): string | null {
   return `sexo: ${original}`
 }
 
-/** Parecer determinístico em texto puro; sem DOM, rede ou banco. */
+/** @deprecated Saída histórica não aprovada para uso clínico ou operacional. */
 export function resumoPaciente(ficha: EntradaRisco): string {
   const paciente = ficha.paciente ?? {}
   const partes: string[] = []
@@ -43,6 +47,7 @@ export function resumoPaciente(ficha: EntradaRisco): string {
   return partes.join(' · ') || 'sem identificação registrada'
 }
 
+/** @deprecated Saída histórica não aprovada para uso clínico ou operacional. */
 export function gerarTextoParecer(
   ficha: EntradaRisco,
   resultado: ResultadoRisco,

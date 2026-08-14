@@ -29,7 +29,7 @@ describe('Dashboard — esqueleto neutro', () => {
     stubMatchMedia()
   })
 
-  it('não inventa status, dados de memória nem regras da fila', async () => {
+  it('não inventa status, dados de memória nem contrato clínico ou de agenda', async () => {
     const invoke = vi.fn(async (channel: string) => {
       if (channel === 'app:version') return '1.0.0'
       return undefined
@@ -48,9 +48,9 @@ describe('Dashboard — esqueleto neutro', () => {
 
     expect(screen.getByTestId('dashboard-skeleton')).toBeInTheDocument()
     expect(screen.getByText('Estrutura inicial')).toBeInTheDocument()
-    expect(
-      screen.getByText(/Nenhuma escolha de widget ou regra de ordenação da fila/),
-    ).toBeInTheDocument()
+    expect(screen.getByText(
+      /Nenhum papel, widget, protocolo ou modelo de agenda é definido nesta tela/,
+    )).toBeInTheDocument()
 
     expect(screen.queryByText('Status do sistema')).not.toBeInTheDocument()
     expect(screen.queryByText('Embedding')).not.toBeInTheDocument()

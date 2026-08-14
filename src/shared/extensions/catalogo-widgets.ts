@@ -1,10 +1,11 @@
-export const CATALOGO_WIDGETS_SPEC_PATH = 'hack/specs/02-quais-widgets/' as const
+export const CATALOGO_WIDGETS_SPEC_PATH =
+  'hack/minispecs/002-triagem-decisao-humana/' as const
 
 /**
  * Ponto de encaixe para a seleção de widgets e templates da triagem.
  *
- * Deliberadamente vazio nesta etapa. A decisão clínica pertence a
- * `hack/specs/02-quais-widgets/` e deve ser aplicada aqui quando chegar.
+ * Deliberadamente vazio. A seleção depende do contrato aprovado pelo Analyst e só
+ * poderá ser aplicada durante a MiniSpec 002.
  */
 export interface CatalogoWidgetsEspecificos<
   TWidgetType extends string = never,

@@ -1,10 +1,12 @@
-export const MOTOR_FILA_SPEC_PATH = 'specs/002-motor-da-fila/' as const
+export const MOTOR_FILA_SPEC_PATH =
+  'hack/minispecs/003-agenda-diferenciada-demo/' as const
 
 /**
- * Ponto de encaixe intencionalmente vazio para o motor da fila.
+ * Ponto de encaixe legado, intencionalmente vazio.
  *
- * `specs/002-motor-da-fila/` é dona dos tipos de domínio, transições,
- * cálculo de espera e ordenação. Esta preparação não antecipa nenhum deles.
+ * O produto antigo previa ordenação de fila física; essa hipótese foi invalidada. A
+ * MiniSpec 003 decidirá o contrato de requisito/capacidade de agenda depois dos gates,
+ * sem reutilizar este nome como decisão de domínio.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface MotorFilaExtensionPoint {}

@@ -32,7 +32,7 @@ const grave = {
   capacidade: { met: 2, atividade: 'Caminhada leve' },
 } satisfies EntradaRisco
 
-describe('classificarRisco — paridade com o protótipo', () => {
+describe('classificarRisco — paridade histórica não aprovada', () => {
   it('caso leve sai por avaliação sucinta', () => {
     const resultado = classificarRisco(leve, grupos)
     expect(resultado.rota.id).toBe('sucinta')

@@ -15,7 +15,7 @@ export const APP_CONFIG = {
   icon: 'Workflow',
 
   /** Descrição curta (about) */
-  description: 'Triagem pré-anestésica offline',
+  description: 'Triagem aplicada ao agendamento da consulta pré-anestésica',
 
   /** Nome do diretorio PGlite dentro de userData */
   dbName: 'antessala-pg',

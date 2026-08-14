@@ -1,14 +1,11 @@
 import { execDDL } from './query'
 
 /**
- * Persistência do Antessala.
+ * Schema clínico legado da hipótese invalidada e catálogos locais reaproveitáveis.
  *
- * O registro é autônomo: os quatro dados da pessoa vivem na própria linha.
- * Não existe tabela Patient, FK de paciente, busca de identidade ou índice de
- * deduplicação por nome. A jornada é uma trilha append-only separada.
- *
- * Este arquivo declara os estados persistidos, mas não decide transições nem
- * ordenação. Esse motor pertence a specs/002-motor-da-fila/.
+ * `registros`, prioridade e `registro_jornada` são provisórios: não representam o
+ * paciente institucional, o caso pré-anestésico nem o fluxo canônico. Não amplie essa
+ * superfície antes do mapa de migração aprovado na MiniSpec 001.
  */
 const DDL_CLINICAL = `
 CREATE TABLE IF NOT EXISTS registros (

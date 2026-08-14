@@ -11,10 +11,9 @@ import { useAppVersion } from '@/hooks/useAppVersion'
 import { APP_DESCRIPTION, APP_NAME } from '@/lib/app-info'
 
 /**
- * Superfície neutra da etapa de preparação.
+ * Superfície neutra enquanto o contrato operacional está em descoberta.
  *
- * As quatro telas clínicas pertencem às specs seguintes. Este dashboard não
- * antecipa widgets, prioridade nem ordenação da fila.
+ * Não antecipa papéis, widgets, decisão clínica nem arquitetura de agenda.
  */
 export function Dashboard() {
   const appVersion = useAppVersion()
@@ -40,12 +39,12 @@ export function Dashboard() {
           <CardHeader>
             <CardTitle>Estrutura inicial</CardTitle>
             <CardDescription>
-              A casca está pronta para receber as jornadas clínicas nas próximas etapas.
+              A fundação técnica está pronta; o produto clínico aguarda validação do Analyst.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Nenhuma escolha de widget ou regra de ordenação da fila é definida nesta tela.
+              Nenhum papel, widget, protocolo ou modelo de agenda é definido nesta tela.
             </p>
           </CardContent>
         </Card>
