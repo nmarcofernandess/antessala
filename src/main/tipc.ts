@@ -6,6 +6,33 @@ import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
 import { knowledgeStudioRouter } from './knowledge/router'
+import { criarCaso, listarCasos, obterCaso, aceitarHandoff, contarPorStatus } from './clinical/case-service'
+import {
+  abrirAnamnese,
+  obterAnamnese,
+  salvarRascunho,
+  finalizarAnamnese,
+} from './clinical/anamnesis-service'
+import {
+  calcularParaCaso,
+  confirmarRequisito,
+  obterRequisitoDoCaso,
+} from './clinical/requirement-service'
+import {
+  listarIntervalo,
+  vagasCompativeis,
+  reservar,
+  moverReserva,
+  cancelarReserva,
+  filaParaAgendar,
+} from './scheduling/agenda-service'
+import {
+  serializarErro,
+  type AnamnesisBlock,
+  type CaseStatus,
+  type CreateCaseInput,
+  type SlotClass,
+} from '../shared/clinical/caso'
 import {
   arquivarProtocolo,
   duplicarProtocolo,
@@ -264,6 +291,100 @@ const iaMensagensDeletarApos = t.procedure
     return { ok: true }
   })
 
+/* ══════════════ caso pré-anestésico ══════════════ */
+
+/**
+ * O renderer manda intenção; o main decide, carimba ator e devolve.
+ *
+ * Nenhuma ação daqui aceita ator, horário ou responsabilidade vindos da tela —
+ * mesmo que chegassem, seriam ignorados. Erros de domínio viajam serializados
+ * com o código na frente, para a tela reagir sem parsing frágil.
+ */
+function comErroDeDominio<T>(fn: () => Promise<T>): Promise<T> {
+  return fn().catch((erro) => {
+    throw new Error(serializarErro(erro))
+  })
+}
+
+const casesCreate = t.procedure
+  .input<CreateCaseInput>()
+  .action(async ({ input }) => comErroDeDominio(() => criarCaso(input)))
+
+const casesListForActor = t.procedure
+  .input<{ status?: CaseStatus[]; busca?: string; limite?: number } | undefined>()
+  .action(async ({ input }) => comErroDeDominio(() => listarCasos(input ?? {})))
+
+const casesGet = t.procedure
+  .input<{ caseId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => obterCaso(input.caseId)))
+
+const casesCounts = t.procedure.action(async () => comErroDeDominio(() => contarPorStatus()))
+
+const casesServicos = t.procedure.action(async () =>
+  queryAll<{ id: string; nome: string }>(
+    `SELECT id, nome FROM catalogo_servicos_solicitantes WHERE ativo ORDER BY nome`,
+  ),
+)
+
+const handoffsAcknowledge = t.procedure
+  .input<{ caseId: string; handoffId: string; expectedCaseVersion: number; idempotencyKey: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => aceitarHandoff(input)))
+
+const anamnesisOpen = t.procedure
+  .input<{ caseId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => abrirAnamnese(input.caseId)))
+
+const anamnesisGet = t.procedure
+  .input<{ caseId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => obterAnamnese(input.caseId)))
+
+const anamnesisSaveDraft = t.procedure
+  .input<{ anamnesisId: string; expectedVersion: number; blocks: AnamnesisBlock[] }>()
+  .action(async ({ input }) => comErroDeDominio(() => salvarRascunho(input)))
+
+const anamnesisFinalize = t.procedure
+  .input<{ anamnesisId: string; expectedVersion: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => finalizarAnamnese(input)))
+
+const requirementsCalculate = t.procedure
+  .input<{ caseId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => calcularParaCaso(input.caseId)))
+
+const requirementsConfirm = t.procedure
+  .input<{
+    requirementId: string
+    expectedVersion: number
+    slotClassEscolhida?: SlotClass
+    motivo?: string
+  }>()
+  .action(async ({ input }) => comErroDeDominio(() => confirmarRequisito(input)))
+
+const requirementsGetForCase = t.procedure
+  .input<{ caseId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => obterRequisitoDoCaso(input.caseId)))
+
+const schedulingRange = t.procedure
+  .input<{ de: string; ate: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => listarIntervalo(input)))
+
+const schedulingCompatibleSlots = t.procedure
+  .input<{ requirementId: string; de?: string; limite?: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => vagasCompativeis(input)))
+
+const schedulingBook = t.procedure
+  .input<{ caseId: string; requirementId: string; slotId: string; idempotencyKey: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => reservar(input)))
+
+const schedulingMove = t.procedure
+  .input<{ bookingId: string; slotId: string; expectedVersion: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => moverReserva(input)))
+
+const schedulingCancel = t.procedure
+  .input<{ bookingId: string; motivo: string; expectedVersion: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => cancelarReserva(input)))
+
+const schedulingQueue = t.procedure.action(async () => comErroDeDominio(() => filaParaAgendar()))
+
 /* ══════════════ protocolos de coleta ══════════════ */
 
 const protocolosListar = t.procedure
@@ -305,6 +426,25 @@ export const router = {
   'ia.mensagens.salvar': iaMensagensSalvar,
   'ia.mensagens.atualizar': iaMensagensAtualizar,
   'ia.mensagens.deletarApos': iaMensagensDeletarApos,
+  'cases.create': casesCreate,
+  'cases.listForActor': casesListForActor,
+  'cases.get': casesGet,
+  'cases.counts': casesCounts,
+  'cases.servicos': casesServicos,
+  'handoffs.acknowledge': handoffsAcknowledge,
+  'anamnesis.open': anamnesisOpen,
+  'anamnesis.get': anamnesisGet,
+  'anamnesis.saveDraft': anamnesisSaveDraft,
+  'anamnesis.finalize': anamnesisFinalize,
+  'requirements.calculate': requirementsCalculate,
+  'requirements.confirm': requirementsConfirm,
+  'requirements.getForCase': requirementsGetForCase,
+  'scheduling.range': schedulingRange,
+  'scheduling.compatibleSlots': schedulingCompatibleSlots,
+  'scheduling.book': schedulingBook,
+  'scheduling.move': schedulingMove,
+  'scheduling.cancel': schedulingCancel,
+  'scheduling.queue': schedulingQueue,
   'protocolos.listar': protocolosListar,
   'protocolos.salvar': protocolosSalvar,
   'protocolos.duplicar': protocolosDuplicar,

@@ -1,488 +1,524 @@
-import { useMemo, useState } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, Filter, Search, Users } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import listPlugin from '@fullcalendar/list'
+import interactionPlugin from '@fullcalendar/interaction'
+import type { EventDropArg } from '@fullcalendar/core'
+import { CalendarClock, Loader2, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/componentes/PageHeader'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  CASOS,
-  CLASSES,
-  ESTADOS,
-  VAGAS_DO_DIA,
-  emMinutos,
-  type Caso,
-  type EstadoCaso,
-} from '@/vitrine/dados'
-import { CarimboSintetico, Inicial, Rotulo, SeloClasse, TituloTela } from '@/vitrine/pecas'
-
-const ABRE = emMinutos('08:00')
-const FECHA = emMinutos('16:00')
-const PX_POR_MIN = 1.6
-/** Largura da régua de horas e respiro até a faixa das vagas. */
-const COL_HORA = 52
-const GAP_HORA = 12
-/** Abaixo desta altura a vaga não comporta duas linhas e colapsa em uma só. */
-const ALTURA_MINIMA_DUAS_LINHAS = 52
-/** Vão sem vaga menor que isto não vale um rótulo — vira só respiro. */
-const VAO_MINIMO_ROTULADO = 25
-
-/** Minutos desde a meia-noite de volta para "HH:MM". */
-function emRelogio(min: number): string {
-  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
-}
-
-/** Duração legível: "45 min", "1 h", "1 h 15". */
-function emDuracao(min: number): string {
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  if (h === 0) return `${m} min`
-  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, '0')}`
-}
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
+import { Rotulo } from '@/vitrine/pecas'
+import { agenda as api, novaChave } from '@/servicos/casos'
+import {
+  ROTULO_CLASSE,
+  type AgendaRangeDTO,
+  type SlotClass,
+  type SlotDTO,
+} from '@shared/clinical/caso'
 
 /**
- * S06 / S07 — Agenda e fila operacional.
+ * Agenda da consulta pré-anestésica.
  *
- * Duas leituras do mesmo dia: a grade, onde a vaga tem tamanho proporcional
- * à duração, e a lista de pessoas, onde a recepção trabalha por caso.
+ * O FullCalendar é **projeção e coletor de intenção**: ele desenha o que o
+ * processo principal devolveu e envia "quero esta vaga" ou "movi para aqui".
+ * Toda validação vive no main — vaga livre, classe compatível, caso no estado
+ * certo. Quando o comando falha, `revert()` desfaz o gesto na hora: o calendário
+ * nunca fica mostrando um agendamento que não existe no banco.
+ *
+ * Nada aqui agenda cirurgia. A sala cirúrgica continua externa ao produto.
  */
-export function AgendaPagina() {
-  return (
-    <div className="flex flex-1 flex-col">
-      <PageHeader breadcrumbs={[{ label: 'Antessala' }, { label: 'Agenda' }]} />
 
-      <div className="mx-auto w-full max-w-7xl p-6 lg:p-8">
-        <TituloTela
-          rotulo="Recepção · S06 e S07"
-          titulo="Agenda pré-anestésica"
-          apoio="Quinta-feira, 14 de agosto de 2026. A altura de cada vaga é a duração que a entrevista definiu — não uma grade fixa de trinta minutos."
-          acao={
-            <>
-              <CarimboSintetico />
-              <div className="flex items-center rounded-lg border">
-                <Button variant="ghost" size="icon" className="rounded-r-none">
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <span className="border-x px-3 py-1.5 font-mono text-xs tabular-nums">14 ago</span>
-                <Button variant="ghost" size="icon" className="rounded-l-none">
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-            </>
-          }
-        />
-
-        <Tabs defaultValue="agenda" className="mt-6">
-          <TabsList>
-            <TabsTrigger value="agenda">
-              <CalendarDays className="size-4" /> Agenda do dia
-            </TabsTrigger>
-            <TabsTrigger value="pessoas">
-              <Users className="size-4" /> Pessoas
-              <Badge variant="secondary" className="ml-1.5 font-mono text-[10px] tabular-nums">
-                {CASOS.length}
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="agenda" className="mt-6">
-            <Grade />
-          </TabsContent>
-
-          <TabsContent value="pessoas" className="mt-6">
-            <ListaPessoas />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  )
+type ItemDaFila = {
+  caseId: string
+  displayCode: string
+  personName: string
+  procedureDescription: string
+  requirementId: string
+  slotClass: SlotClass
+  durationMinutes: number
+  operationalExplanation: string[]
+  requiredCapabilities: string[]
+  readySince: string
 }
 
-/* ══════════════ ABA 1 — grade do dia ══════════════ */
+const COR_CLASSE: Record<SlotClass, { fundo: string; borda: string; texto: string }> = {
+  QUICK: { fundo: 'rgba(34,197,94,0.16)', borda: 'rgb(34,197,94)', texto: 'inherit' },
+  STANDARD: { fundo: 'rgba(59,130,246,0.16)', borda: 'rgb(59,130,246)', texto: 'inherit' },
+  EXTENDED: { fundo: 'rgba(245,158,11,0.18)', borda: 'rgb(245,158,11)', texto: 'inherit' },
+}
 
-function Grade() {
-  const horas = useMemo(() => {
-    const out: number[] = []
-    for (let m = ABRE; m <= FECHA; m += 60) out.push(m)
-    return out
+function inicioDaSemana(d = new Date()): Date {
+  const base = new Date(d)
+  base.setHours(0, 0, 0, 0)
+  base.setDate(base.getDate() - base.getDay())
+  return base
+}
+
+export function AgendaPagina() {
+  const [intervalo, setIntervalo] = useState<AgendaRangeDTO>({ resources: [], slots: [] })
+  const [fila, setFila] = useState<ItemDaFila[]>([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
+  const [aba, setAba] = useState('calendario')
+
+  const [selecionado, setSelecionado] = useState<ItemDaFila | null>(null)
+  const [vagas, setVagas] = useState<SlotDTO[]>([])
+  const [buscandoVagas, setBuscandoVagas] = useState(false)
+  const [reservando, setReservando] = useState<string | null>(null)
+
+  // Depois de marcar, o calendário vai até o dia da consulta: quem reservou
+  // precisa ver onde a consulta caiu, e ela raramente cai na semana em que se
+  // estava olhando.
+  const [irPara, setIrPara] = useState<string | null>(null)
+  const calendario = useRef<FullCalendar | null>(null)
+
+  const [cancelando, setCancelando] = useState<{ id: string; version: number } | null>(null)
+  const [motivo, setMotivo] = useState('')
+
+  const janela = useRef({
+    de: inicioDaSemana().toISOString(),
+    ate: new Date(inicioDaSemana().getTime() + 7 * 86_400_000).toISOString(),
+  })
+
+  const recarregar = useCallback(async () => {
+    try {
+      const [faixa, listaFila] = await Promise.all([
+        api.intervalo(janela.current.de, janela.current.ate),
+        api.fila(),
+      ])
+      setIntervalo(faixa)
+      setFila(listaFila as ItemDaFila[])
+      setErro(null)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCarregando(false)
+    }
   }, [])
+
+  useEffect(() => {
+    void recarregar()
+  }, [recarregar])
+
+  useEffect(() => {
+    if (!irPara || aba !== 'calendario' || !calendario.current) return
+    calendario.current.getApi().gotoDate(irPara)
+    setIrPara(null)
+  }, [irPara, aba])
+
+  /** Eventos do calendário: reserva é evento sólido, vaga livre é fundo. */
+  const eventos = useMemo(() => {
+    return intervalo.slots.map((slot) => {
+      const cor = COR_CLASSE[slot.slotClass]
+      if (slot.booking) {
+        return {
+          id: slot.booking.id,
+          title: `${slot.booking.personName} · ${slot.booking.displayCode}`,
+          start: slot.booking.startsAt,
+          end: slot.booking.endsAt,
+          backgroundColor: cor.fundo,
+          borderColor: cor.borda,
+          textColor: 'inherit',
+          editable: slot.booking.status === 'CONFIRMED',
+          extendedProps: {
+            tipo: 'booking' as const,
+            slotId: slot.id,
+            slotClass: slot.slotClass,
+            resourceName: slot.resourceName,
+            booking: slot.booking,
+          },
+        }
+      }
+      return {
+        id: slot.id,
+        title: `${ROTULO_CLASSE[slot.slotClass]} livre · ${slot.resourceName}`,
+        start: slot.startsAt,
+        end: slot.endsAt,
+        display: 'background' as const,
+        backgroundColor: cor.fundo,
+        extendedProps: { tipo: 'slot' as const, slotClass: slot.slotClass },
+      }
+    })
+  }, [intervalo])
+
+  async function abrirDrawer(item: ItemDaFila) {
+    setSelecionado(item)
+    setBuscandoVagas(true)
+    try {
+      const compativeis = await api.vagasCompativeis({ requirementId: item.requirementId })
+      setVagas(compativeis)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e))
+      setVagas([])
+    } finally {
+      setBuscandoVagas(false)
+    }
+  }
+
+  async function reservar(slot: SlotDTO) {
+    if (!selecionado) return
+    setReservando(slot.id)
+    try {
+      const booking = await api.reservar({
+        caseId: selecionado.caseId,
+        requirementId: selecionado.requirementId,
+        slotId: slot.id,
+        idempotencyKey: novaChave(),
+      })
+      toast.success(
+        `Consulta de ${booking.personName} marcada para ${new Date(booking.startsAt).toLocaleString('pt-BR')}.`,
+      )
+      setSelecionado(null)
+      setAba('calendario')
+      setIrPara(booking.startsAt)
+      await recarregar()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e))
+      await abrirDrawer(selecionado)
+    } finally {
+      setReservando(null)
+    }
+  }
 
   /**
-   * Vãos entre uma vaga e a seguinte. Sem eles a grade tem buracos mudos e
-   * parece quebrada; rotulados, o vazio vira informação — não há vaga ali.
+   * Arrastar é intenção, não decisão.
+   *
+   * O gesto vira comando; se o main recusar — vaga ocupada, classe errada,
+   * versão velha — `revert()` devolve o evento ao lugar de origem e o motivo
+   * aparece em texto. O desenho nunca fica mentindo sobre o banco.
    */
-  const vaos = useMemo(() => {
-    const ordenadas = [...VAGAS_DO_DIA].sort((a, b) => emMinutos(a.inicio) - emMinutos(b.inicio))
-    const out: { inicio: number; fim: number }[] = []
-    let cursor = ABRE
-    for (const v of ordenadas) {
-      const inicio = emMinutos(v.inicio)
-      if (inicio - cursor >= VAO_MINIMO_ROTULADO) out.push({ inicio: cursor, fim: inicio })
-      cursor = Math.max(cursor, inicio + CLASSES[v.classe].minutos + CLASSES[v.classe].buffer)
-    }
-    if (FECHA - cursor >= VAO_MINIMO_ROTULADO) out.push({ inicio: cursor, fim: FECHA })
-    return out
-  }, [])
+  async function aoSoltar(info: EventDropArg) {
+    const destino = intervalo.slots.find(
+      (s) => Date.parse(s.startsAt) === info.event.start!.getTime() && !s.booking,
+    )
+    const booking = info.oldEvent.extendedProps.booking as { id: string; version: number } | undefined
 
-  const ocupadas = VAGAS_DO_DIA.filter((v) => v.casoId)
-  const minutosUsados = ocupadas.reduce(
-    (s, v) => s + CLASSES[v.classe].minutos + CLASSES[v.classe].buffer,
-    0,
-  )
-  const capacidade = FECHA - ABRE
-  const ocupacao = Math.round((minutosUsados / capacidade) * 100)
+    if (!destino || !booking) {
+      info.revert()
+      toast.error('Solte a consulta sobre uma vaga livre.')
+      return
+    }
+
+    try {
+      await api.mover({
+        bookingId: booking.id,
+        slotId: destino.id,
+        expectedVersion: booking.version,
+      })
+      toast.success('Consulta remarcada.')
+      await recarregar()
+    } catch (e) {
+      info.revert()
+      toast.error(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  async function confirmarCancelamento() {
+    if (!cancelando) return
+    try {
+      await api.cancelar({
+        bookingId: cancelando.id,
+        motivo,
+        expectedVersion: cancelando.version,
+      })
+      toast.success('Consulta cancelada. O caso voltou para a fila de agendamento.')
+      setCancelando(null)
+      setMotivo('')
+      await recarregar()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const reservas = intervalo.slots.filter((s) => s.booking).map((s) => s.booking!)
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_272px]">
-      <div className="rounded-xl border bg-card">
-        <div className="flex items-center justify-between gap-4 border-b px-5 py-3.5">
-          <Rotulo>Consultório 3 · Dra. Helena Vasques</Rotulo>
-          <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-muted-foreground">
-            {emRelogio(ABRE)} – {emRelogio(FECHA)}
-          </span>
-        </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <PageHeader breadcrumbs={[{ label: 'Antessala' }, { label: 'Agenda' }]} />
 
-        <div className="px-5 pb-5 pt-4">
-          <div className="relative" style={{ height: (FECHA - ABRE) * PX_POR_MIN }}>
-            {/* réguas de hora — a hora e a linha nascem no mesmo eixo */}
-            {horas.map((m) => (
-              <div
-                key={m}
-                className="pointer-events-none absolute inset-x-0 flex -translate-y-1/2 items-center"
-                style={{ top: (m - ABRE) * PX_POR_MIN, gap: GAP_HORA }}
-              >
-                <span
-                  className="shrink-0 text-right font-mono text-[10.5px] tabular-nums text-muted-foreground"
-                  style={{ width: COL_HORA }}
-                >
-                  {emRelogio(m)}
-                </span>
-                <span className="h-px flex-1 bg-border" aria-hidden />
-              </div>
-            ))}
-
-            {/* vãos sem vaga */}
-            {vaos.map((v) => (
-              <div
-                key={v.inicio}
-                className="pointer-events-none absolute right-0 flex items-center justify-center"
-                style={{
-                  top: (v.inicio - ABRE) * PX_POR_MIN,
-                  height: (v.fim - v.inicio) * PX_POR_MIN,
-                  left: COL_HORA + GAP_HORA,
-                }}
-              >
-                <span className="rounded bg-card px-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
-                  sem vaga · {emDuracao(v.fim - v.inicio)}
-                </span>
-              </div>
-            ))}
-
-            {/* vagas */}
-            {VAGAS_DO_DIA.map((v) => {
-              const c = CLASSES[v.classe]
-              const caso = CASOS.find((x) => x.id === v.casoId)
-              const alturaConsulta = c.minutos * PX_POR_MIN
-              const compacto = alturaConsulta < ALTURA_MINIMA_DUAS_LINHAS
-
-              return (
-                <div
-                  key={v.id}
-                  className="absolute right-0"
-                  style={{
-                    top: (emMinutos(v.inicio) - ABRE) * PX_POR_MIN,
-                    height: (c.minutos + c.buffer) * PX_POR_MIN,
-                    left: COL_HORA + GAP_HORA,
-                  }}
-                >
-                  <div
-                    className={cn(
-                      'flex h-full flex-col overflow-hidden rounded-lg border',
-                      caso ? c.tom : 'border-dashed bg-muted/20 text-muted-foreground',
-                    )}
-                  >
-                    {/* consulta — três colunas iguais em toda vaga, cheia ou livre */}
-                    <div
-                      className="grid min-h-0 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-3.5"
-                      style={{ height: alturaConsulta }}
-                    >
-                      <span
-                        className={cn(
-                          'font-mono text-[11px] tabular-nums',
-                          caso ? 'font-medium' : 'text-muted-foreground',
-                        )}
-                      >
-                        {v.inicio}
-                      </span>
-
-                      {caso ? (
-                        <span className={cn('min-w-0', compacto && 'flex items-baseline gap-2')}>
-                          <span className="block truncate text-[13px] font-medium text-foreground">
-                            {caso.nome}
-                          </span>
-                          <span className="block truncate text-[11px] text-muted-foreground">
-                            {caso.procedimento}
-                            {caso.recurso && ` · ${caso.recurso}`}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="truncate text-[12px] text-muted-foreground">
-                          Vaga {c.nome.toLowerCase()} livre
-                        </span>
-                      )}
-
-                      <span
-                        className={cn(
-                          'shrink-0 font-mono text-[10px] uppercase tracking-wider tabular-nums',
-                          caso ? 'opacity-80' : 'text-muted-foreground',
-                        )}
-                      >
-                        {c.minutos} min
-                      </span>
-                    </div>
-
-                    {/* faixa de buffer, listrada */}
-                    <div
-                      className={cn(
-                        'shrink-0 border-t border-dashed',
-                        caso ? 'opacity-45' : 'text-muted-foreground/25',
-                      )}
-                      style={{
-                        height: c.buffer * PX_POR_MIN,
-                        backgroundImage:
-                          'repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 6px)',
-                      }}
-                      title={`${c.buffer} min de registro`}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+      <div className="border-b px-4 py-2">
+        <Tabs value={aba} onValueChange={setAba}>
+          <TabsList>
+            <TabsTrigger value="calendario">
+              <CalendarClock className="size-4" /> Calendário
+            </TabsTrigger>
+            <TabsTrigger value="fila">
+              <Users className="size-4" /> Para agendar
+              {fila.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5 tabular-nums">
+                  {fila.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-        <div className="rounded-xl border bg-card p-5">
-          <Rotulo>Ocupação do dia</Rotulo>
-          <div className="mt-3 flex items-baseline gap-1.5">
-            <span className="font-mono text-4xl font-light leading-none tabular-nums">
-              {ocupacao}
-            </span>
-            <span className="text-sm text-muted-foreground">%</span>
-          </div>
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-foreground/70"
-              style={{ width: `${ocupacao}%` }}
+      {carregando ? (
+        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+          <Loader2 className="mr-2 size-4 animate-spin" /> Carregando a agenda…
+        </div>
+      ) : erro ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+          <p className="max-w-md text-sm text-muted-foreground">{erro}</p>
+          <Button variant="outline" size="sm" onClick={() => void recarregar()}>
+            Tentar de novo
+          </Button>
+        </div>
+      ) : aba === 'calendario' ? (
+        <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
+          <div className="antessala-calendario">
+            <FullCalendar
+              ref={calendario}
+              plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+              initialView="timeGridWeek"
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+              }}
+              buttonText={{
+                today: 'Hoje',
+                month: 'Mês',
+                week: 'Semana',
+                day: 'Dia',
+                list: 'Programação',
+              }}
+              locale="pt-br"
+              firstDay={0}
+              allDaySlot={false}
+              slotMinTime="07:30:00"
+              slotMaxTime="18:00:00"
+              nowIndicator
+              height="auto"
+              expandRows
+              editable
+              eventDurationEditable={false}
+              events={eventos}
+              eventDrop={aoSoltar}
+              datesSet={(info) => {
+                janela.current = {
+                  de: info.start.toISOString(),
+                  ate: info.end.toISOString(),
+                }
+                void recarregar()
+              }}
+              eventClick={(info) => {
+                const props = info.event.extendedProps as {
+                  tipo?: string
+                  booking?: { id: string; version: number; caseId: string }
+                }
+                if (props.tipo !== 'booking' || !props.booking) return
+                setCancelando({ id: props.booking.id, version: props.booking.version })
+              }}
             />
           </div>
-          <p className="mt-2.5 font-mono text-[11px] tabular-nums text-muted-foreground">
-            {minutosUsados} de {capacidade} min
-          </p>
-        </div>
 
-        {/* Este cartão também é a legenda da grade: cor, duração e ocupação. */}
-        <div className="rounded-xl border bg-card p-5">
-          <Rotulo>Vagas por classe</Rotulo>
-          <div className="mt-3">
-            {(['RAPIDA', 'NORMAL', 'ESTENDIDA'] as const).map((k) => {
-              const total = VAGAS_DO_DIA.filter((v) => v.classe === k).length
-              const livres = VAGAS_DO_DIA.filter((v) => v.classe === k && !v.casoId).length
-              return (
-                <div
-                  key={k}
-                  className="grid grid-cols-[minmax(0,1fr)_auto_38px] items-baseline gap-x-3 border-t py-2 text-xs first:border-t-0 first:pt-0"
+          {/* Equivalente acessível: a mesma agenda em lista, sem depender de arrastar. */}
+          <section className="mt-8" data-testid="agenda-lista">
+            <Rotulo>Consultas marcadas no período</Rotulo>
+            {reservas.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Nenhuma consulta pré-anestésica marcada nesta semana.
+              </p>
+            ) : (
+              <table className="mt-3 w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-muted-foreground">
+                    <th className="pb-2 font-normal">Horário</th>
+                    <th className="pb-2 font-normal">Pessoa</th>
+                    <th className="pb-2 font-normal">Caso</th>
+                    <th className="pb-2 font-normal">Consultório</th>
+                    <th className="pb-2 font-normal">Vaga</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reservas
+                    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+                    .map((b) => (
+                      <tr key={b.id} className="border-b last:border-0">
+                        <td className="py-2 font-mono text-xs tabular-nums">
+                          {new Date(b.startsAt).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                        <td className="py-2">{b.personName}</td>
+                        <td className="py-2">
+                          <Link
+                            to={`/casos/${b.caseId}`}
+                            className="font-mono text-xs underline underline-offset-2"
+                          >
+                            {b.displayCode}
+                          </Link>
+                        </td>
+                        <td className="py-2 text-xs text-muted-foreground">{b.resourceName}</td>
+                        <td className="py-2">
+                          <Badge variant="outline">{ROTULO_CLASSE[b.slotClass]}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        </div>
+      ) : (
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="mx-auto w-full max-w-4xl p-6 lg:p-8" data-testid="fila-para-agendar">
+            <Rotulo>Casos com requisito publicado</Rotulo>
+            <p className="mb-5 mt-1 text-xs text-muted-foreground">
+              A recepção vê o tamanho da vaga e o que a sala precisa ter — nunca o achado clínico
+              que produziu esse tamanho.
+            </p>
+
+            {fila.length === 0 ? (
+              <p className="py-16 text-center text-sm text-muted-foreground">
+                Nenhum caso esperando vaga. Eles aparecem aqui quando a enfermagem confirma o
+                requisito.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {fila.map((item) => (
+                  <div
+                    key={item.caseId}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {item.displayCode}
+                        </span>
+                        <Badge variant="outline">{ROTULO_CLASSE[item.slotClass]}</Badge>
+                        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                          {item.durationMinutes} min
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-sm font-medium">{item.personName}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {item.procedureDescription}
+                      </p>
+                      {item.requiredCapabilities.length > 0 && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          A sala precisa de: {item.requiredCapabilities.join(', ').toLowerCase()}
+                        </p>
+                      )}
+                    </div>
+                    <Button size="sm" onClick={() => abrirDrawer(item)}>
+                      Escolher vaga
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      )}
+
+      {/* ── drawer de vagas ── */}
+      <Sheet open={selecionado !== null} onOpenChange={(a) => !a && setSelecionado(null)}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          <SheetHeader className="space-y-1 border-b px-5 py-4">
+            <SheetTitle>Vagas compatíveis</SheetTitle>
+            <SheetDescription>
+              {selecionado
+                ? `${selecionado.personName} · ${ROTULO_CLASSE[selecionado.slotClass]} de ${selecionado.durationMinutes} min`
+                : ''}
+            </SheetDescription>
+          </SheetHeader>
+
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="flex flex-col gap-1 p-3">
+              {buscandoVagas && (
+                <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 inline size-4 animate-spin" /> Procurando vagas…
+                </p>
+              )}
+              {!buscandoVagas && vagas.length === 0 && (
+                <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  Nenhuma vaga desta classe está livre no período gerado.
+                </p>
+              )}
+              {vagas.map((slot) => (
+                <button
+                  key={slot.id}
+                  type="button"
+                  disabled={reservando !== null}
+                  onClick={() => reservar(slot)}
+                  className={cn(
+                    'flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition',
+                    'border-transparent hover:border-border hover:bg-muted/50 disabled:opacity-50',
+                  )}
                 >
-                  <span className="flex items-baseline gap-2">
-                    <span
-                      className={cn('size-1.5 shrink-0 translate-y-[-1px] rounded-full', CLASSES[k].ponto)}
-                      aria-hidden
-                    />
-                    {CLASSES[k].nome}
-                  </span>
-                  <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
-                    {CLASSES[k].minutos} + {CLASSES[k].buffer} min
-                  </span>
-                  <span className="text-right font-mono text-[11px] tabular-nums">
-                    {total - livres}/{total}
-                  </span>
-                </div>
-              )
-            })}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {new Date(slot.startsAt).toLocaleString('pt-BR', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{slot.resourceName}</p>
+                  </div>
+                  {reservando === slot.id ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin" />
+                  ) : (
+                    <Badge variant="outline" className="shrink-0">
+                      {ROTULO_CLASSE[slot.slotClass]}
+                    </Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── cancelamento ── */}
+      <Sheet open={cancelando !== null} onOpenChange={(a) => !a && setCancelando(null)}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          <SheetHeader className="space-y-1 border-b px-5 py-4">
+            <SheetTitle>Cancelar esta consulta</SheetTitle>
+            <SheetDescription>
+              O caso volta para a fila de agendamento. Cancelar a consulta não cancela o caso.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-3 p-5">
+            <Textarea
+              rows={4}
+              value={motivo}
+              placeholder="Motivo do cancelamento (mínimo 10 caracteres)"
+              onChange={(e) => setMotivo(e.target.value)}
+            />
+            <Button
+              className="w-full"
+              disabled={motivo.trim().length < 10}
+              onClick={confirmarCancelamento}
+            >
+              Cancelar consulta
+            </Button>
           </div>
-        </div>
-
-        <div className="rounded-xl border border-dashed p-5">
-          <Rotulo>Regra de reserva</Rotulo>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Vaga menor nunca atende requisito maior. Duas reservas simultâneas na mesma vaga: uma
-            vence, a outra recebe erro recuperável.
-          </p>
-        </div>
-      </aside>
-    </div>
-  )
-}
-
-/* ══════════════ ABA 2 — pessoas ══════════════ */
-
-const FILTROS: { id: 'todos' | EstadoCaso; nome: string }[] = [
-  { id: 'todos', nome: 'Todos' },
-  { id: 'AGUARDA_ENFERMAGEM', nome: 'Aguardam entrevista' },
-  { id: 'PRONTO_PARA_AGENDAR', nome: 'Para agendar' },
-  { id: 'AGENDADO', nome: 'Agendados' },
-  { id: 'PENDENCIA', nome: 'Com pendência' },
-]
-
-/**
- * Uma única definição de colunas para o cabeçalho e para todas as linhas —
- * é o que faz a tabela alinhar de verdade, com conteúdo de qualquer largura.
- */
-const COLUNAS = cn(
-  'grid items-center gap-x-4',
-  'grid-cols-[minmax(0,1fr)_52px_112px_76px]',
-  'md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.1fr)_52px_112px_76px]',
-  'lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1.1fr)_148px_52px_112px_76px]',
-)
-
-function ListaPessoas() {
-  const [filtro, setFiltro] = useState<'todos' | EstadoCaso>('todos')
-  const [busca, setBusca] = useState('')
-
-  const lista = CASOS.filter(
-    (c) =>
-      (filtro === 'todos' || c.estado === filtro) &&
-      (c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        c.procedimento.toLowerCase().includes(busca.toLowerCase()) ||
-        c.codigo.toLowerCase().includes(busca.toLowerCase())),
-  )
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar por nome, procedimento ou código do caso"
-            className="pl-9"
-          />
-        </div>
-        <div className="flex items-center gap-1 overflow-x-auto">
-          {FILTROS.map((f) => {
-            const n = f.id === 'todos' ? CASOS.length : CASOS.filter((c) => c.estado === f.id).length
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setFiltro(f.id)}
-                className={cn(
-                  'flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors',
-                  filtro === f.id
-                    ? 'border-foreground/20 bg-foreground text-background'
-                    : 'hover:bg-accent',
-                )}
-              >
-                {f.nome}
-                <span className="font-mono tabular-nums opacity-60">{n}</span>
-              </button>
-            )
-          })}
-        </div>
-        <Button variant="outline" size="icon" title="Mais filtros">
-          <Filter className="size-4" />
-        </Button>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border bg-card">
-        {/* cabeçalho de colunas: a mesma grade das linhas */}
-        <div className={cn(COLUNAS, 'border-b bg-muted/30 px-5 py-2.5')}>
-          <Rotulo>Pessoa</Rotulo>
-          <Rotulo className="hidden md:block">Serviço</Rotulo>
-          <Rotulo className="hidden lg:block">Estado</Rotulo>
-          <Rotulo className="col-span-2">Vaga</Rotulo>
-          <span aria-hidden />
-        </div>
-
-        {lista.length === 0 ? (
-          <p className="px-5 py-16 text-center text-sm text-muted-foreground">
-            Nenhum caso com esse filtro.
-          </p>
-        ) : (
-          <div className="divide-y">
-            {lista.map((c) => (
-              <LinhaPessoa key={c.id} caso={c} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function LinhaPessoa({ caso }: { caso: Caso }) {
-  const est = ESTADOS[caso.estado]
-  return (
-    <div className={cn(COLUNAS, 'group px-5 py-3 transition-colors hover:bg-accent/40')}>
-      <div className="flex min-w-0 items-center gap-3">
-        <Inicial nome={caso.nome} />
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span className="truncate text-sm font-medium">{caso.nome}</span>
-            <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-muted-foreground">
-              {caso.idade}a
-            </span>
-          </div>
-          <span className="block truncate text-xs text-muted-foreground">{caso.procedimento}</span>
-        </div>
-      </div>
-
-      <div className="hidden min-w-0 md:block">
-        <span className="block truncate text-xs">{caso.servico}</span>
-        <span className="block truncate font-mono text-[10.5px] text-muted-foreground">
-          {caso.codigo}
-        </span>
-      </div>
-
-      <div className="hidden min-w-0 lg:block">
-        <span className={cn('block truncate text-xs font-medium', est.tom)}>{est.nome}</span>
-        <span className="block truncate font-mono text-[10.5px] text-muted-foreground">
-          {caso.atualizadoEm}
-        </span>
-      </div>
-
-      <span
-        className={cn(
-          'text-right font-mono text-xs tabular-nums',
-          caso.horario ? 'text-foreground' : 'text-muted-foreground/40',
-        )}
-      >
-        {caso.horario ?? '—'}
-      </span>
-
-      <div className="min-w-0">
-        {caso.classe ? (
-          <SeloClasse classe={caso.classe} compacto />
-        ) : (
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/50">
-            sem requisito
-          </span>
-        )}
-      </div>
-
-      {/* Sempre presente e sempre do mesmo tamanho: hover muda cor, nunca altura. */}
-      <div className="flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground/70 transition-colors group-hover:text-foreground"
-        >
-          Abrir
-        </Button>
-      </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

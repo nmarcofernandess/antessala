@@ -3,7 +3,6 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from './componentes/AppSidebar'
 import { ErrorBoundary } from './componentes/ErrorBoundary'
 import { AgendaPagina } from './paginas/AgendaPagina'
-import { AnamnesePagina } from './paginas/AnamnesePagina'
 import { CadastroPagina } from './paginas/CadastroPagina'
 import { Dashboard } from './paginas/Dashboard'
 import { ConfiguracoesPagina } from './paginas/ConfiguracoesPagina'
@@ -12,11 +11,14 @@ import { MemoriaPagina } from './paginas/MemoriaPagina'
 import { DocumentoMemoriaPagina } from './paginas/DocumentoMemoriaPagina'
 import { NaoEncontrado } from './paginas/NaoEncontrado'
 import { RepertorioPagina } from './paginas/RepertorioPagina'
+import { CasoPagina } from './paginas/casos/CasoPagina'
+import { CasoAnamnesePagina } from './paginas/casos/CasoAnamnesePagina'
 
 export const ACTIVE_ROUTE_PATHS = [
   '/',
   '/casos/novo',
-  '/triagem',
+  '/casos/:caseId',
+  '/casos/:caseId/anamnese',
   '/agenda',
   '/repertorio',
   '/repertorio/widgets',
@@ -49,7 +51,8 @@ export const router = createHashRouter([
     children: [
       { path: '/', element: <Dashboard /> },
       { path: '/casos/novo', element: <CadastroPagina /> },
-      { path: '/triagem', element: <AnamnesePagina /> },
+      { path: '/casos/:caseId', element: <CasoPagina /> },
+      { path: '/casos/:caseId/anamnese', element: <CasoAnamnesePagina /> },
       { path: '/agenda', element: <AgendaPagina /> },
       { path: '/repertorio', element: <RepertorioPagina /> },
       { path: '/repertorio/widgets', element: <RepertorioPagina /> },

@@ -51,10 +51,6 @@ test('os protocolos nascem no banco, compõem a entrevista e sobrevivem ao rein�
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#/repertorio/widgets')
     await expect(page.getByRole('heading', { name: 'Widgets do Antessala' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Herança do DietFlow' })).toBeVisible()
-
-    // A anamnese continua montando pelo protocolo do procedimento.
-    await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Triagem' }).click()
-    await expect(page.getByText('Protocolo salvo · v1')).toBeVisible()
   } finally {
     await app.close()
     removeAppData(dbPath)

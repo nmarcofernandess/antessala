@@ -12,11 +12,10 @@ test('Antessala exposes the integrated shell, isolated Assistant and three theme
     // A lateral carrega o fluxo do caso. Configuração e tema saíram dela para o
     // menu da conta, no rodapé — por isso a contagem é de links, não de botões.
     const navItems = page.locator('a[data-sidebar="menu-button"]')
-    await expect(navItems).toHaveCount(7)
+    await expect(navItems).toHaveCount(6)
     await expect(navItems).toHaveText([
       'Início',
       'Novo encaminhamento',
-      'Triagem',
       'Agenda',
       'Repertório',
       'Assistente',
@@ -29,7 +28,6 @@ test('Antessala exposes the integrated shell, isolated Assistant and three theme
     expect(hrefs).toEqual([
       '#/',
       '#/casos/novo',
-      '#/triagem',
       '#/agenda',
       '#/repertorio',
       '#/assistente',

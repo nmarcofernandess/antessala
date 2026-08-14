@@ -13,16 +13,19 @@
  * exames, os três estados são um controle segmentado — escolha, não enfeite.
  */
 
-import { useId, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import {
   Accessibility,
   CalendarClock,
   Cigarette,
   FileText,
   Languages,
+  Plus,
+  Trash2,
   UserRoundCheck,
   Wine,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -468,7 +471,20 @@ export function WidgetExames({
   dados: DadosExames
   onChange: (d: DadosExames) => void
 }) {
+  const [novo, setNovo] = useState('')
   const pendentes = dados.itens.filter((i) => i.status !== 'DISPONIVEL')
+
+  // Não existe catálogo de exames no produto, e inventar um seria inventar
+  // regra clínica. Quem entrevista escreve o nome do exame que conferiu.
+  function adicionar() {
+    const nome = novo.trim()
+    if (!nome) return
+    onChange({
+      ...dados,
+      itens: [...dados.itens, { id: crypto.randomUUID(), nome, status: 'AUSENTE' }],
+    })
+    setNovo('')
+  }
 
   return (
     <CorpoWidget>
@@ -480,6 +496,12 @@ export function WidgetExames({
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-card">
+        {dados.itens.length === 0 && (
+          <p className="px-4 py-3 text-[13px] text-muted-foreground">
+            Nenhum exame conferido ainda. Registre o que foi pedido para esta cirurgia — inclusive
+            o que a pessoa não trouxe.
+          </p>
+        )}
         {dados.itens.map((item) => {
           const pendente = item.status !== 'DISPONIVEL'
           return (
@@ -488,7 +510,7 @@ export function WidgetExames({
               className={cn(
                 // Colunas fixas: nome, data e controle batem entre todas as linhas,
                 // inclusive nas que não têm data.
-                'grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3 border-t px-4 py-2.5 first:border-t-0',
+                'grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto] items-center gap-x-3 border-t px-4 py-2.5 first:border-t-0',
                 pendente && 'bg-muted/20',
               )}
             >
@@ -507,9 +529,39 @@ export function WidgetExames({
                   })
                 }
               />
+              <button
+                type="button"
+                aria-label={`Remover ${item.nome}`}
+                onClick={() =>
+                  onChange({ ...dados, itens: dados.itens.filter((i) => i.id !== item.id) })
+                }
+                className="text-muted-foreground/60 transition-colors hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
             </div>
           )
         })}
+
+        <div className="flex items-center gap-2 border-t bg-muted/20 px-3 py-2.5">
+          <Plus className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            value={novo}
+            aria-label="Exame conferido"
+            placeholder="Nome do exame — “Hemograma”, “ECG”…"
+            onChange={(e) => setNovo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                adicionar()
+              }
+            }}
+            className="h-8 border-transparent bg-transparent text-[13px] shadow-none focus-visible:border-input focus-visible:bg-background"
+          />
+          <Button variant="ghost" size="sm" disabled={!novo.trim()} onClick={adicionar}>
+            Adicionar exame
+          </Button>
+        </div>
       </div>
 
       <p className="text-[11px] leading-relaxed text-muted-foreground">

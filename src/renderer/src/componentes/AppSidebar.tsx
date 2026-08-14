@@ -5,7 +5,6 @@ import {
   CalendarDays,
   ClipboardPlus,
   LayoutDashboard,
-  Stethoscope,
   Network,
 } from 'lucide-react'
 import {
@@ -35,7 +34,6 @@ import { UserMenu } from '@/componentes/UserMenu'
 export const ACTIVE_NAV_ITEMS = [
   { label: 'Início', to: '/', icon: LayoutDashboard },
   { label: 'Novo encaminhamento', to: '/casos/novo', icon: ClipboardPlus },
-  { label: 'Triagem', to: '/triagem', icon: Stethoscope },
   { label: 'Agenda', to: '/agenda', icon: CalendarDays },
   { label: 'Repertório', to: '/repertorio', icon: Blocks },
   { label: 'Assistente', to: '/assistente', icon: BrainCircuit },

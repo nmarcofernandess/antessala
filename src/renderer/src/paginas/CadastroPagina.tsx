@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ArrowRight, Check, ClipboardPlus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight, Check, ClipboardPlus, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,9 +15,11 @@ import {
 } from '@/components/ui/select'
 import { PageHeader } from '@/componentes/PageHeader'
 import { cn } from '@/lib/utils'
-import { PROCEDIMENTOS, SERVICOS, iniciais } from '@/vitrine/dados'
+import { PROCEDIMENTOS, iniciais } from '@/vitrine/dados'
 import { CarimboSintetico, Rotulo, TituloTela } from '@/vitrine/pecas'
 import { carregarProtocolos, useProtocoloDe } from '@/vitrine/protocolos-store'
+import { casos, novaChave } from '@/servicos/casos'
+import type { SexoRelatado } from '@shared/clinical/caso'
 
 type Campo = 'nome' | 'nascimento' | 'sexo' | 'procedimento' | 'servico' | 'medico'
 
@@ -44,7 +48,48 @@ export function CadastroPagina() {
     observacao: '',
   })
 
+  const [servicos, setServicos] = useState<Array<{ id: string; nome: string }>>([])
+  const [abrindo, setAbrindo] = useState(false)
+  const navegar = useNavigate()
+
   const set = (c: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [c]: v }))
+
+  /**
+   * Abre o caso de verdade.
+   *
+   * A chave de idempotência nasce aqui e viaja com o comando: dois cliques no
+   * mesmo formulário devolvem o mesmo caso em vez de abrir dois papéis.
+   */
+  async function abrirCaso() {
+    if (!completo || abrindo) return
+    setAbrindo(true)
+    try {
+      const caso = await casos.criar({
+        person: {
+          fullName: form.nome,
+          birthDate: form.nascimento || null,
+          sexReported: (form.sexo || 'NAO_INFORMADO') as SexoRelatado,
+        },
+        referral: {
+          sourceReference: null,
+          freeTextReference: form.observacao,
+        },
+        procedure: {
+          description: form.procedimento,
+          lateralityOrSite: form.lateralidade === 'Não se aplica' ? null : form.lateralidade || null,
+          notes: null,
+        },
+        requester: { serviceId: form.servico, physicianName: form.medico },
+        idempotencyKey: novaChave(),
+      })
+      toast.success(`Caso ${caso.displayCode} aberto e encaminhado à enfermagem.`)
+      navegar(`/casos/${caso.id}`)
+    } catch (erro) {
+      toast.error(erro instanceof Error ? erro.message : String(erro))
+    } finally {
+      setAbrindo(false)
+    }
+  }
 
   const preenchidos = OBRIGATORIOS.filter((c) => form[c].trim().length > 0)
   const completo = preenchidos.length === OBRIGATORIOS.length
@@ -52,6 +97,10 @@ export function CadastroPagina() {
 
   useEffect(() => {
     void carregarProtocolos()
+    casos
+      .servicos()
+      .then(setServicos)
+      .catch(() => setServicos([]))
   }, [])
 
   const idade = useMemo(() => {
@@ -116,8 +165,10 @@ export function CadastroPagina() {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="F">Feminino</SelectItem>
-                    <SelectItem value="M">Masculino</SelectItem>
+                    <SelectItem value="FEMININO">Feminino</SelectItem>
+                    <SelectItem value="MASCULINO">Masculino</SelectItem>
+                    <SelectItem value="INTERSEXO">Intersexo</SelectItem>
+                    <SelectItem value="NAO_INFORMADO">Não informado</SelectItem>
                   </SelectContent>
                 </Select>
               </CampoForm>
@@ -163,9 +214,9 @@ export function CadastroPagina() {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SERVICOS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
+                    {servicos.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -239,7 +290,10 @@ export function CadastroPagina() {
               <div className="border-t px-5 py-3">
                 <Resumo rotulo="Procedimento" valor={form.procedimento} />
                 <Resumo rotulo="Lateralidade" valor={form.lateralidade} />
-                <Resumo rotulo="Serviço" valor={form.servico} />
+                <Resumo
+                  rotulo="Serviço"
+                  valor={servicos.find((s) => s.id === form.servico)?.nome ?? ''}
+                />
                 <Resumo rotulo="Solicitante" valor={form.medico} />
               </div>
 
@@ -267,8 +321,12 @@ export function CadastroPagina() {
               </div>
 
               <div className="border-t px-5 py-4">
-                <Button className="w-full" disabled={!completo}>
-                  {completo ? (
+                <Button className="w-full" disabled={!completo || abrindo} onClick={abrirCaso}>
+                  {abrindo ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> Abrindo o caso…
+                    </>
+                  ) : completo ? (
                     <>
                       Abrir caso <ArrowRight className="size-4" />
                     </>

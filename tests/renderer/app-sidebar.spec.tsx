@@ -68,18 +68,19 @@ describe('AppSidebar — casca ativa do Antessala', () => {
     await screen.findByText('v1.0.0')
 
     expect(screen.getByRole('link', { name: 'Início' })).toHaveAttribute('href', '/')
-    expect(screen.getByRole('link', { name: 'Triagem' })).toHaveAttribute('href', '/triagem')
     expect(screen.getByRole('link', { name: 'Agenda' })).toHaveAttribute('href', '/agenda')
     expect(screen.getByRole('link', { name: 'Repertório' })).toHaveAttribute('href', '/repertorio')
     expect(screen.getByRole('link', { name: 'Assistente' })).toHaveAttribute('href', '/assistente')
     expect(screen.getByRole('link', { name: 'Memória' })).toHaveAttribute('href', '/memoria')
 
+    // "Triagem" saiu com a tela de vitrine: a entrevista real abre pelo caso.
     for (const removedOrHidden of [
       'Galeria',
       'Terminal',
       'Maia',
       'Setup',
       'Como funciona',
+      'Triagem',
     ]) {
       expect(screen.queryByText(removedOrHidden, { exact: true })).not.toBeInTheDocument()
     }
