@@ -1,7 +1,12 @@
 schema_version: 1
 artifact: antessala-current-architecture
-reviewed_revision: 79ec02f813027dbb43489f34e348cca7e49c5b4b
-proof_scope: "Recon estatico do codigo e dos contratos de teste existentes; npm run typecheck passou nesta rodada. Testes unitarios e E2E nao foram executados."
+reviewed_revision: 9f501a9d67806d3511ebdb9b0a560cd564c27dee
+proof_scope: >-
+  Recon estatico read-only do commit congelado. Foram inspecionados documentos,
+  arvore Git nao truncada, entrypoints, rotas, handlers IPC, persistencia, rede,
+  empacotamento, STT, knowledge e testes presentes. Nao foram instaladas
+  dependencias nem executados build, aplicacao, typecheck, testes unitarios, E2E
+  ou empacotamento nesta revisao.
 allowed_statuses:
   - ACTIVE
   - DORMANT
@@ -47,6 +52,14 @@ runtime:
       - "src/renderer/src/anamnese/Composer.tsx:1-20"
       - "src/renderer/src/App.tsx:49-58"
     reuse_boundary: "Reutilizar contratos e validacao somente depois de reconciliados com o Analyst; nao tratar a ausencia de rota como funcionalidade entregue."
+  headless_window_mode:
+    status: ACTIVE
+    summary: "ANTESSALA_HEADLESS impede a exibicao da janela, mas o modo continua importado pelo entrypoint; nao e CLI nem servidor."
+    evidence:
+      - "src/main/headless.ts:1-7"
+      - "src/main/index.ts:6-6"
+      - "src/main/index.ts:44-46"
+    reuse_boundary: "Reutilizar somente como modo de prova; nao confundir com o terminal ou CLI removidos."
 
 trust_boundary:
   main_window:
@@ -62,6 +75,13 @@ trust_boundary:
     evidence:
       - "src/preload/index.ts:1-17"
     reuse_boundary: "O cliente TIPC pode ser mantido, mas a ponte deve ser estreitada antes de uma fronteira multiusuario."
+  electron_permissions:
+    status: INCOMPLETE
+    summary: "Nao foram encontrados permission request/check handlers explicitos; captura de audio dormente dependeria do comportamento padrao do Electron e do sistema operacional."
+    evidence:
+      - "src/main/index.ts:24-195"
+      - "src/renderer/src/hooks/useAudioRecorder.ts:4-84"
+    reuse_boundary: "Definir politica explicita antes de ativar microfone ou qualquer nova permissao do Electron."
   authorization:
     status: INCOMPLETE
     summary: "O HEAD nao possui login, sessao, papeis, capabilities nem guards de autorizacao IPC."
@@ -81,11 +101,18 @@ persistence:
     reuse_boundary: "Reutilizar PGlite e os helpers queryOne, queryAll, execute e transaction."
   schema_strategy:
     status: INCOMPLETE
-    summary: "O schema usa CREATE TABLE IF NOT EXISTS e retrofits inline; nao existe ledger nem diretorio de migrations."
+    summary: "O schema usa CREATE TABLE IF NOT EXISTS e retrofits inline; nao existe ledger nem diretorio de migrations, e alguns blocos silenciam qualquer excecao."
     evidence:
       - "src/main/db/schema.ts:207-246"
       - "src/main/db/query.ts:76-99"
     reuse_boundary: "Preservar o banco embarcado, mas definir migracoes versionadas antes do schema canônico; nao ocultar falhas com EXCEPTION WHEN others."
+  reset_policy:
+    status: REMOVED
+    summary: "Nao foi encontrado comando, handler ou superficie de reset do banco; scripts de limpeza removem artefatos de build, nao userData."
+    evidence:
+      - "package.json:14-34"
+      - "src/main/db/pglite.ts:12-27"
+    reuse_boundary: "Reset continua fora do produto; provas devem usar somente diretorio temporario proprio."
   clinical_legacy:
     status: INCOMPLETE
     summary: "registros, prioridade e registro_jornada pertencem a hipotese invalidada e sao provisórios."
@@ -94,13 +121,13 @@ persistence:
       - "src/main/db/clinical-schema.ts:10-52"
     reuse_boundary: "Nao ampliar nem usar como fonte canônica de caso, jornada, fila ou paciente."
   knowledge_tables:
-    status: DORMANT
-    summary: "Tabelas de fontes, chunks, memorias, entidades e relacoes sao criadas no boot mesmo sem superficie publicada."
+    status: ACTIVE
+    summary: "Tabelas de fontes, chunks, memorias, entidades, relacoes e jobs de importacao sao criadas no boot normal; somente a superficie esta dormente."
     evidence:
       - "src/main/db/schema.ts:27-127"
       - "src/main/db/schema.ts:129-164"
       - "src/main/db/schema.ts:239-246"
-    reuse_boundary: "Reutilizar conceitos de armazenamento e busca, nao o contrato de governanca ou promocao automatica."
+    reuse_boundary: "Reutilizar conceitos de armazenamento e busca, nao o contrato de governanca ou promocao automatica. Persistencia no boot nao significa produto aprovado."
 
 first_boot:
   status: ACTIVE
@@ -146,7 +173,7 @@ ipc:
     reuse_boundary: "Usar client['procedimento'](input); nao adicionar .invoke() no codigo de produto."
   registered_surface:
     status: INCOMPLETE
-    summary: "O router registrado ainda expoe contratos clinicos provisórios, PDF e todo o backend de conhecimento sem guard de papel."
+    summary: "O router registrado expoe contratos clinicos provisorios, PDF e os 35 procedimentos de memoria, arquivos, RAG, grafo, cloud e jobs sem sessao ou guard de papel."
     evidence:
       - "src/main/tipc.ts:373-409"
     reuse_boundary: "Criar allowlist e autorizacao do produto antes de considerar o router uma fronteira confiavel."
@@ -174,24 +201,55 @@ network:
     evidence:
       - "package.json:35-110"
     reuse_boundary: "Nao adicionar rede de release ao boot da prova de conceito."
+  explicit_main_egress:
+    status: ACTIVE
+    paths:
+      - chat
+      - connection_test
+      - rag_metadata
+      - rag_text_correction
+      - knowledge_enrichment
+      - graph_rebuild
+      - bulk_import_auto_metadata
+      - bulk_import_auto_enrich
+    evidence:
+      - "src/main/tipc.ts:104-130"
+      - "src/main/knowledge/router.ts:367-478"
+      - "src/main/knowledge/bulk-import.ts:241-760"
+    reuse_boundary: "A UI atual nao descreve toda esta superficie. Nenhum caminho legado pode permanecer publicamente chamavel no produto canônico."
+  dormant_stt_download:
+    status: INCOMPLETE
+    summary: "O downloader direto existe, mas canais ia.stt nao sao registrados e sidecar/modelo nao entram no bundle."
+    evidence:
+      - "src/main/stt/catalog.ts:8-23"
+      - "src/main/stt/download.ts:15-79"
+      - "src/main/tipc.ts:373-409"
+      - "electron-builder.yml:6-14"
+    reuse_boundary: "Nao reativar sem hash/assinatura, limite, consentimento e decisao explicita de empacotamento."
 
 pdf_and_files:
   pdf_export:
-    status: ACTIVE
-    summary: "O handler recebe HTML, abre save dialog e usa printToPDF em janela efemera sem JavaScript e sem rede."
+    status: INCOMPLETE
+    service_status: ACTIVE
+    ipc_status: ACTIVE
+    user_surface_status: DORMANT
+    summary: "O backend recebe HTML do renderer, abre save dialog e imprime em janela efemera com JavaScript e rede bloqueados; nao existe superficie ativa que o acione."
     evidence:
       - "src/main/tipc.ts:398-400"
       - "src/main/export/pdf.ts:16-25"
       - "src/main/export/pdf.ts:38-91"
-    reuse_boundary: "Reutilizar o handler; criar uma superficie e permissao próprias antes de publica-lo."
+    reuse_boundary: "Reutilizar a janela isolada, nao o contrato de HTML arbitrario. O documento final deve nascer de dado canônico autorizado no main e ter limites de carga."
   local_file_access:
-    status: DORMANT
-    summary: "Handlers ocultos escolhem arquivo ou pasta e importam caminhos locais, embora a pagina Memoria nao esteja roteada."
+    status: INCOMPLETE
+    parser_status: ACTIVE
+    ipc_status: ACTIVE
+    user_surface_status: DORMANT
+    summary: "Handlers registrados aceitam caminhos fornecidos diretamente pelo renderer; o dialogo e opcional e nao existe limite geral de tamanho, entradas ZIP, expansao ou profundidade."
     evidence:
       - "src/main/knowledge/router.ts:202-237"
       - "src/main/knowledge/router.ts:300-335"
       - "src/renderer/src/App.tsx:49-58"
-    reuse_boundary: "Reutilizar dialogos e parsers; exigir gesto, escopo de path, permissao e auditoria no produto."
+    reuse_boundary: "Reutilizar parsers somente com path emitido por capacidade autorizada, canonicalizacao, limites de recurso, auditoria e finalidade fechada."
 
 audio_and_transcription:
   recording:
@@ -228,11 +286,12 @@ cloud_ai:
     reuse_boundary: "Reutilizar a fronteira de provider, nao o chat generico como solucao do fluxo clinico. Toda sugestao clinica precisa draft, proveniencia e confirmacao."
   configuration:
     status: INCOMPLETE
-    summary: "A UI informa o envio cloud, mas tokens ficam em texto no PGlite e nao ha redacao automatica de dados identificaveis."
+    summary: "A UI informa principalmente o envio de conversa, mas tokens ficam em texto no PGlite e duplicados em provider_configs_json; nao ha redacao automatica de dados identificaveis."
     evidence:
       - "src/renderer/src/paginas/ConfiguracoesPagina.tsx:128-223"
       - "src/main/db/schema.ts:14-24"
       - "src/main/tipc.ts:61-103"
+      - "src/main/index.ts:74-121"
     reuse_boundary: "Antes de dados reais, definir segredo seguro, consentimento, minimizacao, retencao e trilha de uso de rede."
   advanced_context:
     status: DORMANT
@@ -245,9 +304,16 @@ cloud_ai:
     reuse_boundary: "Nao reativar promocao automatica de conversa ou memoria; adaptar somente apos o Analyst de IA e conhecimento."
 
 memory_rag_graph:
+  persistence:
+    status: ACTIVE
+    summary: "Fontes, chunks, memorias, entidades, relacoes e registros de importacao integram o schema criado no boot."
+    evidence:
+      - "src/main/db/schema.ts:27-164"
+      - "src/main/db/schema.ts:239-246"
+    reuse_boundary: "Nao chamar de dormente no nivel de persistencia."
   hidden_backend:
     status: ACTIVE
-    summary: "Apesar do nome dormantKnowledgeRouter, todos os handlers sao espalhados no router IPC registrado."
+    summary: "Apesar do nome dormantKnowledgeRouter, seus 35 procedimentos sao espalhados no router IPC registrado e alcancam banco, filesystem, cloud, grafo e jobs."
     evidence:
       - "src/main/knowledge/router.ts:542-582"
       - "src/main/tipc.ts:7-7"
@@ -263,8 +329,13 @@ memory_rag_graph:
       - "src/renderer/src/componentes/AppSidebar.tsx:28-32"
     reuse_boundary: "Nao reativar a pagina legada como produto; compor uma superficie Antessala a partir dos contratos aprovados."
   retrieval:
-    status: DORMANT
-    summary: "Chunking, FTS e trigram funcionam localmente; sem adapter, embeddings retornam null e a busca degrada para texto."
+    status: INCOMPLETE
+    backend_status: ACTIVE
+    ipc_status: ACTIVE
+    user_surface_status: DORMANT
+    chat_integration_status: INCOMPLETE
+    vector_status: INCOMPLETE
+    summary: "Chunking, FTS e trigram funcionam localmente e o handler esta registrado; sem adapter, embeddings retornam null. O chat ativo nao usa RAG, memoria, grafo ou documentos."
     evidence:
       - "src/main/knowledge/embeddings.ts:1-79"
       - "src/main/knowledge/ingest.ts:60-108"
@@ -272,22 +343,39 @@ memory_rag_graph:
       - "src/main/knowledge/search.ts:124-185"
     reuse_boundary: "Reutilizar chunking e busca textual; qualquer embedding exige adapter explicitamente aprovado e nunca download no boot."
   importers:
-    status: DORMANT
-    summary: "Existem parsers locais para texto, PDF, JSON ChatGPT, JSON Claude e ZIP."
+    status: INCOMPLETE
+    parser_status: ACTIVE
+    ipc_status: ACTIVE
+    user_surface_status: DORMANT
+    summary: "Parsers de texto, PDF, HTML, CSV, JSON e ZIP existem e handlers registrados aceitam paths do renderer. UI esta dormente e a fronteira de filesystem/recursos esta incompleta."
     evidence:
       - "src/main/importers/importer-registry.ts:19-59"
       - "src/main/importers/pdf-importer.ts:5-21"
       - "src/main/importers/zip-importer.ts:11-62"
+      - "src/main/knowledge/router.ts:238-335"
     reuse_boundary: "Reutilizar parsers somente com limites de arquivo, privacidade, origem e politica de retencao."
   graph_governance:
     status: INCOMPLETE
-    summary: "Rebuild e enrichment cloud persistem entidades e relacoes sugeridas sem draft, aprovador, versao ou proveniencia clinica suficiente."
+    summary: "Rebuild e enrichment cloud persistem inferencias sem draft/aprovacao; rebuild remove o grafo anterior antes de concluir todas as chamadas e nao envolve a operacao inteira em uma transacao."
     evidence:
       - "src/main/knowledge/graph.ts:207-272"
       - "src/main/knowledge/enrichment.ts:265-334"
       - "src/main/knowledge/enrichment.ts:487-518"
       - "src/main/db/schema.ts:105-126"
     reuse_boundary: "Reutilizar apenas mecanismos tecnicos; conhecimento global exige sugestao inativa, promocao humana, versao, desativacao e auditoria."
+  ingestion_atomicity:
+    status: INCOMPLETE
+    summary: "A fonte pode ser criada antes da transacao que persiste chunks, permitindo fonte vazia ou estado parcial se a etapa seguinte falhar."
+    evidence:
+      - "src/main/knowledge/ingest.ts:60-160"
+    reuse_boundary: "O Build futuro precisa definir unidade atomica e recuperacao antes de reutilizar a ingestao."
+  live_jobs:
+    status: INCOMPLETE
+    summary: "Pause, resume e cancel vivem em Maps do processo; nao ha recuperacao comprovada dos controladores vivos apos restart."
+    evidence:
+      - "src/main/jobs.ts:1-170"
+      - "src/main/knowledge/bulk-persistence.ts:1-220"
+    reuse_boundary: "Nao prometer retomada de job sem contrato persistente e prova de restart."
   automatic_memory:
     status: INCOMPLETE
     summary: "O processor legado extrai fatos e indexa conversas automaticamente, mas esta desconectado do router atual e viola a nova fronteira de promocao humana."
@@ -298,20 +386,40 @@ memory_rag_graph:
     reuse_boundary: "Nao reutilizar como esta; dado de caso nunca vira memoria global sem promocao humana explicita."
 
 removed_legacy:
-  status: REMOVED
-  summary: "Terminal, CLI, MCP, tool-server, cron, galeria, Maia/TTS e LLM local nao existem no runtime atual."
+  terminal_runtime:
+    status: REMOVED
+  shell_input_heuristic:
+    status: DORMANT
+    evidence:
+      - "src/renderer/src/lib/shell-input.ts:1-12"
+  headless_window_mode:
+    status: ACTIVE
+    evidence:
+      - "src/main/headless.ts:1-7"
+      - "src/main/index.ts:6-6"
+  cli:
+    status: REMOVED
+  mcp:
+    status: REMOVED
+  tool_server:
+    status: REMOVED
+  cron:
+    status: REMOVED
+  gallery:
+    status: REMOVED
+  phaser:
+    status: REMOVED
+  local_llm:
+    status: REMOVED
   evidence:
     - "package.json:35-110"
     - "git:bff8553"
     - "git:36af6af"
     - "git:7dbe440"
-  reuse_boundary: "Nao reintroduzir runtime FlowKit para implementar o Antessala."
+  reuse_boundary: "Nao reintroduzir runtime FlowKit para implementar o Antessala; headless nao e terminal e shell-input e fossil sem consumidor."
 
 verification:
-  executed:
-    command: "npm run typecheck"
-    result: "PASS"
-    date: "2026-08-14"
+  executed: []
   commands:
     install: "npm install"
     development: "npm run dev"
@@ -328,7 +436,7 @@ verification:
     - "vitest.config.ts:13-27"
     - "playwright.config.ts:3-10"
     - "tests/e2e/app-flow.spec.ts:4-80"
-  note: "Nao existe script lint no HEAD. Resultados verdes precisam ser vinculados ao SHA em que os comandos foram executados."
+  note: "Nenhum comando foi executado neste recon do SHA 9f501a9. O typecheck anterior pertence a outra revisao e nao foi transportado. Nao existe script lint no HEAD."
 
 known_risks:
   - id: generic-preload
@@ -343,6 +451,14 @@ known_risks:
     status: INCOMPLETE
     evidence: "src/main/tipc.ts:373-375"
     statement: "Ocultar rota nao desabilita handlers de memoria, arquivos, jobs, cloud ou grafo."
+  - id: arbitrary-file-path
+    status: INCOMPLETE
+    evidence: "src/main/knowledge/router.ts:238-335"
+    statement: "Handlers aceitam paths do renderer sem exigir que tenham sido emitidos por dialogo autorizado."
+  - id: importer-resource-limits
+    status: INCOMPLETE
+    evidence: "src/main/importers/pdf-importer.ts:5-21; src/main/importers/zip-importer.ts:11-62"
+    statement: "Importadores nao provam limites gerais de arquivo, paginas, entradas ZIP ou tamanho descompactado."
   - id: plaintext-cloud-token
     status: INCOMPLETE
     evidence: "src/main/db/schema.ts:14-24"
@@ -355,10 +471,26 @@ known_risks:
     status: INCOMPLETE
     evidence: "src/main/knowledge/enrichment.ts:487-518"
     statement: "Inferencias do LLM podem ser persistidas diretamente como relacoes."
+  - id: graph-destructive-rebuild
+    status: INCOMPLETE
+    evidence: "src/main/knowledge/graph.ts:207-272"
+    statement: "Rebuild remove o grafo anterior antes de concluir chamadas cloud e pode deixar estado parcial."
+  - id: partial-knowledge-ingest
+    status: INCOMPLETE
+    evidence: "src/main/knowledge/ingest.ts:60-160"
+    statement: "Fonte pode existir sem chunks se a ingestao falhar depois da criacao."
+  - id: ephemeral-job-control
+    status: INCOMPLETE
+    evidence: "src/main/jobs.ts:1-170"
+    statement: "Controle vivo de jobs fica em Maps e nao possui retomada comprovada apos restart."
   - id: stt-large-download
     status: INCOMPLETE
     evidence: "src/main/stt/catalog.ts:10-23"
     statement: "O downloader dormente aponta para um modelo de 478 MB."
+  - id: stt-download-integrity
+    status: INCOMPLETE
+    evidence: "src/main/stt/catalog.ts:8-23; src/main/stt/download.ts:15-79"
+    statement: "Downloader STT dormente nao verifica hash ou assinatura antes de extrair o modelo."
   - id: inline-migration-errors
     status: INCOMPLETE
     evidence: "src/main/db/schema.ts:211-233"
@@ -367,6 +499,14 @@ known_risks:
     status: INCOMPLETE
     evidence: "src/main/config/app-config.ts:23-24; src/renderer/src/main.tsx:10-17"
     statement: "APP_CONFIG declara dark, mas o renderer usa system."
+  - id: pdf-arbitrary-html
+    status: INCOMPLETE
+    evidence: "src/main/tipc.ts:398-400; src/main/export/pdf.ts:16-91"
+    statement: "Handler recebe HTML e filename do renderer e nao prova limite de tamanho, frequencia ou vinculo com documento canônico."
+  - id: local-distribution-trust
+    status: INCOMPLETE
+    evidence: "electron-builder.yml:15-25; .github/workflows/dist.yml:1-8"
+    statement: "Distribuicao macOS e ad hoc, sem assinatura Developer ID ou notarizacao."
 
 approval:
   controller: "hack/CONTRATO-DE-APROVACAO.md"
