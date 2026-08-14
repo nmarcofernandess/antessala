@@ -7,7 +7,7 @@
  * disse que é medicamento, entra o catálogo real de 382 princípios ativos.
  */
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Apple, HandHeart, Pill, Plus, ShieldAlert, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -89,12 +89,10 @@ export function WidgetAlergias({
       />
 
       {positivo && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <EtiquetaSecao>
-              {dados.itens.length === 1 ? 'Uma alergia relatada' : `${dados.itens.length} alergias relatadas`}
-            </EtiquetaSecao>
-          </div>
+        <div className="@container space-y-3">
+          <EtiquetaSecao>
+            {dados.itens.length === 1 ? 'Uma alergia relatada' : `${dados.itens.length} alergias relatadas`}
+          </EtiquetaSecao>
 
           {dados.itens.map((item) => (
             <CartaoAlergia
@@ -106,20 +104,22 @@ export function WidgetAlergias({
           ))}
 
           {novo === null ? (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed px-3 py-2.5">
-              <span className="text-xs text-muted-foreground">Alergia a:</span>
-              {FONTES.map((f) => (
-                <Button
-                  key={f.valor}
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-1.5 text-xs"
-                  onClick={() => setNovo(f.valor)}
-                >
-                  <f.icone className="size-3.5" />
-                  {f.rotulo}
-                </Button>
-              ))}
+            /* O convite para incluir mais uma: quatro portas de entrada com o
+               mesmo peso, e não uma barra de ferramentas espremida num canto. */
+            <div className="rounded-xl border border-dashed px-4 py-3.5">
+              <EtiquetaSecao>Adicionar alergia a</EtiquetaSecao>
+              <div className="mt-2.5 max-w-[560px]">
+                <Escolha
+                  opcoes={FONTES.map((f) => ({
+                    valor: f.valor,
+                    rotulo: f.rotulo,
+                    icone: f.icone,
+                  }))}
+                  valor={undefined}
+                  onChange={setNovo}
+                  colunas={4}
+                />
+              </div>
             </div>
           ) : (
             <NovaAlergia fonte={novo} onCancelar={() => setNovo(null)} onConfirmar={adicionar} />
@@ -139,6 +139,24 @@ export function WidgetAlergias({
 
 /* ══════════════ cartão de um item ══════════════ */
 
+/**
+ * Linha de classificação: rótulo à esquerda, opções à direita.
+ *
+ * As duas linhas compartilham a mesma coluna de rótulo e a mesma grade de três
+ * opções, então gravidade e natureza se leem em colunas que batem — em vez do
+ * degrau que aparecia quando cada uma ficava num lado de um grid de dois.
+ */
+function LinhaClassificacao({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-x-4 gap-y-1.5 @2xl:grid-cols-[164px_minmax(0,1fr)] @2xl:items-center">
+      <div>
+        <EtiquetaSecao>{rotulo}</EtiquetaSecao>
+      </div>
+      <div className="max-w-[560px]">{children}</div>
+    </div>
+  )
+}
+
 function CartaoAlergia({
   item,
   onAlterar,
@@ -152,65 +170,65 @@ function CartaoAlergia({
   const status = statusDaGravidade(item.gravidade)
 
   return (
-    <div className="group rounded-lg border bg-card">
-      <div className="flex items-start gap-3 px-4 py-3">
+    <div className="group @container rounded-xl border bg-card px-4 py-3.5">
+      {/* Quem é a alergia e o que aconteceu — o relato antes da classificação. */}
+      <div className="flex items-start gap-3">
         <fonte.icone className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="text-sm font-medium">{item.substancia}</span>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-sm font-medium leading-snug">{item.substancia}</span>
             {item.classe && (
               <span className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground">
                 {item.classe}
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">{item.reacao}</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{item.reacao}</p>
         </div>
-        {item.gravidade && (
-          <ChipStatus status={status}>
-            {GRAVIDADES.find((g) => g.valor === item.gravidade)?.rotulo}
-          </ChipStatus>
-        )}
-        <button
-          type="button"
-          onClick={onRemover}
-          aria-label={`Remover ${item.substancia}`}
-          className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {item.gravidade && (
+            <ChipStatus status={status}>
+              {GRAVIDADES.find((g) => g.valor === item.gravidade)?.rotulo}
+            </ChipStatus>
+          )}
+          <button
+            type="button"
+            onClick={onRemover}
+            aria-label={`Remover ${item.substancia}`}
+            className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-3 border-t px-4 py-3 sm:grid-cols-2">
-        <div>
-          <EtiquetaSecao>Gravidade documentada</EtiquetaSecao>
-          <div className="mt-2">
-            <Escolha
-              opcoes={GRAVIDADES.map((g) => ({
-                valor: g.valor,
-                rotulo: g.rotulo,
-                status: g.status,
-              }))}
-              valor={item.gravidade}
-              onChange={(v) => onAlterar({ gravidade: v })}
-              colunas={3}
-            />
-          </div>
-        </div>
-        <div>
-          <EtiquetaSecao>Natureza da reação</EtiquetaSecao>
-          <div className="mt-2">
-            <Escolha
-              opcoes={TIPOS.map((t) => ({
-                valor: t.valor,
-                rotulo: t.rotulo,
-                detalhe: t.detalhe,
-              }))}
-              valor={item.tipo}
-              onChange={(v) => onAlterar({ tipo: v })}
-            />
-          </div>
-        </div>
+      {/* Indentado até o texto do cabeçalho: a classificação pertence ao que
+          está escrito acima, e o alinhamento é quem diz isso. */}
+      <div className="mt-3.5 space-y-2 border-t pt-3.5 @2xl:ml-7">
+        <LinhaClassificacao rotulo="Gravidade documentada">
+          <Escolha
+            opcoes={GRAVIDADES.map((g) => ({
+              valor: g.valor,
+              rotulo: g.rotulo,
+              status: g.status,
+            }))}
+            valor={item.gravidade}
+            onChange={(v) => onAlterar({ gravidade: v })}
+            colunas={3}
+          />
+        </LinhaClassificacao>
+        <LinhaClassificacao rotulo="Natureza da reação">
+          <Escolha
+            opcoes={TIPOS.map((t) => ({
+              valor: t.valor,
+              rotulo: t.rotulo,
+              detalhe: t.detalhe,
+            }))}
+            valor={item.tipo}
+            onChange={(v) => onAlterar({ tipo: v })}
+            colunas={3}
+          />
+        </LinhaClassificacao>
       </div>
     </div>
   )
@@ -235,7 +253,7 @@ function NovaAlergia({
   const completo = substancia.trim().length > 0 && reacao.trim().length > 0
 
   return (
-    <div className="space-y-3 rounded-lg border border-dashed bg-muted/20 px-4 py-3.5">
+    <div className="space-y-3.5 rounded-xl border border-dashed bg-card px-4 py-3.5">
       <div className="flex items-center gap-2">
         <def.icone className="size-4 text-muted-foreground" />
         <EtiquetaSecao>Alergia a {def.rotulo.toLowerCase()}</EtiquetaSecao>
@@ -300,8 +318,8 @@ function NovaAlergia({
 
       {substancia && (
         <div className="space-y-1.5">
-          <label htmlFor="reacao" className="text-xs text-muted-foreground">
-            Que reação ele teve?
+          <label htmlFor="reacao">
+            <EtiquetaSecao>Que reação ele teve?</EtiquetaSecao>
           </label>
           <Input
             id="reacao"
@@ -313,7 +331,7 @@ function NovaAlergia({
         </div>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 border-t pt-3">
         <Button variant="ghost" size="sm" onClick={onCancelar}>
           Cancelar
         </Button>

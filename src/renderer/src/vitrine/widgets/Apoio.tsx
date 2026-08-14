@@ -7,9 +7,22 @@
  * descreve o que a vaga precisa ter. Intérprete de Libras, sala acessível e
  * acompanhante legal viram requisito da sala, e por isso somam dez minutos
  * fora do teto que limita os demais domínios.
+ *
+ * Composição: as três necessidades moram numa moldura só, com a coluna de
+ * ícones batendo entre linhas e um trilho colorido em quem foi positivo. Nos
+ * exames, os três estados são um controle segmentado — escolha, não enfeite.
  */
 
-import { Accessibility, CalendarClock, Cigarette, FileText, Languages, Wine } from 'lucide-react'
+import { useId, type ReactNode } from 'react'
+import {
+  Accessibility,
+  CalendarClock,
+  Cigarette,
+  FileText,
+  Languages,
+  UserRoundCheck,
+  Wine,
+} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -19,6 +32,7 @@ import {
   Escolha,
   EtiquetaSecao,
   GradeDados,
+  STATUS,
   type Status,
 } from '../primitivos'
 import { PerguntaChave } from './PerguntaChave'
@@ -33,6 +47,65 @@ import type {
   StatusExame,
   UsoSubstancia,
 } from './tipos'
+
+/* ══════════════ trilho de pergunta ══════════════ */
+
+/** Moldura única para uma sequência de perguntas — uma borda, não três. */
+function ListaPerguntas({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('overflow-hidden rounded-lg border bg-card', className)}>{children}</div>
+  )
+}
+
+/**
+ * Uma linha da lista. Envolver a `PerguntaChave compacta` neutraliza o `first:`
+ * do primitivo, então é o trilho que manda no respiro e na cor — daí o
+ * `[&>div]:py-0`. `tom` diz de qual natureza é o positivo: atenção quando é
+ * achado clínico, primary quando é recurso que a vaga precisa ter.
+ */
+function LinhaPergunta({
+  destaque,
+  tom = 'atencao',
+  icone: Icone,
+  className,
+  children,
+}: {
+  destaque?: boolean
+  tom?: 'atencao' | 'primary'
+  icone?: typeof Languages
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        'relative flex items-center gap-3 border-t py-3 pl-4 pr-3.5 transition-colors first:border-t-0',
+        '[&>div]:min-w-0 [&>div]:flex-1 [&>div]:py-0',
+        destaque && (tom === 'primary' ? 'bg-primary/[0.06]' : 'bg-warning/[0.07]'),
+        className,
+      )}
+    >
+      {destaque && (
+        <span
+          className={cn(
+            'absolute inset-y-0 left-0 w-[3px]',
+            tom === 'primary' ? 'bg-primary' : 'bg-warning',
+          )}
+          aria-hidden
+        />
+      )}
+      {Icone && (
+        <Icone
+          className={cn(
+            'size-4 shrink-0',
+            destaque && tom === 'primary' ? 'text-primary' : 'text-muted-foreground',
+          )}
+        />
+      )}
+      {children}
+    </div>
+  )
+}
 
 /* ══════════════ acomodação ══════════════ */
 
@@ -58,7 +131,7 @@ export function WidgetAcomodacao({
         )}
       </div>
 
-      <div className="space-y-3">
+      <ListaPerguntas>
         <BlocoAcomodacao
           icone={Languages}
           pergunta="O paciente precisa de apoio para se comunicar?"
@@ -81,18 +154,24 @@ export function WidgetAcomodacao({
           placeholder="Qual apoio? Ex.: sala acessível e transferência com auxílio."
         />
 
-        <div className="rounded-lg border bg-card px-4 py-3">
+        {/* A terceira não abre campo nenhum: é marcação, e o rodapé diz isso. */}
+        <LinhaPergunta
+          destaque={positiva(dados.representanteLegal)}
+          tom="primary"
+          icone={UserRoundCheck}
+          className={cn(!positiva(dados.representanteLegal) && 'bg-muted/20')}
+        >
           <PerguntaChave
             compacta
             pergunta="Precisa de representante legal para decidir?"
             resposta={dados.representanteLegal}
             onChange={(r) => onChange({ ...dados, representanteLegal: r })}
           />
-        </div>
-      </div>
+        </LinhaPergunta>
+      </ListaPerguntas>
 
       {necessidades > 0 && (
-        <p className="rounded-lg border border-dashed px-4 py-3 text-[13px] text-muted-foreground">
+        <p className="rounded-lg border border-dashed px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">
           A recepção não vê o motivo clínico — ela vê que esta vaga exige o recurso. É o que
           permite agendar sem expor a condição do paciente na tela do balcão.
         </p>
@@ -122,26 +201,32 @@ function BlocoAcomodacao({
 }) {
   const sim = positiva(resposta)
   return (
-    <div className={cn('rounded-lg border bg-card px-4 py-3', sim && 'border-primary/25 bg-primary/5')}>
-      <div className="flex items-start gap-3">
-        <Icone className={cn('mt-0.5 size-4 shrink-0', sim ? 'text-primary' : 'text-muted-foreground')} />
-        <div className="min-w-0 flex-1">
-          <PerguntaChave
-            pergunta={pergunta}
-            apoio={apoio}
-            resposta={resposta}
-            onChange={onChange}
-            statusQuandoSim="adequado"
+    <div
+      className={cn(
+        'relative flex items-start gap-3 border-t py-3.5 pl-4 pr-4 transition-colors first:border-t-0',
+        sim && 'bg-primary/[0.06]',
+      )}
+    >
+      {sim && <span className="absolute inset-y-0 left-0 w-[3px] bg-primary" aria-hidden />}
+      <Icone
+        className={cn('mt-0.5 size-4 shrink-0', sim ? 'text-primary' : 'text-muted-foreground')}
+      />
+      <div className="min-w-0 flex-1">
+        <PerguntaChave
+          pergunta={pergunta}
+          apoio={apoio}
+          resposta={resposta}
+          onChange={onChange}
+          statusQuandoSim="adequado"
+        />
+        {sim && (
+          <Input
+            value={detalhe ?? ''}
+            placeholder={placeholder}
+            onChange={(e) => onDetalhe(e.target.value)}
+            className="mt-3 h-9 bg-card text-[13px]"
           />
-          {sim && (
-            <Input
-              value={detalhe ?? ''}
-              placeholder={placeholder}
-              onChange={(e) => onDetalhe(e.target.value)}
-              className="mt-3 h-9 text-[13px]"
-            />
-          )}
-        </div>
+        )}
       </div>
     </div>
   )
@@ -164,7 +249,7 @@ export function WidgetHabitos({
 }) {
   return (
     <CorpoWidget>
-      <p className="text-xs text-muted-foreground">
+      <p className="max-w-[80ch] text-xs leading-relaxed text-muted-foreground">
         “Parou” é diferente de “nunca usou”, e as duas são diferentes de não ter perguntado.
         Cada uma leva a uma conversa distinta na consulta.
       </p>
@@ -190,14 +275,16 @@ export function WidgetHabitos({
         />
       </GradeDados>
 
-      <div className="rounded-lg border bg-card px-4 py-3">
-        <PerguntaChave
-          compacta
-          pergunta="Usa outras substâncias?"
-          resposta={dados.outrasSubstancias}
-          onChange={(r) => onChange({ ...dados, outrasSubstancias: r })}
-        />
-      </div>
+      <ListaPerguntas>
+        <LinhaPergunta destaque={positiva(dados.outrasSubstancias)}>
+          <PerguntaChave
+            compacta
+            pergunta="Usa outras substâncias?"
+            resposta={dados.outrasSubstancias}
+            onChange={(r) => onChange({ ...dados, outrasSubstancias: r })}
+          />
+        </LinhaPergunta>
+      </ListaPerguntas>
     </CorpoWidget>
   )
 }
@@ -221,26 +308,32 @@ function CartaoHabito({
 }) {
   const valor = resposta.estado === 'RESPONDIDO' ? resposta.valor : undefined
   return (
-    <div className="rounded-lg border bg-card px-4 py-3">
+    <div className="flex h-full flex-col rounded-lg border bg-card px-4 py-3">
       <div className="flex items-center gap-2">
-        <Icone className="size-3.5 text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">{titulo}</span>
+        <Icone className="size-3.5 shrink-0 text-muted-foreground" />
+        <EtiquetaSecao>{titulo}</EtiquetaSecao>
       </div>
+
       <div className="mt-2.5">
         <Escolha
           opcoes={USO.map((u) => ({ valor: u.valor, rotulo: u.rotulo, status: u.status }))}
           valor={valor}
           onChange={(v) => onChange({ estado: 'RESPONDIDO', valor: v })}
+          colunas={3}
         />
       </div>
-      {valor && valor !== 'NUNCA' && (
-        <Input
-          value={detalhe ?? ''}
-          placeholder={placeholder}
-          onChange={(e) => onDetalhe(e.target.value)}
-          className="mt-2.5 h-8 text-[13px]"
-        />
-      )}
+
+      {/* Slot reservado: o detalhe entra e sai sem os dois cartões trocarem de altura. */}
+      <div className="mt-2.5 h-9">
+        {valor && valor !== 'NUNCA' && (
+          <Input
+            value={detalhe ?? ''}
+            placeholder={placeholder}
+            onChange={(e) => onDetalhe(e.target.value)}
+            className="h-9 text-[13px]"
+          />
+        )}
+      </div>
     </div>
   )
 }
@@ -254,45 +347,53 @@ export function WidgetCondicoesEspeciais({
   dados: DadosCondicoesEspeciais
   onChange: (d: DadosCondicoesEspeciais) => void
 }) {
+  const campoOutra = useId()
   const gestante = positiva(dados.gestante)
+
   return (
     <CorpoWidget>
-      <div className="rounded-lg border bg-card px-4 py-3">
-        <PerguntaChave
-          compacta
-          pergunta="Está gestante?"
-          resposta={dados.gestante}
-          onChange={(r) => onChange({ ...dados, gestante: r })}
-        />
-        <PerguntaChave
-          compacta
-          pergunta="Está amamentando?"
-          resposta={dados.lactante}
-          onChange={(r) => onChange({ ...dados, lactante: r })}
-        />
-      </div>
+      <ListaPerguntas>
+        <LinhaPergunta destaque={gestante}>
+          <PerguntaChave
+            compacta
+            pergunta="Está gestante?"
+            resposta={dados.gestante}
+            onChange={(r) => onChange({ ...dados, gestante: r })}
+          />
+        </LinhaPergunta>
+        <LinhaPergunta destaque={positiva(dados.lactante)}>
+          <PerguntaChave
+            compacta
+            pergunta="Está amamentando?"
+            resposta={dados.lactante}
+            onChange={(r) => onChange({ ...dados, lactante: r })}
+          />
+        </LinhaPergunta>
+      </ListaPerguntas>
 
       {gestante && (
-        <div className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
-          <span className="text-[13px]">Semanas de gestação</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
+          <EtiquetaSecao>Semanas de gestação</EtiquetaSecao>
           <Input
             type="number"
+            aria-label="Semanas de gestação"
             value={dados.semanasGestacao ?? ''}
             onChange={(e) => onChange({ ...dados, semanasGestacao: Number(e.target.value) })}
-            className="h-8 w-20 font-mono tabular-nums"
+            className="h-9 w-24 bg-card font-mono text-base tabular-nums"
           />
         </div>
       )}
 
-      <div className="space-y-1.5">
-        <label className="text-[11px] text-muted-foreground">
-          Outra condição declarada pelo paciente
+      <div>
+        <label htmlFor={campoOutra}>
+          <EtiquetaSecao>Outra condição declarada pelo paciente</EtiquetaSecao>
         </label>
         <Input
+          id={campoOutra}
           value={dados.outraCondicao ?? ''}
           placeholder="Só o que ele declarou — o app não deduz condição."
           onChange={(e) => onChange({ ...dados, outraCondicao: e.target.value })}
-          className="h-9 text-[13px]"
+          className="mt-2 h-9 text-[13px]"
         />
       </div>
     </CorpoWidget>
@@ -305,6 +406,59 @@ const STATUS_EXAME: Record<StatusExame, { rotulo: string; status: Status }> = {
   DISPONIVEL: { rotulo: 'Em mãos', status: 'ideal' },
   SOLICITADO: { rotulo: 'Solicitado', status: 'atencao' },
   AUSENTE: { rotulo: 'Não tem', status: 'critico' },
+}
+
+const ORDEM_EXAME = Object.keys(STATUS_EXAME) as StatusExame[]
+
+/**
+ * Os três estados de um exame são uma escolha só, e por isso vivem dentro de
+ * um mesmo sulco: o selecionado sobe para a cor do estado, os outros recuam.
+ */
+function SeletorExame({
+  nome,
+  valor,
+  onChange,
+}: {
+  nome: string
+  valor: StatusExame
+  onChange: (s: StatusExame) => void
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={`Situação de ${nome}`}
+      className="flex shrink-0 gap-0.5 rounded-lg border bg-muted/50 p-0.5"
+    >
+      {ORDEM_EXAME.map((s) => {
+        const ativo = valor === s
+        const def = STATUS_EXAME[s]
+        const tom = STATUS[def.status]
+        return (
+          <button
+            key={s}
+            type="button"
+            aria-pressed={ativo}
+            onClick={() => onChange(s)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[11px] font-medium transition-all',
+              ativo
+                ? cn('bg-card shadow-sm', tom.texto)
+                : 'text-muted-foreground/70 hover:text-foreground',
+            )}
+          >
+            <span
+              className={cn(
+                'size-1.5 rounded-full transition-colors',
+                ativo ? tom.ponto : 'bg-muted-foreground/30',
+              )}
+              aria-hidden
+            />
+            {def.rotulo}
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 export function WidgetExames({
@@ -321,55 +475,44 @@ export function WidgetExames({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <EtiquetaSecao>{dados.itens.length} exames verificados</EtiquetaSecao>
         {pendentes.length > 0 && (
-          <ChipStatus status="atencao">
-            {pendentes.length} viram pendência do caso
-          </ChipStatus>
+          <ChipStatus status="atencao">{pendentes.length} viram pendência do caso</ChipStatus>
         )}
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-card divide-y">
-        {dados.itens.map((item) => (
-          <div key={item.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-            <FileText className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 text-[13px]">{item.nome}</span>
-            {item.data && (
-              <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                {item.data}
+      <div className="overflow-hidden rounded-lg border bg-card">
+        {dados.itens.map((item) => {
+          const pendente = item.status !== 'DISPONIVEL'
+          return (
+            <div
+              key={item.id}
+              className={cn(
+                // Colunas fixas: nome, data e controle batem entre todas as linhas,
+                // inclusive nas que não têm data.
+                'grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-3 border-t px-4 py-2.5 first:border-t-0',
+                pendente && 'bg-muted/20',
+              )}
+            >
+              <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 truncate text-[13px]">{item.nome}</span>
+              <span className="w-[5.5rem] text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+                {item.data ?? '—'}
               </span>
-            )}
-            <div className="flex gap-1">
-              {(Object.keys(STATUS_EXAME) as StatusExame[]).map((s) => {
-                const ativo = item.status === s
-                const def = STATUS_EXAME[s]
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() =>
-                      onChange({
-                        ...dados,
-                        itens: dados.itens.map((i) =>
-                          i.id === item.id ? { ...i, status: s } : i,
-                        ),
-                      })
-                    }
-                    className="rounded-md"
-                  >
-                    <ChipStatus
-                      status={ativo ? def.status : 'neutro'}
-                      className={cn('transition-opacity', !ativo && 'opacity-40')}
-                    >
-                      {def.rotulo}
-                    </ChipStatus>
-                  </button>
-                )
-              })}
+              <SeletorExame
+                nome={item.nome}
+                valor={item.status}
+                onChange={(s) =>
+                  onChange({
+                    ...dados,
+                    itens: dados.itens.map((i) => (i.id === item.id ? { ...i, status: s } : i)),
+                  })
+                }
+              />
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
         Exame ausente vira pendência operacional do caso — nunca soma minuto à consulta,
         porque a falta do papel não torna a entrevista mais longa.
       </p>
@@ -386,12 +529,14 @@ export function WidgetContexto({
   dados: DadosContexto
   onChange: (d: DadosContexto) => void
 }) {
+  const campoObservacao = useId()
+
   return (
     <CorpoWidget>
-      <div className="rounded-lg border bg-muted/30 px-5 py-4">
+      <div className="rounded-xl border bg-muted/30 px-5 py-4">
         <EtiquetaSecao>Veio no encaminhamento</EtiquetaSecao>
         <p className="mt-2 text-lg font-medium leading-snug">{dados.indicacao}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-muted-foreground">
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t pt-3 text-[13px] text-muted-foreground">
           {dados.dataPlanejada && (
             <span className="flex items-center gap-1.5">
               <CalendarClock className="size-3.5" />
@@ -402,15 +547,16 @@ export function WidgetContexto({
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-[11px] text-muted-foreground">
-          Observação do encaminhamento — transcrição, não avaliação
+      <div>
+        <label htmlFor={campoObservacao}>
+          <EtiquetaSecao>Observação do encaminhamento — transcrição, não avaliação</EtiquetaSecao>
         </label>
         <Textarea
+          id={campoObservacao}
           rows={2}
           value={dados.observacaoEncaminhamento ?? ''}
           onChange={(e) => onChange({ ...dados, observacaoEncaminhamento: e.target.value })}
-          className="text-[13px]"
+          className="mt-2 text-[13px]"
         />
       </div>
     </CorpoWidget>
@@ -426,18 +572,29 @@ export function WidgetObservacoes({
   dados: DadosObservacoes
   onChange: (d: DadosObservacoes) => void
 }) {
+  const campoNota = useId()
+
   return (
     <CorpoWidget>
-      <Textarea
-        rows={4}
-        value={dados.nota}
-        placeholder="O que não coube em nenhum campo, com as palavras de quem entrevistou."
-        onChange={(e) => onChange({ ...dados, nota: e.target.value })}
-        className="text-[13px] leading-relaxed"
-      />
+      <div>
+        <label htmlFor={campoNota}>
+          <EtiquetaSecao>Nota da entrevista</EtiquetaSecao>
+        </label>
+        <Textarea
+          id={campoNota}
+          rows={4}
+          value={dados.nota}
+          placeholder="O que não coube em nenhum campo, com as palavras de quem entrevistou."
+          onChange={(e) => onChange({ ...dados, nota: e.target.value })}
+          className="mt-2 text-[13px] leading-relaxed"
+        />
+      </div>
+
       {dados.autor && (
-        <p className="font-mono text-[11px] text-muted-foreground">
-          {dados.autor} · {dados.horario}
+        <p className="flex flex-wrap items-center justify-end gap-x-2 font-mono text-[11px] tabular-nums text-muted-foreground">
+          <span>{dados.autor}</span>
+          <span aria-hidden>·</span>
+          <span>{dados.horario}</span>
         </p>
       )}
     </CorpoWidget>

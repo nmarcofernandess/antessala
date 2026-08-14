@@ -9,10 +9,11 @@
  * verdade se alguém disse isso.
  */
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Plus, Stethoscope, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { buscarCid, COMORBIDADES, TAMANHO_CATALOGOS } from '../catalogos'
 import { BuscaCatalogo } from '../busca'
 import { ChipStatus, CorpoWidget, EtiquetaSecao } from '../primitivos'
@@ -21,6 +22,10 @@ import type { DadosDiagnosticos, ItemDiagnostico } from './tipos'
 
 /** Acima deste volume a regra de dimensionamento soma minutos à consulta. */
 const VOLUME_QUE_SOMA = 3
+
+/** Célula editável: sem caixa em repouso, a caixa aparece ao tocar. */
+const CELULA =
+  'h-8 rounded-md border-transparent bg-transparent px-2 text-[13px] shadow-none transition-colors hover:bg-muted/60 focus-visible:border-input focus-visible:bg-background'
 
 export function WidgetDiagnosticos({
   dados,
@@ -59,7 +64,7 @@ export function WidgetDiagnosticos({
       />
 
       {positivo && (
-        <div className="space-y-3">
+        <div className="@container space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <EtiquetaSecao>
               {total === 1 ? 'Um diagnóstico' : `${total} diagnósticos`}
@@ -67,7 +72,7 @@ export function WidgetDiagnosticos({
             {somaTempo && <ChipStatus status="atencao">Volume soma 5 min à consulta</ChipStatus>}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {dados.itens.map((item) => (
               <CartaoDiagnostico
                 key={item.id}
@@ -81,7 +86,7 @@ export function WidgetDiagnosticos({
           </div>
 
           {adicionando ? (
-            <div className="space-y-3 rounded-lg border border-dashed bg-muted/20 p-3">
+            <div className="space-y-3.5 rounded-xl border border-dashed bg-card px-4 py-3.5">
               <BuscaCatalogo
                 autoFocus
                 placeholder="Diagnóstico ou código — “diabetes”, “dm2”, “I10”…"
@@ -103,9 +108,11 @@ export function WidgetDiagnosticos({
                 }
               />
 
+              {/* Atalhos em grade: o código fica sempre na mesma borda direita,
+                  então a lista se lê em coluna em vez de nuvem de etiquetas. */}
               <div>
                 <EtiquetaSecao>Atalhos frequentes na pré-anestésica</EtiquetaSecao>
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="mt-2 grid gap-1.5 @lg:grid-cols-2">
                   {COMORBIDADES.slice(0, 8).map((c) => {
                     const cid = c.cid[0]
                     return (
@@ -119,10 +126,12 @@ export function WidgetDiagnosticos({
                             capitulo: '',
                           })
                         }
-                        className="rounded-full border px-2.5 py-1 text-[11px] transition-colors hover:bg-accent"
+                        className="flex items-baseline justify-between gap-3 rounded-lg border px-3 py-1.5 text-left transition-colors hover:bg-accent"
                       >
-                        {c.rotulo}
-                        <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
+                        <span className="truncate text-[12px] first-letter:uppercase">
+                          {c.rotulo}
+                        </span>
+                        <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">
                           {cid.codigo}
                         </span>
                       </button>
@@ -131,7 +140,7 @@ export function WidgetDiagnosticos({
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end border-t pt-3">
                 <Button variant="ghost" size="sm" onClick={() => setAdicionando(false)}>
                   Fechar busca
                 </Button>
@@ -155,6 +164,33 @@ export function WidgetDiagnosticos({
   )
 }
 
+/**
+ * Linha de relato: rótulo à esquerda, o que foi dito à direita.
+ *
+ * Em coluna única o texto do paciente cabe inteiro — lado a lado ele era
+ * cortado no meio da frase, que é justamente a parte que interessa.
+ */
+function LinhaRelato({
+  rotulo,
+  htmlFor,
+  children,
+}: {
+  rotulo: string
+  htmlFor: string
+  children: ReactNode
+}) {
+  return (
+    <div className="grid gap-x-4 gap-y-1 @2xl:grid-cols-[184px_minmax(0,1fr)] @2xl:items-start">
+      {/* Alinhado ao topo: quando o rótulo ocupa duas linhas, ele continua
+          começando na mesma altura do que foi respondido. */}
+      <label htmlFor={htmlFor} className="@2xl:pt-[9px]">
+        <EtiquetaSecao>{rotulo}</EtiquetaSecao>
+      </label>
+      {children}
+    </div>
+  )
+}
+
 function CartaoDiagnostico({
   item,
   onAlterar,
@@ -165,12 +201,12 @@ function CartaoDiagnostico({
   onRemover: () => void
 }) {
   return (
-    <div className="group rounded-lg border bg-card px-4 py-3">
+    <div className="group @container rounded-xl border bg-card px-4 py-3.5">
       <div className="flex items-start gap-3">
         <Stethoscope className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-sm font-medium">{item.descricao}</span>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-sm font-medium leading-snug">{item.descricao}</span>
             <span className="rounded border px-1.5 font-mono text-[10.5px] tabular-nums text-muted-foreground">
               {item.codigo}
             </span>
@@ -189,27 +225,27 @@ function CartaoDiagnostico({
         </button>
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="text-[11px] text-muted-foreground">Sintomas hoje</label>
+      {/* Indentado até o texto do cabeçalho: o relato pertence ao diagnóstico
+          nomeado acima, e o alinhamento é quem diz isso. */}
+      <div className="mt-3.5 space-y-1.5 border-t pt-3 @2xl:ml-7">
+        <LinhaRelato rotulo="Sintomas hoje" htmlFor={`sintomas_${item.id}`}>
           <Input
+            id={`sintomas_${item.id}`}
             value={item.sintomasAtuais ?? ''}
             placeholder="O que ele sente agora"
             onChange={(e) => onAlterar({ sintomasAtuais: e.target.value })}
-            className="h-8 text-[13px]"
+            className={cn(CELULA, '-ml-2')}
           />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] text-muted-foreground">
-            Nas palavras do paciente
-          </label>
+        </LinhaRelato>
+        <LinhaRelato rotulo="Nas palavras do paciente" htmlFor={`controle_${item.id}`}>
           <Input
+            id={`controle_${item.id}`}
             value={item.controlePaciente ?? ''}
             placeholder="“Está controlada com o remédio”"
             onChange={(e) => onAlterar({ controlePaciente: e.target.value })}
-            className="h-8 text-[13px]"
+            className={cn(CELULA, '-ml-2')}
           />
-        </div>
+        </LinhaRelato>
       </div>
     </div>
   )

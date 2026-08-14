@@ -10,9 +10,10 @@
  */
 
 import { useState } from 'react'
-import { Pill, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { CLASSES_MEDICAMENTO, buscarMedicamento, comercialQueBate, TAMANHO_CATALOGOS } from '../catalogos'
 import { BuscaCatalogo } from '../busca'
 import { ChipStatus, CorpoWidget, EtiquetaSecao } from '../primitivos'
@@ -21,6 +22,17 @@ import type { DadosMedicacoes, ItemMedicacao } from './tipos'
 
 /** Acima deste volume a regra de dimensionamento soma minutos à consulta. */
 const VOLUME_QUE_SOMA = 5
+
+/**
+ * A grade da tabela, uma só, usada pelo cabeçalho e por toda linha — é o que
+ * garante que dose, frequência e último uso caiam na mesma coluna em todas.
+ */
+const GRADE =
+  '@2xl:grid-cols-[minmax(0,2.2fr)_minmax(72px,1fr)_minmax(96px,1.2fr)_minmax(96px,1.2fr)_24px] @2xl:gap-x-3'
+
+/** Célula editável: sem caixa em repouso, a caixa aparece ao tocar. */
+const CELULA =
+  'h-8 rounded-md border-transparent bg-transparent px-2 text-[13px] tabular-nums shadow-none transition-colors hover:bg-muted/60 focus-visible:border-input focus-visible:bg-background'
 
 export function WidgetMedicacoes({
   dados,
@@ -51,7 +63,7 @@ export function WidgetMedicacoes({
       />
 
       {positivo && (
-        <div className="space-y-3">
+        <div className="@container space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <EtiquetaSecao>
               {total === 1 ? 'Uma medicação em uso' : `${total} medicações em uso`}
@@ -67,7 +79,23 @@ export function WidgetMedicacoes({
             )}
           </div>
 
-          <div className="overflow-hidden rounded-lg border bg-card">
+          <div className="overflow-hidden rounded-xl border bg-card">
+            {/* Cabeçalho de colunas: só quando há largura para a tabela inteira.
+                No estreito cada linha vira um cartão e os placeholders bastam. */}
+            <div className={cn('hidden border-b bg-muted/30 px-4 py-2', GRADE, '@2xl:grid')}>
+              <EtiquetaSecao>Medicação</EtiquetaSecao>
+              <span className="pl-2">
+                <EtiquetaSecao>Dose</EtiquetaSecao>
+              </span>
+              <span className="pl-2">
+                <EtiquetaSecao>Frequência</EtiquetaSecao>
+              </span>
+              <span className="pl-2">
+                <EtiquetaSecao>Último uso</EtiquetaSecao>
+              </span>
+              <span aria-hidden />
+            </div>
+
             <div className="divide-y">
               {dados.itens.map((item) => (
                 <LinhaMedicacao
@@ -149,40 +177,51 @@ function LinhaMedicacao({
   onRemover: () => void
 }) {
   return (
-    <div className="group flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5">
-      <Pill className="size-3.5 shrink-0 text-muted-foreground" />
-
-      <span className="min-w-[180px] flex-1">
-        <span className="block text-[13px] font-medium leading-tight">{item.nome}</span>
-        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+    <div
+      className={cn(
+        'group grid grid-cols-[minmax(0,1fr)_24px] items-center gap-x-3 gap-y-2 px-4 py-2.5',
+        'transition-colors hover:bg-muted/25',
+        GRADE,
+      )}
+    >
+      <span className="min-w-0">
+        <span className="block truncate text-[13px] font-medium leading-tight">{item.nome}</span>
+        <span className="mt-0.5 block truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
           {item.classe}
         </span>
       </span>
 
-      <Input
-        value={item.dose ?? ''}
-        placeholder="Dose"
-        onChange={(e) => onAlterar({ dose: e.target.value })}
-        className="h-8 w-24 text-[13px]"
-      />
-      <Input
-        value={item.frequencia ?? ''}
-        placeholder="Frequência"
-        onChange={(e) => onAlterar({ frequencia: e.target.value })}
-        className="h-8 w-32 text-[13px]"
-      />
-      <Input
-        value={item.ultimoUso ?? ''}
-        placeholder="Último uso"
-        onChange={(e) => onAlterar({ ultimoUso: e.target.value })}
-        className="h-8 w-32 text-[13px]"
-      />
+      {/* No estreito os três campos formam a segunda linha do cartão; a partir
+          de `@2xl` viram células da tabela, na mesma grade do cabeçalho. */}
+      <div className="col-span-2 -ml-2 grid grid-cols-3 gap-2 @2xl:contents">
+        <Input
+          value={item.dose ?? ''}
+          placeholder="Dose"
+          aria-label={`Dose de ${item.nome}`}
+          onChange={(e) => onAlterar({ dose: e.target.value })}
+          className={CELULA}
+        />
+        <Input
+          value={item.frequencia ?? ''}
+          placeholder="Frequência"
+          aria-label={`Frequência de ${item.nome}`}
+          onChange={(e) => onAlterar({ frequencia: e.target.value })}
+          className={CELULA}
+        />
+        <Input
+          value={item.ultimoUso ?? ''}
+          placeholder="Último uso"
+          aria-label={`Último uso de ${item.nome}`}
+          onChange={(e) => onAlterar({ ultimoUso: e.target.value })}
+          className={CELULA}
+        />
+      </div>
 
       <button
         type="button"
         onClick={onRemover}
         aria-label={`Remover ${item.nome}`}
-        className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+        className="col-start-2 row-start-1 justify-self-end rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 @2xl:col-start-auto @2xl:row-start-auto"
       >
         <Trash2 className="size-3.5" />
       </button>

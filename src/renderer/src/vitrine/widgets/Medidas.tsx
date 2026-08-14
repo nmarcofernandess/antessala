@@ -5,9 +5,13 @@
  * que ninguém aferiu não vira zero — vira “não aferido”, com um botão próprio.
  * E o MET da atividade é metadado do catálogo, nunca um valor atribuído ao
  * paciente: a tela mostra de onde o número veio.
+ *
+ * Na composição isso vira duas decisões: todo cartão de medida tem a mesma
+ * altura, aferido ou não, para a grade nunca pular; e a procedência do MET é o
+ * rodapé do próprio cartão da atividade, não um aviso solto no meio do widget.
  */
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Activity, Gauge, HeartPulse, Ruler, Scale, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +20,6 @@ import { cn } from '@/lib/utils'
 import { buscarAtividade, TAMANHO_CATALOGOS } from '../catalogos'
 import { BuscaCatalogo } from '../busca'
 import {
-  CartaoDado,
   ChipStatus,
   CorpoWidget,
   EtiquetaSecao,
@@ -68,7 +71,7 @@ export function WidgetSinaisVitais({
 
   return (
     <CorpoWidget>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
         <EtiquetaSecao>
           {aferidas.length} de {MEDIDAS.length} medidas aferidas
         </EtiquetaSecao>
@@ -92,14 +95,20 @@ export function WidgetSinaisVitais({
       </GradeDados>
 
       {imc && (
-        <div className="flex items-center gap-2 rounded-lg border border-dashed px-4 py-2.5">
-          <Activity className="size-3.5 text-muted-foreground" />
-          <span className="text-[13px] text-muted-foreground">
-            Índice de massa corporal calculado a partir do peso e da altura:
-          </span>
-          <span className="font-mono text-[13px] font-medium tabular-nums">
-            {imc.toFixed(1)} kg/m²
-          </span>
+        <div className="rounded-lg border border-dashed px-4 py-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <span className="flex items-center gap-2">
+              <Activity className="size-3.5 text-muted-foreground" />
+              <EtiquetaSecao>Índice de massa corporal</EtiquetaSecao>
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="font-mono text-lg font-medium tabular-nums">{imc.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">kg/m²</span>
+            </span>
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            Calculado a partir do peso e da altura aferidos — não é uma medida em si.
+          </p>
         </div>
       )}
     </CorpoWidget>
@@ -121,30 +130,37 @@ function CampoMedida({
   return (
     <div
       className={cn(
-        'flex flex-col rounded-lg border bg-card px-4 py-3',
+        // A altura é a mesma nos três estados: aferido, vazio e não aferido.
+        // É o que impede a grade de pular quando o link de recusa aparece.
+        'flex h-full min-h-[6.5rem] flex-col justify-between rounded-lg border bg-card px-4 py-3',
         naoAferida && 'border-dashed bg-muted/20',
       )}
     >
       <div className="flex items-center gap-2">
-        <def.icone className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">{def.titulo}</span>
+        <def.icone
+          className={cn(
+            'size-3.5 shrink-0',
+            naoAferida ? 'text-muted-foreground/50' : 'text-muted-foreground',
+          )}
+        />
+        <EtiquetaSecao>{def.titulo}</EtiquetaSecao>
       </div>
 
       {naoAferida ? (
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-[13px] text-muted-foreground">Não aferido</span>
+        <div className="flex items-end justify-between gap-2">
+          <span className="text-sm text-muted-foreground">Não aferido</span>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-[11px]"
+            className="h-7 -mr-1.5 text-[11px]"
             onClick={() => onChange({ estado: 'NAO_PERGUNTADO' })}
           >
             Aferir
           </Button>
         </div>
       ) : (
-        <>
-          <div className="mt-1.5 flex items-baseline gap-1.5">
+        <div>
+          <div className="flex items-baseline gap-1.5">
             <Input
               type="number"
               inputMode="decimal"
@@ -160,21 +176,24 @@ function CampoMedida({
                     : { estado: 'RESPONDIDO', valor: Number(v) },
                 )
               }}
-              className="h-9 w-24 font-mono text-lg tabular-nums"
+              className="h-10 w-[5.75rem] font-mono text-xl tabular-nums"
             />
             <span className="text-xs text-muted-foreground">{def.unidade}</span>
           </div>
 
-          {!aferida && (
-            <button
-              type="button"
-              onClick={() => onChange({ estado: 'NAO_REALIZADO' })}
-              className="mt-2 self-start text-[11px] text-muted-foreground underline-offset-2 hover:underline"
-            >
-              não foi aferido
-            </button>
-          )}
-        </>
+          {/* Slot reservado: o link some quando o valor entra, o cartão não encolhe. */}
+          <div className="mt-1.5 h-5">
+            {!aferida && (
+              <button
+                type="button"
+                onClick={() => onChange({ estado: 'NAO_REALIZADO' })}
+                className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+              >
+                não foi aferido
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
@@ -189,6 +208,32 @@ function faixaMet(met: number): { rotulo: string; status: Status } {
   return { rotulo: 'esforço vigoroso', status: 'ideal' }
 }
 
+/** Enunciado do widget: a pergunta que a enfermagem faz em voz alta. */
+function Enunciado({ pergunta, apoio }: { pergunta: string; apoio: string }) {
+  return (
+    <div>
+      <p className="text-sm font-medium leading-snug">{pergunta}</p>
+      <p className="mt-1 max-w-[70ch] text-xs text-muted-foreground">{apoio}</p>
+    </div>
+  )
+}
+
+/** Trilho de uma pergunta satélite — mesma gramática da revisão por sistemas. */
+function LinhaPergunta({ destaque, children }: { destaque?: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-lg border bg-card py-3 pl-4 pr-3.5',
+        '[&>div]:py-0',
+        destaque && 'bg-warning/[0.07]',
+      )}
+    >
+      {destaque && <span className="absolute inset-y-0 left-0 w-[3px] bg-warning" aria-hidden />}
+      {children}
+    </div>
+  )
+}
+
 export function WidgetCapacidadeFuncional({
   dados,
   onChange,
@@ -200,33 +245,49 @@ export function WidgetCapacidadeFuncional({
   const atividade = dados.atividade.valor
   const met = dados.metCatalogo
   const faixa = met ? faixaMet(met) : null
+  const limitado =
+    dados.limitadoPorSintoma.estado === 'RESPONDIDO' && dados.limitadoPorSintoma.valor === true
 
   return (
     <CorpoWidget>
-      <div className="space-y-2">
-        <p className="text-sm font-medium leading-snug">
-          Qual a atividade mais pesada que o paciente consegue fazer hoje?
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Pergunte pelo que ele faz de verdade na rotina, não pelo que gostaria de fazer.
-        </p>
+      <div className="space-y-2.5">
+        <Enunciado
+          pergunta="Qual a atividade mais pesada que o paciente consegue fazer hoje?"
+          apoio="Pergunte pelo que ele faz de verdade na rotina, não pelo que gostaria de fazer."
+        />
 
         {atividade && !trocando ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
-            <div className="min-w-0">
-              <span className="block text-sm font-medium">{atividade}</span>
-              {met && (
-                <span className="text-[11px] text-muted-foreground">
-                  Catálogo de atividades: {met} MET · {faixa!.rotulo}
-                </span>
-              )}
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3">
+              <div className="min-w-0">
+                <EtiquetaSecao>Atividade relatada</EtiquetaSecao>
+                <p className="mt-1 text-[15px] font-medium leading-snug">{atividade}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {faixa && (
+                  <ChipStatus status={faixa.status}>
+                    <span className="font-mono tabular-nums">{met}</span> MET · {faixa.rotulo}
+                  </ChipStatus>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setTrocando(true)}
+                >
+                  Trocar
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {faixa && <ChipStatus status={faixa.status}>{met} MET</ChipStatus>}
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setTrocando(true)}>
-                Trocar
-              </Button>
-            </div>
+
+            {met && (
+              // A procedência do número mora junto do número, não em bloco à parte.
+              <p className="border-t bg-muted/30 px-4 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground">De onde vem esse número:</span> o MET
+                pertence à atividade no catálogo, não ao paciente. Ele descreve o esforço típico do
+                que foi relatado — não mede a capacidade de quem relatou.
+              </p>
+            )}
           </div>
         ) : (
           <BuscaCatalogo
@@ -253,34 +314,28 @@ export function WidgetCapacidadeFuncional({
         )}
       </div>
 
-      {met && (
-        <CartaoDado
-          titulo="De onde vem esse número"
-          rodape="O MET pertence à atividade no catálogo, não ao paciente. Ele descreve o esforço típico do que foi relatado — não mede a capacidade de quem relatou."
-        />
-      )}
+      <div className="space-y-2.5">
+        <LinhaPergunta destaque={limitado}>
+          <PerguntaChave
+            compacta
+            pergunta="Ele para por sintoma — cansaço, dor no peito, falta de ar?"
+            resposta={dados.limitadoPorSintoma}
+            onChange={(r) => onChange({ ...dados, limitadoPorSintoma: r })}
+          />
+        </LinhaPergunta>
 
-      <div className="border-t pt-3">
-        <PerguntaChave
-          compacta
-          pergunta="Ele para por sintoma — cansaço, dor no peito, falta de ar?"
-          resposta={dados.limitadoPorSintoma}
-          onChange={(r) => onChange({ ...dados, limitadoPorSintoma: r })}
-        />
-
-        {dados.limitadoPorSintoma.estado === 'RESPONDIDO' &&
-          dados.limitadoPorSintoma.valor === true && (
-            <div className="mt-3 space-y-1.5">
-              <label className="text-[11px] text-muted-foreground">O que faz ele parar?</label>
-              <Textarea
-                rows={2}
-                value={dados.descricaoLimitacao ?? ''}
-                placeholder="“Subo um lance de escada e preciso parar para respirar.”"
-                onChange={(e) => onChange({ ...dados, descricaoLimitacao: e.target.value })}
-                className="text-[13px]"
-              />
-            </div>
-          )}
+        {limitado && (
+          <div className="rounded-lg border border-warning/30 bg-warning/[0.06] px-4 py-3">
+            <EtiquetaSecao>O que faz ele parar?</EtiquetaSecao>
+            <Textarea
+              rows={2}
+              value={dados.descricaoLimitacao ?? ''}
+              placeholder="“Subo um lance de escada e preciso parar para respirar.”"
+              onChange={(e) => onChange({ ...dados, descricaoLimitacao: e.target.value })}
+              className="mt-2 bg-card text-[13px]"
+            />
+          </div>
+        )}
       </div>
     </CorpoWidget>
   )
