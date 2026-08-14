@@ -2,6 +2,13 @@ import { useMemo, useState, type ComponentType } from 'react'
 import { ChevronDown, GripVertical, Plus, Search, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { PageHeader } from '@/componentes/PageHeader'
 import { cn } from '@/lib/utils'
 import { CarimboSintetico, Rotulo, TituloTela } from '@/vitrine/pecas'
@@ -9,36 +16,72 @@ import { TAMANHO_CATALOGOS } from '@/vitrine/catalogos'
 import {
   CATEGORIAS,
   PACIENTE,
-  PROTOCOLO,
   WIDGETS,
   widgetPorTipo,
   type Bloco,
   type Categoria,
   type DefWidget,
 } from '@/vitrine/widgets/registro'
+import {
+  PROTOCOLOS,
+  PROTOCOLO_GERAL,
+  acrescentarFaltantes,
+  aplicar,
+  protocoloPara,
+  type Protocolo,
+} from '@/vitrine/widgets/protocolos'
 import { BASE_MINUTOS, CLASSES, calcularRequisito } from '@/vitrine/widgets/requisito'
 
 /**
  * S05 — Anamnese pré-anestésica.
  *
- * O protocolo abre com os blocos do dia e a coluna da direita traduz, ao vivo,
- * o que foi respondido em uma necessidade de agenda. A regra é a mesma que roda
- * no processo principal: base de vinte minutos, teto de três domínios e a
- * acomodação somando por fora.
+ * O protocolo do procedimento decide quais blocos abrem, e a coluna da direita
+ * traduz ao vivo o que foi respondido em uma necessidade de agenda. A regra de
+ * minutos é a mesma que roda no processo principal: base de vinte, teto de três
+ * domínios e a acomodação somando por fora. O que muda com o protocolo é a
+ * completude — só o que ele pede precisa estar tratado para publicar.
  */
 export function AnamnesePagina() {
-  const [blocos, setBlocos] = useState<Bloco[]>(() =>
-    PROTOCOLO.map((tipo, i) => ({
-      id: `${tipo}_${i}`,
-      tipo,
-      dados: widgetPorTipo(tipo)!.dadosIniciais(),
-    })),
+  const [protocolo, setProtocolo] = useState<Protocolo>(() =>
+    protocoloPara(PACIENTE.procedimento),
   )
-  const [abertos, setAbertos] = useState<string[]>(['allergies_1'])
+  const [blocos, setBlocos] = useState<Bloco[]>(() => aplicar(protocoloPara(PACIENTE.procedimento)))
+  const [abertos, setAbertos] = useState<string[]>(() => {
+    const alergias = aplicar(protocoloPara(PACIENTE.procedimento)).find(
+      (b) => b.tipo === 'allergies',
+    )
+    return alergias ? [alergias.id] : []
+  })
   const [paletaAberta, setPaletaAberta] = useState(false)
+  const [trocaPendente, setTrocaPendente] = useState<Protocolo | null>(null)
 
-  const requisito = useMemo(() => calcularRequisito(blocos), [blocos])
+  const requisito = useMemo(() => calcularRequisito(blocos, protocolo), [blocos, protocolo])
   const classe = CLASSES[requisito.classe]
+
+  /** Troca de protocolo: com o caso já montado, a pessoa escolhe o que fazer. */
+  const pedirTroca = (p: Protocolo) => {
+    if (p.id === protocolo.id) return
+    if (blocos.length === 0) {
+      setProtocolo(p)
+      setBlocos(aplicar(p))
+      return
+    }
+    setTrocaPendente(p)
+  }
+
+  const substituir = (p: Protocolo) => {
+    setProtocolo(p)
+    const novos = aplicar(p)
+    setBlocos(novos)
+    setAbertos(novos.slice(0, 1).map((b) => b.id))
+    setTrocaPendente(null)
+  }
+
+  const acrescentar = (p: Protocolo) => {
+    setProtocolo(p)
+    setBlocos((bs) => acrescentarFaltantes(p, bs))
+    setTrocaPendente(null)
+  }
 
   const alterar = (id: string, dados: unknown) =>
     setBlocos((bs) => bs.map((b) => (b.id === id ? { ...b, dados } : b)))
@@ -54,7 +97,9 @@ export function AnamnesePagina() {
     setAbertos((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]))
 
   const usados = new Set(blocos.map((b) => b.tipo))
-  const tratados = blocos.length - requisito.pendentes.length
+  const tratados = protocolo.blocos.length - requisito.pendentes.length
+  /** Blocos que a pessoa acrescentou além do que o protocolo pede. */
+  const extras = blocos.filter((b) => !protocolo.blocos.includes(b.tipo)).length
 
   return (
     <div className="flex flex-1 flex-col">
@@ -81,22 +126,12 @@ export function AnamnesePagina() {
         <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* ── composer ── */}
           <div>
-            <div className="pb-4">
-              <div className="flex items-baseline gap-3">
-                <Rotulo>Protocolo pré-anestésico</Rotulo>
-                <span className="h-px flex-1 bg-border" aria-hidden />
-                <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
-                  {tratados} / {blocos.length} tratados
-                </span>
-              </div>
-              {/* Progresso do protocolo: o traço cresce com o que já foi perguntado. */}
-              <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-foreground/60 transition-all duration-500"
-                  style={{ width: `${(tratados / blocos.length) * 100}%` }}
-                />
-              </div>
-            </div>
+            <CabecalhoProtocolo
+              protocolo={protocolo}
+              tratados={tratados}
+              extras={extras}
+              onTrocar={pedirTroca}
+            />
 
             <div className="space-y-2.5">
               {blocos.map((bloco, i) => (
@@ -232,6 +267,160 @@ export function AnamnesePagina() {
       {paletaAberta && (
         <Paleta usados={usados} onEscolher={adicionar} onFechar={() => setPaletaAberta(false)} />
       )}
+
+      {trocaPendente && (
+        <DialogoTroca
+          destino={trocaPendente}
+          atual={protocolo}
+          blocosAtuais={blocos}
+          onSubstituir={() => substituir(trocaPendente)}
+          onAcrescentar={() => acrescentar(trocaPendente)}
+          onCancelar={() => setTrocaPendente(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ══════════════ cabeçalho do protocolo ══════════════ */
+
+function CabecalhoProtocolo({
+  protocolo,
+  tratados,
+  extras,
+  onTrocar,
+}: {
+  protocolo: Protocolo
+  tratados: number
+  extras: number
+  onTrocar: (p: Protocolo) => void
+}) {
+  const total = protocolo.blocos.length
+  const opcoes = [...PROTOCOLOS, PROTOCOLO_GERAL]
+
+  return (
+    <div className="pb-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <Rotulo>Protocolo salvo · v{protocolo.versao}</Rotulo>
+          <p className="mt-1 text-sm font-medium">{protocolo.nome}</p>
+          <p className="text-[11.5px] text-muted-foreground">{protocolo.regime}</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
+            {tratados} / {total} tratados
+            {extras > 0 && ` · ${extras} complementar${extras > 1 ? 'es' : ''}`}
+          </span>
+          <Select value={protocolo.id} onValueChange={(v) => {
+            const p = opcoes.find((x) => x.id === v)
+            if (p) onTrocar(p)
+          }}>
+            <SelectTrigger className="h-8 w-[200px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {opcoes.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.nome}
+                  <span className="ml-2 font-mono text-[10px] text-muted-foreground">
+                    {p.blocos.length}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Progresso do protocolo: o traço cresce com o que já foi perguntado. */}
+      <div className="mt-3 h-0.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-foreground/60 transition-all duration-500"
+          style={{ width: `${total ? (tratados / total) * 100 : 0}%` }}
+        />
+      </div>
+
+      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+        Composição de coleta desta demonstração, gerenciada em Configurações › Protocolos.
+        Nenhuma instituição validou esta lista: ela decide quais perguntas o formulário faz,
+        nunca o que o paciente tem.
+      </p>
+    </div>
+  )
+}
+
+/* ══════════════ troca de protocolo ══════════════ */
+
+function DialogoTroca({
+  destino,
+  atual,
+  blocosAtuais,
+  onSubstituir,
+  onAcrescentar,
+  onCancelar,
+}: {
+  destino: Protocolo
+  atual: Protocolo
+  blocosAtuais: Bloco[]
+  onSubstituir: () => void
+  onAcrescentar: () => void
+  onCancelar: () => void
+}) {
+  const presentes = new Set(blocosAtuais.map((b) => b.tipo))
+  const faltantes = destino.blocos.filter((t) => !presentes.has(t)).length
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center p-6">
+      <button
+        type="button"
+        aria-label="Cancelar troca"
+        onClick={onCancelar}
+        className="absolute inset-0 bg-black/30"
+      />
+      <div className="relative w-full max-w-md rounded-xl border bg-background p-5 shadow-xl">
+        <Rotulo>Trocar de protocolo</Rotulo>
+        <p className="mt-2 text-sm leading-relaxed">
+          O caso está com <strong>{atual.nome}</strong> e {blocosAtuais.length} blocos. Aplicar{' '}
+          <strong>{destino.nome}</strong> pode ser feito de duas formas.
+        </p>
+
+        <div className="mt-4 space-y-2">
+          <button
+            type="button"
+            onClick={onAcrescentar}
+            className="w-full rounded-lg border px-4 py-3 text-left transition-colors hover:bg-accent"
+          >
+            <span className="block text-[13px] font-medium">
+              Acrescentar os que faltam
+            </span>
+            <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
+              Traz {faltantes} {faltantes === 1 ? 'bloco novo' : 'blocos novos'} e mantém tudo o
+              que já foi respondido.
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onSubstituir}
+            className="w-full rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-left transition-colors hover:bg-destructive/10"
+          >
+            <span className="block text-[13px] font-medium text-destructive">
+              Substituir a composição
+            </span>
+            <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
+              Abre os {destino.blocos.length} blocos do protocolo novo. As respostas atuais são
+              descartadas.
+            </span>
+          </button>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button variant="ghost" size="sm" onClick={onCancelar}>
+            Cancelar
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -15,6 +15,7 @@ import { PageHeader } from '@/componentes/PageHeader'
 import { cn } from '@/lib/utils'
 import { PROCEDIMENTOS, SERVICOS, iniciais } from '@/vitrine/dados'
 import { CarimboSintetico, Rotulo, TituloTela } from '@/vitrine/pecas'
+import { protocoloPara } from '@/vitrine/widgets/protocolos'
 
 type Campo = 'nome' | 'nascimento' | 'sexo' | 'procedimento' | 'servico' | 'medico'
 
@@ -47,6 +48,7 @@ export function CadastroPagina() {
 
   const preenchidos = OBRIGATORIOS.filter((c) => form[c].trim().length > 0)
   const completo = preenchidos.length === OBRIGATORIOS.length
+  const protocolo = protocoloPara(form.procedimento)
 
   const idade = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(form.nascimento)) return null
@@ -236,6 +238,20 @@ export function CadastroPagina() {
                 <Resumo rotulo="Serviço" valor={form.servico} />
                 <Resumo rotulo="Solicitante" valor={form.medico} />
               </div>
+
+              {/* O protocolo aparece assim que o procedimento é escolhido: é a
+                  ponte visível entre o que a recepção digita e a entrevista que
+                  a enfermagem vai conduzir. */}
+              {form.procedimento && (
+                <div className="border-t px-5 py-4">
+                  <Rotulo>Protocolo que será aplicado</Rotulo>
+                  <p className="mt-1.5 text-sm font-medium">{protocolo.nome}</p>
+                  <p className="text-[11.5px] text-muted-foreground">{protocolo.regime}</p>
+                  <p className="mt-2 font-mono text-[11px] tabular-nums text-muted-foreground">
+                    {protocolo.blocos.length} blocos · v{protocolo.versao}
+                  </p>
+                </div>
+              )}
 
               <div className="border-t bg-muted/30 px-5 py-4">
                 <Rotulo>Próximo passo</Rotulo>
