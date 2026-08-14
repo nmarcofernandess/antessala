@@ -1,0 +1,382 @@
+# WARLOG — Antessala
+
+**Regra:** append-only. Decisão errada não é apagada; ganha uma entrada posterior que a
+invalida. Evidência histórica é marcada com SHA e não vale automaticamente para código
+novo.
+
+Este é o único diário de decisões, divergências, provas e cicatrizes do projeto.
+
+---
+
+## Formato de entrada
+
+```text
+W-XXX · data · título
+Estado: observado | hipótese | decidido | invalidado | bloqueado | provado
+Contexto:
+Evidência:
+Decisão:
+Impacto:
+Pendência:
+```
+
+---
+
+## W-001 · 13/08/2026 · O briefing não descreve o trabalho real
+
+**Estado:** observado
+
+### Contexto
+
+O Desafio 1 informa apenas que a consulta pré-anestésica é obrigatória, que pacientes
+possuem risco/complexidade diferentes e que são agendados de forma semelhante.
+
+### Evidência
+
+Briefing Hacka Health 2026, Desafio 1, página 5.
+
+### Decisão
+
+O briefing não autoriza inventar atores, telas, cores, scores, slots, integrações,
+responsável pela classificação ou momento da agenda.
+
+### Impacto
+
+Qualquer detalhe adicional precisa ser classificado como evidência institucional,
+hipótese ou decisão posterior.
+
+---
+
+## W-002 · 13/08/2026 · Produto inicial invalidado
+
+**Estado:** invalidado
+
+### Contexto
+
+O primeiro Analyst interpretou o problema como fluxo presencial no mesmo dia:
+
+```text
+pessoa descartável
+→ anamnese
+→ fila por urgência + minutos de espera
+→ especialista
+→ hub
+```
+
+Declarou quatro telas, ausência absoluta de histórico e `ready for build`.
+
+### Evidência contrária
+
+- O desafio fala em pacientes “agendados”, não em ordem de chamada na recepção.
+- O HCFMRP possui Ambulatório de Pré-Anestesia.
+- O atendimento ambulatorial é previamente agendado.
+- O paciente recebe registro institucional no HC.
+- A atribuição de anestesiologia inclui priorização de fluxo de agendamento conforme
+  gravidade e necessidade.
+
+### Decisão
+
+Paciente descartável, zero história, quatro telas, hub e motor por urgência/espera deixam
+de ser leis. A antiga Spec 002 não será integrada.
+
+### Impacto
+
+Schema, tipos, handlers e branches construídos sobre essa hipótese ficam provisórios e
+em quarentena até o Sprint 001 decidir migração.
+
+---
+
+## W-003 · 13/08/2026 · Pulseira não é risco pré-anestésico
+
+**Estado:** decidido
+
+### Contexto
+
+A equipe confundiu pulseira de identificação, classificação de urgência e avaliação
+pré-anestésica.
+
+### Evidência
+
+- Protocolos de identificação usam pulseira para identidade e alertas locais.
+- Classificação por cores organiza portas de urgência e pode mudar após reavaliação.
+- Avaliação pré-anestésica combina paciente, procedimento e condições de segurança sob
+  responsabilidade médica.
+
+### Decisão
+
+O Antessala não modelará risco anestésico como pulseira/semáforo de pronto atendimento.
+Prioridade, risco, complexidade, esforço e recurso permanecem eixos separados.
+
+---
+
+## W-004 · 13/08/2026 · A pista do edital é forte, mas não é smoking gun
+
+**Estado:** observado
+
+### Contexto
+
+O Edital HCRP nº 11/2026 reúne, no mesmo perfil, atuação no Ambulatório de
+Pré-Anestesia e priorização do fluxo de agendamento por gravidade/intensidade da doença.
+
+### Controle adversarial
+
+Texto semelhante aparece em seleções de ortopedia, oncologia, psiquiatria e outras
+especialidades, algumas com a expressão “solicitação eletrônica de vagas”.
+
+### Decisão
+
+O edital confirma o ambulatório e uma competência institucional de priorização. Não
+prova sozinho que o desafio seja slot fixo, fila única, um anestesiologista por turno ou
+agenda controlada pelo novo produto.
+
+### Impacto
+
+A hipótese ambulatorial multidiária ganha peso; o fluxo específico continua bloqueado
+pelo Analyst.
+
+---
+
+## W-005 · 13/08/2026 · Hipótese canônica adotada
+
+**Estado:** hipótese
+
+### Formulação
+
+Solicitações de CPA representam casos diferentes, mas chegam à alocação sem informação
+operacional suficiente — ou sem regra que use essa informação — para diferenciar
+prioridade, esforço, recurso e pendência.
+
+### Decisão
+
+O Antessala investigará e demonstrará triagem aplicada ao agendamento ambulatorial.
+
+### Limite
+
+Ainda não estão aprovados:
+
+- ator de triagem;
+- canal de coleta;
+- campos;
+- motor clínico;
+- modalidades;
+- tempos;
+- agenda própria;
+- integração;
+- cirurgia antes/depois da CPA;
+- número ou escala de anestesiologistas.
+
+### Próximo passo
+
+MiniSpec 001 e gates G1–G8 do Analyst.
+
+---
+
+## W-006 · 13/08/2026 · PRD PRÉ-VIA reclassificado
+
+**Estado:** invalidado como PRD; preservado como banco de hipóteses
+
+### Contexto
+
+O documento PRÉ-VIA descreveu atores, FHIR, quatro trilhas, ASA presumido, RCRI, DASI,
+STOP-BANG, slots de 15/30/60 minutos, 21 dias, WhatsApp, liberação assíncrona, métricas e
+integrações.
+
+### Decisão
+
+O documento não é fonte de requisitos. Seus conceitos passam por auditoria individual.
+
+### O que sobreviveu no PRD canônico
+
+- caso relaciona paciente e procedimento;
+- coleta estruturada;
+- dados ausentes como pendência;
+- regras explicáveis e versionadas;
+- revisão humana;
+- tradução da decisão para necessidade operacional;
+- auditoria;
+- integrações futuras claramente mockadas.
+
+### O que voltou para hipótese
+
+Todos os atores não confirmados, canais, scores, rotas, cores, tempos, integrações,
+status, metas e causalidade sobre suspensão cirúrgica.
+
+---
+
+## W-007 · 13/08/2026 · Fundação técnica preservada
+
+**Estado:** provado historicamente
+
+### Contexto
+
+A preparação do repositório foi concluída antes da correção do produto.
+
+### Evidência lacrada
+
+- cadeia final da preparação: commit `bc98182`;
+- último commit da branch de preparação: `4f9e529`;
+- merge em `main`: `a8597ab`;
+- 51 arquivos de teste, 216 testes, typecheck, build e E2E verdes na cadeia registrada;
+- primeiro boot/seed local sem download de modelo;
+- `node_modules` medido em 1.038.844 KiB após a poda;
+- CID-10, medicamentos, MET, widgets, PGlite, IPC e PDF presentes.
+
+### Decisão
+
+A prova vale para a fundação técnica naquele SHA, não para a hipótese clínica nova.
+
+### Impacto
+
+Não reconstruir a casca. Reutilizar infraestrutura depois do contrato; tratar schema,
+jornada, classificador e widgets ativos como provisórios.
+
+---
+
+## W-008 · 13/08/2026 · Branches paralelas colocadas em quarentena
+
+**Estado:** decidido
+
+### Branches
+
+- `codex/motor-fila-logica-v2`;
+- `codex/motor-da-fila-resume`;
+- `origin/hack/02-quais-widgets`;
+- `origin/zan/widgets`.
+
+### Motivo
+
+As duas primeiras implementam o problema invalidado. As duas últimas misturam material
+clínico aproveitável com identidade descartável, fila física, templates, rotas e tempos
+não confirmados.
+
+### Decisão
+
+Não mergear ou cherry-pickar em bloco. O Analyst pode minerar perguntas, referências,
+schemas ou testes individualmente, registrando a decisão aqui.
+
+---
+
+## W-009 · 13/08/2026 · Uma única arquitetura documental
+
+**Estado:** decidido
+
+### Artefatos removidos
+
+- antigo Analyst de produto;
+- specs e prompts 001/002;
+- mapa e relatório separados da preparação;
+- README da antiga frente de widgets;
+- PLANO e INVENTARIO em HTML.
+
+Todos permanecem recuperáveis no histórico Git.
+
+### Nova fonte de verdade
+
+```text
+hack/PRD.md
+hack/ANALYST.md
+hack/BUILD.md
+hack/WARLOG.md
+hack/minispecs/<sprint>/spec.md
+hack/minispecs/<sprint>/writing-plan.md
+```
+
+### Regra
+
+- PRD: problema e promessa;
+- Analyst: evidência, contratos e veto;
+- Build: execução mestre;
+- Warlog: decisões e provas;
+- minispec: sprint executável.
+
+Não criar novos PRDs, analyses, planos gerais ou relatórios paralelos.
+
+---
+
+## W-010 · 13/08/2026 · Três sprints, não uma catedral de specs
+
+**Estado:** decidido
+
+1. Fechar contrato operacional.
+2. Construir triagem e decisão humana aprovadas.
+3. Construir tradução para agenda e demo end-to-end.
+
+Se o Sprint 001 revelar que o produto apenas qualifica solicitações para uma agenda
+externa, o Sprint 003 encolhe e nenhum calendário será criado. Se revelar um domínio de
+agenda próprio e comprovado, o Build será refinado sem abrir uma quarta minispec por
+conveniência.
+
+---
+
+## W-011 · 13/08/2026 · Prontuário e agenda cirúrgica têm limites de evidência
+
+**Estado:** observado
+
+### Evidência consultada em 13/08/2026
+
+- A Carta de Serviços do HCFMRP descreve setor de Registro e acesso ambulatorial
+  institucional.
+- O portal oficial Nosso HC Ribeirão se identifica como acesso aos dados do prontuário
+  do paciente.
+- O artigo institucional 514 descreve a Central Única de Agendamentos Cirúrgicos e suas
+  métricas de cirurgia.
+- Uma notícia institucional indexada sobre a transição Athos → Iris retornava HTTP 404
+  no locator vivo; por isso, essa transição não sustenta fato confirmado neste projeto.
+
+### Decisão
+
+Paciente institucional, prontuário eletrônico e Central Cirúrgica existem como contexto.
+Isso não prova qual sistema cria a solicitação de CPA, quem acessa seus dados ou como a
+agenda do Ambulatório de Pré-Anestesia se relaciona à Central.
+
+### Impacto
+
+- paciente descartável continua invalidado;
+- números da Central Cirúrgica não viram baseline da CPA;
+- Athos, Iris, SIRESP e integrações permanecem perguntas do gate G4;
+- qualquer fluxo entre esses sistemas exige demonstração local e validação do dono.
+
+### Locators
+
+- [Carta de Serviços HCFMRP](https://cartaservicos.hcrp.usp.br/)
+- [Nosso HC Ribeirão](https://appiris.hcrp.usp.br/apex/r/iris/nossohcribeirao/login)
+- [Central Única de Agendamentos Cirúrgicos](https://www.hcrp.usp.br/revistaqualidade/uploads/Artigos/514/514.pdf)
+
+---
+
+## W-012 · 13/08/2026 · Hipótese não substitui evidência e demo precisa diferenciar
+
+**Estado:** decidido
+
+### Contexto
+
+A primeira redação do gate aceitava “evidência ou hipótese isolada” de forma universal e
+permitia que três casos iguais satisfizessem a demo mediante justificativa.
+
+### Decisão
+
+- Fato operacional local, integração, protocolo e regra clínica exigem evidência primária
+  verificável; hipótese aceita só orienta escolha delimitada, reversível e visivelmente
+  sintética da demo.
+- A demo exige um par de contraste que produza requisitos/tratamentos distintos pelo
+  oráculo aprovado e um controle negativo que permaneça igual.
+
+### Impacto
+
+O Analyst não pode liberar build hospitalar por plausibilidade, e a demo não pode esconder
+indiferenciação atrás de uma explicação textual.
+
+---
+
+## Pendências vivas
+
+| ID | Pergunta | Dono esperado | Bloqueia |
+|---|---|---|---|
+| P-01 | o que exatamente é semelhante no agendamento? | responsável do desafio/ambulatório | Sprint 003 |
+| P-02 | quem cria, coleta, revisa e agenda? | operação do HC | Sprints 002/003 |
+| P-03 | o que significa “um anestesiologista”? | anestesiologia | capacidade |
+| P-04 | quando a data cirúrgica nasce? | serviço cirúrgico/central | fluxo e prioridade |
+| P-05 | qual sistema contém solicitação e agenda? | TI/operação | integração |
+| P-06 | qual protocolo e catálogo de procedimentos? | dono clínico | Sprint 002 |
+| P-07 | quais dados/catálogos locais são suficientes? | dono clínico + Analyst | Sprint 002 |
+| P-08 | recomendação ou agenda própria? | produto + HC | Sprint 003 |
