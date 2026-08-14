@@ -228,6 +228,34 @@ export function AgendaPagina() {
     }
   }
 
+  /**
+   * Chegada e ausência são afirmações de quem está na recepção.
+   *
+   * Nenhuma das duas acontece porque o horário passou: o calendário mostra o
+   * compromisso, mas quem diz o que aconteceu é gente.
+   */
+  async function marcarChegada(b: { id: string; version: number; personName: string }) {
+    try {
+      await api.chegada({ bookingId: b.id, expectedVersion: b.version })
+      toast.success(`Chegada de ${b.personName} registrada.`)
+      await recarregar()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e))
+      await recarregar()
+    }
+  }
+
+  async function marcarAusencia(b: { id: string; version: number; personName: string }) {
+    try {
+      await api.ausencia({ bookingId: b.id, expectedVersion: b.version })
+      toast.success(`Ausência de ${b.personName} registrada. O caso voltou para a fila.`)
+      await recarregar()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e))
+      await recarregar()
+    }
+  }
+
   async function confirmarCancelamento() {
     if (!cancelando) return
     try {
@@ -345,6 +373,7 @@ export function AgendaPagina() {
                     <th className="pb-2 font-normal">Caso</th>
                     <th className="pb-2 font-normal">Consultório</th>
                     <th className="pb-2 font-normal">Vaga</th>
+                    <th className="pb-2 font-normal">Chegada</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -372,6 +401,38 @@ export function AgendaPagina() {
                         <td className="py-2 text-xs text-muted-foreground">{b.resourceName}</td>
                         <td className="py-2">
                           <Badge variant="outline">{ROTULO_CLASSE[b.slotClass]}</Badge>
+                        </td>
+                        <td className="py-2">
+                          {b.status === 'CONFIRMED' ? (
+                            <span className="flex gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[11px]"
+                                data-testid="agenda-chegada"
+                                onClick={() => void marcarChegada(b)}
+                              >
+                                Chegou
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-[11px]"
+                                data-testid="agenda-ausencia"
+                                onClick={() => void marcarAusencia(b)}
+                              >
+                                Faltou
+                              </Button>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">
+                              {b.status === 'CHECKED_IN'
+                                ? 'Chegada registrada'
+                                : b.status === 'COMPLETED'
+                                  ? 'Em avaliação'
+                                  : '—'}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -90,6 +90,50 @@ export const agenda = {
   cancelar: (input: Parameters<typeof client['scheduling.cancel']>[0]) =>
     chamar(() => client['scheduling.cancel'](input)),
   fila: () => chamar(() => client['scheduling.queue']()),
+  chegada: (input: Parameters<typeof client['scheduling.checkIn']>[0]) =>
+    chamar(() => client['scheduling.checkIn'](input)),
+  ausencia: (input: Parameters<typeof client['scheduling.noShow']>[0]) =>
+    chamar(() => client['scheduling.noShow'](input)),
+}
+
+/* ══════════════ avaliação ══════════════ */
+
+export const encontros = {
+  iniciar: (input: Parameters<typeof client['encounters.start']>[0]) =>
+    chamar(() => client['encounters.start'](input)),
+  doCaso: (caseId: string) => chamar(() => client['encounters.get']({ caseId })),
+  salvar: (input: Parameters<typeof client['encounters.saveAssessment']>[0]) =>
+    chamar(() => client['encounters.saveAssessment'](input)),
+  interromper: (input: Parameters<typeof client['encounters.interrupt']>[0]) =>
+    chamar(() => client['encounters.interrupt'](input)),
+  retomar: (input: Parameters<typeof client['encounters.resumeReview']>[0]) =>
+    chamar(() => client['encounters.resumeReview'](input)),
+}
+
+export const pendencias = {
+  abrir: (input: Parameters<typeof client['pendencies.open']>[0]) =>
+    chamar(() => client['pendencies.open'](input)),
+  responder: (input: Parameters<typeof client['pendencies.submitEvidence']>[0]) =>
+    chamar(() => client['pendencies.submitEvidence'](input)),
+  revisar: (input: Parameters<typeof client['pendencies.reviewEvidence']>[0]) =>
+    chamar(() => client['pendencies.reviewEvidence'](input)),
+  encerrar: (input: Parameters<typeof client['pendencies.cancel']>[0]) =>
+    chamar(() => client['pendencies.cancel'](input)),
+}
+
+export const resultados = {
+  doCaso: (caseId: string) => chamar(() => client['results.getForCase']({ caseId })),
+  finalizar: (input: Parameters<typeof client['results.finalize']>[0]) =>
+    chamar(() => client['results.finalize'](input)),
+  revisar: (input: Parameters<typeof client['results.revise']>[0]) =>
+    chamar(() => client['results.revise'](input)),
+}
+
+export const entregas = {
+  enviar: (input: Parameters<typeof client['deliveries.send']>[0]) =>
+    chamar(() => client['deliveries.send'](input)),
+  confirmar: (input: Parameters<typeof client['deliveries.acknowledge']>[0]) =>
+    chamar(() => client['deliveries.acknowledge'](input)),
 }
 
 /** Chave de idempotência do comando — protege contra o clique duplo. */

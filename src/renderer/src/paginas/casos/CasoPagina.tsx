@@ -6,7 +6,10 @@ import {
   CheckCircle2,
   ClipboardList,
   Loader2,
+  Send,
   Stethoscope,
+  UserCheck,
+  UserX,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/componentes/PageHeader'
@@ -14,7 +17,20 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { Rotulo } from '@/vitrine/pecas'
-import { casos, novaChave, requisitos as apiRequisitos } from '@/servicos/casos'
+import {
+  agenda as apiAgenda,
+  casos,
+  encontros as apiEncontros,
+  entregas as apiEntregas,
+  novaChave,
+  requisitos as apiRequisitos,
+  resultados as apiResultados,
+} from '@/servicos/casos'
+import {
+  ROTULO_EMISSAO,
+  ROTULO_PENDENCIA,
+  type ResultadoDoCasoDTO,
+} from '@shared/clinical/avaliacao'
 import {
   ROTULO_CLASSE,
   ROTULO_EVENTO,
@@ -40,6 +56,7 @@ export function CasoPagina() {
   const navegar = useNavigate()
   const [caso, setCaso] = useState<CaseDetailDTO | null>(null)
   const [requisito, setRequisito] = useState<RequirementDTO | null>(null)
+  const [avaliacao, setAvaliacao] = useState<ResultadoDoCasoDTO | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [agindo, setAgindo] = useState(false)
@@ -47,12 +64,14 @@ export function CasoPagina() {
   const recarregar = useCallback(async () => {
     if (!caseId) return
     try {
-      const [detalhe, req] = await Promise.all([
+      const [detalhe, req, estado] = await Promise.all([
         casos.obter(caseId),
         apiRequisitos.doCaso(caseId).catch(() => null),
+        apiResultados.doCaso(caseId).catch(() => null),
       ])
       setCaso(detalhe)
       setRequisito(req)
+      setAvaliacao(estado)
       setErro(null)
     } catch (e) {
       setErro(e instanceof Error ? e.message : String(e))
@@ -85,6 +104,20 @@ export function CasoPagina() {
     }
   }
 
+  /** Envolve um comando: erro vira aviso e a tela volta à verdade do banco. */
+  async function comandar(acao: () => Promise<unknown>, mensagem: string) {
+    setAgindo(true)
+    try {
+      await acao()
+      toast.success(mensagem)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAgindo(false)
+      await recarregar()
+    }
+  }
+
   if (carregando) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -106,6 +139,16 @@ export function CasoPagina() {
 
   const podeEntrevistar = ['NURSING_IN_PROGRESS', 'TRIAGE_PENDING'].includes(caso.status)
   const podeAgendar = caso.status === 'READY_FOR_SCHEDULING'
+  const esperaChegada = caso.status === 'SCHEDULED' && Boolean(caso.booking)
+  const podeIniciarAvaliacao = caso.status === 'WAITING_ANESTHESIA' && Boolean(caso.booking)
+  const emAvaliacao = ['IN_ASSESSMENT', 'PENDING'].includes(caso.status)
+  const entrega = avaliacao?.delivery ?? null
+  // Entregar de novo só faz sentido quando a versão corrente ainda não saiu:
+  // depois de uma correção, a entrega antiga vira histórico.
+  const entregaCobreCorrente = Boolean(
+    entrega && avaliacao?.current && entrega.resultId === avaliacao.current.id,
+  )
+  const podeEntregar = caso.status === 'READY_FOR_HANDOFF' && !entregaCobreCorrente
 
   return (
     <div className="flex flex-1 flex-col">
@@ -121,7 +164,9 @@ export function CasoPagina() {
               <span className="font-mono text-[11px] tracking-wide text-muted-foreground">
                 {caso.displayCode}
               </span>
-              <Badge variant="secondary">{ROTULO_STATUS[caso.status]}</Badge>
+              <Badge variant="secondary" data-testid="status-do-caso">
+                {ROTULO_STATUS[caso.status]}
+              </Badge>
             </div>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-tight">{caso.person.fullName}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -154,6 +199,83 @@ export function CasoPagina() {
                   <CalendarCheck className="size-4" />
                   Agendar consulta
                 </Link>
+              </Button>
+            )}
+            {esperaChegada && (
+              <>
+                <Button
+                  disabled={agindo}
+                  data-testid="registrar-chegada"
+                  onClick={() =>
+                    comandar(
+                      () =>
+                        apiAgenda.chegada({
+                          bookingId: caso.booking!.id,
+                          expectedVersion: caso.booking!.version,
+                        }),
+                      'Chegada registrada.',
+                    )
+                  }
+                >
+                  <UserCheck className="size-4" /> Registrar chegada
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={agindo}
+                  data-testid="registrar-ausencia"
+                  onClick={() =>
+                    comandar(
+                      () =>
+                        apiAgenda.ausencia({
+                          bookingId: caso.booking!.id,
+                          expectedVersion: caso.booking!.version,
+                        }),
+                      'Ausência registrada. O caso voltou para a fila de agendamento.',
+                    )
+                  }
+                >
+                  <UserX className="size-4" /> Registrar ausência
+                </Button>
+              </>
+            )}
+            {podeIniciarAvaliacao && (
+              <Button
+                disabled={agindo}
+                data-testid="iniciar-avaliacao"
+                onClick={() =>
+                  comandar(async () => {
+                    await apiEncontros.iniciar({
+                      caseId: caso.id,
+                      bookingId: caso.booking!.id,
+                      expectedCaseVersion: caso.version,
+                      idempotencyKey: novaChave(),
+                    })
+                    navegar(`/casos/${caso.id}/avaliacao`)
+                  }, 'Avaliação aberta.')
+                }
+              >
+                <Stethoscope className="size-4" /> Iniciar avaliação
+              </Button>
+            )}
+            {emAvaliacao && (
+              <Button asChild>
+                <Link to={`/casos/${caso.id}/avaliacao`}>
+                  <Stethoscope className="size-4" /> Abrir avaliação
+                </Link>
+              </Button>
+            )}
+            {podeEntregar && (
+              <Button
+                disabled={agindo}
+                data-testid="enviar-entrega"
+                onClick={() =>
+                  comandar(
+                    () => apiEntregas.enviar({ caseId: caso.id, idempotencyKey: novaChave() }),
+                    'Resultado disponibilizado ao serviço solicitante, dentro do aplicativo.',
+                  )
+                }
+              >
+                <Send className="size-4" /> Disponibilizar ao solicitante
               </Button>
             )}
           </div>
@@ -262,6 +384,81 @@ export function CasoPagina() {
                 </ul>
               </div>
             )}
+
+            {avaliacao?.current && (
+              <div className="rounded-xl border bg-card px-5 py-4" data-testid="resultado-do-caso">
+                <Rotulo>Resultado pré-anestésico</Rotulo>
+                <p className="mt-1.5 text-sm font-medium">
+                  {ROTULO_EMISSAO[avaliacao.current.emissionType]} · versão{' '}
+                  {avaliacao.current.versionNumber}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {avaliacao.current.finalizedBy.displayName} ·{' '}
+                  {new Date(avaliacao.current.finalizedAt).toLocaleString('pt-BR')}
+                </p>
+                <p className="mt-2 text-[12px] leading-relaxed">{avaliacao.current.content.conclusao}</p>
+                {avaliacao.history.length > 1 && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {avaliacao.history.length} versões — nenhuma anterior foi apagada.
+                  </p>
+                )}
+                <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">
+                  sha256 {avaliacao.current.contentHash.slice(0, 16)}…
+                </p>
+
+                {entrega ? (
+                  <div className="mt-3 border-t pt-3">
+                    <p className="text-[11.5px]">
+                      {entrega.status === 'RECEIVED'
+                        ? `Recebido por ${entrega.serviceName} em ${new Date(entrega.receivedAt!).toLocaleString('pt-BR')}.`
+                        : `Disponível para ${entrega.serviceName} desde ${new Date(entrega.sentAt).toLocaleString('pt-BR')}.`}
+                    </p>
+                    <p className="mt-1 text-[10.5px] leading-relaxed text-muted-foreground">
+                      Entrega local da demonstração. O aplicativo não envia nada para fora deste
+                      computador.
+                    </p>
+                    {entrega.status === 'SENT' && (
+                      <Button
+                        size="sm"
+                        className="mt-2 w-full"
+                        disabled={agindo}
+                        data-testid="confirmar-recebimento"
+                        onClick={() =>
+                          comandar(
+                            () =>
+                              apiEntregas.confirmar({
+                                deliveryId: entrega.id,
+                                expectedVersion: entrega.version,
+                              }),
+                            'Recebimento confirmado pelo serviço solicitante.',
+                          )
+                        }
+                      >
+                        Confirmar recebimento como solicitante
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 border-t pt-3 text-[11.5px] text-muted-foreground">
+                    Ainda não disponibilizado ao serviço solicitante.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {avaliacao?.pendencies.length ? (
+              <div className="rounded-xl border bg-card px-5 py-4" data-testid="pendencias-do-caso">
+                <Rotulo>Pendências</Rotulo>
+                <ul className="mt-2 space-y-1.5">
+                  {avaliacao.pendencies.map((p) => (
+                    <li key={p.id} className="text-[11.5px]">
+                      <span className="font-medium">{p.requested.titulo}</span>
+                      <span className="text-muted-foreground"> — {ROTULO_PENDENCIA[p.status]}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             {caso.booking && (
               <div className="rounded-xl border bg-card px-5 py-4" data-testid="booking-do-caso">
