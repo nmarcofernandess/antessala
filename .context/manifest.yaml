@@ -1,45 +1,46 @@
-schema_version: "antessala.context.v2"
+schema_version: "antessala.context.v3"
 
 identity:
   product: "Antessala"
   purpose: "Diferenciar a necessidade operacional da consulta pré-anestésica e conduzir o caso até o handoff final."
-  repository_role: "Prova de conceito Electron local, com dados sintéticos."
+  repository_role: "Produto Electron local em construção, demonstrado com dados sintéticos."
 
 entrypoint:
   required: true
-  instruction: "Toda IA deve começar aqui antes de afirmar, revisar ou alterar qualquer coisa no Antessala."
+  instruction: "Toda IA começa aqui antes de afirmar, revisar ou alterar o Antessala."
 
 mandatory_read_order:
   - order: 1
     paths: [".context/manifest.yaml", "hack/PRD.md"]
-    purpose: "Ler a autoridade e o contrato de produto aprovado."
+    purpose: "Identidade e produto aprovado."
   - order: 2
     paths: ["hack/status.json", "hack/progress.md", ".context/review/STATUS.md"]
-    purpose: "Conhecer a fase viva, o último recibo e a próxima ação."
+    purpose: "Fase viva e maturidade honesta."
   - order: 3
     paths: [".context/product.yaml", ".context/workflow.yaml", ".context/architecture.yaml"]
-    purpose: "Entender produto, método e capacidades comprovadas no HEAD."
+    purpose: "Produto resumido, método e capacidade comprovada no HEAD."
   - order: 4
     paths: ["hack/ANALYST.md", "hack/analysis.md"]
-    purpose: "Ler a autoridade semântica integrada."
+    purpose: "Índice e mapa integrado; ambos são hubs."
   - order: 5
     path: "hack/domains/ANALYST-*.md"
-    purpose: "Consultar evidência e detalhe do domínio sem criar autoridade paralela."
+    purpose: "Ler integralmente cada contrato semântico relacionado; ele é autoridade do domínio."
   - order: 6
-    path: "hack/BUILD.md"
-    purpose: "Ler a especificação técnica integrada."
+    paths: ["hack/BUILD.md"]
+    purpose: "Ler o hub técnico e o grafo de dependências."
   - order: 7
     path: "hack/domains/BUILD-*.md"
-    purpose: "Consultar detalhe físico; em conflito, o BUILD integrado prevalece."
+    purpose: "Ler integralmente cada contrato físico relacionado; ele é autoridade do domínio."
   - order: 8
     path: "código e testes do HEAD"
-    purpose: "Provar a implementação viva antes de afirmar capacidade existente."
+    purpose: "Provar capacidade existente; documentação futura não é implementação."
 
 canonical_artifacts:
   product_contract: "hack/PRD.md"
-  integrated_analysis: "hack/analysis.md"
-  integrated_build: "hack/BUILD.md"
+  analyst_index: "hack/ANALYST.md"
+  integrated_semantic_map: "hack/analysis.md"
   domain_analysts: "hack/domains/ANALYST-*.md"
+  integrated_technical_map: "hack/BUILD.md"
   domain_builds: "hack/domains/BUILD-*.md"
   execution_state: "hack/status.json"
   progress_receipt: "hack/progress.md"
@@ -48,10 +49,10 @@ canonical_artifacts:
   future_writing_plan: "hack/minispecs/<id>/writing-plan.md"
 
 context_map:
-  manifest.yaml: "Entrada, leitura obrigatória e hierarquia de autoridade."
-  product.yaml: "Resumo do problema, fluxo, fronteiras e Definition of Done."
-  workflow.yaml: "Método da aprovação do PRD até QA."
-  architecture.yaml: "Inventário comprovado da arquitetura Electron no HEAD."
+  manifest.yaml: "Entrada, leitura e autoridade."
+  product.yaml: "Problema, fluxo, fronteiras e DoD."
+  workflow.yaml: "Método até Writing Plans, implementação e QA."
+  architecture.yaml: "Inventário comprovado do HEAD."
   review/STATUS.md: "Único tracker de research, recon e review."
 
 authority:
@@ -59,26 +60,28 @@ authority:
     - order: 1
       source: "Marco e hack/PRD.md aprovado"
     - order: 2
-      source: "hack/analysis.md integrado"
+      source: "decisões canônicas no Analyst de domínio dono"
     - order: 3
-      source: "hack/BUILD.md integrado"
+      source: "Build de domínio dono"
     - order: 4
-      source: "Warlog e Writing Plan da minispec ativa"
+      source: "Writing Plan da fatia"
     - order: 5
       source: "código e testes do HEAD"
     - order: 6
-      source: "anexos de domínio e documentação auxiliar"
-  conflict_rule: "Pare e reporte as fontes conflitantes. Nunca escolha silenciosamente nem use um anexo para sobrepor seu integrado."
+      source: "hubs e documentação auxiliar"
+  hubs: "hack/ANALYST.md, hack/analysis.md e hack/BUILD.md indexam e integram; nunca superam um owner de domínio."
+  conflict_rule: "Pare, nomeie as fontes conflitantes e corrija o contrato. Nunca escolha silenciosamente."
 
 workflow:
-  current_phase: "final_congruence_review"
+  current_phase: "documentation_reconciliation"
   sequence:
     - "PRD aprovado"
-    - "Analyst integrado"
-    - "BUILD integrado"
-    - "review final de congruência"
-    - "Warlog corta minispecs"
-    - "writing-plan.md da fatia"
+    - "Analysts de domínio canônicos"
+    - "Builds de domínio canônicos"
+    - "hubs integrados"
+    - "review final independente"
+    - "Warlog exaustivo corta fatias"
+    - "Writing Plan da fatia"
     - "TDD RED"
     - "implementação"
     - "QA"
@@ -86,7 +89,8 @@ workflow:
   no_individual_signature_gates: true
 
 limits:
-  context_role: ".context organiza o mapa cognitivo; não substitui PRD, Analyst ou BUILD."
-  flowkit_warning: "Qualquer CLAUDE, AGENTS, comentário ou documentação herdada do FlowKit é contexto histórico, nunca verdade do Antessala."
-  raw_review_rule: "Resposta de GPT é material de trabalho. Corrija o owner canônico e o tracker; não arquive a resposta como fonte de verdade."
-  documentation_rule: "Não criar documentação paralela quando já existe um owner canônico para a regra."
+  context_role: ".context organiza; não substitui PRD, Analysts ou Builds."
+  flowkit_warning: "Contexto herdado do FlowKit é histórico, nunca verdade do Antessala."
+  donor_warning: "DietFlow e EscalaFlow são doadores; regra de domínio só atravessa quando o Build Antessala a adapta explicitamente."
+  raw_review_rule: "Resposta externa é material de trabalho. Corrija o owner canônico e o tracker; não arquive a resposta bruta."
+  documentation_rule: "Não criar fonte paralela quando existe owner canônico."

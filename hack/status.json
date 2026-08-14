@@ -1,89 +1,98 @@
 {
-  "schema_version": "antessala.status.v2",
-  "updated_at": "2026-08-14T07:10:37-03:00",
+  "schema_version": "antessala.status.v3",
+  "updated_at": "2026-08-14T12:20:00-03:00",
   "product": "Antessala",
-  "mode": "hackathon_poc",
-  "current_phase": "final_congruence_review",
-  "decision": "needs_correction_verification",
+  "mode": "full_documented_product_with_synthetic_demo_access",
+  "current_phase": "documentation_reconciliation",
+  "decision": "independent_final_review_required",
   "canonical_flow": [
     "prd",
-    "analyst",
-    "build",
-    "final_congruence_review",
+    "domain_analysts",
+    "analyst_hubs",
+    "domain_builds",
+    "build_hub",
+    "final_independent_review",
     "warlog",
-    "minispec_writing_plans",
+    "writing_plans",
     "tdd_red",
     "implementation",
-    "qa",
-    "final_qa"
+    "qa"
   ],
   "phases": {
     "prd": {
       "artifact": "PRD.md",
       "status": "approved",
       "decision_by": "Marco",
-      "decision_at": "2026-08-14",
-      "baseline_revision": "452e0e3c6eed4b7504093b7a98c10a5687b89ef7"
+      "decision_at": "2026-08-14"
     },
     "analyst": {
-      "artifact": "analysis.md",
-      "appendices": "domains/ANALYST-*.md",
-      "status": "consolidated",
-      "individual_gates": false
+      "owners": "domains/ANALYST-*.md",
+      "hubs": ["ANALYST.md", "analysis.md"],
+      "status": "reconciled_pending_independent_review",
+      "individual_gates": false,
+      "hub_may_override_domain": false
     },
     "build": {
-      "artifact": "BUILD.md",
-      "appendices": "domains/BUILD-*.md",
-      "status": "adjusted_after_external_review",
-      "individual_gates": false
+      "owners": "domains/BUILD-*.md",
+      "hub": "BUILD.md",
+      "status": "reconciled_pending_independent_review",
+      "individual_gates": false,
+      "hub_may_override_domain": false
     },
-    "final_congruence_review": {
+    "final_review": {
       "tracker": "../.context/review/STATUS.md",
-      "status": "corrections_pending_recheck",
-      "blocking_condition": "verify_confirmed_fixes_on_published_head"
+      "status": "not_run_on_current_changes",
+      "reviewer": "independent_ai",
+      "scope": "PRD + 8 Analysts + 8 Builds + hubs"
     },
     "warlog": {
       "artifact": "WARLOG.md",
       "status": "not_created",
-      "starts_after": "final_congruence_review"
+      "executor": "different_ai",
+      "starts_after": "final_review_without_material_p0",
+      "must_read_all_domain_contracts": true,
+      "task_count_limit": null
     },
-    "minispecs": {
+    "writing_plans": {
       "path": "minispecs/<id>/writing-plan.md",
-      "status": "not_cut",
-      "spec_file": false,
-      "plan_approval_gate": false
+      "status": "not_created",
+      "separate_spec_file": false
     },
     "implementation": {
-      "status": "blocked_until_writing_plan_and_tdd_red",
-      "requires": ["writing_plan", "tdd_red"]
+      "status": "blocked",
+      "requires": ["warlog_slice", "writing_plan", "tdd_red"]
     },
     "qa": {
       "status": "blocked_until_implementation",
-      "human_signature_gate": false,
       "evidence_required": true
     }
   },
   "authority": [
-    "Marco and PRD.md",
-    "analysis.md",
-    "BUILD.md",
-    "WARLOG.md",
-    "minispec writing-plan.md",
-    "code and tests at HEAD"
+    "Marco and approved PRD.md",
+    "domain owner ANALYST-*.md",
+    "domain owner BUILD-*.md",
+    "writing-plan.md of active slice",
+    "code and tests at HEAD",
+    "integration hubs and auxiliary docs"
   ],
+  "decisions": {
+    "demo_access": "single_integrated_fixture_account",
+    "roles": "action_responsibilities_not_accounts",
+    "agenda": "dietflow_fullcalendar_port_adapted_to_antessala",
+    "anamnesis": "dietflow_composer_pattern_with_14_preop_widgets_and_saved_protocols",
+    "scheduling_identity": "versioned_operational_requirement_never_patient_id",
+    "assistant": "isolated_route_no_global_panel_no_widget_embedding"
+  },
   "governance": {
-    "individual_analyst_signatures": false,
-    "individual_build_signatures": false,
-    "individual_plan_signatures": false,
+    "individual_signatures": false,
     "separate_specs": false,
     "raw_external_reviews_are_canonical": false,
     "ai_may_change_product_law": false,
     "evidence_may_be_fabricated": false
   },
   "next_action": {
-    "artifact": "BUILD.md",
-    "action": "verify_congruence_corrections_on_published_head",
-    "on_success": "create_WARLOG_and_cut_minispecs",
-    "on_p0": "correct_canonical_artifact_and_repeat_review"
+    "action": "publish_docs_and_request_independent_final_congruence_review",
+    "on_success": "different_ai_creates_exhaustive_warlog",
+    "on_p0": "correct_domain_owner_and_repeat_review"
   }
 }

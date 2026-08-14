@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## TL;DR
 
@@ -362,7 +363,7 @@ Este Analyst define significado, autoridade, estados semânticos, visibilidade, 
 proibições. Tabelas, colunas, índices, migrations, DTOs, schemas de validação, IPC,
 services, paths, locks, receipts, componentes e testes pertencem ao Build.
 
-O `hack/BUILD.md` incorporou esta mudança e prevalece sobre o Build histórico do domínio.
+O Build canônico deste domínio deve materializar esta mudança; o hub técnico apenas a indexa.
 Writing Plans não podem reintroduzir pendência sempre bloqueadora, resultado único ou
 entrega externa fictícia.
 
@@ -407,7 +408,8 @@ institucionais continuam documentadas como fronteira futura e não bloqueiam a P
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo no domínio de avaliação, pendências e handoff.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans que tocarem avaliação,
+  pendências, retorno, resultado ou handoff.

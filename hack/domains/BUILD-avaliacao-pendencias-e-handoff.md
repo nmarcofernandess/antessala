@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/BUILD.md`.
+- Papel: `CANONICAL_DOMAIN_BUILD`.
+- Indexado por: `hack/BUILD.md`.
 - Gate ou assinatura individual: inexistente.
-- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
-- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
+- O estado de maturidade permanece no tracker único; o hub não pode promovê-lo sozinho.
+- Este arquivo é a fonte técnica do domínio. `hack/BUILD.md` apenas integra dependências;
+  não substitui, resume com perda nem supera este contrato.
 
 ## Sources Consumed
 
@@ -1507,12 +1508,13 @@ destrutiva não pertence ao MVP.
 
 ## Resultado da investigação
 
-Este anexo foi incorporado em `hack/BUILD.md`. Provas de runtime pertencem aos Writing
-Plans e ao QA das minispecs; não existe gate individual neste arquivo.
+Este arquivo permanece owner técnico do domínio. Provas de runtime pertencem aos Writing
+Plans e ao QA das fatias; não existe gate individual neste arquivo.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_BUILD`.
-- Autoridade canônica: `hack/BUILD.md`.
+- Estado: `CANONICAL_DOMAIN_BUILD`.
+- Autoridade canônica: este arquivo no domínio de avaliação, pendências e handoff.
 - Gate individual: inexistente.
-- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans que tocarem avaliação,
+  pendências, retorno, resultado ou handoff.

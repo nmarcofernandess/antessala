@@ -21,9 +21,10 @@ goal:
 
 users:
   classification: "PRODUCT_LAW"
+  access_model: "Uma conta sintética integrada expõe todas as ferramentas; os papéis abaixo são responsabilidades e autoria por ação, não contas separadas."
   direct:
     - role: "ADMIN"
-      responsibility: "Preparar contas locais e configurações permitidas da demonstração."
+      responsibility: "Preparar configurações permitidas, amostra, capacidade e auditoria."
     - role: "RECEPCAO"
       responsibility: "Registrar o encaminhamento, reservar vaga compatível e executar handoffs operacionais."
     - role: "ENFERMAGEM"
@@ -91,7 +92,7 @@ product_laws:
 
 proof_of_concept:
   classification: "DEMO_DECISION"
-  statement: "O MVP roda localmente em Electron, usa dados sintéticos e demonstra o fluxo por troca sequencial de papéis. Não alega reproduzir a operação, a arquitetura ou o protocolo do hospital."
+  statement: "O produto roda localmente em Electron, usa dados sintéticos e demonstra o fluxo inteiro em uma sessão integrada. Não alega reproduzir autenticação ou protocolo institucional."
   future_boundary: "Nuvem, banco institucional, identidade externa e operação multiusuário pertencem a uma etapa posterior financiada."
 
 ai_memory_and_knowledge:
@@ -99,6 +100,7 @@ ai_memory_and_knowledge:
   mvp_role: "Demonstrar pelo menos um uso real de IA e um uso real de memória que ajudem a entrevista ou a explicação operacional sem decidir pelo profissional."
   demo_provider: "Gemini único, somente com fixtures sintéticas, por ação explícita e sem fallback de provedor."
   obligations:
+    - "A única superfície de IA é /assistente; não existe painel global nem IA dentro de widget, agenda ou header."
     - "Sugestões permanecem em rascunho até confirmação humana."
     - "Cada sugestão informa origem e explicação suficiente para revisão."
     - "Indisponibilidade de IA ou rede não quebra caso, agenda nem handoff."
@@ -128,12 +130,15 @@ definition_of_done:
   classification: "PRODUCT_LAW"
   criteria:
     - "Um caso sintético percorre todo o fluxo."
-    - "Cada papel enxerga e executa apenas sua responsabilidade."
+    - "A sessão integrada expõe todas as ferramentas, e cada ação usa a projeção e a responsabilidade corretas."
     - "Enfermagem registra a entrevista com origem e estados semânticos."
     - "Ausência de resposta nunca vira negativa."
     - "A necessidade de agenda é explicável."
     - "Uma pessoa autorizada confirma ou altera a classificação ou o requisito."
     - "Recepção agenda apenas vaga compatível."
+    - "A anamnese usa Composer com 14 widgets, DnD, drawer multi-select e protocolos salvos."
+    - "A agenda usa FullCalendar com mês, semana, dia, programação, dropdowns, drawer e DnD/resize revalidado pelo backend."
+    - "Compatibilidade usa requisito operacional versionado, nunca patientId."
     - "Conflitos e falta de capacidade são tratados."
     - "Anestesiologista registra avaliação, pendência, retorno e conclusão."
     - "O resultado chega ao serviço solicitante."
@@ -144,5 +149,5 @@ definition_of_done:
 
 execution_state:
   source: "hack/status.json"
-  current: "final_congruence_review"
+  current: "documentation_reconciliation"
   individual_signature_gate: false

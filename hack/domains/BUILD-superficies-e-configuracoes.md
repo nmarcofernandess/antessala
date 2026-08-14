@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/BUILD.md`.
+- Papel: `CANONICAL_DOMAIN_BUILD`.
+- Indexado por: `hack/BUILD.md`.
 - Gate ou assinatura individual: inexistente.
-- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
-- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
+- O estado de maturidade permanece no tracker único; o hub não pode promovê-lo sozinho.
+- Este arquivo é a fonte técnica do domínio. `hack/BUILD.md` apenas integra dependências;
+  não substitui, resume com perda nem supera este contrato.
 
 ## Goal
 
@@ -44,29 +45,48 @@ domínios fecharem seus contratos. Este arquivo não substitui os futuros Surfac
 
 ## Recommended Path
 
-### 1. Casca dirigida por contrato
+### 1. Casca integrada de demonstração
 
-Criar um registry único com todas as rotas, capabilities, item de menu e breadcrumbs. O router e a sidebar consomem o mesmo array; não existem listas duplicadas. Uma rota protegida valida sessão/capability antes de montar a página.
+Criar um registry único com todas as rotas, responsabilidades, itens de menu e breadcrumbs.
+O router e a sidebar consomem o mesmo array. Uma única sessão sintética autenticada abre o
+conjunto completo de ferramentas; cada ação continua vinculada à responsabilidade funcional
+que a executaria no hospital e é revalidada no main process. O renderer nunca escolhe um papel
+autoritativo.
 
-### 2. Projeções por papel, não um “Caso completo” universal
+### 2. Projeções por responsabilidade, não um “Caso completo” universal
 
-O main oferece quatro leituras distintas do caso: operacional, enfermagem, anestesia e solicitante. Cada DTO contém apenas os campos que a superfície usa. Isso elimina a expectativa de que JSX escondido proteja um objeto excessivo.
+O main oferece leituras distintas do caso: operacional, enfermagem, anestesia e solicitante.
+Cada DTO contém apenas os campos que a superfície usa. A conta integrada pode navegar por
+todas elas, mas a action declara uma responsabilidade canônica e recebe somente a projeção
+correspondente. JSX escondido nunca protege um objeto excessivo.
 
 ### 3. Slices visuais por jornada
 
 Páginas usam componentes de domínio pequenos dentro de uma casca comum: header do caso, status/next owner, worklist, form, timeline e drawer. Não criar uma megatela condicional com todos os papéis.
 
-### 4. Agenda como projeção própria
+### 4. Agenda FullCalendar portada e adaptada do DietFlow
 
-Construir `WeeklyAgendaGrid`, uma grade CSS fina de cinco dias úteis que recebe `SlotCardDTO[]` prontos do backend. Ela não calcula slot, capacidade, compatibilidade ou transição e não introduz biblioteca de calendário. Reservar e reagendar usam ações explícitas com versão; não há drag-and-drop nem resize. `AccessibleSlotTable` consome o mesmo array, preserva a mesma seleção por `slotId` e é caminho operacional equivalente por teclado.
+Portar a casca, as interações e a densidade visual da Agenda do DietFlow sobre os DTOs do
+Antessala. `AgendaCalendar` usa FullCalendar v6 em mês, semana, dia e programação; a fila
+“Para agendar”, os dropdowns, os filtros, o drawer unificado e a tabela acessível consomem a
+mesma projeção canônica. Drag-and-drop e resize são interações reais, mas nunca regra de
+negócio: enviam intenção tipada, o main revalida requisito, duração, recursos, capacidade e
+versões e a UI chama `revert()` diante de qualquer recusa.
 
-### 5. Configurações administrativas reais
+### 5. Configurações e amostra de uso
 
-Substituir a página cloud por um layout admin com rotas filhas: usuários, cadastros operacionais, agenda/capacidade, catálogos/formulários e auditoria. Somente usuários `origin=ADMIN`, recursos, janelas datadas e bloqueios são mutáveis; contas `FIXTURE`, demais fixtures e conteúdo clínico versionado são somente leitura. A superfície importa os DTOs/actions de capacidade do domínio agenda e não os redefine.
+O dropdown do usuário integrado expõe `Configurações`, `Tema`, `Amostra de uso` e `Sair`.
+Configurações organiza conta de demonstração somente leitura, agenda/capacidade,
+catálogos/formulários, Gemini e auditoria. Recursos, janelas datadas, bloqueios e protocolos
+salvos são mutáveis nos limites dos Builds donos; regras clínicas, classes e catálogos
+versionados permanecem somente leitura.
 
-### 6. IA dormente
+### 6. Assistente isolado
 
-Remover imports/mounts ativos de `IaPagina`, `IaChatPanel`, toggle e nav. Preservar arquivos fora da árvore ativa para roadmap, sem credencial e sem chamada involuntária.
+Substituir o painel global por `/assistente`. Não existe toggle no header, painel sobreposto,
+chat dentro da anamnese nem sugestão injetada ao lado de widget. A superfície isolada pode
+usar Gemini por ação explícita e revisar propostas; somente uma decisão humana aceita ou
+corrigida volta ao rascunho por uma operação normal do domínio de anamnese.
 
 ## Files / Areas
 
@@ -77,46 +97,47 @@ Remover imports/mounts ativos de `IaPagina`, `IaChatPanel`, toggle e nav. Preser
 | `src/renderer/src/navigation/surfaces.ts` | new | Registry único de rota/menu/capability. | high |
 | `src/renderer/src/App.tsx` | rewrite composition | Login público + protected layout + canonical routes. | critical |
 | `src/renderer/src/main.tsx` | modify | AuthProvider antes do router. | high |
-| `src/renderer/src/componentes/AppSidebar.tsx` | modify | Menu pelas capabilities da sessão, user footer/logout, tema. | high |
+| `src/renderer/src/componentes/AppSidebar.tsx` | modify | Menu completo da sessão integrada; footer/dropdown do usuário. | high |
 | `src/renderer/src/componentes/PageHeader.tsx` | modify | Remover toggle IA; manter breadcrumb/actions. | medium |
 | `src/renderer/src/componentes/ErrorBoundary.tsx` | modify | Não expor erro cru; correlation ID/restart. | high |
 | `src/renderer/src/componentes/EmptyState.tsx` | extend minimally | Variantes contextuais sem duplicação. | low |
 | `src/renderer/src/components/domain/*` | new | CaseHeader, timeline, worklist, status, form shell. | medium |
 | `src/renderer/src/paginas/LoginPagina.tsx` | new | Entrada pública única. | high |
-| `src/renderer/src/paginas/HomePagina.tsx` | new | Summary por papel. | medium |
+| `src/renderer/src/paginas/HomePagina.tsx` | new | Visão integrada e atalhos por responsabilidade. | medium |
 | `src/renderer/src/paginas/casos/*` | new | Intake/detail. | high |
 | `src/renderer/src/paginas/triagens/*` | new | Queue/editor. | critical |
 | `src/renderer/src/paginas/pendencias/*` | new | Assigned worklist + evidence metadata. | high |
-| `src/renderer/src/paginas/agenda/*` | new | Fila, grade semanal, lista e reserva. | critical |
-| `src/renderer/src/paginas/agenda/WeeklyAgendaGrid.tsx` | new | Projeção semanal própria, sem regra de agenda. | medium |
+| `src/renderer/src/paginas/agenda/*` | new | Fila, FullCalendar, programação, drawer e reserva. | critical |
+| `src/renderer/src/paginas/agenda/AgendaCalendar.tsx` | port/adapt | Casca e interação DietFlow sobre `SlotCardDTO`/`BookingDTO`. | high |
+| `src/renderer/src/paginas/agenda/AccessibleSlotTable.tsx` | new | Alternativa de teclado sobre a mesma projeção. | medium |
 | `src/renderer/src/paginas/avaliacoes/*` | new | Medical queue/editor. | critical |
 | `src/renderer/src/paginas/resultados/*` | new | Requester inbox/handoff. | high |
-| `src/renderer/src/paginas/configuracoes/*` | new | Admin pages. | high |
-| `src/renderer/src/paginas/IaPagina.tsx` | keep dormant | Roadmap, not MVP route. | low |
-| `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | retire/rename dev-only | Cloud form cannot own `/configuracoes`. | medium |
-| `src/renderer/src/componentes/IaChatPanel.tsx` | keep dormant | No mount in shell. | low |
+| `src/renderer/src/paginas/configuracoes/*` | new | Conta demo, operação, agenda, protocolos, Gemini e auditoria. | high |
+| `src/renderer/src/paginas/AssistentePagina.tsx` | replace/rename | Superfície isolada de IA, memória e revisão humana. | high |
+| `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | decompose | Gemini vira uma aba; não é dona de toda configuração. | medium |
+| `src/renderer/src/componentes/IaChatPanel.tsx` | retire from active shell | Nenhum painel global; lógica útil migra para a rota isolada. | medium |
 | `src/main/tipc.ts` | compose domain routers | Provide view contracts. | critical |
 | `tests/renderer/*` | add/update | State/role/component contract. | low |
 | `tests/e2e/app-flow.spec.ts` | replace | Current three-route expectation is obsolete. | medium |
-| `tests/e2e/role-journey.spec.ts` | new | Five-role ponta a ponta. | high |
+| `tests/e2e/integrated-demo-journey.spec.ts` | new | Fluxo ponta a ponta em uma sessão. | high |
 
 ## Contracts
 
 ### Product
 
 1. O primeiro frame sem sessão é Login, sem flash da casca.
-2. Cada papel vê sua home e seu menu.
+2. A conta integrada vê todas as ferramentas; as ações continuam nomeadas e auditadas por responsabilidade.
 3. Um caso entra na recepção, passa por triagem, agenda, anestesia e handoff em superfícies nomeadas.
-4. O detalhe do caso é role-aware e mostra sempre estado + próximo responsável.
+4. O detalhe do caso é responsibility-aware e mostra sempre estado + próximo responsável.
 5. Toda lista tem busca/filtros mínimos, empty state real e reload de erro.
 6. Toda mutação tem confirmação visível e proteção contra duplo submit.
-7. Configuração permite preparar os dados operacionais da demo, mas não editar regras clínicas livres.
-8. IA cloud não aparece nem é montada no fluxo.
+7. Configuração permite preparar dados operacionais, protocolos e Gemini, mas não editar regras clínicas livres.
+8. IA aparece somente em `/assistente`; nunca como painel global ou elemento embutido em widget.
 
 ### Canonical enums
 
 ```ts
-import type { Capability, SessaoPublica } from '@/shared/auth'
+import type { Capability, PapelResponsabilidade, SessaoPublica } from '@/shared/auth'
 import type { CaseStatus } from '@/shared/clinical/case'
 import type {
   BookingDTO,
@@ -142,7 +163,7 @@ interface SurfaceDefinition {
   label: string
   routeAccess: AccessRule
   navAccess?: AccessRule
-  nav?: { group: 'WORK' | 'ADMIN'; order: number; icon: LucideIcon }
+  nav?: { group: 'FLUXO' | 'CLINICO' | 'CONHECIMENTO' | 'SISTEMA'; order: number; icon: LucideIcon }
   element: React.LazyExoticComponent<React.ComponentType>
 }
 
@@ -165,17 +186,22 @@ export const SURFACES: readonly SurfaceDefinition[] = [
   { id: 'case-assessment', path: '/casos/:casoId/avaliacao', label: 'Avaliação', routeAccess: { allOf: ['assessment:read'] } },
   { id: 'results', path: '/resultados', label: 'Resultados', routeAccess: { anyOf: ['result:status:read', 'result:content:read', 'delivery:manage', 'delivery:acknowledge'] }, navAccess: { anyOf: ['result:status:read', 'result:content:read', 'delivery:manage', 'delivery:acknowledge'] }, nav: /* ... */ },
   { id: 'case-result', path: '/casos/:casoId/resultado', label: 'Resultado', routeAccess: { anyOf: ['result:status:read', 'result:content:read', 'delivery:manage', 'delivery:acknowledge'] } },
-  { id: 'settings', path: '/configuracoes', label: 'Configurações', routeAccess: { anyOf: ['config:read', 'users:manage', 'scheduling:capacity:manage', 'audit:read'] } },
-  { id: 'settings-users', path: '/configuracoes/usuarios', label: 'Usuários', routeAccess: { allOf: ['users:manage'] }, navAccess: { allOf: ['users:manage'] }, nav: /* ... */ },
+  { id: 'assistant', path: '/assistente', label: 'Assistente', routeAccess: { allOf: ['assistant:use'] }, navAccess: { allOf: ['assistant:use'] }, nav: /* ... */ },
+  { id: 'knowledge', path: '/conhecimento', label: 'Conhecimento', routeAccess: { allOf: ['knowledge:read'] }, navAccess: { allOf: ['knowledge:read'] }, nav: /* ... */ },
+  { id: 'settings', path: '/configuracoes', label: 'Configurações', routeAccess: { anyOf: ['config:read', 'scheduling:capacity:manage', 'clinical:protocols:manage', 'assistant:configure', 'audit:read'] } },
+  { id: 'settings-account', path: '/configuracoes/conta', label: 'Conta da demonstração', routeAccess: { allOf: ['config:read'] } },
   { id: 'settings-operation', path: '/configuracoes/operacao', label: 'Operação', routeAccess: { allOf: ['config:read'] }, navAccess: { allOf: ['config:read'] }, nav: /* ... */ },
   { id: 'settings-capacity', path: '/configuracoes/agenda', label: 'Agenda', routeAccess: { allOf: ['scheduling:capacity:manage'] }, navAccess: { allOf: ['scheduling:capacity:manage'] }, nav: /* ... */ },
+  { id: 'settings-protocols', path: '/configuracoes/protocolos', label: 'Protocolos de anamnese', routeAccess: { allOf: ['clinical:protocols:manage'] } },
+  { id: 'settings-ai', path: '/configuracoes/ia', label: 'Gemini', routeAccess: { allOf: ['assistant:configure'] } },
   { id: 'settings-catalogs', path: '/configuracoes/catalogos', label: 'Catálogos', routeAccess: { allOf: ['config:read'] }, navAccess: { allOf: ['config:read'] }, nav: /* ... */ },
   { id: 'settings-audit', path: '/configuracoes/auditoria', label: 'Auditoria', routeAccess: { allOf: ['audit:read'] }, navAccess: { allOf: ['audit:read'] }, nav: /* ... */ },
 ]
 ```
 
-Rotas de detalhe usam o mesmo registry, sem `nav`. O menu filtra exclusivamente por
-`SessaoPublica.capabilities`; não faz `switch(role)`. `routeAccess` decide montagem da rota;
+Rotas de detalhe usam o mesmo registry, sem `nav`. A sessão integrada recebe o conjunto
+de capabilities necessário para a demonstração; o menu não faz `switch(role)`.
+`routeAccess` decide montagem da rota;
 `navAccess` pode ser mais estreito e decide somente visibilidade. `allOf` exige todas as
 capabilities e `anyOf`, ao menos uma. Para `SOLICITANTE`, presença de qualquer capability
 de resultado ainda exige `requireServiceScope(session.servicoSolicitanteId)` no
@@ -219,8 +245,8 @@ interface CaseSummaryDTO {
   requesterLabel: string
   status: CaseStatus
   responsibility: {
-    currentRoles: Role[]
-    nextRoles: Role[]
+    currentResponsibilities: PapelResponsabilidade[]
+    nextResponsibilities: PapelResponsabilidade[]
     reasonCode: string
   }
   version: number
@@ -252,7 +278,7 @@ interface HomeCardDTO {
 }
 
 interface HomeSummaryDTO {
-  role: Role
+  accessMode: 'INTEGRATED_DEMO'
   cards: HomeCardDTO[]
   nextItems: CaseListItemDTO[]
   generatedAt: string
@@ -433,7 +459,7 @@ prévia editável ou outro cálculo de renderer.
 `ANESTESIOLOGISTA` autorizado pode iniciar um booking `CHECKED_IN`, e o DTO do encontro
 devolve o ator real carimbado pelo main.
 
-### Agenda week projection
+### Agenda projection
 
 `SlotCardDTO`, `ConfirmBookingInput`, `SchedulingRequirementDTO` e `BookingDTO` são
 importados de `src/shared/scheduling/types.ts`, sem adaptação de semântica. A superfície
@@ -441,11 +467,11 @@ também reutiliza diretamente a resposta discriminada de
 `scheduling.slots.listCompatible` (`SLOTS | CAPACITY_SHORTAGE`):
 
 ```ts
-interface AgendaWeekDTO {
+interface AgendaViewDTO {
   requirement: SchedulingRequirementDTO
   booking: BookingDTO | null
-  weekStart: string
-  weekEndExclusive: string
+  rangeStart: string
+  rangeEndExclusive: string
   timezone: 'America/Sao_Paulo'
   availability: Awaited<ReturnType<typeof api.scheduling.slots.listCompatible>>
 }
@@ -458,24 +484,33 @@ e a necessidade discriminada `INITIAL | RETURN` — ao command
 todos os estados de `BookingDTO`: `CONFIRMED`, `CHECKED_IN`, `CANCELLED`, `COMPLETED` e
 `NO_SHOW`.
 
-### `WeeklyAgendaGrid`
+### `AgendaCalendar`
 
 ```ts
-interface WeeklyAgendaGridProps {
-  slots: readonly SlotCardDTO[]
-  selectedSlotId: string | null
+interface AgendaCalendarProps {
+  view: AgendaViewDTO
+  preferredView: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek'
   onSelectSlot: (slotId: string) => void
+  onMoveBooking: (intent: MoveBookingIntent) => Promise<ActionResult<BookingDTO>>
+  onResizeBooking: (intent: ResizeBookingIntent) => Promise<ActionResult<BookingDTO>>
 }
 ```
 
-- Implementação própria em CSS Grid com segunda a sexta; não adiciona package de calendário.
-- Recebe slots prontos e apenas os posiciona por `startsAt`/`endsAt`; não calcula capacidade,
-  compatibilidade, classe, duração, buffer, regra ou transição.
-- Não possui drag-and-drop nem resize. Clique/Enter em slot selecionável abre
-  `BookingDrawer`; reagendamento é command explícito.
-- Formata datas com `Intl.DateTimeFormat` e `timeZone: 'America/Sao_Paulo'`.
-- `AccessibleSlotTable` recebe o mesmo `dto.slots`, na mesma ordenação, e sincroniza a
-  seleção por `slotId`. A tabela continua totalmente operacional se a grade falhar.
+- Usa FullCalendar v6 e os plugins declarados no Build de agenda; não duplica configuração,
+  adapter nem semântica naquele domínio.
+- Porta do DietFlow a toolbar, os dropdowns, mês/semana/dia/programação, altura proporcional,
+  seleção, DnD/resize, background events, drawer e preferências de visualização.
+- Adapta as entidades: `Atendimento/Task/Compromisso/Bloqueio` não atravessam. O adapter recebe
+  somente slots, bookings, capacidade e bloqueios do Antessala.
+- O evento carrega IDs opacos: `bookingId`, `slotId`, `caseId`,
+  `schedulingRequirementId`, `schedulingRequirementVersion` e `slotClassId`. Nunca carrega
+  nem produz `patientId`.
+- `eventDrop` e `eventResize` criam intents tipados; em qualquer erro, conflito ou
+  incompatibilidade, chamam `revert()` e recarregam a projeção.
+- Nenhuma duração nasce da altura do evento. A duração e os recursos vêm do requisito
+  confirmado/alterado por humano e são revalidados no main.
+- `AccessibleSlotTable` e `listWeek` recebem a mesma projeção, preservam seleção e actions e
+  são caminhos equivalentes por teclado.
 - Slot com `compatible=false` aparece desabilitado somente quando o backend deliberadamente
   o inclui para explicação; o main continua sendo a autoridade no command.
 
@@ -545,9 +580,9 @@ validam recorrência, materializam slots nem inventam um `SchedulingResourceKind
 editor recorrente no MVP; cada janela possui início/fim datados, pode ser substituída ou
 retirada e a materialização idempotente cobre no máximo 30 dias.
 
-Somente usuários `origin=ADMIN`, recursos, janelas datadas e bloqueios possuem commands de escrita no admin.
-Serviços, procedimentos, profissional solicitante, templates/classes/durações/buffers,
-widgets, regras e catálogos não possuem create/update/delete no MVP. O profissional
+Somente recursos, janelas datadas, bloqueios e protocolos salvos possuem commands de escrita
+em Configurações. Serviços, procedimentos, profissional solicitante, protocolos `SYSTEM`,
+classes/durações/buffers, widgets, regras e catálogos não possuem create/update/delete no MVP. O profissional
 solicitante existe apenas no `RequesterSnapshotDTO` do caso.
 
 ### Backend action map by surface
@@ -566,11 +601,13 @@ solicitante existe apenas no `RequesterSnapshotDTO` do caso.
 | S09 Assessment | `encounters.getClinical` → `assessment:read`; quando existir resultado final, `results.getCurrent` → `result:content:read` | `encounters.saveAssessment/resumeReview`, `returnRequests.decide` e `results.finalize/revise` → `assessment:write`; `pendencies.open/cancel/reviewEvidence` → `pendency:manage`; `pendencies.submitEvidence` → `pendency:evidence:register` | capability própria em cada leitura/ação |
 | S10 Results | `results.listForActor` já filtrado pelo `serviceId` da sessão | — | `result:status:read`; conteúdo não acompanha a lista |
 | S11 Handoff | `results.getStatus` → `result:status:read`; `results.getCurrent` → `result:content:read` | `deliveries.send` → `delivery:manage`; `deliveries.acknowledge` → `delivery:acknowledge`; `results.exportPdf` → `result:export` | projeção e capability próprias por leitura/ação; não existe cancelamento de entrega |
-| S12 Users | `usuarios.listar` | `usuarios.criar`, `usuarios.atualizar`, `usuarios.resetarSenha` | `users:manage` |
+| S12 Account | `auth.currentSession` | — | sessão autenticada; fixture somente leitura |
 | S13 Operation | `catalogs.services.search`, `catalogs.procedures.search` | — | `config:read` |
 | S14 Capacity | `scheduling.capacity.getConfiguration` | `scheduling.capacity.resources.create/update`; `scheduling.capacity.windows.create/replace/retire`; `scheduling.capacity.blocks.create/cancel`; `scheduling.capacity.materialize` | `scheduling:capacity:manage` |
 | S15 Catalogs | `config.catalogs.getStatus` | — | `config:read` |
 | S16 Audit | `auditoria.listar` | — | `audit:read` |
+| S17 Assistant | `assistant.sessions.get`, `assistant.proposals.list`, `knowledge.searchApproved` | `assistant.generate`, `assistant.proposals.accept/reject/correct` | `assistant:use`; envio cloud sempre explícito |
+| S18 Knowledge | `knowledge.relations.list`, `knowledge.sources.list` | `knowledge.relations.suggest/approve/activate/retire` | capability própria por ação; conta integrada não elimina os gates semânticos |
 
 S05 nunca oferece preview mutável: `submitFinal` conclui a revisão `FINAL` e produz o
 requirement `CALCULATED` no mesmo commit, mantendo `NURSING_IN_PROGRESS`; apenas
@@ -603,7 +640,11 @@ reclassifica requirement calculado ou publicado.
 #### Shared shell
 
 - `ProtectedAppLayout`: sidebar, main, toast and global error boundary.
-- `CapabilitySidebar`: items from registry filtered by `SessaoPublica.capabilities` and each `navAccess`; footer includes name, role label, logout and ThemeSelector.
+- `CapabilitySidebar`: todos os grupos operacionais da sessão integrada, derivados do
+  registry. O footer abre `UserMenu` com `Configurações`, `Tema`, `Amostra de uso` e `Sair`.
+- `ThemeSelector`: `Claro | Escuro | Sistema`, persistido localmente e sem depender da rede.
+- `SampleDataControl`: repõe somente fixtures sintéticas por action de harness/demo explícita;
+  não é backup, restore nem reset genérico.
 - `PageHeader`: breadcrumbs/actions only; IA toggle removed.
 - `CaseHeader`: protocol, patient snapshot, procedure, state label, next owner.
 - `CaseTimeline`: domain events with text/time/actor; respects projection.
@@ -611,7 +652,8 @@ reclassifica requirement calculado ou publicado.
 
 #### Worklists
 
-- One `CaseWorklist` component accepts columns/actions as typed config, but DTOs remain role-specific.
+- One `CaseWorklist` component accepts columns/actions as typed config, but DTOs remain
+  responsibility-specific.
 - `AssignedPendencyWorklist` consumes only `AssignedPendencyDTO`; it shows kind, authorized
   request, owner, due/overdue, `caseContext.displayCode/personName/procedureDescription` and
   the discriminated evidence-submission form. It does not reuse a clinical encounter DTO.
@@ -639,18 +681,22 @@ reclassifica requirement calculado ou publicado.
 
 #### Config layout
 
-- Secondary sidebar or tabs: Usuários, Operação, Agenda, Catálogos, Auditoria.
-- Each child route is deep-linkable; `/configuracoes` redirects to `/configuracoes/usuarios`.
-- Usuários `origin=FIXTURE` exibem badge “Conta da demo” e nenhuma ação de editar, resetar,
-  ativar ou desativar; os forms de gestão abrem somente para `origin=ADMIN`.
+- Secondary sidebar or tabs: Conta da demonstração, Operação, Agenda, Protocolos,
+  Catálogos, Gemini e Auditoria.
+- Each child route is deep-linkable; `/configuracoes` redirects to `/configuracoes/conta`.
+- Conta mostra o único login sintético e as responsabilidades cobertas; não cria, edita,
+  ativa, desativa nem redefine senha de outras contas.
 - Operação mostra somente inventário, `source` e `revision` dos serviços/procedimentos
   fixtures. Catálogos mostra somente status/version/hash. Nenhuma dessas páginas possui
   create, edit, activate, delete, upload, publish ou JSON textarea.
 - Agenda apresenta forms tipados do owner agenda e permite escrever apenas recursos,
   janelas datadas e bloqueios, além de solicitar materialização idempotente. Templates,
-  classes, durações e buffers aparecem como referência somente leitura; não há editor de
-  recorrência, FullCalendar, drag-and-drop ou resize.
-- IA cloud configuration may be kept under an explicitly non-routed development import; it is not a settings tab.
+  classes, durações e buffers aparecem como referência somente leitura. A configuração não
+  duplica o FullCalendar operacional nem altera requisito pelo desenho.
+- Protocolos permite listar, criar, editar metadados, duplicar, versionar e arquivar templates
+  salvos de anamnese; nunca salva respostas ou identidade de caso.
+- Gemini configura somente provider/modelo/chave para o Assistente isolado, com teste de
+  conexão explícito e indicação inequívoca de uso de rede.
 - Não existe página, botão ou TIPC de backup, restore ou reset. Limpeza de dados pertence
   somente ao harness de teste, fora da casca autenticada.
 
@@ -665,7 +711,7 @@ reclassifica requirement calculado ou publicado.
 | Agenda | loading, slots, capacity shortage, selected, confirming, conflict, confirmed, checked-in, cancelled, completed, no-show |
 | Pendência atribuída | loading, empty, filter-empty, hashing metadata, invalid, saving, evidence submitted, conflict, forbidden, error |
 | Handoff/PDF | unavailable, available, confirming, received, generating, export error |
-| User/capacity write | loading, empty, dialog, invalid, saving, conflict, deactivate/remove warning |
+| Protocol/capacity write | loading, empty, dialog, invalid, saving, conflict, deactivate/remove warning |
 | Read-only fixtures/catalog status | loaded, empty, missing, divergent, read error |
 
 ### Responsiveness
@@ -674,7 +720,7 @@ reclassifica requirement calculado ou publicado.
 - `1024×640`: sidebar may collapse to icons; forms become one column; worklist hides low-priority columns into row detail; primary action remains visible.
 - `1440×900+`: content max widths prevent stretched forms; agenda uses available width.
 - `<768`: not an acceptance target. Existing Sheet sidebar may remain functional, but no promise de mobile workflow.
-- No fixed 380px IA panel remains to steal space.
+- Nenhum painel global de IA rouba largura da anamnese, agenda ou avaliação.
 
 ### Accessibility
 
@@ -695,7 +741,7 @@ reclassifica requirement calculado ou publicado.
 sequenceDiagram
   actor User as "Usuário autenticado"
   participant Route as "ProtectedRoute"
-  participant Page as "Página do papel"
+  participant Page as "Ferramenta da responsabilidade"
   participant Client as "TIPC client"
   participant Main as "Guard + projection handler"
   participant DB as "PGlite"
@@ -707,7 +753,7 @@ sequenceDiagram
     Route->>Page: monta página
     Page->>Client: solicita view DTO específico
     Client->>Main: action tipada
-    Main->>Main: valida sessão, papel e escopo
+    Main->>Main: valida sessão, responsabilidade da ação e escopo
     Main->>DB: consulta projeção mínima
     DB-->>Main: rows
     Main-->>Page: DTO sem campos proibidos
@@ -720,14 +766,14 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   actor Reception as "Recepção"
-  participant UI as "WeeklyAgendaGrid / AccessibleSlotTable"
+  participant UI as "FullCalendar / AccessibleSlotTable"
   participant Main as "scheduling.bookings.confirm"
   participant DB as "PGlite transaction"
   Reception->>UI: escolhe slot compatível
   UI->>Main: ConfirmBookingInput com need INITIAL ou RETURN
   Main->>DB: revalida need, versões, slot, recursos e caso
   alt conflict or no capacity
-    DB-->>Main: SLOT_CONFLICT
+    DB-->>Main: SLOT_TAKEN
     Main-->>UI: reload availability
     UI-->>Reception: explica que a vaga foi ocupada
   else available
@@ -753,11 +799,13 @@ retorna `BookingDTO.CHECKED_IN`. Só então a avaliação habilita `encounters.s
 - Renderer imports `SessaoPublica`, never `CurrentSession` or `ActorContext`.
 - Every canonical lifecycle state has label, next-owner mapping and visual token.
 - Every slot class has label without changing key.
-- No active code imports `IaPagina`, `IaChatPanel` or IA toggle.
+- No active shell imports `IaChatPanel` or IA toggle; `AssistentePagina` existe apenas na
+  rota `/assistente`.
 
 ### Renderer unit/integration
 
-- Menus derivados de `SessaoPublica.capabilities`, `routeAccess/navAccess` e cinco homes fixture; nenhum `switch(role)` na sidebar.
+- Menu integrado derivado do registry, com todos os grupos e nenhum `switch(role)` na sidebar.
+- User dropdown abre Configurações, alterna Claro/Escuro/Sistema, repõe amostra sintética e sai.
 - Protected route does not mount child before authorization.
 - Worklist loading/empty/filter-empty/error.
 - Intake with equal person data, optional source reference and duplicate source reference
@@ -770,37 +818,47 @@ retorna `BookingDTO.CHECKED_IN`. Só então a avaliação habilita `encounters.s
 - Nursing dirty/incomplete/rebase pré-FINAL/submit, `CALCULATED_AWAITING_DECISION`, confirm/override, conflict/read-only; nenhuma edição pós-FINAL nem prévia mutável paralela.
 - Assigned pendency worklist covers each owner role, requester service isolation,
   metadata-only `CaseDocument`, invalid cross-case reference and no bytes/path in TIPC/DB.
-- Agenda grid/list contain same `slotId`s; union shortage, conflict reload e os cinco estados de `BookingDTO`.
+- FullCalendar/lista contêm os mesmos `slotId`s e IDs opacos de requisito; cobrem month,
+  week, day, list, dropdowns, busca/filtro, shortage, conflito, `eventDrop/eventResize` com
+  `revert()` e os cinco estados de `BookingDTO`.
 - Check-in somente pela recepção e `encounters.start` bloqueado antes de `CHECKED_IN`.
 - Assessment revisa suficiência e oferece decisão explícita de `ReturnRequest`; submissão
   de evidência e último blocker nunca criam retorno automaticamente.
 - Requester scoped by session `serviceId`, payload redigido, result/PDF states, proveniência
   explicitamente não digital e prova negativa entre serviços.
-- Admin forms de usuário/recursos/janelas datadas/bloqueios; fixtures read-only; zero backup/restore/reset no produto.
+- Protocolos salvos preservam ordem/configuração sem respostas; drawer multi-select e DnD da
+  anamnese são provados em superfície real.
+- Assistente isolado prova ausência de painel global e de IA dentro de widgets; aceitar uma
+  proposta gera uma operação normal no draft, sempre por decisão humana.
+- Forms de recursos/janelas datadas/bloqueios; conta demo e fixtures read-only; zero
+  backup/restore/reset genérico no produto.
 - Keyboard/focus assertions and no raw error message.
 
 ### E2E proof script
 
-1. Reset app data pelo harness de teste (sem rota/action de produto); open at Login.
-2. Login RECEPCAO; create synthetic endoscopy referral.
-3. Logout/login ENFERMAGEM; acknowledge handoff, start/complete form,
+1. Iniciar `userData` temporário pelo harness; abrir no Login.
+2. Entrar uma vez com a conta integrada e criar encaminhamento sintético pela ferramenta da recepção.
+3. Sem trocar de sessão, reconhecer o handoff, abrir o Composer, aplicar protocolo, reordenar
+   widgets por DnD, salvar draft e completar a responsabilidade de enfermagem;
    `submitFinal` → `CALCULATED`, confirm/override `STANDARD` e só então prove o caso
    `READY_FOR_SCHEDULING`.
-4. Logout/login RECEPCAO; find only compatible slot, reserve and explicitly check in.
-5. Logout/login ANESTESIOLOGISTA; start only after check-in and open a return-required
-   pendency. Logout/login as its owner, open `/pendencias`, register metadata/SHA-256 without
+4. Abrir “Para agendar”, conferir o ID opaco do requisito, usar dropdowns do FullCalendar,
+   reservar somente vaga compatível, testar move/resize com aceite e `revert()`, e fazer check-in.
+5. Abrir a ferramenta do anestesiologista, iniciar somente após check-in e abrir pendência
+   com retorno. Na ferramenta do responsável, registrar metadata/SHA-256 sem
    storing bytes and submit evidence; then, as anesthesiologist, review it and explicitly
    decide whether a `ReturnRequest` is needed. Do not choose
    a date/slot in the assessment or pendency surfaces.
-6. Logout/login RECEPCAO; see the `RETURN` discriminant in S06, book and check it in;
-   logout/login
-   ANESTESIOLOGISTA, resume/finish assessment and export the final PDF; reception then
+6. Na mesma sessão, voltar à recepção, ver o discriminante `RETURN`, reservar e fazer
+   check-in; voltar à avaliação, concluir/exportar PDF; depois registrar o handoff;
    registers the local/PDF delivery handoff. Prove the PDF says it is not digitally signed.
-7. Logout/login SOLICITANTE; see only its service, open result and confirm receipt.
-8. Logout/login ADMIN; mutate user/resource/dated-window/block, inspect read-only fixture
-   inventories and sanitized audit, and prove no backup/restore/reset surface exists.
-9. Repeat with QUICK and EXTENDED fixture cases to prove differentiated availability.
-10. Take screenshots at 1280×720 in light and dark for pitch; exercise keyboard list path once.
+7. Abrir a ferramenta do solicitante, ver apenas o serviço autorizado e confirmar recebimento.
+8. Abrir Configurações no dropdown, alternar os três temas, carregar amostra, editar
+   recurso/janela/bloqueio e inspecionar auditoria com conta + responsabilidade por ação.
+9. Abrir `/assistente`, executar uma sugestão Gemini sintética, aceitar uma proposta e uma
+   recuperação de memória; provar zero UI de IA na anamnese e na agenda.
+10. Repeat with QUICK and EXTENDED fixture cases to prove differentiated availability.
+11. Take screenshots at 1280×720 in light and dark; exercise keyboard list path once.
 
 ### Commands future Plan must invoke
 
@@ -815,27 +873,27 @@ The Plan must not assume these are green before implementation.
 ## Sequence
 
 1. Land canonical shared enums/view contracts and access foundation.
-2. Build AuthProvider, surface registry, ProtectedRoute and role shell.
+2. Build AuthProvider, surface registry, ProtectedRoute and integrated demo shell.
 3. Build main projection handlers before each consuming page.
 4. Build Login + Home.
 5. Build S02/S03 intake/detail.
 6. Build S04/S05 triage around handoff acknowledgment and approved widget contract.
 7. Build S04A `/pendencias` from the canonical assessment query/DTO and metadata-only
    document commands.
-8. Build S06/S07 booking with availability backend, then `WeeklyAgendaGrid`/list projection.
+8. Build S06/S07 booking with availability backend, then port/adapt FullCalendar and drawer.
 9. Build S08/S09 assessment.
 10. Build S10/S11 requester handoff/PDF.
-11. Build S12–S16 admin settings.
-12. Remove IA imports from active tree and replace obsolete tests.
-13. Run ponta-a-ponta role journey and visual/accessibility proof.
+11. Build S12–S16 settings and saved protocols.
+12. Replace global IA mounts with isolated S17/S18 routes.
+13. Run integrated ponta-a-ponta journey and visual/accessibility proof.
 
 These are topological dependencies, not executable Plan items.
 
 ## Rollback / Containment
 
 - Add new pages/routes without deleting dormant IA/memory files.
-- Keep current placeholder Dashboard until RoleHome is proven, then replace import atomically.
-- Keep `WeeklyAgendaGrid` isolated from `AccessibleSlotTable`; if the grid rendering fails,
+- Keep current placeholder Dashboard until IntegratedHome is proven, then replace import atomically.
+- Keep `AgendaCalendar` isolated from `AccessibleSlotTable`; if FullCalendar rendering fails,
   the table remains fully operational. Booking logic stays in the main process.
 - New DTO actions coexist temporarily with legacy handlers, but active UI calls only guarded new actions.
 - Feature-level rollback returns to previous route component without dropping new tables/data.
@@ -845,10 +903,10 @@ These are topological dependencies, not executable Plan items.
 
 | Risk | Containment |
 |---|---|
-| Role data leak through universal DTO | Separate projection endpoints + shape tests. |
-| Surface explosion becomes duplicated pages | Shared shell/worklist/case primitives; keep writes role-specific. |
-| Weekly grid becomes business engine | It receives ready `SlotCardDTO[]`; opaque IDs, backend validation, no DnD and equivalent accessible table. |
-| IA imported indirectly in header/shell | Static active-import test and removal of toggle. |
+| Responsabilidades na mesma sessão vazam dados | Projeções separadas + action authority no main + shape tests. |
+| Surface explosion becomes duplicated pages | Shared shell/worklist/case primitives; keep writes responsibility-specific. |
+| FullCalendar vira motor de negócio | Adapter recebe DTOs prontos; IDs opacos; main revalida; DnD/resize sempre pode reverter. |
+| IA volta ao header/widget | Static active-import test; apenas `/assistente`; zero toggle global. |
 | Config UI edits clinical rules unsafely | Read-only version/status; no JSON editor/action. |
 | Current tests reward obsolete nav | Replace assertions in same slice as registry. |
 | Raw exception leaks clinical detail | Stable code + correlation ID; ErrorBoundary redaction. |
@@ -857,13 +915,13 @@ These are topological dependencies, not executable Plan items.
 
 ## Explicit Non-Goals
 
-- Não construir chat, RAG, gravação/transcrição ou autopreenchimento.
+- Não construir chat global, agente autônomo nem IA embutida em widget.
 - Não construir portal do paciente.
 - Não transformar admin em leitor clínico.
 - Não permitir edição livre de widgets/regras/classificador.
-- Não portar a Agenda do DietFlow nem adicionar engine/biblioteca externa de calendário.
-- Não derivar regra de slot, capacidade, compatibilidade ou transição no `WeeklyAgendaGrid`.
-- Não usar FullCalendar, drag-and-drop ou resize para agendar/reagendar.
+- Não portar entidades nutricionais, `Patient`, planos, tarefas ou WhatsApp da Agenda DietFlow.
+- Não derivar regra de slot, duração, capacidade, compatibilidade ou transição no FullCalendar.
+- Não converter o “tipo de paciente ID” em `patientId`; o único ID operacional é o requisito versionado.
 - Não oferecer backup, restore ou reset como função, rota ou action do produto.
 - Não oferecer hard delete de cadastros referenciados.
 - Não garantir mobile ou produção hospitalar.
@@ -872,7 +930,7 @@ These are topological dependencies, not executable Plan items.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_BUILD`.
-- Autoridade canônica: `hack/BUILD.md`.
+- Estado: `CANONICAL_DOMAIN_BUILD`.
+- Autoridade canônica: este arquivo no domínio de superfícies.
 - Gate individual: inexistente.
-- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans que tocarem superfícies.

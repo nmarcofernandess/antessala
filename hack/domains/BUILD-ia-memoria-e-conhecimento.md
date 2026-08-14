@@ -2,25 +2,25 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/BUILD.md`.
+- Papel: `CANONICAL_DOMAIN_BUILD`.
+- Indexado por: `hack/BUILD.md`.
 - Gate ou assinatura individual: inexistente.
-- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
-- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
+- O estado de maturidade permanece no tracker único; o hub não pode promovê-lo sozinho.
+- Este arquivo é a fonte técnica do domínio. `hack/BUILD.md` apenas integra dependências;
+  não substitui, resume com perda nem supera este contrato.
 
-## Propósito deste anexo
+## Propósito deste Build
 
-Este arquivo preserva o recon e os riscos que sustentam o contrato integrado em
-`hack/BUILD.md`. A síntese já fechou a arquitetura mínima da PoC:
+Este arquivo é o owner físico de IA, memória e conhecimento. O hub `hack/BUILD.md` apenas
+indexa sua integração. Ele fecha:
 
 1. capacidades comprovadas no HEAD;
 2. incompatibilidades entre o legado e o novo contrato;
 3. restrições que já vêm das leis do produto;
 4. limites que o Writing Plan não pode violar.
 
-O `hack/BUILD.md` fixa ownership e integração. Este anexo fecha o contrato físico mínimo
-de tabelas, namespaces, Gemini, superfícies e transações que o Writing Plan deve executar;
-não existe uma alternativa paralela.
+O contrato abaixo cobre tabelas, namespaces, Gemini, captura/transcrição, superfícies e
+transações que o Writing Plan deve executar; não existe alternativa paralela.
 
 ## Fontes consumidas
 
@@ -93,30 +93,55 @@ Estas restrições decorrem de leis do produto e não dependem da escolha de arq
 14. Conteúdo não confiável não amplia tools, rede, campos, papel ou transição, e a IA não
     recebe ferramenta mutadora.
 
-## Contrato físico mínimo da PoC
+## Contrato físico do domínio
 
-O corte não implementa chat, áudio, STT, embeddings ou uma base clínica universal. Ele
-fecha somente uma proposta Gemini sobre transcript sintético digitado e uma recuperação
-textual de relação ativa.
+O produto não implementa chat global, embeddings obrigatórios nem uma base clínica
+universal. Ele implementa, dentro de `/assistente`, transcript sintético digitado ou
+capturado, transcrição Gemini explícita, propostas por campo e recuperação textual de
+relação ativa. Não existe modelo STT local nem download de 478 MB.
 
 ### Persistência
 
 ```sql
+CREATE TABLE case_audio_capture_receipts (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES preop_cases(id) ON DELETE RESTRICT,
+  anamnesis_id TEXT NOT NULL,
+  draft_revision INTEGER NOT NULL CHECK (draft_revision > 0),
+  operational_choice TEXT NOT NULL CHECK (operational_choice IN ('GRANTED','REFUSED','REVOKED')),
+  status TEXT NOT NULL CHECK (status IN ('READY','RECORDING','STOPPED','DISCARDED','TRANSCRIBED','FAILED')),
+  duration_ms INTEGER CHECK (duration_ms IS NULL OR duration_ms BETWEEN 0 AND 3600000),
+  audio_sha256 TEXT CHECK (audio_sha256 IS NULL OR char_length(audio_sha256) = 64),
+  created_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL,
+  stopped_at TIMESTAMPTZ,
+  discarded_at TIMESTAMPTZ,
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  UNIQUE (id, case_id)
+);
+
 CREATE TABLE case_transcripts (
   id TEXT PRIMARY KEY,
   case_id TEXT NOT NULL REFERENCES preop_cases(id) ON DELETE RESTRICT,
   anamnesis_id TEXT NOT NULL,
   draft_revision INTEGER NOT NULL CHECK (draft_revision > 0),
-  kind TEXT NOT NULL CHECK (kind = 'SYNTHETIC_TYPED'),
+  capture_receipt_id TEXT,
+  kind TEXT NOT NULL CHECK (kind IN ('SYNTHETIC_TYPED','SYNTHETIC_GEMINI_AUDIO')),
   data_classification TEXT NOT NULL CHECK (data_classification = 'FICTIONAL_NON_DERIVED'),
   content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 12000),
   content_hash TEXT NOT NULL CHECK (char_length(content_hash) = 64),
-  status TEXT NOT NULL CHECK (status IN ('ACTIVE','INVALIDATED')),
+  status TEXT NOT NULL CHECK (status IN ('DRAFT','ACTIVE','INVALIDATED')),
   created_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL,
   invalidated_at TIMESTAMPTZ,
   version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
-  UNIQUE (id, case_id)
+  UNIQUE (id, case_id),
+  FOREIGN KEY (capture_receipt_id, case_id)
+    REFERENCES case_audio_capture_receipts(id, case_id) ON DELETE RESTRICT,
+  CHECK (
+    (kind = 'SYNTHETIC_TYPED' AND capture_receipt_id IS NULL)
+    OR (kind = 'SYNTHETIC_GEMINI_AUDIO' AND capture_receipt_id IS NOT NULL)
+  )
 );
 
 CREATE TABLE ai_invocations (
@@ -276,6 +301,11 @@ type KnowledgeRelationInput = {
 | Channel | Capability | Resultado |
 |---|---|---|
 | `ai.transcripts.createSynthetic` | `ai:proposal:generate` | transcript local classificado e hashado |
+| `ai.capture.prepare` | `ai:proposal:generate` | recibo e arquivo temporário delimitado, sem iniciar microfone |
+| `ai.capture.start/pause/resume/stop/cancel` | `ai:proposal:generate` | lifecycle explícito; cancel/revoke descarta o temporário |
+| `ai.capture.excludeSegment` | `ai:proposal:generate` | marca trecho de terceiro para remoção antes da transcrição confirmada |
+| `ai.transcripts.transcribeCapture` | `ai:proposal:generate` | confirmação de egress → Gemini → transcript revisável → descarte do áudio |
+| `ai.transcripts.saveReview/confirm` | `ai:proposal:generate` | revisão humana do texto; somente `ACTIVE` pode gerar propostas |
 | `ai.proposals.generate` | `ai:proposal:generate` | invocation + propostas `DRAFT` validadas pelo schema dos widgets |
 | `ai.proposals.list` | `clinical:anamnesis:read` | propostas somente do caso/revisão autorizados |
 | `ai.proposals.decide` | `ai:proposal:decide` | proposta decidida + operação aplicada atomicamente no draft |
@@ -293,38 +323,51 @@ fica explicitamente rotulado como limitação da PoC.
 
 ### Transações e invalidação
 
-1. `generate` exige transcript `ACTIVE`, anamnese `DRAFT`, revisão exata e texto sintético;
+1. `prepare/start/stop` exigem caso sintético, anamnese `DRAFT`, revisão exata e escolha
+   operacional explícita. O arquivo vive apenas em diretório temporário emitido pelo main.
+2. `transcribeCapture` exige confirmação de envio, remove intervalos marcados como fala de
+   terceiro, trava o recibo, envia o áudio ao
+   `GeminiGateway`, valida resposta e persiste transcript revisável; sucesso, cancelamento e
+   falha descartam bytes temporários conforme a matriz de retry. O banco guarda somente
+   hash/duração/recibo, nunca path ou áudio.
+3. `generate` exige transcript `ACTIVE`, anamnese `DRAFT`, revisão exata e conteúdo sintético;
    cria invocation `REQUESTED`, faz uma chamada Gemini e, após parser `.strict()`, persiste
    lote de proposals ou `FAILED` sem write clínico parcial.
-2. `decide` trava proposta e draft. `ACCEPT/CORRECT` aplica uma única operação do schema
+4. `decide` trava proposta e draft. `ACCEPT/CORRECT` aplica uma única operação do schema
    canônico da anamnese e persiste decisão/autoria na mesma transação; `REJECT` não altera
    resposta. Aceitar uma proposta não decide outras.
-3. Mudança de transcript, schema ou revisão do draft invalida propostas `DRAFT`; propostas
+5. Mudança de transcript, schema ou revisão do draft invalida propostas `DRAFT`; propostas
    decididas permanecem como recibo histórico, nunca são reaplicadas.
-4. `suggest → approve → activate` são três comandos CAS e três eventos. Somente `ACTIVE`
+6. `suggest → approve → activate` são três comandos CAS e três eventos. Somente `ACTIVE`
    entra em `searchActive`; retire/supersede altera o índice antes de responder sucesso.
-5. Busca vazia retorna coleção vazia e a copy “nenhum conhecimento aprovado encontrado”.
+7. Busca vazia retorna coleção vazia e a copy “nenhum conhecimento aprovado encontrado”.
 
 ### Segredo, egress e contenção
 
-- O alvo remove OpenRouter, `/ia` e o painel global da árvore ativa.
+- O alvo remove OpenRouter e o painel global, substitui `/ia` por `/assistente` e não monta
+  IA no header, agenda, Composer ou widget.
 - A chave Gemini é criptografada com `electron.safeStorage.encryptString`; PGlite guarda
   somente ciphertext. Se `safeStorage.isEncryptionAvailable()` for falso, salvar/testar
   falha com `SECRET_STORAGE_UNAVAILABLE` e o caminho manual continua.
-- Só `GeminiGateway` no main pode abrir rede, apenas após `generate` ou teste explícito,
+- Só `GeminiGateway` no main pode abrir rede, apenas após `transcribeCapture`, `generate` ou teste explícito,
   para host fixo do Gemini, timeout finito, `redirect: 'error'`, JSON e limite de payload.
 - Logs/auditoria guardam invocationId, modelo, hashes, duração e código seguro; nunca token,
   transcript, prompt integral ou proposta clínica.
 - `PROVIDER_UNAVAILABLE`, `NETWORK_UNAVAILABLE`, `INVALID_PROVIDER_RESPONSE`,
   `PROPOSAL_STALE`, `SECRET_STORAGE_UNAVAILABLE`, `FORBIDDEN` e `VERSION_CONFLICT` são
   códigos estáveis; todos preservam o draft manual.
-- Chat, conversas, memórias automáticas, importadores, grafo extraído e downloads STT
+- Chat, conversas, memórias automáticas, importadores, grafo extraído e downloads/modelos STT
   permanecem fora do router ativo.
 
 ### Componentes e superfícies
 
-- `/casos/:caseId/triagem`: `SyntheticTranscriptPanel`, `GenerateProposalsDisclosure` e
-  `FieldProposalCard` ao lado do campo alvo; sem apply-all.
+- `/assistente`: `AssistantCasePicker`, `CaptureDisclosure`, `AudioCaptureControls`,
+  `ThirdPartySegmentEditor`, `TranscriptReview`, `SyntheticTranscriptPanel`,
+  `GenerateProposalsDisclosure`, `FieldProposalReview` e `KnowledgeEvidencePanel`; sem
+  apply-all. A rota pode ser aberta a partir de um caso, mas continua isolada.
+- `FieldProposalReview` mostra campo alvo, trecho/origem, explicação, versão e as ações
+  aceitar/rejeitar/corrigir. A decisão aceita/corrigida chama a operação canônica do draft;
+  não injeta componente nem estado de IA no widget.
 - `/conhecimento`: `KnowledgeSearch`, `KnowledgeRelationForm`, fila de aprovação e ações
   separadas de ativação/retirada.
 - `/configuracoes/ia`: Gemini, modelo, segredo mascarado e teste técnico sem conteúdo.
@@ -349,8 +392,8 @@ Divergência entre owners retorna ao Analyst; este Build não resolve conflito s
 
 O Writing Plan escolhe arquivos, ordem TDD, fixtures e commits para materializar o contrato
 acima. Ele não pode inventar coluna, enum, capability, channel, transação, provider,
-lifecycle, política de segredo ou egress. Áudio/STT, embeddings, chat, importadores e grafo
-continuam fora do corte; reintroduzi-los exige reabrir o BUILD integrado.
+lifecycle, política de segredo ou egress. Embeddings, chat global, importadores automáticos,
+grafo extraído e modelo STT local continuam fora; reintroduzi-los exige reabrir este Build.
 
 ## Provas que o Build definitivo deverá tornar executáveis
 
@@ -370,6 +413,9 @@ continuam fora do corte; reintroduzi-los exige reabrir o BUILD integrado.
 14. Uma prova sintética executa um uso real de IA e um uso real de memória aprovada.
 15. OpenRouter não aparece em configuração, rota, fallback ou chamada do produto-alvo.
 16. Prompt injection não ganha efeito sem ação humana autorizada.
+17. Pausar, revogar ou cancelar captura funciona; fala de terceiro marcada não entra no
+    transcript confirmado, em proposta nem em memória.
+18. Nenhuma proposta é gerada antes de a enfermagem confirmar a revisão do transcript.
 
 Esta lista define resultados. O Writing Plan da minispec escolhe arquivos e testes dentro
 da arquitetura já consolidada.
@@ -383,8 +429,8 @@ da arquitetura já consolidada.
 | Relação inferida ganhar aparência de protocolo | Crítica | Contido por `SUGGESTED → APPROVED_INACTIVE → ACTIVE`, fonte e limitações visíveis. |
 | Token persistido em texto recuperável | Alta | Resolvido no alvo por `safeStorage`; indisponibilidade desativa Gemini sem bloquear o fluxo. |
 | Prompt injection em transcript/fonte | Alta | Contenção de efeitos: parser estrito, zero tools mutadoras e decisão humana por campo; não se promete invulnerabilidade do modelo. |
-| Áudio sobreviver ao descarte prometido | Alta | Fora da PoC: nenhuma captura/áudio/STT entra na árvore ativa. |
-| Modelo local inflar pacote ou iniciar download | Alta | Fora da PoC: catálogo/downloader STT permanece dormente e nenhum boot o chama. |
+| Áudio sobreviver ao descarte prometido | Alta | Recibo sem path, temporário emitido pelo main, teardown em sucesso/cancel/falha e teste de filesystem. |
+| Modelo local inflar pacote ou iniciar download | Alta | Não há STT local no produto; catálogo/downloader legado fica fora do router e do boot. |
 | Chat global capturar contexto indevido | Alta | `CONFIRMADO`; superfície ativa atual não é reutilizável como está. |
 | Embeddings ausentes degradarem silenciosamente | Média | `CONFIRMADO`; modo textual deve ser explícito e testado. |
 
@@ -394,12 +440,14 @@ da arquitetura já consolidada.
 - [x] Propostas por campo, decisão humana e proveniência foram integradas.
 - [x] Aprovação e ativação de conhecimento foram separadas.
 - [x] Falha de cloud preserva o fluxo manual.
-- [x] STT grande e embeddings foram retirados do caminho crítico.
-- [x] O `hack/BUILD.md` é a autoridade física única.
+- [x] Transcrição opcional foi fechada via Gemini explícito; STT local grande e embeddings
+      continuam fora do caminho crítico.
+- [x] O Build do domínio permanece a autoridade física deste domínio; o hub apenas o indexa.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_BUILD`.
-- Autoridade canônica: `hack/BUILD.md`.
+- Estado: `CANONICAL_DOMAIN_BUILD`.
+- Autoridade canônica: este arquivo no domínio de IA, memória e conhecimento.
 - Gate individual: inexistente.
-- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans que tocarem Assistente,
+  conhecimento, Gemini ou rede opcional.

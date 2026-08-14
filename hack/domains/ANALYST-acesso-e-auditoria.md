@@ -2,24 +2,25 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## TL;DR
 
-O MVP usa login local, sem cadastro público. O `ADMIN` cria contas com nome, e-mail, senha e
-função; cinco contas sintéticas permitem demonstrar `ADMIN`, `RECEPCAO`, `ENFERMAGEM`,
-`ANESTESIOLOGISTA` e `SOLICITANTE`. Identidade, papel, serviço e autorização são resolvidos
-na fronteira confiável do aplicativo, nunca aceitos do payload.
+O MVP usa uma conta local sintética, sem cadastro público. Depois do login, a mesma sessão
+abre todas as ferramentas da demonstração. `ADMIN`, `RECEPCAO`, `ENFERMAGEM`,
+`ANESTESIOLOGISTA` e `SOLICITANTE` são responsabilidades do fluxo, não cinco identidades da
+prova. Conta, sessão e responsabilidade da ação são resolvidas na fronteira confiável e
+nunca aceitas do payload.
 
-Menor privilégio vale também para resposta, erro, contagem, busca, cache, PDF, auditoria,
-IA e conhecimento. Revogar conta, credencial, papel, serviço ou vínculo de um caso impede
-qualquer novo commit ou resposta protegida baseada na autoridade anterior. A recepção não
-lê nem salva PDF clínico; opera somente status e entrega selada. IA cloud pode existir na
-prova apenas por intenção explícita e limitada a dados sintéticos, nunca como chat genérico.
+Cada handler declara uma responsabilidade fixa. A conta integrada pode chamar os handlers
+da prova, mas não pode transformar uma ação de recepção em ação clínica enviando um papel.
+Projeção, erro, arquivo, PDF, IA, conhecimento e auditoria seguem o contrato do domínio. A
+IA cloud usa apenas dados sintéticos por ação explícita na rota própria do Assistente.
 
 O HEAD auditado possui handlers diretamente chamáveis, preload genérico, tokens cloud no
 PGlite e backend de conhecimento alcançável. Isso é terreno legado, não contrato autorizado.
@@ -30,8 +31,8 @@ por serviço ou auditoria e não pode receber dado real.
 
 | Pergunta | Estado | Resposta |
 |---|---|---|
-| Quem autentica? | `PRODUCT_LAW` | Uma conta local criada pelo admin ou uma das cinco fixtures sintéticas. |
-| Quem decide o ator? | `PRODUCT_LAW` | A autoridade corrente no processo confiável; nunca o renderer. |
+| Quem autentica? | `PRODUCT_LAW` | Uma conta fixture integrada e sintética. |
+| Quem decide a responsabilidade da ação? | `PRODUCT_LAW` | O handler no processo confiável; nunca o renderer. |
 | Admin é superusuário clínico? | `PRODUCT_LAW` | Não. Admin gerencia operação e auditoria sanitizada. |
 | Solicitante acompanha o caso inteiro? | `PRODUCT_LAW` | Não. Cumpre pendência própria e recebe resultado/entrega do próprio serviço. |
 | Revogação vale para chamada em voo? | `DEMO_DECISION` | Sim. Nenhum novo commit ou resposta protegida pode usar autoridade revogada. |
@@ -43,10 +44,10 @@ por serviço ou auditoria e não pode receber dado real.
 ### Dentro
 
 - login, logout e autoridade local não restaurável;
-- contas administrativas e cinco fixtures sintéticas;
-- cinco papéis, capabilities semânticas e escopo por serviço;
+- uma conta fixture integrada e sintética;
+- cinco responsabilidades, capabilities semânticas e escopo por ação;
 - não interferência em listas, buscas, contagens, detalhes, erros e identificadores;
-- revogação, mudança de escopo, concorrência e último administrador;
+- revogação, concorrência e validade da sessão;
 - projeções protegidas e descarte de estado efêmero;
 - auditoria sanitizada, autoria e limites de integridade;
 - autorização de áudio, IA, rede e conhecimento;
@@ -61,6 +62,7 @@ por serviço ou auditoria e não pode receber dado real.
 - escolha de hash, parâmetros criptográficos, schema físico, locks, DTOs, IPC, componentes,
   migrations e testes;
 - política institucional definitiva de LGPD, retenção ou não repúdio.
+- CRUD institucional de usuários, segregação real por conta, IdP e troca de papel.
 
 ## Current Terrain
 
@@ -86,18 +88,19 @@ capability correspondente.
 
 ## Product Promise
 
-Cada integrante entra com uma credencial local e executa somente sua responsabilidade. A
-autorização vale antes de carregar dados, no momento de produzir o efeito e antes de devolver
-uma projeção. O administrador consegue preparar a demo e reconstruir autoria sem receber uma
-segunda cópia clínica na auditoria. Trocar de usuário ou escopo limpa o contexto protegido.
+O operador entra uma vez e percorre o fluxo inteiro. A barra lateral organiza ferramentas
+por responsabilidade. O processo principal associa cada canal à responsabilidade que o
+possui, valida estado e escopo e registra a dupla `conta + responsabilidade`. A sessão
+integrada simplifica a apresentação; não vira modelo institucional de autorização.
 
 ## Verdades por classificação
 
 ### `PRODUCT_LAW`
 
-- existem exatamente cinco papéis canônicos;
-- uma conta tem um papel na PoC; `SOLICITANTE` pertence a um serviço;
-- ator, papel, serviço, autoria e capabilities nunca vêm do payload;
+- existem exatamente cinco responsabilidades canônicas;
+- a conta integrada não pertence a uma delas; ela exerce a responsabilidade fixa do
+  handler chamado;
+- conta, responsabilidade, serviço, autoria e capabilities nunca vêm do payload;
 - esconder rota ou botão não autoriza nem desautoriza handler;
 - `ADMIN` não herda leitura clínica;
 - dados são minimizados antes de atravessar a fronteira de confiança;
@@ -110,9 +113,9 @@ segunda cópia clínica na auditoria. Trocar de usuário ou escopo limpa o conte
 
 ### `DEMO_DECISION`
 
-- cinco contas fixture, uma por papel;
+- uma conta fixture integrada;
 - uma pessoa opera a instalação por vez na apresentação;
-- contas fixtures são imutáveis pela administração;
+- a conta fixture é imutável pela interface;
 - ausência de self-service, recuperação, expiração e bloqueio progressivo;
 - autoridade corrente fica somente durante a execução da instalação;
 - IA cloud, quando usada, recebe apenas dados sintéticos numa intenção explícita;
@@ -131,7 +134,7 @@ segunda cópia clínica na auditoria. Trocar de usuário ou escopo limpa o conte
 
 | Ator | Responsabilidade autorizada | Proibição central |
 |---|---|---|
-| `ADMIN` | contas, capacidade, inventários, saúde técnica e auditoria sanitizada | conteúdo de caso, transcript, prompt, resultado ou conhecimento clínico |
+| `ADMIN` | capacidade, inventários, saúde técnica, tema e auditoria sanitizada | usar a configuração para alterar conteúdo clínico |
 | `RECEPCAO` | intake, handoff inicial, agenda, check-in, status e entrega selada | anamnese, avaliação, explicação clínica, transcript e PDF legível |
 | `ENFERMAGEM` | coleta estruturada, revisão conforme qualificação e proposta operacional da demo | avaliação médica e promoção de regra global |
 | `ANESTESIOLOGISTA` | avaliação, pendência, retorno, resultado, consulta e curadoria de conhecimento | reescrever anamnese final ou escolher vaga |
@@ -142,15 +145,21 @@ segunda cópia clínica na auditoria. Trocar de usuário ou escopo limpa o conte
 
 ### `Account`
 
-Identidade local de demonstração: nome, e-mail normalizado, papel, serviço quando
-solicitante, estado ativo/inativo, origem fixture/admin e revisão da autoridade. Senha é
-segredo verificável, nunca informação retornável. Conta não é identidade institucional.
+Identidade local de demonstração: nome, e-mail normalizado, modo `INTEGRATED_DEMO`, estado,
+origem fixture e revisão da autoridade. Senha é segredo verificável, nunca informação
+retornável. Conta não é identidade institucional.
 
 ### `SessionAuthority`
 
-Autoridade efêmera derivada após login válido. Conhece conta, papel, serviço, revisão e
-capabilities. Não é restaurada pelo recibo de uma sessão antiga e não pode ser escolhida,
-editada ou ampliada pelo renderer.
+Autoridade efêmera derivada após login válido. Conhece conta, modo da sessão, revisão e
+capabilities da demonstração. Não é restaurada por recibo antigo nem ampliada pelo renderer.
+
+### `ActionResponsibility`
+
+Responsabilidade fixa declarada pelo handler e pelo serviço de domínio. Ela determina o
+contrato semântico, a projeção e a autoria do efeito. O renderer não envia
+`actingRole`, `papel` ou equivalente. A auditoria registra a conta integrada e a
+responsabilidade exercida.
 
 ### `CapabilityGrant`
 
@@ -182,7 +191,7 @@ stateDiagram-v2
   [*] --> SEM_SESSAO
   SEM_SESSAO --> ATIVA: login válido
   ATIVA --> ENCERRADA: logout ou fechamento
-  ATIVA --> INVALIDADA: conta, credencial, papel ou serviço alterado
+  ATIVA --> INVALIDADA: conta ou credencial alterada
   INVALIDADA --> SEM_SESSAO: contexto protegido descartado
   ENCERRADA --> SEM_SESSAO
 ```
@@ -192,10 +201,9 @@ stateDiagram-v2
 | boot ou reabertura | começa sem autoridade; recibo antigo não autentica |
 | login ausente, inativo ou senha errada | mesma resposta pública; motivo interno sanitizado |
 | logout | autoridade e projeções protegidas deixam de ser utilizáveis antes do sucesso |
-| reset de senha, troca de papel/serviço ou desativação | nenhuma mutação confirma e nenhuma nova resposta protegida usa a autoridade anterior |
+| reset de senha ou desativação | nenhuma mutação confirma e nenhuma nova resposta protegida usa a autoridade anterior |
 | mudança do serviço vinculado ao caso | nenhuma resposta nova é emitida ao serviço anterior; worklists e projeções antigas expiram |
 | resposta já exibida antes da mudança | não pode ser “desvista”; não autoriza nova leitura, ação ou cache persistente |
-| duas ações reduzem administradores | decisão global garante pelo menos um admin ativo após todos os commits válidos |
 | duas instâncias tentam escrever | o invariante de autorização e último admin continua valendo; PoC não aceita dois writers sem coordenação |
 | replay de comando | revalida autoridade e escopo atuais; recibo não é credencial |
 
@@ -212,9 +220,9 @@ antes da resposta. A forma física de serialização pertence ao Build.
 | ler identidade e encaminhamento necessários | sim | sim | sim | mínimo da pendência própria | não |
 | aceitar handoff inicial | não | sim | não | não | não |
 | registrar dados da coleta | não | sim, conforme qualificação/supervisão | não | não | não |
-| revisar e declarar `CAPTURE_COMPLETE` | não | somente conta identificada como enfermeiro na demo | não | não | não |
+| revisar e declarar `CAPTURE_COMPLETE` | não | sim, pela responsabilidade de enfermagem | não | não | não |
 | ler anamnese final | não | sim | sim | não | não |
-| confirmar/alterar requisito operacional | não | `UNRESOLVED`; nunca técnico autônomo por inferência | não | não | não |
+| confirmar/alterar requisito operacional | não | sim, com autoria e justificativa no override | não | não | não |
 | ler classe, duração e status operacionais | sim | sim | sim | não | não |
 | reservar/reagendar/cancelar/check-in | sim | não | não | não | capacidade, não booking clínico |
 | iniciar/salvar/finalizar avaliação | não | não | sim | não | não |
@@ -227,17 +235,17 @@ antes da resposta. A forma física de serialização pertence ao Build.
 | iniciar/parar captura consentida | não | sim | não | não | não |
 | revisar transcript do caso | não | sim | sim, após confirmação humana | não | não |
 | gerar proposta de campo | não | sim | não | não | não |
-| aceitar/rejeitar/corrigir proposta | não | responsável humano pelo campo | responsável humano pelo campo | não | não |
+| aceitar/rejeitar/corrigir proposta de anamnese | não | sim, no próprio draft | não | não | não |
 | consultar conhecimento aprovado | não | somente para o campo em trabalho | sim | não | estado técnico, sem conteúdo |
 | criar relação candidata | não | não | sim | não | não |
 | aprovar/versionar/desativar relação | não | não | sim, ação separada | não | não |
 | iniciar intenção cloud autorizada | não | para proposta sintética | para consulta sintética | não | não |
 | configurar capacidade técnica de IA | não | não | não | não | sim, sem conteúdo clínico |
-| gerenciar usuários e auditoria sanitizada | não | não | não | não | sim |
+| consultar auditoria sanitizada e configuração técnica | não | não | não | não | sim |
 
 Cada linha representa permissão diferente. “Acesso clínico”, “IA” ou “configuração” não são
-guards genéricos. O Build pode escolher identificadores físicos, mas não fundir essas
-fronteiras nem ampliar papel.
+guards genéricos. No modo integrado, elas descrevem a responsabilidade fixa de cada ação,
+não o menu disponível para a conta. O Build não pode fundir essas fronteiras.
 
 ## Redação e não interferência
 
@@ -315,11 +323,10 @@ processo com acesso direto ao diretório do PGlite. A PoC não pode alegar essas
 
 | Falha ou ataque | Resultado obrigatório |
 |---|---|
-| renderer envia papel, ator ou serviço | campo rejeitado/ignorado; autoridade vem da sessão |
+| renderer envia papel, ator ou responsabilidade | campo rejeitado/ignorado; responsabilidade vem do handler |
 | rota escondida chama handler legado | indisponível ou negado antes de tocar recurso |
 | conta muda durante mutação | nenhuma confirmação com autoridade antiga; operação sem efeito |
 | serviço do caso muda durante leitura | nenhuma resposta nova ao serviço antigo; projeções expiram |
-| dois admins tentam remover um ao outro | no máximo uma redução confirma; sempre sobra admin ativo |
 | solicitante consulta outro serviço | resposta indistinguível de inexistente e sem cardinalidade |
 | cache contém projeção antiga | descartado; não autoriza ação ou nova leitura |
 | login inexistente/inativo/senha errada | mesma resposta pública |
@@ -333,14 +340,13 @@ processo com acesso direto ao diretório do PGlite. A PoC não pode alegar essas
 
 ## Rules And Invariants
 
-1. MUST resolver ator, papel, serviço e capability fora do payload.
+1. MUST resolver conta, responsabilidade, serviço e capability fora do payload.
 2. MUST aplicar autorização a leitura, mutação, arquivo, PDF, rede, IA e conhecimento.
 3. MUST NOT considerar menu, rota ou tipo TypeScript como fronteira de segurança.
-4. MUST NOT confirmar mutação se conta, revisão, papel ou escopo deixarem de corresponder.
+4. MUST NOT confirmar mutação se conta, revisão, responsabilidade ou escopo deixarem de corresponder.
 5. MUST NOT emitir resposta protegida usando serviço ou vínculo anterior.
 6. MUST invalidar estado efêmero protegido em logout, revogação ou mudança de escopo.
-7. MUST manter pelo menos um `ADMIN` ativo sob qualquer concorrência válida.
-8. MUST NOT permitir que `ADMIN` leia clínica por auditoria, contagem ou erro.
+7. MUST NOT permitir que a responsabilidade `ADMIN` leia clínica por auditoria, contagem ou erro.
 9. MUST aplicar não interferência a todas as formas de consulta e existência.
 10. MUST usar identificador restrito que não revele sequência global.
 11. MUST restringir recepção a status e entrega selada, sem PDF legível.
@@ -353,23 +359,24 @@ processo com acesso direto ao diretório do PGlite. A PoC não pode alegar essas
 18. MUST NOT persistir ou duplicar token cloud no banco clínico.
 19. MUST apresentar erro público opaco e estável.
 20. MUST limitar a promessa append-only às operações normais do aplicativo.
-21. MUST começar todo boot sem sessão autenticada.
-22. MUST preservar fixtures e contas administrativas extras sem permitir mutação das fixtures.
+20. MUST começar todo boot sem sessão autenticada.
+21. MUST preservar a conta fixture integrada e impedir sua mutação pela interface.
+22. MUST registrar `accountId` e `actionResponsibility` em toda mutação auditável.
 
 ## Acceptance Scenarios
 
 | # | Cenário | Resultado obrigatório |
 |---:|---|---|
-| 1 | renderer envia ator/papel falsos | identidade ignorada; autorização corrente aplicada |
+| 1 | renderer envia ator/papel falsos | valores ignorados ou rejeitados; responsabilidade do handler aplicada |
 | 2 | solicitante lista/busca/conta casos de outro serviço | zero inferência de existência ou cardinalidade |
 | 3 | solicitante tenta detalhe de outro serviço | resposta opaca e nenhum dado |
 | 4 | serviço errado confirma entrega | falha sem mutação |
-| 5 | serviço da conta muda durante chamada | nenhum commit/resposta com autoridade antiga |
+| 5 | responsabilidade enviada tenta ampliar handler | nenhum efeito além do contrato fixo do handler |
 | 6 | conta é desativada entre leitura e escrita | mutação não confirma |
-| 7 | usuário comum tenta alterar papel ou senha fora do contrato | negado |
-| 8 | dois admins tentam remover o outro | sempre resta ao menos um admin ativo |
+| 7 | operador tenta alterar a conta fixture pela interface | negado |
+| 8 | menu exibe todas as ferramentas | navegação completa sem conceder semântica extra ao payload |
 | 9 | fixture recebe mutação direta | negado sem alterar revisão |
-| 10 | segundo boot após conta administrativa extra | cinco fixtures reconciliadas; conta extra preservada |
+| 10 | segundo boot | a mesma conta integrada é reconciliada sem duplicação |
 | 11 | login ausente, inativo e senha errada | mesma mensagem e forma pública |
 | 12 | app reinicia | exige novo login |
 | 13 | recepção tenta ler ou exportar PDF clínico | somente status; conteúdo negado |
@@ -384,6 +391,7 @@ processo com acesso direto ao diretório do PGlite. A PoC não pode alegar essas
 | 22 | payload inclui HTML, path, estado ou horário confiável | dados sensíveis derivados no main ou rejeitados |
 | 23 | erro contém SQL/path/provedor | renderer recebe código opaco e correlação |
 | 24 | LLM sugere relação de conhecimento | fica inativa até aprovação humana separada |
+| 25 | ação percorre recepção, enfermagem e anestesiologia na mesma sessão | auditoria preserva uma conta e três responsabilidades distintas |
 
 ## Boundary With Build
 
@@ -399,8 +407,8 @@ não interferência, redaction, falhas e limites. O Build será owner de:
 - derivação do PDF canônico e entrega selada;
 - testes de chamadas diretas, concorrência, rollback e egress.
 
-O `hack/BUILD.md` incorporou estas correções. Parâmetro criptográfico, nome de tabela,
-path, componente ou lock não substitui a semântica consolidada.
+O Build de acesso traduz estas decisões. Parâmetro criptográfico, nome de tabela, path,
+componente ou lock não substitui esta semântica.
 
 ## Dependencies And Open Questions
 
@@ -410,18 +418,18 @@ Antes de novo adversarial:
 2. avaliação e superfícies devem retirar PDF legível da recepção;
 3. arquitetura deve permitir somente intenção cloud explícita e sintética da prova;
 4. IA deve consumir esta matriz e deixar de adiar a separação autorizativa ao Build;
-5. síntese deve incorporar revogação em voo, auditoria allowlisted e limites do PGlite;
-6. o BUILD integrado prevalece sobre contratos físicos antigos destes anexos;
-7. os 24 cenários precisam de novo ataque no SHA reconciliado.
+5. o hub deve apontar revogação em voo, auditoria allowlisted e limites do PGlite;
+6. os 25 cenários precisam de novo ataque no SHA reconciliado.
 
 ## Resultado da investigação
 
-Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+Os achados e limites deste domínio são indexados em `hack/analysis.md`. Pendências
 institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e de todo Writing Plan que tocar acesso,
+  responsabilidade ou auditoria.

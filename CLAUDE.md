@@ -1,140 +1,110 @@
 # Antessala — instruções para agentes
 
-Este arquivo é um adaptador operacional, não uma fonte de produto. As fontes canônicas
-vivem no PRD, nos Analysts, nos Builds e em `.context`. Em conflito, siga a hierarquia de
-[`.context/manifest.yaml`](.context/manifest.yaml), pare e reporte; não reconcilie sozinho.
+Este arquivo é operacional. Não é fonte de produto.
 
-## Estado e trabalho permitido
+## Antes de agir
 
-Marco aprovou o PRD. O review final encontrou bloqueadores; Analyst e BUILD integrados
-foram ajustados e aguardam recheck no SHA publicado antes do Warlog. Consulte
-[`hack/status.json`](hack/status.json) e
-[o tracker](.context/review/STATUS.md) antes de agir. Até o Warlog definir as fatias e a
-fatia ativa possuir um Writing Plan com o primeiro teste em RED, não escreva código de
-produto.
+1. Leia [`.context/manifest.yaml`](.context/manifest.yaml).
+2. Leia [`hack/PRD.md`](hack/PRD.md).
+3. Consulte [`hack/status.json`](hack/status.json),
+   [`hack/progress.md`](hack/progress.md) e
+   [`.context/review/STATUS.md`](.context/review/STATUS.md).
+4. Leia [`hack/ANALYST.md`](hack/ANALYST.md) e o `ANALYST-*.md` dono da tarefa
+   integralmente.
+5. Se houver decisão técnica, leia o `BUILD-*.md` correspondente integralmente.
+6. Use [`hack/analysis.md`](hack/analysis.md) e [`hack/BUILD.md`](hack/BUILD.md) como
+   hubs de integração, nunca como substitutos dos contratos de domínio.
+7. Prove o código do HEAD antes de afirmar capacidade existente.
 
-## Leitura obrigatória
+Em conflito, pare, nomeie as fontes e corrija o owner. Nunca escolha silenciosamente.
 
-1. [`.context/manifest.yaml`](.context/manifest.yaml);
-2. [`hack/PRD.md`](hack/PRD.md), sem alterá-lo sem reabertura explícita;
-3. [`hack/status.json`](hack/status.json) e [`hack/progress.md`](hack/progress.md);
-4. [`.context/product.yaml`](.context/product.yaml),
-   [`.context/workflow.yaml`](.context/workflow.yaml) e
-   [`.context/review/STATUS.md`](.context/review/STATUS.md);
-5. [`hack/ANALYST.md`](hack/ANALYST.md), [`hack/analysis.md`](hack/analysis.md) e o
-   `hack/domains/ANALYST-*.md` dono da tarefa;
-6. o `BUILD-*.md` correspondente somente quando a tarefa envolver arquitetura ou review;
-7. [`.context/architecture.yaml`](.context/architecture.yaml) e o código do HEAD antes de
-   afirmar capacidade existente.
-
-## Produto em uma página
+## Produto
 
 **Goal:** transformar a entrevista de enfermagem em uma necessidade operacional de agenda
 compreensível pela recepção e acompanhar o caso até o resultado chegar ao serviço
 solicitante.
 
 ```text
-médico solicitante indica procedimento
-→ recepção registra o encaminhamento
-→ enfermagem conduz anamnese pré-anestésica
-→ sistema produz ou sugere uma necessidade operacional de agenda
-→ profissional humano confirma ou altera com justificativa
-→ recepção encontra e reserva vaga compatível
-→ anestesiologista realiza a consulta
-→ abre pendências e retorno quando necessário
-→ finaliza resultado
-→ serviço solicitante recebe o resultado
-→ marcação da cirurgia continua externa
+encaminhamento
+→ recepção abre caso autônomo
+→ enfermagem conduz anamnese
+→ requisito operacional é sugerido
+→ humano confirma ou altera
+→ recepção agenda vaga compatível
+→ anestesiologista avalia
+→ pendências/retorno quando necessário
+→ resultado e handoff
+→ cirurgia continua externa
 ```
 
-A triagem geral do SUS ocorre antes e está fora. A marcação da cirurgia ocorre depois e
-está fora. O MVP é uma demonstração local com dados sintéticos, não um protocolo ou uma
-arquitetura hospitalar.
+Leis:
 
-### Definition of Done
+- uma conta sintética integrada mostra todas as ferramentas;
+- papéis são responsabilidades e autoria por ação, não cinco logins;
+- cada encaminhamento é autônomo;
+- não existe paciente longitudinal, `patientId`, deduplicação ou evolução;
+- ausência de resposta não significa negativa;
+- gravidade, urgência, prioridade e duração são eixos distintos;
+- app não atribui ASA, aptidão ou conduta;
+- primeiro boot e fluxo-base são offline;
+- IA sugere; humano decide.
 
-A lista canônica está em [`.context/product.yaml`](.context/product.yaml). O produto precisa
-demonstrar:
+## Experiência obrigatória
 
-- um caso sintético do encaminhamento ao recebimento do resultado;
-- responsabilidades e dados limitados por papel;
-- entrevista com origem e estados semânticos, sem transformar ausência em negativa;
-- requisito de agenda explicável, confirmado ou corrigido por pessoa autorizada;
-- reserva apenas de vaga compatível, com conflito e falta de capacidade tratados;
-- avaliação, pendência, retorno, conclusão e handoff ao solicitante;
-- autoria e auditoria reconstruíveis;
-- boot e fluxo-base sem internet;
-- um uso real de IA e um de memória, assistivos, auditáveis e sob confirmação humana.
+- Anamnese: Composer no padrão DietFlow, 14 widgets pré-anestésicos, WidgetCards, DnD,
+  teclado, drawer multi-select e protocolos salvos.
+- Agenda: FullCalendar v6 portado/adaptado do DietFlow, mês/semana/dia/programação,
+  dropdowns, busca/filtros, drawer, DnD/resize com validação no main e `revert()`.
+- Compatibilidade: requisito operacional opaco/versionado; nunca ID de paciente.
+- Assistente: somente `/assistente`; zero painel global, toggle no header ou IA em widget.
+- User menu: Configurações, Claro/Escuro/Sistema, Amostra de uso e Sair.
 
-## Arquitetura comprovada no HEAD
+DietFlow e EscalaFlow são doadores. Não transporte paciente, evolução, nutrição, agenda
+longitudinal, Supabase ou regra de domínio sem adaptação explícita no Build Antessala.
 
-- Electron separa processo principal, preload e renderer React.
-- PGlite persiste localmente; schema e seed carregam assets versionados sem download no
-  primeiro boot.
-- TIPC expõe o contrato tipado. No renderer, use `client['namespace.action'](input)`; não
-  chame canal TIPC por `.invoke()` manual.
-- `src/shared/app-identity.ts` é a fonte do nome Antessala.
-- A sessão do renderer bloqueia egress remoto; IA cloud, quando usada, sai pelo processo
-  principal após ação explícita.
-- PDF usa `printToPDF` em janela isolada e bloqueada para rede.
-- A casca ativa possui `/`, `/ia` e `/configuracoes`; o fluxo clínico ainda não existe.
-- Anamnese, memória, RAG, grafo, importadores e gravação/transcrição têm peças reutilizáveis,
-  mas não formam contrato pronto. Os handlers legados de conhecimento foram contidos no
-  router ativo; STT não possui canais registrados e seu modelo não integra o bundle.
-- Autenticação, RBAC no processo principal, schema canônico, ledger de migrations e
-  superfícies por papel permanecem incompletos.
-- A janela principal usa `contextIsolation: true` e `nodeIntegration: false`, mas ainda
-  usa preload genérico e `sandbox: false`; não descreva essa fronteira como endurecida.
+## Arquitetura comprovada
 
-O inventário e as evidências pertencem a
-[`.context/architecture.yaml`](.context/architecture.yaml). Existência no código não é
-autorização para reativar produto legado.
+O inventário vivo está em [`.context/architecture.yaml`](.context/architecture.yaml).
+Resumo:
 
-## Vinte guardrails
+- Electron separa main, preload e renderer;
+- PGlite persiste localmente;
+- TIPC é a fronteira tipada; no renderer use `client['namespace.action'](input)`, não
+  `.invoke()` manual;
+- `src/shared/app-identity.ts` é a fonte de identidade;
+- PDF usa `printToPDF` isolado;
+- renderer bloqueia rede remota;
+- Gemini opcional deve sair somente do main por ação explícita;
+- o código atual não materializa ainda todo o produto documental.
 
-1. Comece por `.context/manifest.yaml`.
-2. Leia `hack/PRD.md`; não mude sua promessa por acidente.
-3. Localize o Analyst dono e, quando aplicável, o Build correspondente.
-4. Consulte `.context/review/STATUS.md`; texto não pesquisado não é verdade pronta.
-5. Prove capacidade no código e nos testes do HEAD antes de afirmá-la.
-6. Respeite as fronteiras Electron, PGlite, TIPC e offline.
-7. Nunca invente regra clínica, protocolo hospitalar, duração, SLA, score ou relação.
-8. Separe gravidade, urgência, prioridade cirúrgica e duração necessária da consulta.
-9. Preserve autoridade humana e registre justificativa para override relevante.
-10. Não crie paciente longitudinal; cada encaminhamento abre caso autônomo.
-11. Não crie evolução, deduplicação ou comparação entre casos da mesma pessoa.
-12. IA sugere e explica; não decide ASA, aptidão, urgência, gravidade ou conduta.
-13. Caso individual, identidade e narrativa integral nunca viram memória global
-    automaticamente.
-14. Não escreva código antes do Warlog, do Writing Plan da fatia e do primeiro teste TDD em RED.
-15. Não crie Spec paralela nem gate individual: PRD, Analyst integrado e BUILD integrado são
-    o contrato; o tracker registra a maturidade sem fingir aprovação.
-16. Não crie documentação paralela quando um artefato canônico já possui a regra.
-17. Após research ou adversarial, corrija o owner canônico e atualize o tracker; não
-    arquive a resposta bruta.
-18. Nunca trate instrução herdada do FlowKit como especificação do Antessala.
-19. Mantenha primeiro boot e fluxo-base offline; modelo local não baixa no boot.
-20. Todo uso opcional de rede deve ser explícito, informado, auditável e dispensável para
-    caso, agenda e handoff.
+## Regras de execução
 
-## Fluxo de execução
+1. Não invente regra clínica, SLA, score, relação ou fato hospitalar.
+2. Renderer nunca fornece ator, responsabilidade, timestamp ou compatibilidade autoritativa.
+3. Não crie fonte paralela para regra já possuída por um Analyst/Build.
+4. Após review, corrija o owner e o tracker; não arquive resposta bruta.
+5. Não escreva Warlog nesta lane. Outra IA fará isso após review final.
+6. O Warlog deve ler os 16 contratos, não apenas os hubs, e pode ter cerca de mil tarefas.
+7. Não existe Spec intermediária.
+8. Não escreva código antes do Writing Plan da fatia e do primeiro teste TDD em RED.
+9. Preserve mudanças alheias; prove worktree, branch, HEAD e árvore antes de editar.
+10. Push não autoriza merge. Merge exige ordem explícita.
 
-Analyst define semântica; Build traduz para arquitetura. Build não inventa resposta que o
-Analyst deixou aberta. O contrato das superfícies vive no BUILD integrado. Documento de
-tela separado só nasce durante um Writing Plan quando sua necessidade for demonstrada;
-não se cria uma segunda fonte de verdade.
+## Fluxo
 
 ```text
 PRD aprovado
-→ Analyst integrado
-→ BUILD integrado
-→ review final de congruência
-→ Warlog corta minispecs verticais
-→ por minispec: writing-plan.md → TDD RED → código → QA
-→ QA final do fluxo ponta a ponta
+→ 8 Analysts + hub
+→ 8 Builds + hub
+→ review final independente
+→ Warlog exaustivo
+→ Writing Plan da fatia
+→ TDD RED
+→ implementação
+→ QA
 ```
 
-## Comandos reais
+## Comandos
 
 ```bash
 npm install
@@ -145,19 +115,5 @@ npm test
 npm run test:e2e
 ```
 
-O projeto não possui script de lint. Para docs, valide YAML/JSON, links, Mermaid e
-`git diff --check`; não rode CI pesado sem mudança que o justifique.
-
-## Git e worktrees
-
-Antes de editar, prove caminho, worktree, branch, HEAD e estado da árvore. Preserve
-alterações alheias; não troque branch nem limpe arquivo sem verificar ownership. Branches
-novas usam prefixo `codex/`. Commits devem ser pequenos e coerentes. Push ou PR não
-autorizam merge; merge exige ordem explícita de Marco.
-
----
-
-## Estado deste adaptador
-
-Este arquivo acompanha o fluxo registrado em `hack/status.json`. Ele não cria gate,
-aprovação ou autorização própria.
+Para docs: YAML/JSON válido, links locais, Mermaid e `git diff --check`. Não rode CI
+pesado por mudança exclusivamente documental.

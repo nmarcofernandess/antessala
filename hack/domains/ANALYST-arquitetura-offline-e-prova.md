@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## TL;DR
 
@@ -27,7 +28,7 @@ o Build proposto já existe.
 | Como o schema evolui? | Migrations numeradas, atômicas e registradas em `schema_migrations`. |
 | Como provar que não houve chamada externa? | Teste com interceptação fail-closed no Electron e servidor sentinela, além da policy existente. |
 | Quem autoriza writes? | A `CurrentSession` autenticada pelo `auth.login` canônico; o main deriva dela o `ActorContext` imutável consumido pelos serviços. |
-| A demo possui login real? | Sim, local: cinco contas fixture com e-mail, senha em hash e um papel cada. Não é autenticação institucional. |
+| A demo possui login real? | Sim, local: uma conta fixture integrada com e-mail e senha em hash. Ela abre todas as ferramentas, sem se apresentar como autenticação institucional. |
 | Como repetir a demonstração? | O harness cria um diretório de dados temporário e executa seed determinístico. Não há botão destrutivo no produto. |
 
 ## Source And Scope
@@ -52,13 +53,19 @@ Fora do escopo: Supabase, Stripe, sync entre máquinas, integração HC, autenti
 
 ## Product Promise
 
-Uma pessoa consegue instalar/abrir o app, entrar com uma conta fixture local, percorrer a demonstração com dados locais, fechar e reabrir sem perder os dados e exportar o resultado sem que o primeiro boot ou o fluxo clínico precisem da rede. A sessão não sobrevive ao reinício: reabrir exige novo login.
+Uma pessoa consegue instalar/abrir o app, entrar com a conta fixture integrada, percorrer a
+demonstração com dados locais, fechar e reabrir sem perder os dados e exportar o resultado
+sem que o primeiro boot ou o fluxo clínico precisem da rede. A sessão não sobrevive ao
+reinício: reabrir exige novo login.
 
 ## Story de Usuário
 
 Como demonstrador, quero abrir o Antessala em qualquer rede ou sem rede e executar o caso completo, para que a apresentação não dependa de serviço externo.
 
-Como avaliador do hackathon, quero entrar com uma das contas fixture e ver claramente qual usuário e papel estão ativos e por que uma ação é permitida ou bloqueada, para distinguir autenticação local demonstrada de integração institucional futura.
+Como avaliador, quero entrar uma vez e alternar entre ferramentas de recepção, enfermagem,
+anestesia e solicitante, vendo qual responsabilidade assina cada ação, para percorrer o caso
+completo sem simular cinco pessoas nem confundir a conta de demonstração com identidade
+hospitalar.
 
 ## Story Técnica
 
@@ -109,7 +116,7 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 | Runner | `src/main/db/migrate.ts` | lock, checksum, ledger e transação |
 | Catálogos | `src/main/db/seed.ts`, `src/data/catalogos/*` | seed por hash e manifesto de versão |
 | Acesso canônico | `hack/domains/ANALYST-acesso-e-auditoria.md` | consumir autoridade, escopo, revogação e auditoria sem inventar contrato físico |
-| Integração de boot | hook do domínio de acesso | inicia sem sessão, encerra recibos abertos e semeia as cinco contas fixture locais |
+| Integração de boot | hook do domínio de acesso | inicia sem sessão, encerra recibos abertos e semeia a conta fixture integrada |
 | IPC | routers clínicos + `src/main/tipc.ts` | Zod, errors tipados e services |
 | Rede | fronteira futura de intenção | nenhuma chamada implícita; allowlist fechada por finalidade da prova |
 | Auditoria | serviço canônico do domínio de acesso | consumir `auditoria_eventos`; esta fatia não cria DDL nem writer paralelo |
@@ -140,11 +147,12 @@ Como sistema Electron, quero aplicar migrations e seeds locais antes de expor ha
 - O comportamento pertence semanticamente a
   `hack/domains/ANALYST-acesso-e-auditoria.md`; representação física só poderá vir do Build
   integrado, e esta fatia não a inventa.
-- `auth.login` valida e-mail e senha contra `usuarios`, cria a `CurrentSession` em memória
+- `auth.login` valida e-mail e senha contra `usuarios`, cria a `CurrentSession` integrada em memória
   no main e devolve a `SessaoPublica` redigida.
 - O `ActorContext` entregue aos serviços é uma projeção imutável da `CurrentSession`;
   papel, autoria, escopo, `sessionId` e horário nunca vêm do renderer.
-- Papéis canônicos: `ADMIN | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE`.
+- Responsabilidades canônicas: `ADMIN | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA |
+  SOLICITANTE`; são autoridade de ação, não cinco contas.
 - Estados: `SEM_SESSAO | ATIVA | INVALIDADA | ENCERRADA`.
 - `sessoes` registra o ciclo como recibo auditável, mas nunca restaura autoridade.
   Todo boot começa `SEM_SESSAO` e exige novo `auth.login`.
@@ -253,7 +261,8 @@ O Build deve fechar:
 - [ ] Primeiro boot e fluxo ponta a ponta passam com um trap que falha qualquer rede não permitida.
 - [ ] Toda ação clínica rejeita payload malformado e papel indevido no main.
 - [ ] Renderer não escolhe autoria, papel, horário, estado ou hash; ele envia somente e-mail e senha a `auth.login`.
-- [ ] As cinco contas fixture locais autenticam e recebem exatamente um papel cada.
+- [ ] A conta fixture integrada autentica, exibe todas as ferramentas e cada ação registra
+      exatamente uma responsabilidade canônica.
 - [ ] `sessoes` registra login, encerramento e invalidação, mas reinício sempre volta sem sessão ativa.
 - [ ] Toda auditoria usa `auditoria_eventos`; não existe ledger paralelo.
 - [ ] Não existe rota/handler de backup, restore ou reset; o harness recria apenas seu próprio diretório temporário.
@@ -273,7 +282,7 @@ institucionais continuam documentadas como fronteira futura e não bloqueiam a P
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo no domínio de arquitetura offline e prova.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans de infraestrutura, boot e prova.

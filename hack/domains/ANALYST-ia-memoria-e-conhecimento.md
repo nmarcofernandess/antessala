@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## Legenda de autoridade
 
@@ -72,6 +73,17 @@ e transformar decisões de casos em “memória” pode criar uma regra clínica
   grafo, desde que a resposta devolva sua proveniência e versão.
 - `PRODUCT_LAW`: ausência de conhecimento ou resposta da IA nunca vira ausência clínica,
   resposta negativa ou autorização para avançar.
+
+### Fronteira de superfície
+
+- `PRODUCT_LAW`: IA trabalha somente na rota própria `/assistente`.
+- `PRODUCT_LAW`: não existe painel global, toggle no header, bolha flutuante, chat sobre a
+  agenda, proposta inline no widget nem execução automática ao abrir ou salvar um caso.
+- `PRODUCT_LAW`: a anamnese continua sendo um editor humano normal. O Assistente pode abrir
+  o contexto autorizado do caso, gerar propostas e mostrar origem/explicação; aceitar ou
+  corrigir uma proposta produz uma operação comum no draft.
+- `PRODUCT_LAW`: navegar para `/assistente` e voltar preserva o draft; indisponibilidade da
+  rota ou da rede não reduz nenhuma capacidade manual.
 
 ## Escopo
 
@@ -146,11 +158,12 @@ Essa escolha precisa de adversarial e não prova governança institucional.
 
 ```mermaid
 flowchart TD
-    START["Enfermagem inicia entrevista"]
+    START["Enfermagem conduz entrevista no Composer"]
     CONSENT{"Captura autorizada?"}
     AUDIO["Captura temporária de áudio"]
     MANUAL["Registro manual continua disponível"]
     TRANSCRIPT["Transcrição literal em revisão"]
+    ASSIST["Abre /assistente sem painel global"]
     REQUEST["Ação explícita solicita assistência"]
     CONTEXT["Schema dos widgets + caso corrente + conhecimento aprovado"]
     DRAFTS["Propostas DRAFT por campo + origem + explicação"]
@@ -165,8 +178,8 @@ flowchart TD
     START --> CONSENT
     CONSENT -->|"sim"| AUDIO --> TRANSCRIPT
     CONSENT -->|"não"| MANUAL
-    TRANSCRIPT --> REQUEST
-    MANUAL --> REQUEST
+    TRANSCRIPT --> ASSIST --> REQUEST
+    MANUAL --> ASSIST
     CONTEXT --> REQUEST
     REQUEST --> DRAFTS --> HUMAN
     HUMAN --> ACCEPT --> FORM
@@ -458,7 +471,7 @@ redistribuir ou ampliar essas fronteiras.
 | Classificação e agenda | Resumo assistivo e relações aprovadas como explicação; requisito continua sob seu motor e confirmação humana. |
 | Avaliação e pendências | Leitura do transcript confirmado e das fontes usadas, dentro do caso. |
 | Acesso e auditoria | Ator, capabilities, escopo e recibos sanitizados. |
-| Superfícies | Consentimento, revisão por proposta, estados de falha e conhecimento versionado. |
+| Superfícies | Rota `/assistente`, revisão por proposta, estados de falha e conhecimento versionado; zero IA dentro do Composer. |
 | Arquitetura offline | Chamada de rede explícita, fallback offline e nenhuma dependência de boot. |
 
 ## Terreno atual comprovado
@@ -578,7 +591,8 @@ O arquivo pareado existe apenas como mapa de terreno e bloqueios:
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo no domínio de IA, memória e conhecimento.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans que tocarem Assistente,
+  memória, conhecimento ou rede opcional.

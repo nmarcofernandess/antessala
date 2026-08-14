@@ -2,18 +2,23 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## TL;DR
 
-O produto não cabe nas três rotas herdadas. O MVP exige uma casca autenticada e superfícies explícitas para entrada do encaminhamento, fila de triagem, anamnese, casos prontos para agendar, agenda, avaliação anestésica, pendências/retornos, entrega do resultado e administração. Cada papel recebe uma home e uma navegação próprias; o detalhe do caso é compartilhado, mas compõe seções e ações conforme autorização.
+O produto não cabe nas três rotas herdadas. O MVP exige uma casca autenticada e superfícies
+explícitas para entrada do encaminhamento, fila de triagem, anamnese, casos prontos para
+agendar, agenda, avaliação anestésica, pendências/retornos, entrega do resultado,
+Assistente e configuração. Uma conta sintética integrada enxerga todas as ferramentas na
+barra lateral. Cada ferramenta continua identificada pela responsabilidade que exerce.
 
-`Configurações` permanece e o catálogo futuro precisa incorporar o uso assistivo de IA,
-transcrição e memória aprovado no novo Analyst. O catálogo S00–S16 e seus viewports são
+`Configurações` permanece. O Assistente ocupa `/assistente`, sem painel global e sem IA
+dentro dos widgets. O catálogo S00–S17 e seus viewports são
 `DEMO_DECISION`; não constituem Surface Blueprints. Esses blueprints só nascem durante o
 fechamento do Build, em `hack/surfaces/`.
 
@@ -22,30 +27,30 @@ fechamento do Build, em `hack/surfaces/`.
 | Signal | Verdict | Notes |
 |---|---|---|
 | Action clear | `PASS` | Enumerar toda superfície necessária para executar o fluxo do login ao handoff. |
-| Persona clear | `PASS` | Cinco papéis autenticados; paciente não usa o app. |
+| Persona clear | `PASS` | Uma conta demo percorre cinco responsabilidades; paciente não usa o app. |
 | Input/output clear | `PASS` | Cada tela recebe um estado/DTO e produz uma ação/estado seguinte definido. |
 | Scope clear | `PASS` | Desktop Electron para demo; sem portal do paciente, cirurgia ou integração hospitalar. |
-| Objective criteria clear | `PASS` | Os cinco papéis completam o cenário ponta a ponta sem rota órfã nem ação de outro papel. |
+| Objective criteria clear | `PASS` | A sessão integrada completa o cenário sem rota órfã e audita a responsabilidade de cada ação. |
 
 ## Source And Scope
 
 ### In scope
 
-- login, logout e casca por papel;
-- home operacional por papel;
+- login, logout e casca integrada;
+- home geral com atalhos para todas as responsabilidades;
 - listas de trabalho e filtros mínimos;
 - entrada do encaminhamento;
 - visão compartilhada e role-aware do caso;
 - anamnese de enfermagem;
 - resumo operacional para recepção;
 - procura e confirmação de vaga;
-- agenda semanal e alternativa em lista;
+- agenda FullCalendar com mês, semana, dia, Programação e Para agendar;
 - avaliação anestésica, pendência, retorno e conclusão;
 - caixa de resultados do solicitante e confirmação de recebimento;
-- configurações administrativas;
+- configurações da demonstração e menu do usuário;
 - inventários versionados de serviços/procedimentos e configuração da capacidade da demo;
 - componentes, estados vazios/erro/loading/conflito, responsividade e acessibilidade;
-- incorporação futura de IA/memória somente pelos contratos assistivos do domínio canônico.
+- Assistente isolado em `/assistente`, com IA/memória pelos contratos do domínio canônico.
 
 ### Out of scope
 
@@ -66,13 +71,19 @@ fechamento do Build, em `hack/surfaces/`.
 - O sistema usa dados sintéticos e um único estabelecimento fixture.
 - Paciente é identidade embutida no caso, não um cadastro pesquisável ou deduplicado.
 - Nome repetido não é conflito; o caso é identificado pelo seu código/ID.
-- Usuários são cadastro de acesso editável. Serviços e procedimentos são fixtures versionadas selecionáveis; o profissional solicitante é capturado como snapshot no encaminhamento, não como cadastro. Catálogos clínicos, templates e regras também são assets versionados no MVP.
-- A agenda usa `WeeklyAgendaGrid` próprio e lista acessível sobre slots prontos; nenhuma
-  biblioteca ou engine de calendário é necessária, e a UI nunca é fonte da capacidade.
+- Existe uma conta fixture integrada; gestão institucional de usuários fica fora.
+  Serviços e procedimentos são fixtures versionadas selecionáveis; o profissional
+  solicitante é snapshot do encaminhamento. Catálogos clínicos e regras são assets
+  versionados; protocolos/templates de anamnese possuem lifecycle próprio.
+- A agenda porta FullCalendar do DietFlow. O componente visual nunca é fonte da capacidade.
 
 ## Product Promise
 
-Ao entrar, cada profissional vê imediatamente o trabalho que lhe cabe e consegue levar um caso ao próximo responsável sem reconstruir contexto em outro sistema. A recepção cria o caso, agenda e registra check-in sem ler anamnese; a enfermagem encontra os casos aguardando triagem, submete a revisão final, confirma ou sobrescreve a necessidade calculada e só então a publica; o anestesiologista recebe o caso completo, abre pendências, revisa evidências, decide impacto e retorno ou conclui, mas nunca escolhe a vaga. Somente uma decisão clínica explícita cria a solicitação de retorno; o serviço solicitante recebe a versão autorizada do resultado. O administrador prepara contas e capacidade datada da demonstração e confere as versões dos serviços/procedimentos sem tocar no banco ou em código.
+Ao entrar, o operador vê todas as ferramentas do fluxo na barra lateral. Ele percorre
+recepção, enfermagem, agenda, anestesiologia, pendências, resultado e configuração sem trocar
+identidade. Cada rota exibe sua responsabilidade e aplica o contrato correspondente. A
+agenda e a anamnese têm a mesma densidade de interação dos doadores DietFlow; o Assistente
+permanece separado.
 
 ## Story de Usuario
 
@@ -81,11 +92,15 @@ Ao entrar, cada profissional vê imediatamente o trabalho que lhe cabe e consegu
 - Como recepcionista, quero ver apenas vagas compatíveis e confirmar uma delas, para não interpretar dados clínicos.
 - Como anestesiologista, quero uma agenda/lista do dia e o detalhe clínico preservado, para concluir, abrir pendência ou solicitar retorno sem assumir o agendamento da recepção.
 - Como solicitante, quero uma caixa de resultados do meu serviço, para confirmar recebimento e continuar o planejamento.
-- Como administrador, quero preparar acessos, recursos e disponibilidade da demo e conferir a integridade dos cadastros versionados, para não editar o banco manualmente nem alterar regra clínica pela interface.
+- Como operador, quero preparar recursos, disponibilidade, tema e fixtures da demo e
+  conferir sua integridade sem editar o banco manualmente.
 
 ## Story Tecnica
 
-Como renderer, preciso derivar rota, navegação, componente e ação da sessão/capability; consumir DTOs mínimos por superfície; representar loading, vazio, erro, ausência de vaga, conflito, pendência e conclusão; manter formulários com dirty state e confirmação de saída; e nunca montar ou buscar uma superfície proibida. Como main, preciso fornecer projeções adequadas ao papel e tratar configurações clínicas versionadas como leitura, não como JSON livre editável.
+Como renderer, preciso derivar rota, navegação, componente e ação do registry; consumir DTOs
+mínimos por superfície; representar loading, vazio, erro, ausência de vaga, conflito,
+pendência e conclusão; e manter dirty state. Como main, preciso associar cada action à
+responsabilidade canônica, fornecer a projeção adequada e impedir papel forjado no payload.
 
 ## Current Terrain
 
@@ -135,7 +150,7 @@ Como renderer, preciso derivar rota, navegação, componente e ação da sessão
 | Header | `src/renderer/src/componentes/PageHeader.tsx` | Breadcrumb/actions. | Reusar sem toggle IA; adicionar identificação do caso quando aplicável. |
 | UI primitives | `src/renderer/src/components/ui/*` | shadcn/Radix. | Reusar; não criar segundo design system. |
 | Anamnese | `src/renderer/src/anamnese/*` | Composer e oito editors. | Reusar dentro da triagem após contratos de widgets. |
-| Home | `src/renderer/src/paginas/Dashboard.tsx` | Placeholder. | Substituir por `RoleHomePage`. |
+| Home | `src/renderer/src/paginas/Dashboard.tsx` | Placeholder. | Substituir por `IntegratedHomePage`. |
 | IA | `src/renderer/src/paginas/IaPagina.tsx`, `IaChatPanel.tsx` | Chat cloud herdado. | Não reutilizar como solução clínica; as superfícies assistivas serão compostas depois que o Analyst de IA fechar. |
 | Config atual | `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | Token/modelo IA. | Não é contrato canônico; sua permanência ou substituição depende do Build de IA e da política de rede aprovada. |
 | Tests | `tests/renderer/*`, `tests/e2e/app-flow.spec.ts` | Congelam casca atual. | Reescrever para mapa por papel e jornada ponta a ponta. |
@@ -184,7 +199,7 @@ Como renderer, preciso derivar rota, navegação, componente e ação da sessão
 
 ```mermaid
 flowchart TD
-  login["S00 Login"] --> home["S01 Home do papel"]
+  login["S00 Login integrado"] --> home["S01 Home da demonstração"]
   home --> intake["S02 Entrada do encaminhamento"]
   intake --> nursingList["S04 Fila de triagem"]
   nursingList --> triage["S05 Anamnese de enfermagem"]
@@ -201,20 +216,21 @@ flowchart TD
   caseDetail --> triage
   caseDetail --> schedule
   caseDetail --> evaluation
-  home -->|"ADMIN"| settings["S12–S16 Configurações"]
+  home --> settings["S12–S16 Configurações"]
+  home --> assistant["S17 Assistente isolado"]
 ```
 
 ### Configurações
 
 ```mermaid
 flowchart LR
-  config["Configurações — ADMIN"] --> users["Usuários e acesso"]
+  config["Configurações da demonstração"] --> account["Conta fixture — leitura"]
   config --> operation["Serviços/procedimentos — leitura"]
   config --> capacity["Agenda e capacidade"]
   config --> catalogs["Catálogos e formulários — leitura"]
   config --> audit["Auditoria — leitura"]
   theme["Tema claro/escuro/sistema"] --> shell["Rodapé da casca — preferência local"]
-  ai["IA, memória e conhecimento"] --> unresolved["Superfícies pendentes do Analyst e do Build do domínio"]
+  ai["IA, memória e conhecimento"] --> assistant["/assistente — rota própria"]
 ```
 
 ### Estados do caso que dirigem as superfícies
@@ -257,29 +273,27 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 
 ## Canonical Surface Catalog
 
-### S00 — Login (`/login`)
+### S00 — Login integrado (`/login`)
 
-- Actor: qualquer usuário direto sem sessão.
+- Actor: operador da demonstração sem sessão.
 - Input: e-mail e senha.
-- Output: sessão e redirecionamento à home do papel.
+- Output: sessão `INTEGRATED_DEMO` e redirecionamento à home geral.
 - Components: marca Antessala, `LoginForm`, password reveal, submit, error alert.
 - States: idle, submitting, generic credential failure and local database error. Conta
   ausente, senha errada e conta inativa usam a mesma mensagem pública; somente auditoria e
   administração distinguem o motivo.
 - Forbidden: cadastro, confirmação, recuperação, social login e seleção manual de papel.
 
-### S01 — Home do papel (`/`)
+### S01 — Home da demonstração (`/`)
 
 - Actor: todos autenticados.
-- Input: `HomeSummaryDTO` já filtrado pelo papel.
+- Input: `IntegratedHomeSummaryDTO` com contagens operacionais sintéticas.
 - Output: navegação para o próximo conjunto de trabalho.
-- Reception: `Novas entradas`, `Aguardando triagem`, `Prontos para agendar`, `Consultas hoje`.
-- Nursing: `Aguardando triagem`, `Em rascunho`, `Com pendência de dado`, `Necessidade calculada aguardando decisão`.
-- Anesthesiologist: `Hoje`, `Aguardando avaliação`, `Com pendência`, `Retornos`.
-- Requester: somente `Pendências atribuídas` e `Resultados novos` do serviço; não existe
-  acompanhamento geral do caso antes do resultado.
-- Admin: atalhos para usuários, cadastros, capacidade, catálogos e auditoria; nenhuma métrica clínica.
-- States: loading skeleton, zero work with role-specific message, error with retry.
+- Regiões: `Recepção`, `Enfermagem`, `Agenda`, `Anestesiologia`, `Solicitante` e
+  `Configuração`, cada uma com contagens e próxima ação.
+- Atalhos: Nova entrada, Triagens, Para agendar, Agenda, Avaliações, Pendências, Resultados,
+  Assistente e Configurações.
+- States: loading skeleton, zero work, erro com retry e fixture vazia.
 
 ### S02 — Entrada do encaminhamento (`/casos/novo`)
 
@@ -347,7 +361,9 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 ### S05 — Anamnese de enfermagem (`/casos/:casoId/triagem`)
 
 - Actor: `ENFERMAGEM`; read-only para anestesiologista após submissão.
-- Structure: case context, completion summary, Composer de widgets, source/provenance, validation list, ação de submissão final e, depois do cálculo, decisão explícita de confirmar ou sobrescrever com justificativa.
+- Structure: shell de editor DietFlow, contexto do caso, toolbar, canvas único de
+  `WidgetCard`, DnD, drawer multisseleção, protocolos/templates, provenance, validação e
+  decisão explícita de confirmar ou sobrescrever a necessidade.
 - Output em duas etapas: `clinicalAnamnesis.submitFinal` grava a revisão final efetiva e o
   resultado `PROPOSED`, `HUMAN_DEFINITION_REQUIRED` ou `OUT_OF_DEMO_RANGE`; somente
   `confirm` ou `override` de proposta válida publica a necessidade e move o caso para
@@ -359,6 +375,8 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 - States: loading, draft clean, draft dirty, autosave/saving, incomplete, ready, submit confirmation, proposing atomically, proposal awaiting decision, confirming/overriding, published/read-only, version conflict, save error.
 - Não existe prévia de classificação mutável. Antes da submissão há apenas validação/completude; depois dela a tela renderiza o requirement canônico calculado e exige uma decisão auditável.
 - A saída clínica e os campos exatos pertencem ao Analyst de widgets/classificação; esta superfície não adiciona campo por conta própria.
+- Nenhum painel, chat, badge ou ação de IA é montado nesta rota. Propostas são decididas em
+  S17 e só então aplicadas ao draft como operação clínica comum.
 
 ### S06 — Casos para agendar (`/agendamentos`)
 
@@ -374,16 +392,22 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 
 - Actor: somente `RECEPCAO`. O anestesiologista vê a fila compartilhada de capacidade em
   S08, sem montar a rota operacional de agenda.
-- Views: semana visual e lista acessível dos slots compatíveis.
+- Views: FullCalendar em mês/semana/dia, Programação acessível e Para agendar.
 - Input: categoria/duração/prazo do caso; range de datas.
 - Output: `BookingDTO` discriminado ou conflito recuperável.
-- Components: `ScheduleToolbar`, `WeeklyAgendaGrid`, `AccessibleSlotTable`, `BookingDrawer`.
+- Components: `AgendaHeaderBar`, `AgendaCalendar`, `AgendaProgramacao`,
+  `AgendaParaAgendar` e `UnifiedAgendaDrawer`.
 - States: loading, available, no compatible slot, slot selected, confirming, `CONFIRMED`, `CHECKED_IN`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, concurrent conflict/reload.
 - Confirmar, reagendar, cancelar e no-show exigem `scheduling:booking:manage`; check-in é command explícito da `RECEPCAO` sob `scheduling:booking:check-in` e só habilita entre `slot.startsAt - 30 minutos` e `slot.consultationEndsAt`. `COMPLETED` é publicado atomicamente quando o anestesiologista inicia o encounter após o check-in, não por ação desta tela; a occupancy permanece até `slot.endsAt`.
 - Antes do encontro, a tela permite anular check-in equivocado com motivo. Presença sem
   início ou impossibilidade registrada devolve INITIAL ao agendamento e reabre RETURN; a
   UI nunca comprime isso em no-show ou resultado clínico.
 - Rule: só slots retornados pelo backend como compatíveis podem ser selecionados; UI não calcula capacidade.
+- Toolbar: dropdowns de modo/visão, busca, filtros de tipo/status/classe/recurso, `Novo` e
+  `Mais`, iguais em comportamento ao padrão DietFlow adaptado.
+- DnD/resize sempre chama o backend. Rejeição executa revert e preserva a reserva.
+- A identidade que filtra slots é `schedulingRequirementId`/ReturnRequest, nunca
+  `patientId`, tipo de paciente ou label visual.
 
 ### S08 — Avaliações do anestesiologista (`/avaliacoes`)
 
@@ -435,12 +459,11 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
   externo. Autoria, horário e hash aparecem como proveniência local, nunca assinatura
   digital. Nova versão corrigida exige novo handoff. A confirmação não agenda cirurgia.
 
-### S12 — Usuários e acesso (`/configuracoes/usuarios`)
+### S12 — Conta da demonstração (`/configuracoes/conta`)
 
-- Actor: `ADMIN`.
-- Content/actions: list, search and create; edit role/scope/status and reset password somente
-  para `origin=ADMIN`. Linhas `origin=FIXTURE` mostram badge “Conta da demo”, sem controles
-  de mutação.
+- Actor: responsabilidade `ADMIN` da sessão integrada.
+- Content: nome, e-mail, modo `INTEGRATED_DEMO`, estado e último login.
+- Actions: nenhuma mutação de identidade ou papel. A conta fixture é somente leitura.
 - Contract: `ANALYST-acesso-e-auditoria.md`.
 
 ### S13 — Inventário operacional da demo (`/configuracoes/operacao`)
@@ -480,6 +503,23 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 - Contract: `ANALYST-acesso-e-auditoria.md`.
 - No edit/delete/export in MVP.
 
+### S17 — Assistente (`/assistente`)
+
+- Actor: sessão integrada, com responsabilidade `ENFERMAGEM` para proposta de campo e
+  `ANESTESIOLOGISTA` para consulta/curadoria de conhecimento.
+- Layout: contexto à esquerda, conversa/transcript sintético ao centro e revisão de
+  propostas/relacionamentos à direita ou em drawer conforme viewport.
+- Case scope: a pessoa escolhe explicitamente um caso e revisão `DRAFT`. Sem caso, o
+  Assistente opera apenas fixture sintética e não aplica nada.
+- Actions: gerar propostas, inspecionar origem/explicação, aceitar, rejeitar ou corrigir;
+  consultar conhecimento; sugerir relação; aprovar e ativar em ações separadas.
+- Output: decisões aceitas/corrigidas chamam operações canônicas da anamnese. A tela de
+  anamnese não recebe UI de IA.
+- Forbidden: painel global, overlay, botão IA no header, aplicação em lote sem revisão,
+  mudança de requirement/booking e chat sem finalidade.
+- States: sem caso, sem configuração, offline, gerando, proposta draft, conflito de versão,
+  conhecimento vazio, erro cloud e fallback manual.
+
 ### Global surfaces
 
 - `403`: session exists but capability/scope is absent; no protected content mounts.
@@ -487,40 +527,44 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 - Fatal boundary: local recovery message, restart action and correlation ID; no raw stack in UI.
 - Logout confirmation appears only if current form is dirty; otherwise immediate.
 
-## Navigation By Capability
+## Navegação integrada
 
-Os exemplos abaixo são o efeito de `routeAccess/navAccess` sobre
-`SessaoPublica.capabilities`, não uma segunda matriz de autorização por enum de papel.
-`allOf` exige todas as capabilities; `anyOf`, ao menos uma. Cada item aparece somente quando
-`navAccess` passa; `routeAccess` é reavaliado antes da montagem e o main reaplica capability
-e escopo em toda leitura e mutação.
+`SessaoPublica.capabilities` contém o conjunto da demonstração. A sidebar não filtra por
+papel e não oferece seletor de papel. `routeAccess` garante sessão; actions continuam
+associadas no main à responsabilidade do domínio.
 
-| Conta fixture | Primary navigation resultante |
+| Grupo | Itens |
 |---|---|
-| `RECEPCAO` | Início · Nova entrada · Pendências · Para agendar · Agenda · Resultados (status/handoff) |
-| `ENFERMAGEM` | Início · Triagens · Pendências |
-| `ANESTESIOLOGISTA` | Início · Avaliações · Pendências · Resultados |
-| `SOLICITANTE` | Início · Pendências · Resultados |
-| `ADMIN` | Início · Configurações |
+| Visão geral | Início |
+| Recepção | Nova entrada · Pendências · Para agendar · Agenda · Resultados |
+| Enfermagem | Triagens |
+| Anestesiologia | Avaliações · Pendências · Resultados |
+| Inteligência | Assistente |
+| Sistema | Configurações |
 
 Case detail is reached from worklists and need not become a permanent menu item.
+
+O dropdown do usuário contém `Configurações`, `Claro | Escuro | Sistema`, `Amostra de uso`
+e `Sair`. `Amostra de uso` explica o roteiro e pode repor somente fixtures sintéticas da
+demonstração após confirmação; nunca apaga ou reinterpreta um caso fora desse conjunto.
 
 ## Configuration Decisions
 
 | Domain | Editable in MVP? | Why / source |
 |---|---:|---|
-| Users, roles, status, password reset | only `origin=ADMIN`; fixtures read-only | Required to prepare extra demo accounts without drifting the five boot fixtures. |
+| Conta integrada | no, fixture read-only | Um login percorre toda a prova; RBAC institucional fica futuro. |
 | Services and procedures | no, read-only fixtures | Required as stable synthetic snapshots; changing them needs seed/version review. |
 | Requester professionals | no master cadastro | Name/specialty/contact are captured in the referral snapshot. |
 | Slot classes/durations/buffers | no, read-only fixtures | `QUICK 20+5`, `STANDARD 35+5`, `EXTENDED 50+10` são `DEMO_DECISION` congeladas para a PoC, não evidência institucional. |
 | Resources, dated availability windows and blocks | yes | Admin prepares capacity without changing classification semantics or exposing a recurrence editor. |
 | CID, medications, MET, comorbidities | no, read-only integrity | Versioned clinical catalogs must not drift through ad-hoc UI. |
-| Widget definitions/templates | no, read-only version/link | Clinical form changes require versioned artifact and tests. |
+| Widget definitions | no, registry versionado | Campos clínicos exigem artefato e teste. |
+| Protocolos/templates de anamnese | sim, composição versionada | Guarda widgets/ordem; nunca respostas ou caso. |
 | Classification rules | no | Rule editing is unsafe and outside hack; fixture/version is displayed. |
 | Institution/location | no | Single synthetic facility fixture. |
-| Theme | local shell selector | Preference of workstation, no business persistence. |
-| IA provider/token/model | `UNRESOLVED` | Rede opcional faz parte da prova, mas configuração, segredo e permissões dependem do Analyst/Build de IA. |
-| Memory/RAG/import | `UNRESOLVED` | A prova exige recuperação de conhecimento aprovado; a superfície e a allowlist ainda não estão fechadas. |
+| Theme | dropdown do usuário | `Claro/Escuro/Sistema`, sem significado clínico. |
+| Gemini/modelo/token | sim, configuração técnica | Somente Gemini; uso sintético e ação explícita. |
+| Conhecimento | sim, lifecycle próprio | Sugestão, aprovação e ativação são ações separadas. |
 | Backup/reset/retention | no | Operational tooling outside pitch; reset is test harness only. |
 
 ## Rules And Invariants
@@ -537,7 +581,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 10. Focus moves to dialog title on open, returns to trigger on close and moves to error summary after invalid submit.
 11. All controls have visible label or accessible name; icon-only actions have tooltip and `aria-label`.
 12. Tables keep headers; at `1024 × 640`, nonessential columns collapse into row detail instead of horizontal page overflow.
-13. Agenda offers a keyboard-operable list view equivalent to the visual week.
+13. Agenda offers a keyboard-operable list view equivalent to month/week/day calendar actions.
 14. Target viewports: 1024×640 minimum functional, 1280×720 proof, 1440×900 comfort. Mobile below 768 is not an acceptance target.
 15. Theme selector remains `Claro/Escuro/Sistema`; no clinical meaning depends on theme.
 16. Chat genérico, Memory legado e painel global não viram produto por reuso automático; somente superfícies assistivas fechadas pelo domínio de IA entram no shell.
@@ -546,13 +590,15 @@ Case detail is reached from worklists and need not become a permanent menu item.
 19. Configurations with clinical meaning are versioned/read-only; admin does not edit JSON.
 20. Admin settings never expose clinical case content.
 21. Reception projections omit anamnese; requester has only assigned pendency and final-result projections for its service; admin projections omit cases.
-22. `WeeklyAgendaGrid` and its accessible table display backend-provided `SlotCardDTO[]`; neither derives slot validity.
+22. FullCalendar, Programação e Para agendar exibem a projeção do backend; nenhum deriva
+    slot, duração ou compatibilidade.
 23. A rota `Configurações` não expõe controles cloud herdados sem contrato aprovado de segredo, rede, permissão e falha segura.
-24. Menus são derivados de `SessaoPublica.capabilities` e `navAccess`; `CurrentSession`/`ActorContext` nunca chegam ao renderer, e papel é fixture de concessões, não atalho de autorização.
+24. A conta integrada recebe o menu completo; `CurrentSession`/`ActorContext` nunca chegam
+    ao renderer, e a responsabilidade da action pertence ao registry main-only.
 25. `SOLICITANTE` não possui query geral de casos. Pendência e resultado exigem `serviceId`
     da sessão no main e retornam payload redigido; mudança de serviço revoga leituras e
     replay não devolve projeção antiga.
-25a. Logout, revogação, troca de papel/serviço ou mudança do serviço do caso desmontam a
+25a. Logout, revogação da sessão ou mudança do serviço do caso desmontam a
      projeção protegida e limpam store/cache correspondente; resposta em voo revalida o
      escopo antes de aparecer.
 25b. Lista, busca, contagem, paginação, vazio, erro e identificador restrito não revelam
@@ -585,6 +631,10 @@ Case detail is reached from worklists and need not become a permanent menu item.
     anestesiologista que iniciou de fato.
 41. S11 não possui cancelamento de entrega; `finalizedBy`, `finalizedAt` e `contentHash` são
     proveniência, não assinatura digital.
+42. A anamnese usa Composer, DnD, drawer e protocolos/templates; nunca monta IA.
+43. `/assistente` é a única superfície de IA; não existe painel global ou toggle no header.
+44. A agenda usa `schedulingRequirementId`/ReturnRequest para compatibilidade, nunca
+    `patientId` ou tipo de paciente.
 
 ## Architecture Risks
 
@@ -594,7 +644,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 | critical | Router/sidebar can expose same UI to every role. | `AppSidebar.tsx:28-32`. | Typed surface registry + ProtectedRoute + main guard. |
 | high | `Configurações` atuais enviam conteúdo/token cloud sem o contrato de privacidade do novo domínio. | `ConfiguracoesPagina.tsx:205-209`. | Não adotar como está; substituir ou adaptar somente depois do Build de IA. |
 | high | Painel global de IA pode receber texto clínico por acidente. | `App.tsx:42`; `IaChatPanel.tsx:8-43`. | Remover o mount global; futuras superfícies precisam ser delimitadas por caso, ator e finalidade. |
-| high | Grade semanal criada antes do contrato pode virar fonte de verdade. | No agenda exists in current code. | `SlotCardDTO[]` do backend; grade fina + lista acessível, sem engine. |
+| high | FullCalendar virar fonte de verdade. | No agenda exists in current code. | range DTO do backend, actions main-only e revert obrigatório. |
 | high | Uma tela de caso genérica pode vazar campos entre papéis. | Current app has no role projections. | DTO-specific projections; component sections gated by data/capability. |
 | high | Pendência atribuída sem worklist compartilhada fica invisível para recepção, enfermagem ou solicitante. | Quatro papéis podem ser owner pelo contrato de avaliação. | `/pendencias` + query filtrada no main + ownership no command. |
 | medium | Existing tests freeze obsolete three-item menu. | `tests/e2e/app-flow.spec.ts:13-30`. | Replace with per-role route and journey tests. |
@@ -607,19 +657,20 @@ Case detail is reached from worklists and need not become a permanent menu item.
 |---|---|---|---|
 | `src/renderer/src/navigation/surfaces.ts` | new registry | One map for paths/nav/capabilities. | registry uniqueness/coverage test. |
 | `src/renderer/src/App.tsx` | rebuild route composition | Cobrir o catálogo canônico e retirar o painel global herdado; superfícies assistivas entram por contrato próprio. | per-role router tests. |
-| `src/renderer/src/componentes/AppSidebar.tsx` | role-aware nav | Only work of current actor. | accessible role matrix test. |
-| `src/renderer/src/paginas/Dashboard.tsx` | role home | Replace placeholder. | five home fixtures. |
+| `src/renderer/src/componentes/AppSidebar.tsx` | integrated nav | Todos os grupos e user dropdown. | menu completo + teclado. |
+| `src/renderer/src/paginas/Dashboard.tsx` | integrated home | Replace placeholder. | all responsibility fixtures. |
 | `src/renderer/src/paginas/casos/*` | new | Intake/detail/timeline. | form, DTO redaction, not found/forbidden. |
 | `src/renderer/src/paginas/triagens/*` | new | Worklist and anamnese. | widget/completude/dirty/conflict tests. |
 | `src/renderer/src/paginas/pendencias/*` | new | Worklist compartilhada por owner e registro de evidência. | role/service scope, metadata-only document and evidence-submission tests. |
-| `src/renderer/src/paginas/agenda/*` | new | Booking and own weekly-grid/list projection. | no-slot and concurrent conflict. |
+| `src/renderer/src/paginas/agenda/*` | new | FullCalendar, Programação, Para agendar e drawer. | DnD/revert, no-slot e conflito. |
 | `src/renderer/src/paginas/avaliacoes/*` | new | Medical workflow. | pending/return/complete. |
 | `src/renderer/src/paginas/resultados/*` | new | Requester handoff. | service scoping and PDF. |
-| `src/renderer/src/paginas/configuracoes/*` | new | Admin users, fixture inventories, capacity, catalog status and audit. | write/read-only boundaries. |
+| `src/renderer/src/paginas/assistente/*` | new | IA isolada e revisão de propostas. | sem mount global ou aplicação automática. |
+| `src/renderer/src/paginas/configuracoes/*` | new | Conta fixture, inventários, capacidade, catálogos e auditoria. | write/read-only boundaries. |
 | `src/renderer/src/paginas/ConfiguracoesPagina.tsx` | reavaliar após o Build de IA | Provider, segredo e finalidade de rede ainda não têm contrato aprovado. | nenhum controle cloud herdado sem guard, aviso e fallback. |
 | `src/renderer/src/componentes/IaChatPanel.tsx` | não montar globalmente | Não equivale às futuras superfícies assistivas vinculadas ao caso. | scan de mount global + teste de escopo futuro. |
 | `tests/renderer/*` | update/new | Component/state matrix. | Vitest. |
-| `tests/e2e/app-flow.spec.ts` | replace | Current contract is obsolete. | five-role end-to-end. |
+| `tests/e2e/app-flow.spec.ts` | replace | Current contract is obsolete. | one-session end-to-end. |
 
 ### View DTO boundaries
 
@@ -639,7 +690,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 ## Acceptance Criteria
 
 - [ ] Uma instalação limpa abre `/login`, não a casca clínica.
-- [ ] Cada fixture abre uma home e um menu específicos ao papel.
+- [ ] A fixture integrada abre a home geral e todos os grupos da sidebar.
 - [ ] Renderer usa somente `SessaoPublica`; testes de `routeAccess/navAccess` cobrem `allOf` parcial/completo e cada alternativa de `anyOf`.
 - [ ] O fluxo completo passa por S02 → S05 → S07 → S09 → S11 sem rota improvisada.
 - [ ] O detalhe do caso mostra o próximo responsável e apenas seções autorizadas.
@@ -649,9 +700,8 @@ Case detail is reached from worklists and need not become a permanent menu item.
 - [ ] Recepção não vê widgets/respostas clínicas em tela ou payload.
 - [ ] Solicitante não possui detalhe/listagem geral; vê somente pendência própria e resultado
       final do serviço atual.
-- [ ] Admin não vê casos; vê usuários, operação, agenda, catálogos e auditoria.
-- [ ] Usuário `origin=FIXTURE` aparece somente leitura; todos os fluxos administrativos de
-      edição/reset/status usam conta `origin=ADMIN`.
+- [ ] A configuração não usa a responsabilidade ADMIN para alterar conteúdo clínico.
+- [ ] Conta `origin=FIXTURE` aparece somente leitura e não possui CRUD institucional.
 - [ ] Entrada permite nomes, conteúdo e referência iguais; referência repetida gera alerta
       e confirmação de novo encaminhamento, nunca bloqueio automático.
 - [ ] Triagem diferencia rascunho, incompleto, pronto, submitted, conflito e erro.
@@ -662,6 +712,8 @@ Case detail is reached from worklists and need not become a permanent menu item.
 - [ ] Correção aplica a matriz de impacto; revisão final inválida permanece histórica e não
       alimenta agenda, enquanto nova revisão é produzida.
 - [ ] Agendamento oferece somente slots compatíveis e trata falta de vaga/conflito.
+- [ ] FullCalendar oferece mês/semana/dia, Programação e Para agendar com dropdowns, DnD e
+      revert autoritativo.
 - [ ] S06 mostra em uma única fila discriminada casos `INITIAL READY_FOR_SCHEDULING` e
       retornos `READY_FOR_BOOKING`, sem perder a origem da need.
 - [ ] Agenda representa os cinco estados de `BookingDTO`; check-in exige `scheduling:booking:check-in`, separado das demais ações `scheduling:booking:manage`.
@@ -681,18 +733,19 @@ Case detail is reached from worklists and need not become a permanent menu item.
 - [ ] Serviços e procedimentos aparecem com source/revision e sem controles de mutação; profissional solicitante permanece snapshot do encaminhamento.
 - [ ] Admin prepara recursos, janelas datadas e bloqueios pelos contratos do domínio agenda; classes/durações/buffers permanecem read-only e a agenda mostra materialização derivada.
 - [ ] Catálogos/widgets/regras aparecem com versão e integridade, sem editor clínico.
-- [ ] Uso assistivo de IA, memória e transcrição possui superfície, permissão e fallback definidos pelo novo Analyst.
-- [ ] Tema claro/escuro/sistema continua acessível no rodapé.
+- [ ] `/assistente` concentra IA/memória e não existe IA dentro de anamnese, header ou
+      painel global.
+- [ ] Tema claro/escuro/sistema continua acessível no dropdown do usuário.
 - [ ] Todas as superfícies têm loading, vazio, erro e forbidden pertinentes.
 - [ ] Teclado completa login, formulários, dialogs, listas e reserva via list view.
 - [ ] 1024×640 não perde ação primária; 1280×720 é a prova visual do pitch.
-- [ ] Teste E2E percorre o caso ponta a ponta trocando entre as cinco contas sintéticas.
+- [ ] Teste E2E percorre o caso ponta a ponta na mesma conta integrada.
 - [ ] Não existe rota/action de backup, restore ou reset do produto; a limpeza E2E permanece no harness.
 
 ## Open Questions
 
-As superfícies de captura, revisão de sugestão e gestão mínima de conhecimento estão
-abertas; todas as demais dependem dos contratos de domínio e dos futuros Surface Blueprints.
+Os detalhes finais do Assistente dependem do Build de IA; todas as superfícies dependem dos
+contratos canônicos de domínio e dos futuros Surface Blueprints.
 
 Futuro, fora do hack:
 
@@ -705,12 +758,13 @@ Futuro, fora do hack:
 
 ## Resultado da investigação
 
-Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+Os achados e limites deste domínio são indexados em `hack/analysis.md`. Pendências
 institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e de todo Writing Plan que tocar rota, layout,
+  navegação, estado de UI, componente ou configuração.

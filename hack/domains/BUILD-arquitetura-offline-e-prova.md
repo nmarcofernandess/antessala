@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/BUILD.md`.
+- Papel: `CANONICAL_DOMAIN_BUILD`.
+- Indexado por: `hack/BUILD.md`.
 - Gate ou assinatura individual: inexistente.
-- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
-- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
+- O estado de maturidade permanece no tracker único; o hub não pode promovê-lo sozinho.
+- Este arquivo é a fonte técnica do domínio. `hack/BUILD.md` apenas integra dependências;
+  não substitui, resume com perda nem supera este contrato.
 
 ## Sources Consumed
 
@@ -29,7 +30,7 @@
 
 - O app inicia e executa a demonstração clínica sem conexão.
 - A persistência sobrevive ao fechamento normal do app.
-- A sessão local autenticada mostra usuário e papel em todas as superfícies protegidas;
+- A sessão local autenticada mostra a conta integrada e a responsabilidade da ação;
   ela não se apresenta como login hospitalar.
 - A tela administrativa local mostra versão do schema, revisão dos catálogos e contagens.
 - Backup, restore e reset não são superfícies do MVP; o harness usa diretório temporário.
@@ -37,9 +38,9 @@
 
 ### Superfícies
 
-1. **Login local** — recebe e-mail e senha de uma conta real local criada pelo seed ou pelo
-   admin; trocar de papel exige logout e login em outra conta.
-2. **Indicador de sessão** — exibe usuário, papel e modo `Demonstração local` em todas as telas protegidas.
+1. **Login local** — recebe e-mail e senha da conta fixture integrada criada pelo seed.
+2. **Indicador de sessão** — exibe conta, modo `Demonstração integrada` e a responsabilidade
+   associada à ação; não existe troca de papel por logout/login.
 3. **Configurações da demo** — saúde local e revisões de catálogo, somente leitura.
 4. **Diagnóstico de boot** — erro local para migration/seed corrompido; não abre uma UI clínica parcialmente inicializada.
 5. **Prova offline** — artefato de teste, não botão de produção, que registra tentativas de rede e resultado do fluxo.
@@ -48,7 +49,7 @@
 
 | Superfície | Empty | Loading | Error | Blocked | Success |
 |---|---|---|---|---|---|
-| Login | formulário vazio | autenticando no main | credencial inválida | sessão invalidada | home do papel |
+| Login | formulário vazio | autenticando no main | credencial inválida | sessão invalidada | home integrada |
 | Saúde local | sem leitura | verificando banco/assets | migration/seed inválido | UI clínica indisponível | versões e contagens |
 
 ## Backend Blueprint
@@ -73,7 +74,7 @@
 | `src/main/network/network-intent.ts` | criar | choke point interno; somente Gemini por ações explícitas do domínio IA, sem transporte genérico público |
 | `scripts/check-active-router-network-boundary.ts` | criar | falhar se o grafo ativo importar cliente cloud ou transporte direto |
 | `scripts/proof/create-demo-userdata.ts` | criar | diretório temporário guardado + seed determinístico para provas |
-| `src/main/index.ts` | adaptar | migrate → seed/cinco fixtures → acesso sem sessão → guards/routers → window |
+| `src/main/index.ts` | adaptar | migrate → seed/fixture integrada → acesso sem sessão → guards/routers → window |
 | `src/main/renderer-network-policy.ts` | manter/adaptar | bloqueio fail-closed do renderer |
 | `src/main/export/pdf.ts` | manter | PDF isolado e sem rede |
 
@@ -125,7 +126,7 @@ triggers e dos serviços de `usuarios`, `sessoes` e `auditoria_eventos`. Esta ar
 - inclui a migration produzida por aquele domínio na sequência do runner;
 - chama o hook canônico de boot para iniciar com `CurrentSession = null` e encerrar
   recibos que tenham ficado abertos;
-- semeia as cinco contas fixture pelo seed canônico de acesso;
+- semeia a conta fixture integrada pelo seed canônico de acesso;
 - consome `auth.login`, `CurrentSession`, `ActorContext`, guards e audit service;
 - nunca cria DDL, coluna, trigger, writer ou ledger alternativo para essas entidades.
 
@@ -292,10 +293,12 @@ entra em `LocalHealthDTO`, não em auditoria de usuário.
 1. Renderer: manter bloqueio `http:`, `https:`, `ws:` e `wss:`; origin de dev permitido somente quando `is.dev`.
 2. PDF: sessão própria, JavaScript desligado e todas as requisições bloqueadas.
 3. Main: o router ativo nasce de uma allowlist; transporte externo direto é proibido no
-   grafo alcançável. `NetworkIntent` é choke point interno e sua allowlist é vazia.
-4. IA: código pode permanecer dormente, mas `IA_TEST_CONNECTION`, `IA_CHAT` e equivalentes
-   ficam fora do router ativo. Se algum canal legado precisar permanecer no preload por
-   compatibilidade, retorna `FEATURE_DISABLED` antes de importar/chamar o cliente cloud.
+   grafo alcançável. `NetworkIntent` é choke point interno; sua allowlist contém somente as
+   finalidades Gemini fechadas pelo Build de IA: teste técnico, transcrição sintética e
+   geração de propostas.
+4. IA: `IA_CHAT` genérico e equivalentes ficam fora do router ativo. Entram apenas os canais
+   tipados de `/assistente` e `/configuracoes/ia`; cada chamada exige ação explícita,
+   finalidade fechada, host fixo, payload limitado e preservação do caminho manual.
 5. Nenhum command aceita URL arbitrária, redirect externo ou remote asset.
 
 ### Repetição segura da prova
@@ -350,9 +353,9 @@ entra em `LocalHealthDTO`, não em auditoria de usuário.
 ### IPC e segurança
 
 - schemas rejeitam campos extras, payload grande, enum/id/version inválidos;
-- `auth.login` valida as cinco contas fixture locais e rejeita senha inválida sem revelar
+- `auth.login` valida a conta fixture integrada e rejeita senha inválida sem revelar
   existência da conta;
-- cada ação tem teste positivo e negativo por papel;
+- cada ação tem teste positivo e negativo por responsabilidade, sob a mesma sessão;
 - `localHealth.get` falha para todos os papéis exceto `ADMIN`;
 - `config.catalogs.getStatus` preserva a ordem fechada do manifesto, não retorna linhas de
   catálogo e falha para todos os papéis exceto `ADMIN`;
@@ -387,7 +390,7 @@ entra em `LocalHealthDTO`, não em auditoria de usuário.
 ### E2E obrigatório
 
 1. diretório de dados vazio → boot → migrations/seed → UI;
-2. entrar com cada uma das cinco contas fixture e confirmar ação permitida/bloqueada;
+2. entrar uma vez com a conta integrada e confirmar ferramentas visíveis, action authority e bloqueios semânticos;
 3. executar fluxo sintético canônico, fechar/reabrir e conferir persistência;
 4. exportar PDF sem rede;
 5. encerrar e repetir a prova em um segundo diretório temporário;
@@ -442,12 +445,12 @@ Qualquer piloto real reinicia em PRD → Analyst → Build com threat model e co
 - [ ] Arquivos, schema, IPC e DTOs reconciliados com o HEAD.
 - [ ] Boot, migrations, seed, rede, IA opcional e prova revisados.
 - [ ] Validação, rollback e compatibilidade PGlite atacados no review final de congruência.
-- [x] Conteúdo da PoC incorporado ao Analyst e ao BUILD integrados.
-- [ ] Review final de congruência do BUILD integrado.
+- [x] Dependências entre os oito domínios descritas no hub técnico.
+- [ ] Review final de congruência dos oito Builds e do hub.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_BUILD`.
-- Autoridade canônica: `hack/BUILD.md`.
+- Estado: `CANONICAL_DOMAIN_BUILD`.
+- Autoridade canônica: este arquivo no domínio de arquitetura offline e prova.
 - Gate individual: inexistente.
-- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans de infraestrutura, boot e prova.

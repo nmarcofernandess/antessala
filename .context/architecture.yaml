@@ -541,5 +541,5 @@ known_risks:
 
 execution_state:
   source: "hack/status.json"
-  current: "final_congruence_review"
-  note: "Inventário técnico; não cria gate nem substitui o BUILD integrado."
+  current: "documentation_reconciliation"
+  note: "Inventário técnico; não cria gate nem substitui os Builds canônicos de domínio."

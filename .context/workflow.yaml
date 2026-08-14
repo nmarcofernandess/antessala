@@ -1,29 +1,31 @@
-schema_version: "antessala.workflow-context.v2"
+schema_version: "antessala.workflow-context.v3"
 
-purpose: "Levar a PoC do produto aprovado ao código com uma única cadeia canônica e sem gates documentais individuais."
+purpose: "Levar o produto aprovado a fatias implementáveis sem deixar hubs apagarem contratos de domínio."
 
 authority:
   order:
     - "Marco e hack/PRD.md aprovado"
-    - "hack/analysis.md"
-    - "hack/BUILD.md"
-    - "Warlog e recorte de minispecs"
-    - "Writing Plan da minispec"
+    - "Analyst canônico do domínio dono"
+    - "Build canônico do domínio dono"
+    - "Writing Plan da fatia"
     - "código e testes do HEAD"
-  conflict_rule: "Parar e corrigir o artefato inferior; nunca escolher silenciosamente."
-  domain_appendices: "hack/domains/* preserva detalhe e evidência, mas não possui gate individual nem supera a síntese."
+    - "hubs e documentação auxiliar"
+  conflict_rule: "Parar, reportar e corrigir a fonte canônica. Nunca escolher silenciosamente."
+  hubs: "hack/ANALYST.md, hack/analysis.md e hack/BUILD.md são índices/mapas; não são atalhos de leitura."
 
 flow: |
   flowchart LR
-      PRD["PRD aprovado"] --> ANALYST["analysis.md integrado"]
-      ANALYST --> BUILD["BUILD.md integrado"]
-      BUILD --> REVIEW["Review final de congruência"]
-      REVIEW --> WARLOG["Warlog corta minispecs"]
-      WARLOG --> WP["Writing Plan da minispec"]
+      PRD["PRD aprovado"] --> DOMAIN_A["8 Analysts de domínio"]
+      DOMAIN_A --> SYNTH["analysis.md hub"]
+      SYNTH --> DOMAIN_B["8 Builds de domínio"]
+      DOMAIN_B --> BUILD["BUILD.md hub"]
+      BUILD --> REVIEW["Review final independente"]
+      REVIEW --> WARLOG["Warlog exaustivo"]
+      WARLOG --> WP["Writing Plan da fatia"]
       WP --> RED["Primeiro teste TDD em RED"]
       RED --> CODE["Implementação"]
-      CODE --> QA["QA da minispec"]
-      QA --> MORE{"Outra minispec?"}
+      CODE --> QA["QA da fatia"]
+      QA --> MORE{"Outra fatia?"}
       MORE -->|"sim"| WP
       MORE -->|"não"| FINAL["QA final ponta a ponta"]
 
@@ -31,54 +33,61 @@ phases:
   prd:
     owner: "hack/PRD.md"
     state: "APPROVED_PRODUCT_BASELINE"
-    meaning: "Define problema, goal, atores, fluxo e fronteiras."
   analyst:
-    owner: "hack/analysis.md"
-    state: "CONSOLIDATED_FOR_BUILD"
-    meaning: "Define entidades semânticas, estados, regras, autoridade humana, falhas e proibições."
-    appendices: "hack/domains/ANALYST-*.md"
+    owners: "hack/domains/ANALYST-*.md"
+    hub: "hack/ANALYST.md + hack/analysis.md"
+    meaning: "Cada domínio fecha entidades semânticas, estados, regras, atores, consumidores, falhas e proibições."
   build:
-    owner: "hack/BUILD.md"
-    state: "READY_FOR_FINAL_CONGRUENCE_REVIEW"
-    meaning: "É a especificação técnica: tabelas, DTOs, IPC, transações, superfícies, componentes e estratégia de prova."
-    appendices: "hack/domains/BUILD-*.md"
+    owners: "hack/domains/BUILD-*.md"
+    hub: "hack/BUILD.md"
+    meaning: "Cada domínio traduz seu Analyst em tabelas, DTOs, IPC, serviços, transações, componentes e testes."
   review:
     owner: ".context/review/STATUS.md"
-    meaning: "Ataque final à congruência PRD → Analyst → BUILD; achado P0 retorna ao artefato canônico."
+    meaning: "Reviewer independente lê PRD, 16 contratos e hubs; aponta incongruências materiais."
   warlog:
     owner: "hack/WARLOG.md"
     create_after_review: true
-    meaning: "Registra decisões de execução e corta o BUILD em fatias verticais demonstráveis."
+    executor: "Outra IA, nunca o reconciliador que escreveu os hubs atuais."
+    meaning: "Decompõe todos os contratos antes de cortar fatias verticais."
+    required_receipts:
+      - "source_artifact"
+      - "source_section_or_rule"
+      - "task_or_explicit_exclusion"
+      - "implementation_owner"
+      - "proof"
+    constraints:
+      - "Ler integralmente 8 Analysts e 8 Builds."
+      - "Não gerar tarefa apenas de analysis.md ou BUILD.md."
+      - "Não limitar quantidade; aproximadamente 1000 tarefas é aceitável se a cobertura exigir."
+      - "Provar cobertura reversa de cada MUST, campo, estado, ação, erro, teste e limite de UI."
+      - "Cortar fatias somente depois da matriz exaustiva."
   minispec:
-    meaning: "Nome e diretório de uma fatia vertical definidos pelo Warlog; não possui spec.md própria."
+    meaning: "Diretório/nome de uma fatia vertical definidos pelo Warlog; não possui spec.md."
     required_file: "hack/minispecs/<id>/writing-plan.md"
   writing_plan:
-    meaning: "Plano executável derivado diretamente de PRD + analysis.md + BUILD.md + Warlog."
+    meaning: "Plano executável que consome diretamente PRD, contracts de domínio e Warlog."
     required_content:
       - "objetivo vertical e cenário demonstrável"
-      - "contratos canônicos consumidos"
-      - "arquivos exatos a criar ou alterar"
+      - "regras de origem com links"
+      - "arquivos exatos"
       - "ordem de implementação"
       - "primeiro teste relevante em RED"
-      - "testes por etapa"
-      - "provas e comandos proporcionais"
+      - "testes e provas por etapa"
       - "rollback ou contenção"
-    forbidden: "Não redecidir produto nem arquitetura; divergência volta ao artefato canônico."
+    forbidden: "Redecidir produto, resumir owner com perda ou inventar arquitetura."
   implementation:
     start_condition: "Writing Plan existe e o primeiro teste relevante foi observado em RED."
-    method: "Implementar em fatias pequenas, manter verde honesto e registrar desvios no Warlog."
   qa:
-    meaning: "Valida comportamento real da fatia e, ao final, a jornada sintética ponta a ponta."
+    meaning: "Valida a fatia e, ao final, a jornada integrada ponta a ponta."
 
 research_and_adversarial:
-  role: "Subprocessos usados para melhorar Analyst e BUILD; não são fases nem gates autônomos."
-  raw_output_rule: "Resposta externa é material de trabalho, nunca nova fonte canônica."
-  final_review: "O GPT Pro revisa o SHA publicado; o chat principal verifica e corrige achados antes do Warlog."
+  role: "Subprocessos que corrigem os owners; não geram fonte paralela nem gate individual."
+  raw_output_rule: "Resposta externa é material de trabalho, não documentação canônica."
 
 surface_contract:
-  owner: "hack/BUILD.md"
-  rule: "Rotas, papéis, regiões, DTOs, ações e estados de UI ficam no BUILD integrado e no Build de superfícies como anexo."
-  future_docs: "Criar documento separado somente se um Writing Plan provar necessidade; não é gate pré-Warlog."
+  analyst_owner: "hack/domains/ANALYST-superficies-e-configuracoes.md"
+  build_owner: "hack/domains/BUILD-superficies-e-configuracoes.md"
+  future_docs: "Surface Blueprint separado somente se o Writing Plan provar necessidade; não criar agora."
 
 governance:
   individual_signatures: false
@@ -87,12 +96,10 @@ governance:
   spec_files: false
   plan_approval_gate: false
   evidence_required: true
-  product_change_rule: "Mudança de problema, goal, atores ou fronteira reabre o PRD; correção técnica atualiza Analyst/BUILD e o Warlog."
 
 documentation_minimalism:
   - "Um owner canônico por regra."
-  - "Sem Spec duplicando PRD/BUILD."
-  - "Sem SPRINTS.md separado: o Warlog corta as minispecs."
-  - "Sem Critic placeholder: o review final ocorre sobre o SHA publicado."
+  - "Sem Spec duplicando PRD ou Build."
+  - "Sem SPRINTS.md paralelo: o Warlog corta as fatias."
   - "Sem relatório bruto de GPT no repositório."
-  - "Sem gate ou assinatura por anexo."
+  - "Sem usar hub para dispensar leitura do domínio."

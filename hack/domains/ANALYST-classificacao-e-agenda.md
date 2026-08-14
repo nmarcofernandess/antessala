@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## TL;DR
 
@@ -173,7 +174,7 @@ subestimação, sobrestimação, desempenho por subgrupo e impacto na capacidade
 - recursos e capabilities das fixtures;
 - igualdade exata entre classe da necessidade e classe da vaga;
 - janela de check-in, momento de no-show e política de atraso;
-- grade semanal sem drag-and-drop ou recorrência;
+- calendário completo com mês, semana, dia, programação acessível, DnD e resize validados;
 - vocabulário e limites de justificativa.
 
 ### `UNRESOLVED`
@@ -228,6 +229,18 @@ terminais e imutáveis; erro percebido depois da publicação fica visível como
 pós-publicação e correção do conteúdo `FINAL` pertencem à operação futura. Isso não se
 confunde com resultado anestésico: resultado finalizado admite nova versão de correção ou
 adendo conforme o domínio de avaliação/handoff.
+
+### `SchedulingCompatibilityIdentity`
+
+Identidade opaca que liga o caso autônomo a uma necessidade agendável publicada. Ela
+carrega conceitualmente `caseId`, `requirementId`, classe, duração, buffer, tipos de recurso
+e capabilities. A vaga candidata anuncia as mesmas dimensões. A recepção escolhe um par
+`necessidade + vaga`; o processo confiável refaz a compatibilidade antes de reservar.
+
+Esta identidade substitui o que, no vocabulário informal, foi chamado de “tipo de paciente
+ID”. O Antessala não cria tipo de paciente, ficha mestre nem `patientId`. Duas pessoas com o
+mesmo nome continuam sendo casos e requisitos distintos. A interface não calcula
+compatibilidade por label, cor ou posição no calendário.
 
 ### `CapacityOffer`
 
@@ -375,6 +388,36 @@ A recepção pode receber somente:
 
 ## Agenda e capacidade
 
+### Experiência operacional canônica
+
+A agenda precisa ter densidade e ergonomia equivalentes à agenda do DietFlow, adaptadas ao
+caso pré-anestésico. O calendário é uma projeção interativa da capacidade e das reservas;
+nunca vira fonte de verdade paralela.
+
+- Modos: `Agenda`, `Programação` acessível e `Para agendar`.
+- Visões: mês, semana e dia.
+- Navegação: anterior, hoje e próximo.
+- Busca: identificador do caso, nome no snapshot, procedimento e serviço solicitante.
+- Filtros: consulta `INITIAL | RETURN`, status, `QUICK | STANDARD | EXTENDED` e recurso.
+- Dropdown `Novo`: reserva, bloqueio e janela extra de capacidade.
+- Dropdown `Mais`: configurações, imprimir/exportar, fins de semana e horário expandido.
+- Eventos mostram horário, identificador do caso, procedimento, classe e estado sem expor
+  fatos clínicos.
+- Altura do evento representa a duração real. Evento curto não é inflado até parecer uma
+  consulta longa.
+- DnD e resize são ações propostas: o backend valida requisito, vaga, recursos, bloqueios,
+  concorrência e estado. Falha reverte o evento e explica o conflito.
+- Abrir, criar ou mover item usa um drawer unificado com dirty guard, loading, erro,
+  conflito e sucesso.
+- Calendário e tabela/lista acessível consomem a mesma projeção. Teclado executa as ações
+  essenciais sem DnD.
+- Preferências de visão pertencem à conta da demonstração. Uma mudança temporária forçada
+  pela navegação não sobrescreve a preferência escolhida.
+
+`Planejamento` longitudinal, cadência de atendimento, tarefas nutricionais, WhatsApp,
+financeiro e histórico de paciente do DietFlow não atravessam. `Para agendar` é uma worklist
+de requisitos autônomos, não acompanhamento de pessoa.
+
 ### Compatibilidade
 
 Uma vaga é compatível quando:
@@ -385,6 +428,10 @@ Uma vaga é compatível quando:
 4. pertence a oferta ativa e não bloqueada;
 5. não conflita com booking ativo de recurso exclusivo;
 6. continua disponível no momento da confirmação.
+
+Compatibilidade não é uma comparação apenas de `slotClass`. A decisão autoritativa usa a
+identidade e versão do requisito, ocupação completa, recursos e capabilities. Dropdowns
+apenas filtram e selecionam; não autorizam booking.
 
 A demo exige igualdade entre classes. Essa política é conservadora e `DEMO_DECISION`;
 capacidade menor nunca satisfaz maior, e uso futuro de capacidade maior para necessidade
@@ -413,6 +460,8 @@ incompatível.
 - conflito falha integralmente e mantém o caso disponível para nova escolha;
 - cancelamento libera capacidade futura e preserva autoria e motivo;
 - reagendamento é explícito, não move a reserva silenciosamente;
+- arrastar ou redimensionar chama reagendamento autoritativo; em falha, a UI reverte e
+  mantém a reserva original;
 - no-show inicial devolve o caso ao agendamento;
 - no-show de retorno preserva a solicitação de retorno;
 - check-in equivocado pode ser anulado antes do encontro e retorna booking/caso ao estado
@@ -474,6 +523,11 @@ incompatível.
     proposta inválida nunca é confirmada, alterada ou publicada.
 17. MUST tratar anulação de check-in e presença sem início como fatos distintos de
     cancelamento da reserva e cancelamento do caso.
+18. MUST usar `SchedulingCompatibilityIdentity`, nunca `patientId`, tipo de paciente ou
+    label visual, para validar vaga.
+19. MUST oferecer mês, semana, dia, Programação e Para agendar sobre a mesma fonte.
+20. MUST revalidar DnD/resize no processo confiável e reverter a interação em falha.
+21. MUST manter busca, filtros e dropdowns como projeções; nenhum decide compatibilidade.
 
 ## Boundary With Build
 
@@ -513,6 +567,11 @@ com o contrato integrado e implementado pela minispec correta.
 - [ ] `desiredBy` muda a janela consultada sem mudar duração, gravidade ou prioridade.
 - [ ] Nenhum texto afirma validação clínica ou institucional inexistente.
 - [ ] Detalhes físicos permanecem exclusivamente no Build.
+- [ ] Mês, semana, dia, Programação e Para agendar consomem a mesma projeção.
+- [ ] Dropdowns de visão, filtro, novo item e configurações funcionam sem expor clínica.
+- [ ] DnD/resize incompatível reverte sem alterar booking ou ocupação.
+- [ ] A identidade agendável é o requirement do caso; não existe `patientId` ou tipo de
+      paciente persistido.
 
 ## Dependencies And Open Questions
 
@@ -522,7 +581,7 @@ Antes do Warlog:
    efeito exige nova versão da regra.
 2. O review final de congruência precisa atacar subestimação, definição humana, capacidade,
    privacidade da explicação e todos os números de demo.
-3. Prazo, duração, recursos e capabilities do retorno são consumidos do Analyst integrado
+3. Prazo, duração, recursos e capabilities do retorno são consumidos do Analyst canônico
    de avaliação/handoff, sem herança automática.
 4. A operação institucional real permanece fora da PoC; qualquer uso real exige estudo
    local de duração, capacidade, calendário, acessibilidade e erro da regra.
@@ -530,12 +589,13 @@ Antes do Warlog:
 
 ## Resultado da investigação
 
-Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+Os achados e limites deste domínio são indexados em `hack/analysis.md`. Pendências
 institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e de todo Writing Plan que tocar regra,
+  compatibilidade, capacidade, calendário ou reserva.

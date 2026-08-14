@@ -1,148 +1,116 @@
 # Antessala
 
-Prova de conceito para transformar a anamnese pré-anestésica de enfermagem em uma
-necessidade operacional de agenda explicável e conduzir o caso até o resultado voltar ao
-serviço solicitante.
+Produto Electron para transformar a anamnese pré-anestésica de enfermagem em uma
+necessidade operacional de agenda explicável e conduzir cada encaminhamento até o resultado
+voltar ao serviço solicitante.
 
-> O PRD está aprovado. Analyst e BUILD foram consolidados; o review final encontrou
-> bloqueadores, e as correções aguardam verificação no SHA publicado. Código começa somente
-> depois do Warlog, do Writing Plan da primeira minispec e de um teste relevante observado
-> em RED.
+O PRD está aprovado. A documentação está sendo reconciliada para um review final
+independente. Ainda não existe Warlog nem autorização para código.
 
-## Problema e objetivo
+## O problema
 
 A recepção precisa reservar a consulta, mas não deve interpretar comorbidades,
-medicamentos ou exames. A enfermagem coleta a história; o Antessala deve traduzir essa
-entrevista em um requisito operacional que uma pessoa autorizada confirma ou corrige com
-justificativa. A recepção então reserva uma vaga compatível.
-
-O produto acompanha o mesmo caso até o anestesiologista concluir ou abrir pendências e o
-serviço solicitante receber o resultado.
-
-## Fluxo principal
+medicamentos ou exames. A enfermagem coleta a história; o Antessala estrutura a entrevista e
+produz uma proposta de requisito operacional. Uma pessoa confirma ou altera com
+justificativa. Só então a recepção procura uma vaga compatível.
 
 ```text
 médico solicitante indica procedimento
-→ recepção registra o encaminhamento
+→ recepção registra encaminhamento e caso autônomo
 → enfermagem conduz anamnese pré-anestésica
-→ sistema produz ou sugere uma necessidade operacional de agenda
-→ profissional humano confirma ou altera com justificativa
-→ recepção encontra e reserva vaga compatível
-→ anestesiologista realiza a consulta
-→ abre pendências e retorno quando necessário
-→ finaliza resultado
-→ serviço solicitante recebe o resultado
+→ sistema produz ou sugere requisito operacional
+→ humano confirma ou altera com justificativa
+→ recepção reserva vaga compatível
+→ anestesiologista avalia
+→ pendência e retorno, quando necessários
+→ resultado final
+→ serviço solicitante recebe
 → marcação da cirurgia continua externa
 ```
 
-A triagem geral do SUS ocorre antes e está fora do produto. Cada encaminhamento abre um
-caso autônomo: não existe cadastro longitudinal de paciente, deduplicação por nome nem
-evolução entre casos. A marcação da cirurgia ocorre depois e também fica fora.
+A triagem geral do SUS acontece antes e está fora. Não existe cadastro longitudinal de
+paciente, deduplicação por nome, `patientId` ou evolução entre casos. O app não atribui ASA,
+não declara aptidão e não substitui decisão clínica.
 
-## O que o produto não faz
+## Como a demonstração funciona
 
-- não atribui ASA, aptidão anestésica, diagnóstico ou conduta clínica;
-- não confunde gravidade, urgência, prioridade cirúrgica e duração da consulta;
-- não transforma doença ou medicação isolada em urgência automática;
-- não substitui a decisão da enfermagem ou do anestesiologista;
-- não é prontuário, triagem geral do SUS, fila de chamada ou agenda cirúrgica;
-- não alega reproduzir protocolo ou arquitetura do HCFMRP-USP.
+Uma única conta sintética abre todas as ferramentas da sidebar. Recepção, enfermagem,
+anestesiologista, solicitante e admin continuam sendo responsabilidades diferentes: cada
+ação usa sua projeção, regra, escopo e autoria. A conta integrada evita cinco logins durante
+a demonstração; não simula autenticação hospitalar.
 
-## Atores
+O menu do usuário contém Configurações, Tema Claro/Escuro/Sistema, Amostra de uso e Sair.
 
-| Ator | Responsabilidade no Antessala |
-|---|---|
-| Recepção | registra o encaminhamento e reserva vaga compatível |
-| Enfermagem | conduz a entrevista e confirma ou corrige o requisito operacional |
-| Anestesiologista | avalia, abre pendências e retornos e finaliza o resultado |
-| Serviço solicitante | recebe o resultado do próprio serviço |
-| Administrador | prepara contas locais e configurações permitidas da demonstração |
+## Experiência exigida
 
-Paciente e médico solicitante participam do fluxo, mas não entram no aplicativo no MVP.
+### Anamnese
 
-## IA, memória e conhecimento
+O editor porta e adapta a experiência do DietFlow: canvas único, 14 WidgetCards
+pré-anestésicos, DnD, alternativa por teclado, collapse, remover/desfazer, drawer
+multi-select e protocolos `SYSTEM` ou salvos. Protocolos guardam estrutura e configuração,
+nunca respostas ou identidade de caso.
 
-A prova de conceito deve demonstrar um uso real de IA e um de memória. A direção é
-assistiva: transcrição pode originar propostas de preenchimento; cada proposta mostra sua
-origem e continua rascunho até confirmação humana. Conhecimento global só nasce por
-promoção explícita e versionada; identidade, narrativa integral e decisão isolada de um
-caso nunca viram regra automática.
+### Agenda
 
-Uso de rede é opcional, informado e iniciado pela pessoa. A PoC usa Gemini somente com
-fixtures sintéticas e sem fallback de provedor. Sem IA ou internet, caso, agenda e handoff
-continuam funcionando. O contrato completo está no
-[Analyst de IA, memória e conhecimento](hack/domains/ANALYST-ia-memoria-e-conhecimento.md).
+A agenda porta e adapta o FullCalendar do DietFlow: mês, semana, dia e programação,
+toolbar/dropdowns, busca, filtros, fila “Para agendar”, eventos proporcionais, drawer,
+capacidade/bloqueios, DnD e resize. A interface só envia intenção; o main revalida requisito,
+duração, recursos, versão e conflito e reverte a interação se necessário.
 
-## Base técnica atual
+O que informalmente foi chamado de “tipo de paciente ID” é um requisito operacional opaco
+e versionado. Ele determina a compatibilidade da vaga; nunca identifica uma pessoa.
 
-O repositório contém uma casca Electron com processo principal, preload e renderer React;
-PGlite local; cliente TIPC tipado; catálogos versionados carregados sem rede; política de
-egress do renderer; e PDF pelo motor de impressão do Electron. A casca ativa ainda expõe
-somente Início, IA e Configurações: o fluxo clínico ponta a ponta não está implementado.
+### IA e conhecimento
 
-Gravação em WAV, peças de transcrição, RAG, grafo, memória e importadores existem em
-estados incompletos ou dormentes. Existência no código não autoriza reativação. O inventário
-com evidências e limites vive em [.context/architecture.yaml](.context/architecture.yaml).
+IA fica em `/assistente`. Não há painel global, toggle no header nem IA dentro de widget ou
+agenda. Gemini é opcional e explícito. Propostas mostram origem/explicação e só alteram o
+draft depois de aceitar ou corrigir. Sem rede, caso, anamnese, agenda, avaliação e handoff
+continuam funcionando.
+
+## Base técnica
+
+O HEAD contém Electron main/preload/renderer, PGlite, TIPC tipado, seed local versionado,
+tema, PDF via `printToPDF`, política de rede do renderer e peças de IA/conhecimento. Isso é
+terreno, não prova de que o produto descrito já existe. O inventário com evidências está em
+[.context/architecture.yaml](.context/architecture.yaml).
 
 ## Mapa documental
 
-Comece em [.context/manifest.yaml](.context/manifest.yaml). Ele define leitura obrigatória,
-fontes e autoridade.
+Comece por [.context/manifest.yaml](.context/manifest.yaml).
 
-| Artefato | Pergunta que responde |
+| Artefato | Papel |
 |---|---|
-| [PRD](hack/PRD.md) | qual produto, problema, promessa e fronteira |
-| [Analyst integrado](hack/analysis.md) e [índice](hack/ANALYST.md) | qual é a verdade lógica ponta a ponta |
-| `hack/domains/ANALYST-*.md` | quais entidades, campos, estados, regras, papéis e falhas pertencem a cada domínio |
-| [BUILD integrado](hack/BUILD.md) | especificação técnica e autoridade para arquitetura, dados, UI e prova |
-| `hack/domains/ANALYST-*.md` e `hack/domains/BUILD-*.md` | anexos de detalhe sem gate individual |
-| [.context/product.yaml](.context/product.yaml) | resumo estável do produto e Definition of Done |
-| [.context/workflow.yaml](.context/workflow.yaml) | fluxo PRD → Analyst → BUILD → Warlog → Writing Plans → código |
-| [.context/review/STATUS.md](.context/review/STATUS.md) | única fila de pesquisa, recon e review por artefato |
-| [status.json](hack/status.json) e [progress.md](hack/progress.md) | estado operacional e próxima ação |
+| [PRD](hack/PRD.md) | produto aprovado |
+| [ANALYST.md](hack/ANALYST.md) | índice dos oito contratos semânticos |
+| [analysis.md](hack/analysis.md) | hub do fluxo e das dependências |
+| `hack/domains/ANALYST-*.md` | fonte canônica da semântica de cada domínio |
+| [BUILD.md](hack/BUILD.md) | hub técnico e grafo de ownership |
+| `hack/domains/BUILD-*.md` | fonte canônica da arquitetura de cada domínio |
+| [.context/review/STATUS.md](.context/review/STATUS.md) | único tracker de research/review |
+| [status.json](hack/status.json) e [progress.md](hack/progress.md) | fase operacional e recibo |
 
-`.context` é mapa cognitivo. Não substitui PRD, Analyst ou Build.
+Os hubs não superam os arquivos de domínio. Em conflito, pare e corrija o owner.
 
-## Método
+## Fluxo documental
 
 ```mermaid
 flowchart LR
-    PRD["PRD aprovado"] --> ANALYST["analysis.md integrado"]
-    ANALYST --> BUILD["BUILD.md integrado"]
-    BUILD --> REVIEW["Review final de congruência"]
-    REVIEW --> WARLOG["Warlog corta minispecs"]
-    WARLOG --> WP["Writing Plan da fatia"]
-    WP --> RED["TDD RED"]
+    PRD["PRD aprovado"] --> A["8 Analysts"]
+    A --> AH["analysis.md hub"]
+    AH --> B["8 Builds"]
+    B --> BH["BUILD.md hub"]
+    BH --> REVIEW["Review final independente"]
+    REVIEW --> WARLOG["Warlog exaustivo"]
+    WARLOG --> PLAN["Writing Plan da fatia"]
+    PLAN --> RED["TDD RED"]
     RED --> CODE["Implementação"]
     CODE --> QA["QA"]
 ```
 
-Research e adversarial melhoram os artefatos canônicos; não são gates separados. PRD,
-Analyst e BUILD juntos são a especificação. Não existe `spec.md` por minispec.
-
-### Review com GPT Pro
-
-1. publicamos branch, SHA e artefato canônico;
-2. GPT Pro pesquisa ou tenta quebrá-lo direto no repositório;
-3. Marco traz a resposta ao chat principal;
-4. o chat verifica fontes e corrige o artefato canônico;
-5. atualiza o tracker e publica um novo SHA.
-
-A resposta bruta é material de trabalho, não documentação do produto.
-
-### Do Build ao código
-
-```text
-review final sem P0
-→ Warlog corta minispecs
-→ writing-plan.md da fatia
-→ primeiro teste TDD em RED
-→ implementação
-→ QA da minispec
-→ QA final
-```
-
-O Writing Plan define paths, passos e testes; não redecide produto ou arquitetura.
+O futuro Warlog será escrito por outra IA. Ela precisa ler os 16 contratos completos,
+construir rastreabilidade linha normativa → tarefa → prova e só depois cortar fatias. Não
+há limite artificial: centenas ou cerca de mil tarefas são aceitáveis. Não existe Spec
+intermediária; cada fatia gera Writing Plan direto.
 
 ## Comandos atuais
 
@@ -155,12 +123,7 @@ npm test
 npm run test:e2e
 ```
 
-Não existe script de lint no projeto. Validação documental usa YAML/JSON, links locais,
-Mermaid e `git diff --check`; CI pesado só roda quando a superfície alterada justificar.
-
----
-
 ## Estado
 
-Consulte [status.json](hack/status.json) para a fase operacional e
-[STATUS.md](.context/review/STATUS.md) para o review final.
+Consulte [status.json](hack/status.json) e o
+[tracker](.context/review/STATUS.md). PRD aprovado não significa que o código esteja pronto.

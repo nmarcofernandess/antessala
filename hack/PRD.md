@@ -3,12 +3,12 @@
 ## Agendamento diferenciado da consulta pré-anestésica
 
 **Hacka Health 2026 · Desafio 1 · HCFMRP-USP**
-**Versão:** 5.0 · 14/08/2026
+**Versão:** 5.1 · 14/08/2026
 **Estado:** `APPROVED_PRODUCT_BASELINE`
 **Confiança:** média
-**Rota:** PRD → Analyst integrado → BUILD integrado → review final → Warlog → minispecs →
-Writing Plans → TDD RED → código → QA
-**Próxima fase:** review final de congruência de `hack/analysis.md` + `hack/BUILD.md`
+**Rota:** PRD → Analysts de domínio → Builds de domínio → hubs de integração → review final
+→ Warlog → minispecs → Writing Plans → TDD RED → código → QA
+**Próxima fase:** review final de congruência do pacote completo de Analysts e Builds
 
 ---
 
@@ -30,11 +30,14 @@ Depois desta revisão, o PRD fica congelado. O Analyst pode esclarecer o domíni
 decisões técnicas, mas não pode mudar o problema, os atores, a fronteira ou a promessa do
 produto. Uma mudança desse porte exige reabrir formalmente o PRD.
 
-Este documento não define banco, telas, widgets, algoritmo, classes clínicas ou
-arquitetura. Essas respostas pertencem ao Analyst. O acesso do MVP, porém, está decidido:
-o administrador cria contas locais com e-mail, senha e uma função. Não haverá cadastro
-público, confirmação de e-mail, recuperação por e-mail, SSO ou integração com diretório no
-hackathon.
+Este documento não define banco, campos clínicos, algoritmo ou arquitetura. Essas respostas
+pertencem aos Analysts e Builds de domínio.
+
+Para a demonstração, uma única conta sintética abre todas as ferramentas. Ela representa o
+operador de desenvolvimento que percorre o fluxo inteiro sem trocar de usuário. Recepção,
+enfermagem, anestesiologia, serviço solicitante e administração continuam sendo
+responsabilidades distintas, visíveis e auditáveis. A conta integrada não transforma essas
+responsabilidades em uma só e não representa o modelo de acesso de um hospital.
 
 ## Problem
 
@@ -91,11 +94,12 @@ marcação do procedimento.
 | Enfermagem | realiza a anamnese e produz a necessidade operacional da vaga |
 | Anestesiologista | realiza a avaliação, registra pendências e conclui o parecer |
 | Serviço solicitante | recebe o resultado e conduz a marcação da cirurgia |
-| Administrador | cria e desativa contas locais, redefine senha e atribui uma função |
+| Administrador | prepara fixtures, capacidade e configurações da demonstração |
 
-Paciente e médico solicitante não precisam de login no MVP. Os usuários diretos são
-recepção, enfermagem, anestesiologista, serviço solicitante e administrador. Cada conta tem
-uma função. O Analyst fecha as permissões de cada função e a propriedade de cada campo.
+Paciente e médico solicitante não entram no aplicativo. A prova usa uma conta local
+integrada e sintética. Ela enxerga, na navegação lateral, as ferramentas das cinco
+responsabilidades. Cada ação continua identificada por responsabilidade, e o processo
+confiável valida qual serviço de domínio pode executá-la.
 
 Os identificadores canônicos dessas funções são `ADMIN`, `RECEPCAO`, `ENFERMAGEM`,
 `ANESTESIOLOGISTA` e `SOLICITANTE`.
@@ -137,10 +141,10 @@ Os identificadores canônicos dessas funções são `ADMIN`, `RECEPCAO`, `ENFERM
 
 ### Administrador
 
-- Como administrador da demonstração, quero criar uma conta com e-mail, senha e função,
-  para preparar os atores do fluxo sem depender de serviços externos.
-- Como administrador, quero desativar contas, trocar sua função e redefinir sua senha, para
-  corrigir a demonstração sem editar o banco manualmente.
+- Como operador da demonstração, quero entrar uma vez e acessar todas as ferramentas pela
+  navegação lateral, para apresentar o fluxo completo sem interrompê-lo com trocas de conta.
+- Como operador, quero abrir pelo menu de usuário as configurações, o tema e uma amostra de
+  uso, para preparar e explicar a demonstração sem editar o banco manualmente.
 
 ## Story Tecnica
 
@@ -156,10 +160,12 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - Como sistema, preciso manter pendências e retornos ligados ao caso original.
 - Como sistema, preciso entregar ao serviço solicitante um resultado compreensível e
   rastreável.
-- Como sistema, preciso autenticar contas locais e aplicar a função do usuário em todas as
-  leituras e escritas, não apenas esconder botões.
-- Como sistema, preciso iniciar a demonstração com contas sintéticas conhecidas e permitir
-  que o administrador crie outras contas locais.
+- Como sistema, preciso autenticar a conta sintética integrada e derivar a responsabilidade
+  de cada ação pelo contrato confiável do domínio, nunca por um papel enviado pelo renderer.
+- Como sistema, preciso registrar a conta da demonstração e a responsabilidade exercida em
+  cada mutação auditável.
+- Como sistema, preciso usar a identidade do requisito operacional, e não um cadastro de
+  paciente, para decidir quais vagas são compatíveis.
 
 ## Scope
 
@@ -173,10 +179,14 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - avaliação do anestesiologista;
 - pendências e retornos ligados à avaliação;
 - entrega do resultado ao serviço solicitante;
-- login local dos usuários diretos;
-- gestão mínima de contas pelo administrador: criar, listar, desativar, reativar, trocar
-  função e redefinir senha;
-- fixtures sintéticas de usuários, agendas, catálogos e casos para a demonstração.
+- login local único para a demonstração integrada;
+- navegação lateral com todas as ferramentas do fluxo;
+- menu do usuário com configurações, tema claro/escuro/sistema, amostra de uso e logout;
+- agenda visual completa, com calendário, filtros, busca, reagendamento e tratamento de
+  conflitos;
+- anamnese em composer de widgets, com reordenação, drawer e protocolos/templates salvos;
+- Assistente de IA em rota própria, separado da anamnese e do restante do fluxo;
+- fixtures sintéticas de conta, agendas, catálogos, protocolos e casos.
 
 ### Fora
 
@@ -192,15 +202,15 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - uso de dados reais de pacientes;
 - cadastro público, convite, confirmação de e-mail e recuperação de senha por e-mail;
 - login social, SSO, LDAP, Active Directory ou identidade institucional;
-- perfil editável pelo próprio usuário e múltiplas funções simultâneas;
+- gestão institucional de identidades, múltiplas contas e múltiplas funções;
 - acesso do paciente ao aplicativo.
 
 ## Expected Behavior
 
-O produto deve conduzir o caso por todo o fluxo canônico, manter a responsabilidade de
-cada ator e diferenciar as opções de agenda conforme a necessidade produzida pela triagem.
-Cada usuário direto entra com uma conta local criada pelo administrador e vê somente as
-ações da sua função.
+O produto deve conduzir o caso por todo o fluxo canônico, manter a responsabilidade de cada
+ator e diferenciar as opções de agenda conforme a necessidade produzida pela triagem. Na
+prova, uma sessão integrada expõe todas as ferramentas; o sistema registra qual
+responsabilidade cada ação exerce.
 
 ## Current Behavior / Bug
 
@@ -238,7 +248,7 @@ deve provar o que serve, o que precisa mudar e o que deve ficar fora.
 
 A demonstração deve usar dados sintéticos. O PRD não escolhe schema, biblioteca de agenda,
 algoritmo de classificação ou arquitetura de produção. Para autenticação, escolhe apenas o
-contrato do MVP: contas locais administradas dentro do aplicativo, sem dependência externa.
+contrato da prova: uma conta local sintética, sem dependência externa.
 
 ## Data / Contracts
 
@@ -246,23 +256,31 @@ O produto precisa representar encaminhamento, caso, anamnese, necessidade de age
 reserva, avaliação, pendência, retorno e resultado. O Analyst definirá identidades,
 relacionamentos, DTOs, versões, proveniência, permissões e persistência.
 
-O produto também precisa representar usuário, função, sessão local e evento de auditoria.
-As fixtures criam, no mínimo, uma conta por função direta e um administrador. As senhas das
-fixtures são dados sintéticos de demonstração; o aplicativo nunca armazena senha em texto
-puro.
+O produto também precisa representar conta da demonstração, sessão local, responsabilidade
+da ação e evento de auditoria. A fixture cria uma conta integrada. Sua senha é sintética; o
+aplicativo nunca a armazena em texto puro.
+
+A agenda recebe uma referência opaca da necessidade agendável. Essa identidade liga o caso
+autônomo à classe, duração e recursos exigidos. Ela nunca é `patientId`, ficha de paciente ou
+atalho para histórico longitudinal.
 
 Nenhum campo pode surgir no Build sem origem, responsável, consumidor e teste futuro.
 
 ## UX / States
 
-Cada papel precisa de uma superfície coerente com sua responsabilidade. A interface deve
-mostrar o próximo passo, dados ausentes, ausência de vaga, pendência, retorno e conclusão
-sem depender apenas de cor.
+Cada responsabilidade precisa de ferramentas próprias e reconhecíveis na mesma casca. A
+interface deve mostrar o próximo passo, dados ausentes, ausência de vaga, pendência, retorno
+e conclusão sem depender apenas de cor.
 
-O produto inclui uma tela de login e uma área administrativa de usuários. Estado sem sessão
-leva ao login. Conta inativa ou credencial inválida não abre a casca autenticada. O
-administrador recebe feedback claro ao tentar criar e-mail duplicado, senha inválida ou
-conta sem função.
+O produto inclui uma tela de login. Estado sem sessão leva ao login. Credencial inválida não
+abre a casca autenticada. Após entrar, a navegação lateral mostra todas as ferramentas da
+prova. A troca entre recepção, enfermagem, agenda, anestesiologia, solicitante e configuração
+ocorre por rota, não por troca de identidade.
+
+A anamnese usa uma superfície de composer: widgets empilhados, claros, reordenáveis em
+rascunho, drawer de adição e protocolos/templates reutilizáveis. A agenda usa calendário
+completo com mês, semana, dia e lista acessível. O Assistente ocupa uma rota própria e nunca
+aparece como painel global nem dentro dos widgets.
 
 O Analyst definirá a máquina de estados. Este PRD exige apenas que o caso continue
 identificável do encaminhamento ao handoff final.
@@ -278,11 +296,13 @@ identificável do encaminhamento ao handoff final.
 - O serviço solicitante recebe o resultado final do caso.
 - A autoria e a sequência dos handoffs podem ser reconstruídas.
 - A demonstração usa somente dados sintéticos.
-- Cada função direta possui uma conta fixture capaz de entrar offline.
-- O administrador cria uma conta local com e-mail, senha e função, sem confirmação externa.
-- Uma conta inativa não autentica e um usuário autenticado não executa ação proibida para
-  sua função, mesmo que tente chamar o contrato IPC diretamente.
-- E-mails duplicados são rejeitados por comparação normalizada.
+- Uma conta fixture integrada entra offline e acessa todas as ferramentas da demonstração.
+- Cada mutação registra a mesma conta e a responsabilidade exercida pelo contrato chamado.
+- O renderer não escolhe nem envia um papel autoritativo para ampliar permissão.
+- A agenda oferece somente vagas compatíveis com a identidade do requisito operacional.
+- Reagendamento por arrastar ou redimensionar confirma no backend ou reverte visualmente.
+- A anamnese oferece os widgets pré-anestésicos, DnD, drawer e protocolos/templates salvos.
+- O Assistente permanece em rota própria; indisponibilidade de IA não afeta o fluxo manual.
 
 ## Definition of Complete
 
@@ -295,7 +315,7 @@ identificável do encaminhamento ao handoff final.
 - [x] Escopo interno e externo definido.
 - [x] Critérios de aceitação definidos.
 - [x] Próxima fase definida.
-- [x] Contrato de autenticação do MVP definido.
+- [x] Contrato de autenticação integrada da demonstração definido.
 - [x] Marco aprovou esta revisão como baseline do hackathon.
 
 O conteúdo do PRD está aprovado. Analyst e BUILD podem detalhar sua execução sem alterar
@@ -310,8 +330,9 @@ problema, goal, atores ou fronteiras.
 - Modelar uma agenda visual antes de definir capacidade, duração e concorrência.
 - Encerrar o fluxo na triagem e esquecer consulta, pendências, retorno e handoff.
 - Tratar a arquitetura local da demonstração como arquitetura hospitalar.
-- Proteger apenas a interface e deixar o IPC clínico sem validação de sessão e função.
-- Tratar e-mail como verificado ou conta local como identidade institucional.
+- Proteger apenas a interface e deixar o IPC clínico sem validação da sessão e da
+  responsabilidade exercida.
+- Tratar a conta integrada como identidade institucional ou modelo final de RBAC.
 - Expor senha em texto puro, log, fixture publicada em tela ou resposta IPC.
 
 ## Open Questions
@@ -333,9 +354,10 @@ O Analyst deve fechar, sem alterar este PRD:
 
 ## Next Phase
 
-O PRD é a baseline de produto; `analysis.md` consolida a semântica e `BUILD.md` é a
-especificação técnica. Depois do review final de congruência,
-o Warlog corta o BUILD em minispecs e cada fatia recebe um Writing Plan executável.
+O PRD é a baseline de produto. Cada Analyst e Build de domínio é canônico no próprio
+escopo; `analysis.md` e `BUILD.md` são hubs de integração. Depois do review final de
+congruência, outra IA cria o Warlog lendo todos os domínios e corta minispecs. Cada fatia
+recebe um Writing Plan executável.
 
 ---
 
@@ -347,3 +369,16 @@ o Warlog corta o BUILD em minispecs e cada fatia recebe um Writing Plan executá
 - Escopo: o conteúdo de produto está aprovado e congelado para o hackathon.
 - Mudança futura de problema, goal, atores ou fronteiras reabre o PRD; correções técnicas
   seguem em `analysis.md` e `BUILD.md` sem novo gate individual.
+
+### Emenda operacional aprovada por Marco
+
+- Decisão: `INTEGRATED_DEMO_SESSION`.
+- Data: `2026-08-14`.
+- A prova usa uma conta sintética com todas as ferramentas na barra lateral.
+- Os cinco papéis permanecem responsabilidades do fluxo, não cinco logins da prova.
+- A agenda reutiliza o padrão FullCalendar do DietFlow, adaptado ao caso autônomo e à
+  compatibilidade do requisito operacional.
+- A anamnese reutiliza a experiência Composer do DietFlow, com os widgets pré-anestésicos,
+  DnD, drawer e protocolos/templates salvos.
+- A IA fica isolada em uma rota própria do Assistente.
+- Gestão institucional de contas e segregação real por usuário ficam fora desta prova.

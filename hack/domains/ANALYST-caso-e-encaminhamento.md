@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## TL;DR
 
@@ -491,7 +492,7 @@ Antes de novo adversarial:
 4. acesso e superfícies precisam aplicar o escopo mínimo do solicitante;
 5. IA precisa tornar propostas e resumos dependentes do contexto `STALE`;
 6. `hack/analysis.md` precisa manter owners e glossário únicos;
-7. o Build integrado prevalece sobre qualquer contrato físico antigo deste anexo.
+7. o Build canônico do domínio materializa este contrato; hubs não o substituem.
 
 ## Resultado da investigação
 
@@ -500,7 +501,7 @@ institucionais continuam documentadas como fronteira futura e não bloqueiam a P
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo no domínio de caso e encaminhamento.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans que tocarem caso ou encaminhamento.

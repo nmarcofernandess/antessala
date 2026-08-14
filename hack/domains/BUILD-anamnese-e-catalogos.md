@@ -2,17 +2,19 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/BUILD.md`.
+- Papel: `CANONICAL_DOMAIN_BUILD`.
+- Indexado por: `hack/BUILD.md`.
 - Gate ou assinatura individual: inexistente.
-- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
-- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
+- O estado de maturidade permanece no tracker único; o hub não pode promovê-lo sozinho.
+- Este arquivo é a fonte técnica do domínio. `hack/BUILD.md` apenas integra dependências;
+  não substitui, resume com perda nem supera este contrato.
 
 ## Goal
 
 Substituir o registro clínico legado por um caso autônomo com encaminhamento, anamnese
-pré-anestésica versionada e catálogos offline. Entregar à enfermagem um formulário fixo de
-14 widgets, ao anestesiologista um snapshot com proveniência e à recepção somente a
+pré-anestésica versionada e catálogos offline. Entregar à enfermagem um editor Composer com
+14 widgets, DnD, drawer e protocolos/templates salvos; ao anestesiologista, um snapshot com
+proveniência; e à recepção, somente a
 consequência operacional. Não criar paciente mestre, histórico longitudinal ou decisão
 clínica automática.
 
@@ -38,7 +40,8 @@ legado, sem reinterpretar seus dados. Reutilizar a infraestrutura de registry/se
 mas criar tipos v3 e definitions pré-anestésicas em namespace próprio. Persistir rascunho
 mutável com versão otimista; `submitFinal` cria a única revisão imutável, marca o agregado
 `COMPLETE` e grava o requisito `CALCULATED` no mesmo commit. Catálogos permanecem seed-first
-e read-only no MVP. A UI usa um template fixo; não haverá montador de formulário nem
+e read-only no MVP. A UI usa o Composer do DietFlow como padrão de interação, adaptado a
+shadcn e aos 14 widgets pré-anestésicos. Protocolos versionam somente a composição; não há
 cadastro de paciente. Procedimento e serviço são compostos a partir do caso em leitura; o
 conteúdo clínico guarda apenas indicação, data, lateralidade e notas, ancorado por versão e
 fingerprint para detectar correção pré-final do caso.
@@ -51,7 +54,8 @@ fingerprint para detectar correção pré-final do caso.
 | `src/shared/anamnese/serialization.ts` | expand | Validar invariantes cruzados e completude | high |
 | `src/shared/anamnese/pre-anesthesia/` | new | 14 DTOs/definitions sem contaminar legado | medium |
 | `src/shared/anamnese/registry.ts` | adapt | Registry canônico exaustivo | medium |
-| `src/shared/anamnese/templates.ts` | replace active catalog | Ativar somente template MVP | medium |
+| `src/shared/anamnese/protocols.ts` | new | Contratos de protocolo de sistema e template salvo | high |
+| `src/shared/anamnese/templates.ts` | adapt | Compatibilidade fina; fonte ativa migra para protocols | medium |
 | `src/shared/catalogos-clinicos.ts` | expand | DTOs de procedimentos, serviços, MET e comorbidades | medium |
 | `src/main/db/migrations/00x_master_data.sql` | new | Serviços/procedimentos antes da migration de acesso | high |
 | `src/main/db/migrations/00x_anamnese.sql` | new | Anamnese, único FINAL e receipts depois da migration de caso | high |
@@ -63,7 +67,9 @@ fingerprint para detectar correção pré-final do caso.
 | `src/main/tipc.ts` | wire thin handlers | Separar router de domínio de SQL | medium |
 | `src/renderer/src/paginas/TriagemPagina.tsx` | new | Superfície da enfermagem | medium |
 | `src/renderer/src/anamnese/widgets/` | add 14 editors | Captura shadcn | medium |
-| `src/renderer/src/anamnese/Composer.tsx` | constrain | Template fixo, sem delete/reorder obrigatório | medium |
+| `src/renderer/src/anamnese/Composer.tsx` | expand | Canvas DietFlow, DnD, collapse, undo e aplicação controlada | high |
+| `src/renderer/src/anamnese/WidgetDrawer.tsx` | new | Busca, categorias e multisseleção | medium |
+| `src/renderer/src/anamnese/ProtocolDrawer.tsx` | new | Listar, visualizar, aplicar e versionar templates | medium |
 | `src/main/export/pdf.ts` | preserve engine | Renderizar DTO já sanitizado | low |
 | `tests/shared/anamnese/` | expand | Prova de DTO/semântica/migração | low |
 | `tests/main/db/` | expand | Constraints, FINAL terminal e boot offline | medium |
@@ -80,7 +86,11 @@ fingerprint para detectar correção pré-final do caso.
 - Enfermagem edita somente `DRAFT` e cria a única revisão `FINAL` por `submitFinal`.
 - Anestesiologista lê o snapshot final; nenhum papel o edita, reabre ou revisa no MVP.
 - Recepção nunca recebe conteúdo dos widgets.
-- O template do MVP é fixo e contém exatamente os 14 widgets do Analyst.
+- O protocolo `pre_anesthesia_mvp@1` contém exatamente os 14 widgets do Analyst.
+- Em `DRAFT`, composição e ordem podem mudar; isso nunca altera a matriz clínica.
+- Protocolos/templates guardam somente blueprint de widgets, nunca respostas ou caso.
+- A rota de anamnese não monta IA. Ela recebe apenas operações já decididas em
+  `/assistente`.
 - Toda tela mostra que os dados são sintéticos e a ferramenta não decide aptidão.
 
 ### Backend
@@ -104,11 +114,32 @@ com paciente. `preop_cases` guarda os snapshots de pessoa, encaminhamento, proce
 solicitante; portanto não há `clinical_referrals` nem duplicação desses JSONs.
 
 ```sql
+CREATE TABLE clinical_anamnesis_protocols (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('SYSTEM_PROTOCOL','SAVED_TEMPLATE')),
+  name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 2 AND 120),
+  description TEXT NOT NULL DEFAULT '',
+  active_version INTEGER NOT NULL CHECK (active_version > 0),
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE clinical_anamnesis_protocol_versions (
+  protocol_id TEXT NOT NULL REFERENCES clinical_anamnesis_protocols(id) ON DELETE RESTRICT,
+  version INTEGER NOT NULL CHECK (version > 0),
+  blueprint JSONB NOT NULL,
+  created_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (protocol_id, version)
+);
+
 CREATE TABLE clinical_anamneses (
   id TEXT PRIMARY KEY,
   case_id TEXT NOT NULL UNIQUE REFERENCES preop_cases(id) ON DELETE RESTRICT,
-  template_id TEXT NOT NULL CHECK (template_id = 'pre_anesthesia_mvp'),
-  template_version INTEGER NOT NULL CHECK (template_version = 1),
+  protocol_id TEXT NOT NULL,
+  protocol_version INTEGER NOT NULL CHECK (protocol_version > 0),
   status TEXT NOT NULL CHECK (status IN ('DRAFT','COMPLETE')),
   draft_content JSONB,
   draft_version INTEGER NOT NULL DEFAULT 0 CHECK (draft_version >= 0),
@@ -126,7 +157,9 @@ CREATE TABLE clinical_anamneses (
       AND final_revision = 1 AND completed_at IS NOT NULL)
   ),
   CHECK (context_state = 'VALID' OR status = 'DRAFT'),
-  UNIQUE (id, case_id)
+  UNIQUE (id, case_id),
+  FOREIGN KEY (protocol_id, protocol_version)
+    REFERENCES clinical_anamnesis_protocol_versions(protocol_id, version) ON DELETE RESTRICT
 );
 
 CREATE TABLE clinical_anamnesis_revisions (
@@ -258,7 +291,8 @@ O código usa os tipos definidos no Analyst. Zod aplica as seguintes refinements
    nunca fabricam essa resposta.
 4. condição positiva exige item/detalhe condicionado.
 5. `COMPLETE` proíbe `NOT_ASKED` obrigatório.
-6. os 14 `widgetType` aparecem exatamente uma vez e na ordem do template.
+6. no protocolo de sistema, os 14 `widgetType` aparecem exatamente uma vez e na ordem
+   versionada; templates salvos não duplicam tipo nem relaxam completude.
 7. toda provenance tratada usa timestamp ISO, actor e papel permitido.
 8. `content._v=3`, `template.version=1` e `schemaVersion=1` são literais.
 9. limites de texto, listas, datas e números seguem integralmente a matriz do Analyst.
@@ -534,7 +568,7 @@ Handlers:
 | Channel | Papel | Efeito |
 |---|---|---|
 | `clinicalAnamnesis.getClinical` | ENFERMAGEM/ANESTESIOLOGISTA | caso + draft ou único FINAL + provenance |
-| `clinicalAnamnesis.start` | ENFERMAGEM | cria draft do template fixo |
+| `clinicalAnamnesis.start` | ENFERMAGEM | cria draft a partir de protocolo/version |
 | `clinicalAnamnesis.saveDraft` | ENFERMAGEM | CAS por `expectedDraftVersion`; somente DRAFT |
 | `clinicalAnamnesis.submitFinal` | ENFERMAGEM | FINAL/COMPLETE + requirement CALCULATED; mantém NURSING_IN_PROGRESS |
 | `clinicalAnamnesis.rebaseCaseContext` | ENFERMAGEM | reancora contexto somente em DRAFT e antes de FINAL/CALCULATED |
@@ -544,6 +578,10 @@ Handlers:
 | `catalogs.medications.search` | ENFERMAGEM | busca read-only |
 | `catalogs.met.search` | ENFERMAGEM | busca read-only |
 | `clinicalAnamnesis.export` | ENFERMAGEM/ANESTESIOLOGISTA | produz DTO sanitizado do único FINAL para PDF |
+| `clinicalAnamnesis.protocols.list` | sessão integrada | lista sistema/templates salvos sem conteúdo clínico |
+| `clinicalAnamnesis.protocols.get` | sessão integrada | devolve blueprint versionado |
+| `clinicalAnamnesis.protocols.saveCurrentAsTemplate` | sessão integrada | cria nova versão sem respostas |
+| `clinicalAnamnesis.protocols.apply` | ENFERMAGEM | `REPLACE` ou `APPEND_MISSING` no DRAFT com CAS |
 
 Os handlers de leitura e exportação exigem `clinical:anamnesis:read`. `start`, `saveDraft`,
 `rebaseCaseContext` e `submitFinal` exigem `clinical:anamnesis:edit`, que o mapa canônico de
@@ -624,17 +662,60 @@ auditoria na mesma transação.
 
 #### Composição da triagem
 
-1. Header: identificador da demo, procedimento e serviço read-only projetados do caso,
-   estado e alerta bloqueante quando o contexto estiver stale.
-2. Progresso: respondidos, pendentes e recusados; não usa score clínico.
-3. Índice lateral dos 14 widgets com estado textual.
-4. Área central: um widget por seção; navegação anterior/próximo e salvamento local.
-5. Rodapé fixo: “Salvar rascunho” e “Finalizar anamnese”.
-6. Drawer de pendências ao finalizar.
+1. Shell de editor no padrão `MainGenericEditor`: título do caso, estado, dirty indicator,
+   salvar e ações secundárias.
+2. Contexto do caso read-only: identificador, procedimento e serviço. Nunca existe busca de
+   paciente ou link para histórico.
+3. Toolbar: `Adicionar widgets`, `Protocolos`, `Salvar como template`, `Copiar texto`,
+   `Exportar PDF`, `Salvar rascunho` e `Finalizar anamnese`.
+4. Canvas único e responsivo com todos os `WidgetCard` empilhados. Cada card oferece drag
+   handle, recolher/expandir, resumo, remover e undo em `DRAFT`.
+5. DnD usa `dnd-kit`, aceita teclado e publica uma operação de ordem por CAS. Arrastar não
+   desmonta editor nem perde draft intermediário.
+6. `WidgetDrawer` abre à direita com busca, categorias, cards multisselecionáveis, contador,
+   `Limpar` e `Adicionar`. Confirmação insere em lote e foca o primeiro bloco.
+7. `ProtocolDrawer` lista protocolo de sistema e templates salvos, mostra widgets/versão e
+   aplica `REPLACE` em novo draft ou `APPEND_MISSING | REPLACE_WITH_CONFIRMATION` em draft
+   existente.
+8. Drawer de pendências aparece somente ao finalizar e leva ao primeiro campo inválido.
 
-O composer reutiliza DnD apenas internamente onde necessário, mas template obrigatório não
-pode ser reordenado ou deletado. Cada Answer tem um componente comum com opções
-“Não”, “Não sabe”, “Não se aplica” e “Prefere não responder” somente quando o campo permite.
+Cada `Answer` usa componente comum com “Não”, “Não sabe”, “Não se aplica” e “Prefere não
+responder” apenas quando o campo permite. A IA não aparece nesta rota: sem chat, painel,
+badge ou botão de proposta. Uma decisão tomada em `/assistente` chega como operação comum
+do draft com provenance.
+
+#### Fidelidade ao DietFlow
+
+| Elemento doador | Decisão Antessala |
+|---|---|
+| `MainGenericEditor` | portar hierarquia de título, dirty/save e ações; adaptar ao shell Electron/shadcn |
+| `ComposerUniversal` | portar composição controlada, DnD e inserção em lote |
+| `WidgetCard` | portar card, resumo recolhido, drag handle, remoção e readonly |
+| `SelectionDrawer` | portar busca, categorias, multisseleção e footer de confirmação |
+| Importar favoritos/templates | adaptar para protocolos e templates locais versionados |
+| `patientId` e evolução | excluir integralmente |
+| oito widgets nutricionais | usar apenas como referência visual/técnica; não como conteúdo clínico |
+
+#### Contrato visual e de prazer de uso
+
+- O canvas usa uma única coluna editorial confortável; não cria dashboard de mini-cards nem
+  formulário monolítico de checkboxes.
+- `WidgetCard` preserva a hierarquia DietFlow: superfície única com borda sutil, título e
+  descrição curtos, drag handle previsível, ações discretas no header, conteúdo respirando
+  e resumo útil quando recolhido. Não existe card dentro de card.
+- Campos relacionados formam grupos por proximidade, label e ajuda; divisores e cor só
+  reforçam estrutura. Texto explicativo não compete com o preenchimento.
+- Header e barra de ações permanecem acessíveis durante anamnese longa; salvar/finalizar não
+  exigem voltar ao topo. A densidade suporta 14 widgets sem parecer uma planilha esmagada.
+- Drawer tem busca no topo, cards selecionáveis em grid/lista responsiva e footer fixo com
+  contagem e ação primária. Seleção nunca fecha o drawer a cada item.
+- Feedback de DnD mostra origem, destino e placeholder; animação respeita
+  `prefers-reduced-motion`. Drop inválido restaura posição sem perder foco ou conteúdo.
+- Claro, escuro e sistema preservam contraste, bordas, estados e foco. Nenhum estado depende
+  apenas de cor.
+- Aceite visual exige comparação lado a lado com o Composer/WidgetCard/drawer do DietFlow em
+  `1280×720` e `1440×900`, mais reconstrução cega a partir deste Build. Qualquer invenção
+  necessária volta ao contrato antes do Writing Plan.
 
 #### Estados UX
 
@@ -651,6 +732,9 @@ pode ser reordenado ou deletado. Cada Answer tem um componente comum com opçõe
 | complete | terminal e readonly para todos os papéis; sem ação de mutação clínica |
 | catalog miss | mantém texto livre e rotula “não vinculado ao catálogo” |
 | error | mensagem recuperável, retry e nenhum falso “salvo” |
+| protocol-empty | protocolo de sistema continua disponível; templates salvos podem estar vazios |
+| protocol-apply-conflict | nenhuma composição muda; recarregar ou reaplicar após revisão |
+| removed | toast com undo restaura bloco, posição e respostas enquanto DRAFT |
 
 #### Acessibilidade
 
@@ -666,7 +750,8 @@ pode ser reordenado ou deletado. Cada Answer tem um componente comum com opçõe
 |---|---|
 | DTO | tabela parametrizada dos seis estados de resposta por campo |
 | Registry | exatamente 14 tipos e um definition por tipo |
-| Template | ordem fixa, sem widget herdado rejeitado |
+| Protocol | sistema tem 14 widgets; versão/ordem estáveis; template nunca contém respostas |
+| Composer | DnD mouse/teclado, collapse, remoção+undo, inserção em lote e nenhum draft perdido |
 | Serialization | round-trip v3, ID duplicado, versão errada e widget desconhecido |
 | Completeness | positivo condicionado, NOT_ASKED, UNKNOWN, REFUSED e NA |
 | Field matrix | cada path da matriz possui schema; required/optional/NA e condições cobertos parametrizadamente |
@@ -683,6 +768,8 @@ pode ser reordenado ou deletado. Cada Answer tem um componente comum com opçõe
 | Catalog | IDs válidos, fallback livre, hash e seed idempotente |
 | Offline | `fetch` bloqueado durante init/schema/seed |
 | Renderer | teclado, erro, version conflict, submissão final e estado terminal readonly |
+| Templates | salvar/aplicar/versionar, `APPEND_MISSING`, confirmação de replace e zero dado clínico |
+| IA boundary | rota de triagem não monta componente de IA; decisão do Assistente vira operação auditável |
 | PDF | sem rede/JS; texto escapado; provenance e revisão impressas |
 
 ### Operations
@@ -702,11 +789,13 @@ pode ser reordenado ou deletado. Cada Answer tem um componente comum com opçõe
    e ledger exclusivos da arquitetura; não criar `migrate.ts`, manifesto ou `schema_migrations`.
 4. Expandir catálogos e seed read-only.
 5. Implementar services transacionais e DTO mappers.
-6. Expor handlers TIPC validados e filtrados por papel.
-7. Construir template/registry e editors shadcn.
-8. Montar rota da enfermagem e rota médica.
-9. Integrar export sanitizado.
-10. Executar provas de contrato, banco, RBAC, renderer, offline e PDF.
+6. Expor handlers TIPC validados e associados à responsabilidade do domínio.
+7. Construir registry, protocolo de sistema e 14 editors shadcn.
+8. Portar o shell Composer, WidgetCard, DnD e WidgetDrawer do padrão DietFlow.
+9. Implementar persistência, versionamento e aplicação de protocolos/templates.
+10. Montar rota da enfermagem e rota médica sem IA embutida.
+11. Integrar export sanitizado.
+12. Executar provas de contrato, banco, acesso, renderer, offline e PDF.
 
 Esta sequência é dependência arquitetural. Plan a converterá em subtarefas somente depois do
 BUILD integrado, Warlog e Writing Plan da fatia.
@@ -726,7 +815,9 @@ BUILD integrado, Warlog e Writing Plan da fatia.
 | Risk | Containment |
 |---|---|
 | Duplicação entre v2/v3 | namespace explícito e nenhum adapter implícito |
-| Scope de 14 widgets | template fixo, componentes comuns e corte vertical pelo Warlog |
+| Scope de 14 widgets | registry exaustivo, protocolo de sistema e componentes comuns |
+| Template transportar clínica | schema do blueprint proíbe Answer/provenance/caseId e testes inspecionam JSON |
+| DnD perder resposta | ordem por IDs estáveis, estado controlado e teste de draft intermediário |
 | Catálogo incompleto | fallback livre rotulado; nenhuma alegação de completude ANVISA |
 | Papel falsificado no IPC | sessão/actor resolvido no main; input não decide autorização |
 | Escrita concorrente no PGlite | optimistic revision + transação curta |
@@ -741,15 +832,15 @@ BUILD integrado, Warlog e Writing Plan da fatia.
 - [ ] Contratos clínicos pesquisados e validados.
 - [ ] Tabelas, DTOs, commands, queries e constraints provados no runtime.
 - [ ] Estados, sequência e rollback aprovados pelo adversarial.
-- [x] Conteúdo da PoC incorporado ao Analyst integrado.
-- [ ] Review final de congruência verificar este anexo contra o BUILD integrado.
-- [ ] Review final de congruência do BUILD integrado antes do Warlog.
+- [x] Contrato do Composer DietFlow classificado em portar, adaptar e excluir.
+- [ ] Review final de congruência verificar este Build canônico e suas dependências.
+- [ ] Review final do pacote completo antes do Warlog.
 
 ---
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_BUILD`.
-- Autoridade canônica: `hack/BUILD.md`.
+- Estado: `CANONICAL_DOMAIN_BUILD`.
+- Autoridade canônica: este arquivo.
 - Gate individual: inexistente.
-- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans de anamnese e protocolos.

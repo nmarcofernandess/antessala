@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/analysis.md`.
+- Papel: `CANONICAL_DOMAIN_CONTRACT`.
+- Indexado por: `hack/analysis.md`.
 - Gate ou assinatura individual: inexistente.
-- Research, recon e adversarial permanecem como histórico de maturidade, não como bloqueio do hack.
-- Em conflito, `hack/analysis.md` prevalece e este anexo deve ser corrigido.
+- Research, recon e adversarial qualificam a maturidade registrada no tracker único.
+- Este arquivo é a fonte semântica do domínio. `hack/analysis.md` apenas integra e aponta;
+  não substitui, resume com perda nem supera este contrato.
 
 ## TL;DR
 
@@ -239,7 +240,7 @@ versão, campos derivados e forma de persistência pertencem ao Build futuro.
 ```ts
 type PreAnesthesiaContent = {
   _v: 3
-  template: { id: 'pre_anesthesia_mvp'; version: 1 }
+  protocol: { id: string; version: number; kind: 'SYSTEM_PROTOCOL' | 'SAVED_TEMPLATE' }
   blocks: PreAnesthesiaBlock[]
   listMutationLog: ListMutationReceipt[]
   completedAt: string | null
@@ -256,6 +257,64 @@ type PreAnesthesiaBlock<T> = {
   updatedAt: string
 }
 ```
+
+## Experiência canônica da anamnese
+
+O editor adota a experiência comprovada do Composer do DietFlow, mas não seu conteúdo
+nutricional nem seu vínculo com paciente. Esta seção é contrato de produto, não sugestão de
+layout.
+
+### Canvas e widgets
+
+- A anamnese abre num único canvas vertical com cards de widget empilhados.
+- Os 14 tipos pré-anestésicos pertencem ao registry e ficam disponíveis no drawer.
+- Cada card mostra título, descrição curta, estado semântico e resumo quando recolhido.
+- Em `DRAFT`, a pessoa pode recolher, expandir, reordenar por DnD e remover bloco com undo.
+- DnD muda somente a ordem dos blocos. Não altera resposta, proveniência, regra de
+  obrigatoriedade ou resultado operacional.
+- Teclado oferece o mesmo poder de reordenação. Estado nunca depende apenas de cor.
+- `COMPLETE` preserva exatamente a composição e a ordem submetidas em modo somente leitura.
+- A interface não mostra evolução, comparação com outro caso nem qualquer `patientId`.
+
+### Drawer de adição
+
+O comando `Adicionar widgets` abre um drawer com busca, categorias, cards selecionáveis,
+multisseleção, contador no rodapé, `Limpar` e `Adicionar`. O drawer impede IDs duplicados e
+não fecha a cada seleção. Ao confirmar, insere todos os blocos escolhidos e leva o foco ao
+primeiro bloco novo.
+
+### Protocolos e templates salvos
+
+`AnamnesisProtocol` é uma composição versionada de blocos. Nunca contém respostas, pessoa,
+caso, identificador externo, proveniência clínica ou resultado.
+
+| Tipo | Uso | Lei |
+|---|---|---|
+| `SYSTEM_PROTOCOL` | `pre_anesthesia_mvp` da prova | contém os 14 widgets candidatos e não é editado in-place |
+| `SAVED_TEMPLATE` | composição salva pelo operador | guarda nome, descrição, ordem e configuração dos widgets; toda alteração cria versão |
+
+Aplicar um protocolo a um draft novo usa `REPLACE`. Em draft com conteúdo, a pessoa escolhe
+`APPEND_MISSING` ou `REPLACE_WITH_CONFIRMATION`. `APPEND_MISSING` não duplica tipo de widget;
+`REPLACE_WITH_CONFIRMATION` explica que respostas ainda não salvas serão removidas. Nenhuma
+aplicação importa respostas ou proveniência de outro caso.
+
+Um template pode omitir widgets, mas isso não relaxa a completude. `submitFinal` continua
+validando a matriz do protocolo ativo e as exigências do domínio. O protocolo de sistema é
+o único caminho feliz garantido da demonstração.
+
+### Ações do editor
+
+O cabeçalho oferece `Adicionar widgets`, `Protocolos`, `Salvar como template`, `Copiar
+texto`, `Exportar PDF` e `Salvar`. Finalizar a anamnese continua uma ação separada, com
+validação integral e confirmação explícita.
+
+### Fronteira com IA
+
+A anamnese não contém painel de IA, chat, badge de proposta nem botão de aceitar sugestão.
+O Assistente vive em `/assistente`. Lá, a pessoa escolhe um caso, gera propostas, revisa
+origem e decide `ACCEPT | REJECT | CORRECT`. Apenas uma decisão aceita ou corrigida chama a
+operação canônica do draft; quando a pessoa volta à anamnese, vê um campo normal com
+proveniência. A IA nunca altera o card diretamente.
 
 ## Inventário candidato de grupos da coleta
 
@@ -752,7 +811,7 @@ sequenceDiagram
 
   R->>A: abre caso com encaminhamento e snapshot da pessoa
   A->>DB: persiste caso sem patientId
-  N->>A: inicia template pre_anesthesia_mvp@1
+  N->>A: aplica protocolo pre_anesthesia_mvp@1
   loop "cada campo"
     N->>A: registra Answer + Provenance
     A->>A: valida schema e semântica
@@ -809,6 +868,12 @@ sequenceDiagram
   aplicar o template geral completo.
 - MUST NOT produzir ASA, RCRI, aptidão, manejo medicamentoso ou conduta clínica.
 - MUST NOT expor diagnóstico, medicação ou nota clínica à recepção.
+- MUST manter os 14 widgets pré-anestésicos no registry e no protocolo de sistema.
+- MUST permitir DnD, drawer multisseleção e templates salvos somente em `DRAFT`.
+- MUST NOT salvar resposta, identidade ou proveniência clínica em protocolo/template.
+- MUST aplicar protocolo por `REPLACE`, `APPEND_MISSING` ou confirmação explícita.
+- MUST manter toda interação de IA na rota `/assistente`; o editor só consome operações de
+  draft já decididas por humano.
 
 ## Architecture Risks
 
@@ -847,13 +912,18 @@ constraint deste anexo sobrepõe o BUILD integrado quando depender de `UNRESOLVE
       correção aplica a matriz de impacto e bloqueia consumidores obsoletos até revisão.
 - [ ] Procedimento sem catálogo preserva texto/fonte e não bloqueia o caso.
 - [ ] Encerramento da captura, proposta e confirmação operacional são marcos separados.
-- [ ] Revisão final incorreta recebe adendo/substituição rastreável; nunca overwrite.
+- [ ] Revisão final é imutável; correção clínica posterior pertence ao encontro ou à
+      evidência de pendência, nunca a um overwrite da entrevista.
 - [ ] Recepção recebe somente requisito operacional e pendência administrativa.
 - [ ] Erro descoberto depois da finalização preserva a versão anterior e controla o impacto
       nos derivados; política pós-publicação continua visivelmente aberta.
 - [ ] Um novo encaminhamento cria novo caso mesmo com nome idêntico.
 - [ ] O boot carrega catálogos sem rede e o app funciona com dados sintéticos.
 - [ ] Nenhuma saída usa ASA, RCRI, aptidão ou orientação de suspensão medicamentosa.
+- [ ] O protocolo de sistema abre os 14 widgets em cards empilhados e reordenáveis.
+- [ ] Drawer adiciona vários widgets por busca/categoria e preserva foco.
+- [ ] Um template salvo reaplica somente a composição; nenhuma resposta atravessa casos.
+- [ ] A anamnese não monta IA; propostas são decididas exclusivamente em `/assistente`.
 
 ## Catálogos: verdade atual e gate de publicação
 
@@ -874,7 +944,8 @@ direito de adaptação ou redistribuição.
 
 ## Decisões da demonstração
 
-Permanecem `DEMO_DECISION`: exatamente 14 grupos e sua ordem; wording, obrigatoriedade e
+Permanecem `DEMO_DECISION`: exatamente 14 grupos e a ordem inicial do protocolo de sistema;
+wording, obrigatoriedade e
 ramos; forma física da negativa; critérios para encerrar captura com lacuna; conta
 `ENFERMAGEM` representando enfermeiro; QUICK/STANDARD/EXTENDED, minutos, buffers, prazos,
 pesos e caps; uso dos recortes de medicamentos, MET e comorbidades; faixas de plausibilidade;
@@ -897,12 +968,13 @@ institucional das normas profissionais no fluxo real.
 
 ## Resultado da investigação
 
-Os achados e limites deste domínio foram incorporados em `hack/analysis.md`. Pendências
+Os achados e limites deste domínio são indexados em `hack/analysis.md`. Pendências
 institucionais continuam documentadas como fronteira futura e não bloqueiam a PoC sintética.
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_ANALYSIS`.
-- Autoridade canônica: `hack/analysis.md`.
+- Estado: `CANONICAL_DOMAIN_CONTRACT`.
+- Autoridade canônica: este arquivo.
 - Gate individual: inexistente.
-- Uso futuro: detalhe semântico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e de todo Writing Plan que tocar anamnese,
+  widgets, catálogos, protocolos, templates ou exportação.

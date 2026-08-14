@@ -2,11 +2,12 @@
 
 ## Estado documental
 
-- Papel: `REFERENCE_APPENDIX`.
-- Consumido por: `hack/BUILD.md`.
+- Papel: `CANONICAL_DOMAIN_BUILD`.
+- Indexado por: `hack/BUILD.md`.
 - Gate ou assinatura individual: inexistente.
-- Estados antigos de bloqueio foram absorvidos pela reconciliação integrada.
-- Em conflito, `hack/BUILD.md` prevalece e este anexo deve ser corrigido.
+- O estado de maturidade permanece no tracker único; o hub não pode promovê-lo sozinho.
+- Este arquivo é a fonte técnica do domínio. `hack/BUILD.md` apenas integra dependências;
+  não substitui, resume com perda nem supera este contrato.
 
 ## Goal
 
@@ -14,8 +15,8 @@ Implementar um motor puro `demo-workload-v1` que transforma uma revisão finaliz
 anamnese em requisito operacional explicável e uma agenda local de slots QUICK, STANDARD e
 EXTENDED. Submit `FINAL` e cálculo formam um único commit; confirmação/override publicam o
 requisito. A reserva deve ser filtrada por duração/capabilities, transacional, idempotente e
-segura contra dupla confirmação e sobreposição de recurso. O calendário semanal é projeção
-do PGlite.
+segura contra dupla confirmação e sobreposição de recurso. O renderer porta o shell
+FullCalendar do DietFlow, mas o PGlite permanece a fonte de verdade.
 
 ## Current Terrain
 
@@ -37,8 +38,8 @@ sanitizado da revisão candidata a `FINAL` e emite um requisito completo; o subm
 revisão + cálculo atomicamente e uma decisão posterior publica confirmação/override. A
 agenda materializa até 30 dias a partir de janelas datadas administráveis, sem recorrência.
 Booking usa índices parciais, ocupação exclusiva de recursos, command receipt e transação
-curta. A UI semanal própria consulta uma projeção operacional; nenhuma regra vive no
-componente.
+curta. FullCalendar consulta uma projeção operacional por intervalo; nenhuma regra vive no
+componente. DnD e resize apenas propõem mudanças, sempre revalidadas no main.
 
 ## Files / Areas
 
@@ -57,8 +58,9 @@ componente.
 | `src/main/scheduling/booking-service.ts` | new | Reserva/reagendamento/idempotência | critical |
 | `src/main/scheduling/router.ts` | new | TIPC fino e guards | high |
 | `src/main/tipc.ts` | spread router | Wiring | low |
-| `src/renderer/src/paginas/AgendaPagina.tsx` | new | Grade semanal | medium |
-| `src/renderer/src/componentes/agenda/` | new | Week grid, cards, list fallback, drawer | medium |
+| `package.json` | add | FullCalendar v6 React, daygrid, timegrid, interaction, list e rrule | medium |
+| `src/renderer/src/paginas/AgendaPagina.tsx` | new | Shell operacional completa | high |
+| `src/renderer/src/componentes/agenda/` | new | Calendar, toolbar, filters, renderers e drawer | high |
 | `src/renderer/src/App.tsx` | add routes | Navegação | low |
 | `tests/shared/scheduling/` | new | Oráculos do motor | medium |
 | `tests/main/db/scheduling*.spec.ts` | new | Constraints/corridas | high |
@@ -794,6 +796,17 @@ type SchedulableNeedRef =
   | { kind: 'INITIAL'; requirementId: string; requirementVersion: number }
   | { kind: 'RETURN'; returnRequestId: string; returnRequestVersion: number }
 
+type SchedulingCompatibilityIdentityDTO = {
+  caseId: string
+  schedulingRequirementId: string
+  schedulingRequirementVersion: number
+  slotClassId: SlotClass
+  durationMinutes: 20 | 35 | 50
+  bufferMinutes: 5 | 10
+  requiredResourceKinds: ResourceKind[]
+  requiredCapabilities: ResourceCapability[]
+}
+
 type MarkTriagePendingInput = {
   requestId: string
   caseId: string
@@ -876,7 +889,8 @@ type BookingDTO = {
 `requiredCapabilities` contém `INTERPRETER`; não há inferência no renderer. O snapshot de
 retorno copia o `RequirementEffectiveDTO` inteiro sem recalcular essa relação.
 
-Recepção recebe requirement publicado/need operacional e `BookingDTO`; nunca recebe
+Recepção recebe `SchedulingCompatibilityIdentityDTO`, requirement publicado/need
+operacional e `BookingDTO`; nunca recebe
 `clinicalSignals`. `occupiedMinutes` e `slot.endsAt` sempre incluem consulta + buffer.
 `MarkTriagePendingInput.reason` aceita 10–500 caracteres e
 `missingFieldPaths` somente paths conhecidos pelo contrato da anamnese; estado, ator,
@@ -899,6 +913,11 @@ Compatibilidade:
 7. bundle contém exatamente um `ANESTHESIA_PROFESSIONAL`, um `ROOM` e apoios requeridos;
 8. não existe block ativo nem occupancy concorrente;
 9. começa no futuro.
+
+Para `INITIAL`, `schedulingRequirementId` é a identidade autoritativa que decide quais
+slots podem ser ocupados. `slotClassId` é uma dimensão dessa identidade, não “tipo de
+paciente”. Para `RETURN`, a mesma projeção usa o `returnRequestId` equivalente. O renderer
+envia somente IDs e versões; o service recarrega todos os atributos.
 
 O resultado da query é discriminado: `{ kind: 'SLOTS'; slots }` ou
 `{ kind: 'CAPACITY_SHORTAGE'; requirement, searchedFrom, searchedThrough, nextSearchFrom }`.
@@ -1041,30 +1060,94 @@ commands próprios, mas não reclassifica o caso nem o devolve à enfermagem.
 
 #### Rotas e superfícies
 
-- `/agenda` — grade semanal e busca por identificador do caso.
-- `/casos/:caseId/agendamento` — drawer/página focada no requisito e booking.
-- `/configuracoes/agenda` — `ADMIN` gerencia recursos, janelas datadas e bloqueios; sem
-  editor recorrente.
+- `/agenda` — FullCalendar com Agenda, Programação e Para agendar.
+- `/casos/:caseId/agendamento` — abre a mesma seleção/drawer focada no requisito.
+- `/configuracoes/agenda` — recursos, janelas datadas e bloqueios.
+
+#### Dependências FullCalendar
+
+Todas permanecem no mesmo major v6:
+
+```text
+@fullcalendar/core
+@fullcalendar/react
+@fullcalendar/daygrid
+@fullcalendar/timegrid
+@fullcalendar/interaction
+@fullcalendar/list
+@fullcalendar/rrule
+rrule
+```
 
 #### `AgendaPagina`
 
 ```text
-Toolbar
-  semana anterior | hoje | próxima semana
-  filtro de classe | filtro de recurso | buscar caso
-RequirementBanner
-  identificador | classe | duração | desiredBy | capabilities
-WeekGrid
-  5 colunas de dia útil
-  SlotCard[]
-AccessibleSlotTable
-  data | início | fim | classe | recursos | estado | ação
-BookingDrawer
-  resumo operacional | slot escolhido | confirmar/cancelar
+AgendaHeaderBar
+  mode: Agenda | Programação | Para agendar
+  view: Mês | Semana | Dia
+  previous | Hoje | next
+  busca
+  filtros: tipo | status | classe | recurso
+  Novo: Reserva | Bloqueio | Janela extra
+  Mais: Configurações | Imprimir/Exportar | Fins de semana | Horário expandido
+RequirementContextBar
+  caso | requirementId | classe | duração | desiredBy | capabilities
+AgendaCalendar
+  FullCalendar dayGridMonth | timeGridWeek | timeGridDay
+AgendaProgramacao
+  lista/tabela acessível sobre a mesma projeção
+AgendaParaAgendar
+  worklist de SchedulingCompatibilityIdentityDTO sem booking ativo
+UnifiedAgendaDrawer
+  Reserva | Bloqueio | Janela extra
 ```
 
-Não há drag-and-drop. Reagendar reutiliza o seletor e abre confirmação explícita. Cor é
-secundária; todo card escreve Rápida/Normal/Estendida e duração.
+Configuração base:
+
+```ts
+const calendarContract = {
+  headerToolbar: false,
+  slotDuration: '00:15:00',
+  snapDuration: '00:15:00',
+  eventMinHeight: 15,
+  slotEventOverlap: false,
+  dayMaxEvents: 3,
+  eventDisplay: 'block',
+  navLinks: true,
+  editable: true,
+} as const
+```
+
+`eventDrop` e `eventResize` chamam `scheduling.bookings.rebook`. O service valida requisito,
+slot, versão, recursos, classe, ocupação e conflito. Se falhar, o callback executa
+`revert()` e abre feedback acionável. Resize que tentaria mudar a duração publicada é
+rejeitado; a duração pertence ao requirement, não ao pixel.
+
+Cor é secundária. Cada evento escreve Rápida/Normal/Estendida, duração e estado. A altura é
+proporcional; CSS não força mínimo visual acima de 20 px. Eventos de janela/bloqueio usam
+background rendering e não se confundem com booking.
+
+#### Portabilidade DietFlow: portar, adaptar e excluir
+
+| Contrato do DietFlow | Antessala |
+|---|---|
+| FullCalendar month/week/day + range windowed | `PORT` |
+| toolbar customizada, dropdowns, busca e filtros | `PORT` com labels do Antessala |
+| business hours, background events e bloqueios | `PORT` |
+| DnD/resize com confirmação e revert | `PORT` com validação de requirement |
+| UnifiedAgendaDrawer e dirty guard | `PORT` para reserva, bloqueio e janela extra |
+| preferências de visão persistidas | `PORT` para a conta integrada; não usar localStorage como fonte |
+| renderização compacta por duração e tokens de tema | `PORT` |
+| Atendimento | `ADAPT` para `SchedulingBooking` |
+| Patient/planoAtendimentoId | `ADAPT` para caso autônomo + `schedulingRequirementId` |
+| profissional/local | `ADAPT` para bundle de recursos/capabilities |
+| EXPANDE/BLOQUEIA agenda | `ADAPT` para janela extra/bloqueio de capacidade |
+| Planejamento longitudinal e cadência | `EXCLUDE` |
+| tarefas, WhatsApp, financeiro e histórico clínico | `EXCLUDE` |
+| qualquer `patientId` ou evolução | `EXCLUDE` |
+
+“Trazer toda a regra do DietFlow” significa executar esta matriz, não copiar entidades
+nutricionais que violam o Antessala.
 
 #### Estados UX
 
@@ -1073,6 +1156,7 @@ secundária; todo card escreve Rápida/Normal/Estendida e duração.
 | requirement pending | CTA volta à enfermagem; agenda bloqueada |
 | loading | skeleton de toolbar/grid/lista |
 | available | cards e lista sincronizados |
+| range-loading | estrutura visível; mutação bloqueada até a projeção completa |
 | no compatible slot | filtros aplicados, período consultado, próxima semana e shortage |
 | selected | drawer resume requisito e slot |
 | confirming | botão desabilitado e requestId estável |
@@ -1085,6 +1169,9 @@ secundária; todo card escreve Rápida/Normal/Estendida e duração.
 | cancelled | motivo e ação de escolher nova vaga |
 | no-show | estado terminal daquele booking; nova reserva explícita |
 | error | retry seguro com mesmo requestId quando apropriado |
+| drag/resize pending | evento provisório; nova interação bloqueada até resposta |
+| drag/resize rejected | `revert()` obrigatório, reserva original preservada |
+| drawer dirty | fechar/trocar item pede confirmação; nada é descartado em silêncio |
 
 #### DTO do renderer
 
@@ -1109,6 +1196,9 @@ type SlotCardDTO = {
 ```
 
 Nenhum campo clínico participa do DTO.
+
+`AgendaCalendar`, `AgendaProgramacao` e `AgendaParaAgendar` consomem o mesmo
+`SchedulingEventDTO[]`. O fallback acessível não mantém fetch, filtros ou regra paralelos.
 
 ### Validation
 
@@ -1168,8 +1258,14 @@ Nenhum campo clínico participa do DTO.
 
 #### Renderer/E2E
 
-- grade e tabela mostram os mesmos slots.
-- navegação de semana respeita timezone.
+- mês, semana, dia, Programação e Para agendar usam a mesma projeção e filtros.
+- navegação de intervalo respeita timezone e não faz fetch sem limite.
+- dropdowns de modo, visão, Novo e Mais preservam teclado, foco e estado.
+- business hours, janela extra e bloqueio aparecem como background events.
+- drop compatível confirma nova reserva; drop incompatível chama `revert()`.
+- resize nunca altera a duração do requirement por pixel.
+- evento de 20 minutos permanece visualmente menor que um de 50 minutos.
+- preferências persistem para a conta integrada; mudança forçada não sobrescreve escolha.
 - seleção incompatível não tem ação de reserva.
 - conflito simultâneo remove slot e preserva dados do caso.
 - fluxo incompleto: `markPending` → `TRIAGE_PENDING` → `resume` →
@@ -1205,7 +1301,7 @@ Nenhum campo clínico participa do DTO.
 6. Implementar pausa/resume, requirement service e projeção segura por papel.
 7. Implementar booking service atômico/idempotente.
 8. Expor router TIPC validado.
-9. Construir grade semanal, tabela acessível e drawer.
+9. Portar FullCalendar, toolbar/dropdowns, renderers, preferências e drawer unificado.
 10. Integrar retorno, check-in, start, reagendamento, cancelamento e no-show.
 11. Executar provas de regra, concorrência, RBAC e ponta a ponta.
 
@@ -1232,7 +1328,8 @@ A sequência é topológica, não um Plan executável.
 | Recepção inferir clínica por explicação | operational explanation curada sem paths/fatos |
 | Ocupação ser liberada no start | booking completa, mas occupancy persiste até `slot.ends_at` |
 | Edição pós-publicação regressar estado | requirement/revisão imutáveis na PoC; resultado clínico versiona correção separadamente |
-| Grade semanal crescer em complexidade | sem DnD e sem recorrência; janelas datadas |
+| FullCalendar virar segunda fonte de verdade | range query única, actions no main e revert obrigatório |
+| Copiar domínio nutricional do DietFlow | matriz PORT/ADAPT/EXCLUDE e teste sem patientId |
 
 ## Definition of Complete for Build
 
@@ -1241,16 +1338,16 @@ A sequência é topológica, não um Plan executável.
 - [ ] DTOs, tabelas, constraints, concorrência e rollback provados no PGlite.
 - [ ] Janelas, capacidade, recursos e bookings validados como `DEMO_DECISION`.
 - [ ] Topologia agenda base → assessment → integração provada no PGlite.
-- [ ] Superfície semanal confirmada pelos futuros Surface Blueprints.
-- [x] Conteúdo da PoC incorporado ao Analyst integrado.
-- [ ] Review final de congruência verificar este anexo contra o BUILD integrado.
-- [ ] Review final de congruência do BUILD integrado antes do Warlog.
+- [ ] FullCalendar mês/semana/dia, Programação e Para agendar confirmados por prova visual.
+- [x] Matriz DietFlow PORT/ADAPT/EXCLUDE fechada.
+- [ ] Review final de congruência verificar este Build canônico e suas dependências.
+- [ ] Review final do pacote completo antes do Warlog.
 
 ---
 
 ## Estado de consolidação
 
-- Estado: `INCORPORATED_IN_BUILD`.
-- Autoridade canônica: `hack/BUILD.md`.
+- Estado: `CANONICAL_DOMAIN_BUILD`.
+- Autoridade canônica: este arquivo.
 - Gate individual: inexistente.
-- Uso futuro: detalhe técnico para o Writing Plan, sem substituir a síntese.
+- Uso futuro: fonte obrigatória do Warlog e dos Writing Plans de requisito e agenda.

@@ -1,173 +1,79 @@
-# ANALYST — índice canônico do Antessala
+# ANALYST — Índice dos contratos de domínio
+
+## Papel deste arquivo
+
+Este arquivo é um hub. Ele não contém a verdade completa de nenhum domínio e não autoriza
+implementação. A fonte semântica é sempre o `ANALYST-*` correspondente em `hack/domains/`.
+Se o hub e um contrato de domínio divergirem, o trabalho para e a divergência é corrigida no
+artefato canônico; ninguém escolhe silenciosamente o texto mais conveniente.
+
+O PRD aprovado define problema, promessa e leis globais. Os Analysts de domínio definem
+entidades semânticas, estados, atores, responsabilidades, regras, falhas e proibições. O
+arquivo [analysis.md](analysis.md) integra apenas as fronteiras e o fluxo ponta a ponta.
+
+## Ordem de leitura
+
+1. [PRD.md](PRD.md)
+2. [.context/manifest.yaml](../.context/manifest.yaml)
+3. este índice
+4. todos os Analysts de domínio relacionados à fatia — integralmente
+5. [analysis.md](analysis.md), apenas para dependências e fluxo global
+6. Builds correspondentes e [BUILD.md](BUILD.md)
+7. [tracker único](../.context/review/STATUS.md)
+
+## Contratos canônicos
+
+| Domínio | Analyst canônico | O que fecha |
+|---|---|---|
+| Acesso e auditoria | [ANALYST-acesso-e-auditoria.md](domains/ANALYST-acesso-e-auditoria.md) | conta integrada da demo, responsabilidades por ação, projeções, escopo e auditoria |
+| Caso e encaminhamento | [ANALYST-caso-e-encaminhamento.md](domains/ANALYST-caso-e-encaminhamento.md) | caso autônomo, snapshots, handoffs e lifecycle |
+| Anamnese e catálogos | [ANALYST-anamnese-e-catalogos.md](domains/ANALYST-anamnese-e-catalogos.md) | Composer, 14 widgets, respostas semânticas, protocolos e catálogos |
+| Classificação e agenda | [ANALYST-classificacao-e-agenda.md](domains/ANALYST-classificacao-e-agenda.md) | requisito operacional versionado, compatibilidade, capacidade e agenda |
+| Avaliação, pendências e handoff | [ANALYST-avaliacao-pendencias-e-handoff.md](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | consulta anestésica, pendências, retorno, resultado e entrega |
+| Superfícies e configurações | [ANALYST-superficies-e-configuracoes.md](domains/ANALYST-superficies-e-configuracoes.md) | navegação integrada, trabalhos por tela, estados e limites de informação |
+| Arquitetura offline e prova | [ANALYST-arquitetura-offline-e-prova.md](domains/ANALYST-arquitetura-offline-e-prova.md) | boot local, fronteiras Electron, rede opcional e prova |
+| IA, memória e conhecimento | [ANALYST-ia-memoria-e-conhecimento.md](domains/ANALYST-ia-memoria-e-conhecimento.md) | Assistente isolado, proposta humana, conhecimento versionado e Gemini explícito |
+
+## Decisões transversais vigentes
+
+- A demonstração usa uma conta integrada. Os cinco papéis continuam sendo
+  responsabilidades funcionais e autoria de ação, não cinco logins.
+- O menu lateral expõe o fluxo inteiro. O dropdown do usuário oferece Configurações, tema
+  Claro/Escuro/Sistema, Amostra de uso e Sair.
+- Não existe paciente longitudinal, `patientId`, deduplicação por pessoa nem evolução entre
+  encaminhamentos.
+- A identidade que determina compatibilidade de agenda é o requisito operacional
+  versionado (`schedulingRequirementId`), nunca um ID de paciente.
+- A agenda porta e adapta a experiência FullCalendar do DietFlow; regras nutricionais,
+  histórico de paciente e entidades doadoras não atravessam.
+- A anamnese porta e adapta o Composer do DietFlow com 14 widgets pré-anestésicos,
+  WidgetCards, DnD, drawer multi-select e protocolos salvos.
+- IA fica em `/assistente`. Não existe painel global nem IA dentro de widget, agenda ou
+  header. Toda saída continua rascunho até decisão humana.
+- Primeiro boot e fluxo-base funcionam offline. Gemini é opcional, explícito e dispensável.
+
+## Contrato para o futuro Warlog
+
+Este repositório não possui Warlog nesta fase. Outra IA o produzirá somente depois do review
+final de congruência.
+
+O Warlog futuro deve:
+
+1. ler os oito Analysts e os oito Builds integralmente;
+2. decompor cada MUST, regra, estado, campo, ação, falha, teste, acessibilidade e caso de
+   escala em trabalho rastreável;
+3. registrar, para cada item, os arquivos e as seções de origem;
+4. não criar tarefa baseada apenas neste hub, em `analysis.md` ou em `BUILD.md`;
+5. aceitar centenas ou milhares de itens quando isso for necessário para cobrir o contrato;
+6. provar cobertura reversa: toda linha normativa dos contratos de domínio precisa apontar
+   para ao menos uma tarefa, prova ou exclusão consciente;
+7. cortar fatias verticais somente depois dessa matriz de cobertura;
+8. gerar Writing Plans por fatia, sem Spec intermediária.
 
 ## Estado
 
-- Documento analítico ativo: [analysis.md](analysis.md)
-- Fonte de produto aprovada: [PRD.md](PRD.md)
-- Profundidade: `forensic`
-- Estado de revisão: `CONSOLIDATED_FOR_BUILD`
-- Tracker único: [`.context/review/STATUS.md`](../.context/review/STATUS.md)
-- Autoridade: [analysis.md](analysis.md) prevalece; dossiês são anexos de detalhe sem gate
-  individual
-
-Este arquivo é o índice estável para ferramentas e leitores que procuram
-`hack/ANALYST.md`. A análise consolidada vive em `analysis.md`; os contratos detalhados
-vivem nos oito dossiês abaixo. Nenhum Build pode alterar uma lei do Analyst.
-
-## Sistema coberto
-
-O pacote descreve a jornada inteira do MVP local:
-
-```text
-encaminhamento na recepção
-→ coleta estruturada de enfermagem
-→ requisito operacional QUICK | STANDARD | EXTENDED
-→ reserva de vaga compatível
-→ consulta com anestesiologista
-→ pendência e retorno, quando necessários
-→ resultado finalizado, versionado e corrigível sem overwrite
-→ recebimento pelo serviço solicitante
-```
-
-Também fecha os domínios transversais sem os quais essa jornada não funciona: login
-local, papéis e permissões, auditoria, cadastros, configurações, navegação, estados de UI,
-persistência PGlite, fixtures, funcionamento offline, segurança, IA assistiva, memória
-aprovada e prova ponta a ponta. “Descreve” não significa pesquisado, revisado ou aprovado.
-
-No domínio de IA, a decisão vigente para a prova é Gemini único com fixtures sintéticas,
-sem fallback de provedor. OpenRouter não pertence ao produto-alvo; uso clínico real de
-cloud permanece fora do escopo deste hack.
-
-## Dossiês e BUILDs correspondentes
-
-| # | Domínio | Analyst canônico | BUILD correspondente |
-|---:|---|---|---|
-| 1 | Caso e encaminhamento | [ANALYST-caso-e-encaminhamento](domains/ANALYST-caso-e-encaminhamento.md) | [BUILD-caso-e-encaminhamento](domains/BUILD-caso-e-encaminhamento.md) |
-| 2 | Acesso e auditoria | [ANALYST-acesso-e-auditoria](domains/ANALYST-acesso-e-auditoria.md) | [BUILD-acesso-e-auditoria](domains/BUILD-acesso-e-auditoria.md) |
-| 3 | Anamnese e catálogos | [ANALYST-anamnese-e-catalogos](domains/ANALYST-anamnese-e-catalogos.md) | [BUILD-anamnese-e-catalogos](domains/BUILD-anamnese-e-catalogos.md) |
-| 4 | Classificação e agenda | [ANALYST-classificacao-e-agenda](domains/ANALYST-classificacao-e-agenda.md) | [BUILD-classificacao-e-agenda](domains/BUILD-classificacao-e-agenda.md) |
-| 5 | Avaliação, pendências e handoff | [ANALYST-avaliacao-pendencias-e-handoff](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | [BUILD-avaliacao-pendencias-e-handoff](domains/BUILD-avaliacao-pendencias-e-handoff.md) |
-| 6 | Superfícies e configurações | [ANALYST-superficies-e-configuracoes](domains/ANALYST-superficies-e-configuracoes.md) | [BUILD-superficies-e-configuracoes](domains/BUILD-superficies-e-configuracoes.md) |
-| 7 | Arquitetura offline e prova | [ANALYST-arquitetura-offline-e-prova](domains/ANALYST-arquitetura-offline-e-prova.md) | [BUILD-arquitetura-offline-e-prova](domains/BUILD-arquitetura-offline-e-prova.md) |
-| 8 | IA, memória e conhecimento | [ANALYST-ia-memoria-e-conhecimento](domains/ANALYST-ia-memoria-e-conhecimento.md) | [BUILD-ia-memoria-e-conhecimento](domains/BUILD-ia-memoria-e-conhecimento.md) |
-
-Um dossiê responde o que o domínio significa e como se comporta. O BUILD de mesmo nome
-traduz somente essas decisões em tabelas, DTOs, serviços, comandos, queries, componentes e
-testes. BUILD não é Spec, Plan nem autorização para código.
-
-## Leis globais estáveis
-
-### Papéis
-
-```text
-ADMIN | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE
-```
-
-- Paciente e médico solicitante não autenticam no MVP.
-- `ADMIN` administra a operação, mas não herda leitura clínica.
-- `SOLICITANTE` enxerga somente pendências atribuídas e resultado/entrega do serviço ao
-  qual sua conta está vinculada; não possui acompanhamento geral do caso.
-- Autorização é aplicada no processo principal; esconder botão não é controle de acesso.
-- Revogar conta, papel, serviço ou vínculo impede novo commit/resposta protegida e invalida
-  projeções efêmeras sob a autoridade anterior.
-- `RECEPCAO` opera status e entrega selada; não lê nem salva PDF clínico.
-- Auditoria administrativa é sanitizada e append-only nas operações normais do app; não é
-  promessa de inviolabilidade contra acesso direto ao dispositivo.
-
-### Estado canônico do caso
-
-```text
-RECEIVED_AT_RECEPTION
-→ WAITING_NURSING
-→ NURSING_IN_PROGRESS ↔ TRIAGE_PENDING
-→ READY_FOR_SCHEDULING
-→ SCHEDULED
-→ WAITING_ANESTHESIA
-→ IN_ASSESSMENT
-→ PENDING → IN_ASSESSMENT
-          ↘ WAITING_RETURN → WAITING_ANESTHESIA → IN_ASSESSMENT
-→ READY_FOR_HANDOFF
-→ DELIVERED_TO_REQUESTER
-```
-
-`CANCELLED` é terminal e exige motivo. Os dossiês podem possuir estados internos próprios
-para sessão, slot, reserva, revisão, encontro, pendência ou resultado; eles não substituem
-o estado do caso.
-
-Antes do encontro, `WAITING_ANESTHESIA` possui saídas explícitas: anulação de check-in volta
-ao estado anterior; presença sem início devolve INITIAL ao agendamento ou reabre RETURN;
-cancelamento terminal exige fato e motivo próprios.
-
-Pendência não é sinônimo de bloqueio. Evidência submetida não é suficiência clínica, e
-retorno não nasce automaticamente do último item respondido. Versões finalizadas são
-imutáveis; correção, adendo ou supersessão criam sucessoras e preservam o histórico.
-
-### Fronteiras
-
-- A triagem geral do SUS termina antes do Antessala.
-- O produto não diagnostica, não atribui ASA e não declara aptidão anestésica.
-- A coleta de enfermagem subsidia, mas não substitui, a avaliação pré-anestésica do
-  anestesiologista. Na demo, a conta que encerra a captura representa um enfermeiro;
-  habilitação, delegação e supervisão reais continuam abertas à decisão institucional.
-- Captura completa, informação resolvida, requisito operacional confirmado e avaliação
-  médica concluída são marcos diferentes.
-- `QUICK`, `STANDARD` e `EXTENDED` descrevem carga de consulta, não cor de pulseira,
-  gravidade clínica ou prioridade cirúrgica.
-- Um caso guarda um snapshot descartável da pessoa; não existe cadastro longitudinal de
-  paciente, deduplicação por nome nem evolução entre casos.
-- O serviço solicitante recebe o resultado; a marcação da cirurgia permanece externa.
-- Todas as regras e pessoas da demonstração são sintéticas e não alegam reproduzir o HC.
-
-## Matriz de suficiência do Analyst
-
-| Pergunta que o código exigirá | Fonte que deve respondê-la |
-|---|---|
-| Quem entra, como entra e o que pode fazer? | acesso e auditoria |
-| O que chega à recepção e qual identidade nasce? | caso e encaminhamento |
-| Quais perguntas existem, campos, DTOs e completude? | anamnese e catálogos |
-| Como a triagem vira requisito e como a vaga é reservada? | classificação e agenda |
-| Como o anestesiologista conclui, pede algo e devolve? | avaliação, pendências e handoff |
-| Quais telas, rotas, estados e configurações existem? | superfícies e configurações |
-| Como persiste, funciona offline e prova o fluxo? | arquitetura offline e prova |
-| Como IA propõe, humano confirma e conhecimento é promovido? | IA, memória e conhecimento |
-| Como tudo se conecta? | `analysis.md` |
-
-O estado autoritativo de pesquisa, recon e adversarial está somente no
-[tracker](../.context/review/STATUS.md). Esta tabela mapeia ownership; não declara readiness.
-
-## Recibo de consolidação
-
-- [x] Oito domínios foram incorporados em `analysis.md`.
-- [x] Leis, evidências, decisões da demo e limites futuros estão separados.
-- [x] Recon técnico distingue capacidade existente de arquitetura proposta.
-- [x] Lacunas institucionais foram declaradas fora do escopo, não respondidas por invenção.
-- [x] `analysis.md` é a única autoridade semântica integrada.
-- [x] Dossiês não possuem gate ou assinatura individual.
-
-## Ordem obrigatória
-
-```text
-PRD aprovado
-→ Analyst integrado
-→ BUILD integrado
-→ review final de congruência
-→ Warlog corta minispecs
-→ Writing Plan da minispec
-→ primeiro teste TDD em RED
-→ implementação
-→ QA da minispec
-→ próxima minispec
-→ QA final
-```
-
-Os BUILDs de domínio são anexos técnicos consumidos pela síntese integrada. Não existe Spec
-separada: PRD + Analyst + BUILD formam o contrato do produto.
-
----
-
-## Estado de consolidação
-
-- Estado: `CONSOLIDATED_FOR_BUILD`.
-- Autoridade semântica: [analysis.md](analysis.md).
-- Anexos: oito Analysts de domínio, sem gate individual.
-- Próximo artefato: [BUILD.md](BUILD.md).
+- PRD: aprovado por Marco.
+- Analysts individuais: contratos canônicos sem gate individual.
+- Síntese: hub em reconciliação final.
+- Build integrado: não autoriza código antes do review final de congruência.
+- Warlog, Writing Plans e implementação: inexistentes/bloqueados.
