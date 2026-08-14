@@ -1,7 +1,6 @@
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { cancelJob, createJob, failJob, finishJob, getJob, isJobCancelled, isJobPaused, pauseJob, resumeJob, updateJob } from '../jobs'
-import { ingestImportedFileResult } from './ingest'
 import {
   createKnowledgeGroup,
   createKnowledgeImportFile,
@@ -20,9 +19,9 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.markdown',
   '.txt',
   '.pdf',
+  '.docx',
   '.json',
   '.jsonl',
-  '.zip',
   '.html',
   '.htm',
   '.csv',
@@ -200,6 +199,7 @@ function mimeForPath(filePath: string): string | null {
   if (ext === '.jsonl') return 'application/x-ndjson'
   if (ext === '.csv') return 'text/csv'
   if (ext === '.pdf') return 'application/pdf'
+  if (ext === '.docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   if (ext === '.zip') return 'application/zip'
   if (ext === '.html' || ext === '.htm') return 'text/html'
   return null
@@ -473,22 +473,45 @@ export async function runBulkRagImport(
 
       try {
         if (persistedFileId) await updateKnowledgeImportFile(persistedFileId, { status: 'reading' })
-        const { importFile } = await import('../importers/importer-registry')
-        const imported = await importFile(filePath)
+        const { importStructuredDocument } = await import('../importers/structured-document-importer')
+        const structuredDocument = await importStructuredDocument(filePath)
+        const imported: ImportResult = {
+          type: 'text',
+          data: {
+            text: structuredDocument.text,
+            metadata: {
+              fileName: structuredDocument.metadata.fileName,
+              charCount: structuredDocument.text.length,
+              format: structuredDocument.format === 'pdf' ? 'pdf' : 'text',
+              pageCount: structuredDocument.metadata.pageCount,
+              author: structuredDocument.metadata.author,
+            },
+          },
+        }
         const aiMetadata = await metadataForImportedFile(scan.root_path, filePath, imported, input.auto_metadata === true, summary)
-        const result = await ingestImportedFileResult(filePath, imported, aiMetadata.title, {
-          group_id: group.id,
+        const { createKnowledgeDocument } = await import('./document-repository')
+        const created = await createKnowledgeDocument({
+          titulo: aiMetadata.title,
+          document: structuredDocument,
+          groupId: group.id,
+          contextHint: typeof aiMetadata.metadata.context_hint === 'string' ? aiMetadata.metadata.context_hint : undefined,
+          metadata: {
           bulk_group_id: String(group.id),
           bulk_group_name: groupName,
           bulk_root_path: scan.root_path,
           relative_path: entry.relative_path,
           imported_at: nowIso(),
           ...aiMetadata.metadata,
+          },
         })
+        const result = {
+          source_id: created.source_id,
+          chunks_count: created.index_count,
+          entities_count: 0,
+        }
 
         summary.imported_files++
         summary.chunks_count += result.chunks_count
-        summary.conversations_count += result.conversations_count ?? 0
         if (persistedFileId) {
           await updateKnowledgeImportFile(persistedFileId, {
             source_id: result.source_id || null,

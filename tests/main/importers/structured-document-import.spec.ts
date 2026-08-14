@@ -68,6 +68,18 @@ describe('structured document importer', () => {
     expect(serialized).not.toContain('onclick')
   })
 
+  it('preserva linhas e células de tabelas HTML na representação TipTap', async () => {
+    const filePath = path.join(directory, 'tabela.html')
+    await writeFile(filePath, '<h1>Parâmetros</h1><table><thead><tr><th>Etapa</th><th>Ação</th></tr></thead><tbody><tr><td>Indução</td><td>Confirmar identidade</td></tr></tbody></table>')
+
+    const result = await importStructuredDocument(filePath)
+    const serialized = JSON.stringify(result.tiptapJson)
+
+    expect(serialized).toContain('"type":"table"')
+    expect(serialized).toContain('"type":"tableHeader"')
+    expect(serialized).toContain('Confirmar identidade')
+  })
+
   it.each([
     ['dados.csv', 'nome,valor\nASA,externo', 'csv'],
     ['dados.json', '{"regra":"decisão humana"}', 'json'],

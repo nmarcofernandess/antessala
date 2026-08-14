@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import Highlight from '@tiptap/extension-highlight'
+import { TableKit } from '@tiptap/extension-table'
 import {
   Bold,
   Heading1,
@@ -38,8 +39,9 @@ interface RichTextEditorProps {
   onTitleChange?: (title: string) => void
   onSelectionChange?: (selection?: { text: string; from: number; to: number }) => void
   placeholder?: string
-  status?: 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+  status?: 'idle' | 'dirty' | 'saving' | 'saved' | 'indexing' | 'error'
   revision?: number
+  editable?: boolean
 }
 
 export function RichTextEditor({
@@ -51,6 +53,7 @@ export function RichTextEditor({
   placeholder = 'Comece a escrever…',
   status = 'idle',
   revision,
+  editable = true,
 }: RichTextEditorProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const onSelectionChangeRef = useRef(onSelectionChange)
@@ -62,12 +65,14 @@ export function RichTextEditor({
       StarterKit.configure({ link: false }),
       Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
       Highlight.configure({ multicolor: false }),
+      TableKit.configure({ table: { resizable: true } }),
       Placeholder.configure({ placeholder }),
     ],
     content: value,
+    editable,
     editorProps: {
       attributes: {
-        class: 'min-h-[320px] max-w-none px-6 py-5 leading-7 outline-none',
+        class: 'min-h-[320px] max-w-none px-6 py-5 leading-7 outline-none [&_h1]:mb-5 [&_h1]:mt-8 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mb-4 [&_h2]:mt-7 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mb-3 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-semibold [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground [&_table]:my-5 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:bg-muted [&_th]:p-2 [&_th]:text-left [&_td]:border [&_td]:p-2',
       },
     },
     onUpdate: ({ editor: nextEditor }) => onChange(nextEditor.getJSON() as RichTextJson),
@@ -85,6 +90,10 @@ export function RichTextEditor({
     }
   }, [editor, value])
 
+  useEffect(() => {
+    editor?.setEditable(editable)
+  }, [editor, editable])
+
   if (!editor) return <div className="min-h-[320px] animate-pulse rounded-xl bg-muted/20" />
 
   const statusLabel = {
@@ -92,6 +101,7 @@ export function RichTextEditor({
     dirty: 'Alterações pendentes',
     saving: 'Salvando…',
     saved: revision == null ? 'Salvo' : `Salvo · revisão ${revision}`,
+    indexing: 'Salvo · indexando…',
     error: 'Não foi possível salvar',
   }[status]
 
@@ -108,7 +118,7 @@ export function RichTextEditor({
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="flex flex-wrap items-center gap-1 border-b bg-muted/20 p-2">
+      {editable && <div className="flex flex-wrap items-center gap-1 border-b bg-muted/20 p-2">
         <Button size="icon" variant={editor.isActive('bold') ? 'secondary' : 'ghost'} aria-label="Negrito" onClick={() => editor.chain().focus().toggleBold().run()}><Bold /></Button>
         <Button size="icon" variant={editor.isActive('italic') ? 'secondary' : 'ghost'} aria-label="Itálico" onClick={() => editor.chain().focus().toggleItalic().run()}><Italic /></Button>
         <Button size="icon" variant={editor.isActive('strike') ? 'secondary' : 'ghost'} aria-label="Riscado" onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough /></Button>
@@ -122,9 +132,9 @@ export function RichTextEditor({
         <Button size="icon" variant={editor.isActive('orderedList') ? 'secondary' : 'ghost'} aria-label="Lista numerada" onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered /></Button>
         <Button size="icon" variant={editor.isActive('blockquote') ? 'secondary' : 'ghost'} aria-label="Citação" onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote /></Button>
         <span className="ml-auto text-xs text-muted-foreground" role="status" aria-live="polite">{statusLabel}</span>
-      </div>
+      </div>}
 
-      <div className="flex items-center gap-2 border-b px-4 py-2">
+      {editable && <div className="flex items-center gap-2 border-b px-4 py-2">
         <LinkIcon className="size-4 text-muted-foreground" />
         <Input
           value={linkUrl}
@@ -146,7 +156,7 @@ export function RichTextEditor({
           <Button size="icon" variant="ghost" aria-label="Desfazer" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}><Undo2 /></Button>
           <Button size="icon" variant="ghost" aria-label="Refazer" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()}><Redo2 /></Button>
         </div>
-      </div>
+      </div>}
 
       {title !== undefined && onTitleChange && (
         <Input

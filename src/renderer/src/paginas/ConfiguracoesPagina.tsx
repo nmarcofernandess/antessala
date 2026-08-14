@@ -193,7 +193,7 @@ export function ConfiguracoesPagina() {
               <ShieldCheck className="size-5 text-emerald-600" />
               <h3 className="mt-4 text-sm font-semibold">Local primeiro</h3>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Arquivos, chunks e grafo permanecem no computador. Só a pergunta e os trechos recuperados saem quando você usa o Gemini.
+                Documentos, índice de busca e grafo permanecem no computador. Só a pergunta e os trechos recuperados saem quando você usa o Gemini.
               </p>
             </div>
             <div className="rounded-2xl border border-dashed p-5">

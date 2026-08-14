@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { generateJSON } from '@tiptap/html'
 import StarterKit from '@tiptap/starter-kit'
+import { TableKit } from '@tiptap/extension-table'
 import { marked } from 'marked'
 import sanitizeHtml from 'sanitize-html'
 import TurndownService from 'turndown'
@@ -13,7 +14,7 @@ import type {
   TiptapJsonNode,
 } from '../../shared/structured-document-import'
 
-const extensions = [StarterKit]
+const extensions = [StarterKit, TableKit]
 const turndown = new TurndownService({ bulletListMarker: '-', codeBlockStyle: 'fenced' })
 
 const MIME_TYPES: Record<StructuredDocumentFormat, string> = {

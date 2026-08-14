@@ -1,7 +1,8 @@
-import { existsSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
-import { execute, insertReturningId, queryAll, queryOne } from '../db/query'
+import { execute, insertReturningId, queryAll, queryOne, transaction } from '../db/query'
 import {
   cancelJob,
   getJob,
@@ -22,6 +23,7 @@ import type {
   IaMemoria,
   KnowledgeEnrichmentConfig,
 } from '../../shared/types'
+import type { StructuredDocumentImport } from '../../shared/structured-document-import'
 
 const require = createRequire(import.meta.url)
 const { tipc } = require('@egoist/tipc/main') as typeof import('@egoist/tipc/main')
@@ -143,7 +145,10 @@ const knowledgeListarFontes = t.procedure.action(async () =>
   ),
 )
 
-const knowledgeStats = t.procedure.action(async () => {
+const knowledgeStats = t.procedure
+  .input<{ query?: string } | undefined>()
+  .action(async ({ input }) => {
+  const query = input?.query?.trim() ?? ''
   const fontes = await queryAll<{
     id: number
     tipo: string
@@ -152,26 +157,35 @@ const knowledgeStats = t.procedure.action(async () => {
     ativo: boolean
     criada_em: string
     atualizada_em: string
+    source_format: string
+    page_count: number | null
+    word_count: number
+    enrichment_status: string
     chunks_count: number
   }>(`
     SELECT ks.id, ks.tipo, ks.titulo, ks.importance, ks.ativo,
-           ks.criada_em, ks.atualizada_em, COUNT(kc.id)::int AS chunks_count
+           ks.criada_em::text, ks.atualizada_em::text, ks.source_format,
+           ks.page_count, ks.word_count, ks.enrichment_status,
+           (SELECT COUNT(*)::int FROM knowledge_chunks kc WHERE kc.source_id = ks.id) AS chunks_count
       FROM knowledge_sources ks
-      LEFT JOIN knowledge_chunks kc ON kc.source_id = ks.id
-     GROUP BY ks.id
+     WHERE ($1 = '' OR ks.titulo ILIKE '%' || $1 || '%'
+       OR ks.conteudo_original ILIKE '%' || $1 || '%'
+       OR ks.source_format ILIKE '%' || $1 || '%'
+       OR COALESCE(ks.metadata->>'publisher', '') ILIKE '%' || $1 || '%')
      ORDER BY ks.atualizada_em DESC
-  `)
+  `, query)
   const totais = await queryOne<{
-    total_fontes: number
-    total_chunks: number
-    total_sistema: number
-    total_usuario: number
+    total_documentos: number
+    total_conceitos: number
+    total_relacoes: number
   }>(`
     SELECT
-      (SELECT COUNT(*)::int FROM knowledge_sources) AS total_fontes,
-      (SELECT COUNT(*)::int FROM knowledge_chunks) AS total_chunks,
-      (SELECT COUNT(*)::int FROM knowledge_sources WHERE tipo = 'sistema') AS total_sistema,
-      (SELECT COUNT(*)::int FROM knowledge_sources WHERE tipo <> 'sistema') AS total_usuario
+      (SELECT COUNT(*)::int FROM knowledge_sources) AS total_documentos,
+      (SELECT COUNT(*)::int FROM knowledge_entities WHERE valid_to IS NULL OR valid_to > NOW()) AS total_conceitos,
+      (SELECT COUNT(DISTINCT kr.id)::int
+         FROM knowledge_relations kr
+         JOIN knowledge_relation_evidence ev ON ev.relation_id = kr.id AND ev.invalidated_at IS NULL
+        WHERE kr.valid_to IS NULL OR kr.valid_to > NOW()) AS total_relacoes
   `)
   const enrichment = await queryOne<{
     enriched_count: number
@@ -186,10 +200,9 @@ const knowledgeStats = t.procedure.action(async () => {
   return {
     fontes,
     totais: totais ?? {
-      total_fontes: 0,
-      total_chunks: 0,
-      total_sistema: 0,
-      total_usuario: 0,
+      total_documentos: 0,
+      total_conceitos: 0,
+      total_relacoes: 0,
     },
     enrichment: enrichment ?? {
       enriched_count: 0,
@@ -199,13 +212,60 @@ const knowledgeStats = t.procedure.action(async () => {
   }
 })
 
+const knowledgeDocumentGet = t.procedure
+  .input<{ id: number }>()
+  .action(async ({ input }) => {
+    const { getKnowledgeDocument } = await import('./document-repository')
+    return getKnowledgeDocument(input.id)
+  })
+
+const knowledgeDocumentSave = t.procedure
+  .input<{ id: number; expected_revision: number; titulo: string; content_json: unknown }>()
+  .action(async ({ input }) => {
+    const { saveKnowledgeDocument } = await import('./document-repository')
+    return saveKnowledgeDocument({ ...input, reason: 'autosave' })
+  })
+
+const knowledgeDocumentVersions = t.procedure
+  .input<{ id: number }>()
+  .action(async ({ input }) => {
+    const { listKnowledgeDocumentVersions } = await import('./document-repository')
+    return listKnowledgeDocumentVersions(input.id)
+  })
+
+const knowledgeDocumentRestore = t.procedure
+  .input<{ id: number; revision: number; expected_revision: number }>()
+  .action(async ({ input }) => {
+    const { restoreKnowledgeDocumentVersion } = await import('./document-repository')
+    return restoreKnowledgeDocumentVersion(input)
+  })
+
+const knowledgeDocumentExportMarkdown = t.procedure
+  .input<{ id: number }>()
+  .action(async ({ input }) => {
+    const { getKnowledgeDocument } = await import('./document-repository')
+    const document = await getKnowledgeDocument(input.id)
+    const options = {
+      title: 'Exportar documento em Markdown',
+      defaultPath: `${document.titulo.replace(/[^a-z0-9áàâãéêíóôõúç -]/gi, '').trim() || 'documento'}.md`,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    }
+    const focusedWindow = BrowserWindow.getFocusedWindow()
+    const result = focusedWindow
+      ? await dialog.showSaveDialog(focusedWindow, options)
+      : await dialog.showSaveDialog(options)
+    if (result.canceled || !result.filePath) return { saved: false as const }
+    writeFileSync(result.filePath, document.content_markdown, 'utf8')
+    return { saved: true as const, path: result.filePath }
+  })
+
 const knowledgeEscolherArquivo = t.procedure.action(async () => {
   const window = BrowserWindow.getFocusedWindow()
   const options = {
     properties: ['openFile' as const],
     filters: [{
       name: 'Documentos',
-      extensions: ['md', 'markdown', 'txt', 'pdf', 'json', 'zip', 'html', 'htm', 'csv'],
+      extensions: ['pdf', 'docx', 'md', 'markdown', 'txt', 'html', 'htm', 'csv', 'json', 'jsonl'],
     }],
   }
   const result = window
@@ -260,7 +320,22 @@ const jobsResume = t.procedure.input<{ id: string }>().action(async ({ input }) 
 const knowledgeRemoverFonte = t.procedure
   .input<{ id: number }>()
   .action(async ({ input }) => {
-    await execute('DELETE FROM knowledge_sources WHERE id = $1', input.id)
+    await transaction(async () => {
+      await execute(
+        `DELETE FROM knowledge_relations kr
+          WHERE EXISTS (
+            SELECT 1 FROM knowledge_relation_evidence ev
+             WHERE ev.relation_id = kr.id AND ev.source_id = $1
+          )
+            AND NOT EXISTS (
+              SELECT 1 FROM knowledge_relation_evidence other
+               WHERE other.relation_id = kr.id AND other.source_id <> $1
+                 AND other.invalidated_at IS NULL
+            )`,
+        input.id,
+      )
+      await execute('DELETE FROM knowledge_sources WHERE id = $1', input.id)
+    })
     return { ok: true }
   })
 
@@ -303,26 +378,15 @@ const knowledgeExtrairTexto = t.procedure
     if (!existsSync(input.caminho_arquivo)) {
       throw new Error(`Arquivo não encontrado: ${input.caminho_arquivo}`)
     }
-    const { importFile } = await import('../importers/importer-registry')
-    const result = await importFile(input.caminho_arquivo)
-    if (result.type === 'error') throw new Error(result.error)
-
-    const extension = path.extname(input.caminho_arquivo)
-    const nome_arquivo = path.basename(input.caminho_arquivo, extension)
-    if (result.type === 'conversations') {
-      const conversations = result.data.conversations
-      const preview = conversations
-        .slice(0, 5)
-        .map((conversation) => `- ${conversation.title} (${conversation.messages.length} msgs)`)
-        .join('\n')
-      return {
-        texto: `${conversations.length} conversa(s) encontrada(s):\n\n${preview}`,
-        nome_arquivo,
-        tipo: 'conversations' as const,
-        conversation_count: conversations.length,
-      }
+    const { importStructuredDocument } = await import('../importers/structured-document-importer')
+    const document = await importStructuredDocument(input.caminho_arquivo)
+    if (!document.text.trim() || document.warnings.some((warning) => warning.code === 'EMPTY_DOCUMENT')) {
+      throw new Error('O documento não contém texto extraível. Se for um PDF escaneado, OCR é necessário.')
     }
-    return { texto: result.data.text, nome_arquivo, tipo: 'text' as const }
+    return {
+      document,
+      sha256: createHash('sha256').update(readFileSync(input.caminho_arquivo)).digest('hex'),
+    }
   })
 
 const knowledgeImportarArquivo = t.procedure
@@ -378,16 +442,49 @@ const knowledgeGerarMetadataIa = t.procedure
   })
 
 const knowledgeImportarCompleto = t.procedure
-  .input<{ titulo: string; conteudo: string; quando_consultar: string; auto_enrich?: boolean }>()
+  .input<{
+    titulo: string
+    conteudo?: string
+    structured_document?: StructuredDocumentImport
+    content_sha256?: string
+    quando_consultar: string
+    auto_enrich?: boolean
+  }>()
   .action(async ({ input }) => {
-    const { ingestKnowledge } = await import('./ingest')
-    const conteudo = input.quando_consultar
-      ? `<!-- quando_usar: ${input.quando_consultar} -->\n${input.conteudo}`
-      : input.conteudo
-    const imported = await ingestKnowledge(input.titulo, conteudo, 'high', {
-      tipo: 'manual',
-      context_hint: input.quando_consultar,
+    const { createKnowledgeDocument } = await import('./document-repository')
+    const { countWords, markdownToRichText } = await import('./document-content')
+    const fallbackText = input.conteudo?.trim() ?? ''
+    const structuredDocument: StructuredDocumentImport = input.structured_document ?? {
+      format: 'text',
+      tiptapJson: markdownToRichText(fallbackText) as StructuredDocumentImport['tiptapJson'],
+      markdown: fallbackText,
+      text: fallbackText,
+      suggestedTitle: input.titulo,
+      pages: [{ number: 1, text: fallbackText, wordCount: countWords(fallbackText) }],
+      wordCount: countWords(fallbackText),
+      warnings: [],
+      metadata: {
+        fileName: `${input.titulo}.txt`,
+        extension: '.txt',
+        mimeType: 'text/plain',
+        byteSize: Buffer.byteLength(fallbackText),
+        modifiedAt: new Date().toISOString(),
+        pageCount: 1,
+        sourcePath: '',
+      },
+    }
+    const created = await createKnowledgeDocument({
+      titulo: input.titulo,
+      document: structuredDocument,
+      contextHint: input.quando_consultar,
+      metadata: input.content_sha256 ? { content_sha256: input.content_sha256 } : {},
     })
+    const imported = {
+      source_id: created.source_id,
+      chunks_count: created.index_count,
+      entities_count: 0,
+      revision: created.document.revision,
+    }
     if (!input.auto_enrich) return { ...imported, enrichment: { status: 'skipped' as const } }
 
     try {
@@ -519,10 +616,24 @@ const knowledgeListarChunks = t.procedure
   ))
 
 const knowledgeGraphData = t.procedure
-  .input<{ origem?: 'sistema' | 'usuario'; limite?: number } | undefined>()
+  .input<{ origem?: 'sistema' | 'usuario'; limite?: number; sourceId?: number; entityTypes?: string[] } | undefined>()
   .action(async ({ input }) => {
     const limite = input?.limite ?? 300
-    const entities = input?.origem
+    const entities = input?.sourceId
+      ? await queryAll<{ id: number; nome: string; tipo: string }>(
+          `SELECT DISTINCT ke.id, ke.nome, ke.tipo
+             FROM knowledge_entities ke
+             JOIN knowledge_relations kr ON kr.entity_from_id = ke.id OR kr.entity_to_id = ke.id
+             JOIN knowledge_relation_evidence ev ON ev.relation_id = kr.id AND ev.invalidated_at IS NULL
+            WHERE ev.source_id = $1
+              AND ($2::text IS NULL OR ke.origem = $2)
+              AND (ke.valid_to IS NULL OR ke.valid_to > NOW())
+            ORDER BY ke.nome LIMIT $3`,
+          input.sourceId,
+          input.origem ?? null,
+          limite,
+        )
+      : input?.origem
       ? await queryAll<{ id: number; nome: string; tipo: string }>(
           `SELECT id, nome, tipo FROM knowledge_entities
             WHERE origem = $1 AND (valid_to IS NULL OR valid_to > NOW())
@@ -543,15 +654,67 @@ const knowledgeGraphData = t.procedure
       target: number
       tipo_relacao: string
       peso: number
+      evidence_count: number
     }>(
-      `SELECT entity_from_id AS source, entity_to_id AS target, tipo_relacao, peso
-         FROM knowledge_relations
-        WHERE entity_from_id = ANY($1::int[])
-          AND entity_to_id = ANY($1::int[])
-          AND (valid_to IS NULL OR valid_to > NOW())`,
+      `SELECT kr.entity_from_id AS source, kr.entity_to_id AS target, kr.tipo_relacao,
+              MAX(kr.peso) AS peso, COUNT(DISTINCT ev.id)::int AS evidence_count
+         FROM knowledge_relations kr
+         JOIN knowledge_relation_evidence ev ON ev.relation_id = kr.id AND ev.invalidated_at IS NULL
+        WHERE kr.entity_from_id = ANY($1::int[])
+          AND kr.entity_to_id = ANY($1::int[])
+          AND (kr.valid_to IS NULL OR kr.valid_to > NOW())
+          AND ($2::int IS NULL OR ev.source_id = $2)
+        GROUP BY kr.entity_from_id, kr.entity_to_id, kr.tipo_relacao`,
       `{${ids.join(',')}}`,
+      input?.sourceId ?? null,
     )
     return { nodes: entities, links }
+  })
+
+const knowledgeGraphNodeEvidence = t.procedure
+  .input<{ entityId: number }>()
+  .action(async ({ input }) => {
+    const entity = await queryOne<{ id: number; nome: string; tipo: string }>(
+      'SELECT id, nome, tipo FROM knowledge_entities WHERE id = $1',
+      input.entityId,
+    )
+    if (!entity) throw new Error('Conceito não encontrado.')
+    const relations = await queryAll<{
+      relation_id: number
+      tipo_relacao: string
+      direction: 'entrada' | 'saida'
+      neighbor_id: number
+      neighbor_name: string
+      neighbor_type: string
+      source_id: number
+      source_title: string
+      source_revision: number
+      section_ref: string
+      excerpt: string | null
+    }>(
+      `SELECT kr.id AS relation_id, kr.tipo_relacao,
+              CASE WHEN kr.entity_from_id = $1 THEN 'saida' ELSE 'entrada' END AS direction,
+              neighbor.id AS neighbor_id, neighbor.nome AS neighbor_name, neighbor.tipo AS neighbor_type,
+              ks.id AS source_id, ks.titulo AS source_title, ev.source_revision,
+              ev.section_ref, ev.excerpt
+         FROM knowledge_relations kr
+         JOIN knowledge_entities neighbor ON neighbor.id = CASE
+           WHEN kr.entity_from_id = $1 THEN kr.entity_to_id ELSE kr.entity_from_id END
+         JOIN knowledge_relation_evidence ev ON ev.relation_id = kr.id AND ev.invalidated_at IS NULL
+         JOIN knowledge_sources ks ON ks.id = ev.source_id AND ks.revision = ev.source_revision
+        WHERE (kr.entity_from_id = $1 OR kr.entity_to_id = $1)
+          AND (kr.valid_to IS NULL OR kr.valid_to > NOW())
+        ORDER BY ks.titulo, ev.section_ref, neighbor.nome`,
+      input.entityId,
+    )
+    return {
+      entity: {
+        ...entity,
+        description: relations.find((relation) => relation.excerpt)?.excerpt
+          ?? `Conceito sustentado por ${relations.length} ${relations.length === 1 ? 'evidência documental' : 'evidências documentais'}.`,
+      },
+      relations,
+    }
   })
 
 const knowledgeGraphExplore = t.procedure
@@ -573,6 +736,11 @@ export const dormantKnowledgeRouter = {
   'ia.memorias.contar': iaMemoriasContar,
   'knowledge.listarFontes': knowledgeListarFontes,
   'knowledge.stats': knowledgeStats,
+  'knowledge.document.get': knowledgeDocumentGet,
+  'knowledge.document.save': knowledgeDocumentSave,
+  'knowledge.document.versions': knowledgeDocumentVersions,
+  'knowledge.document.restore': knowledgeDocumentRestore,
+  'knowledge.document.exportMarkdown': knowledgeDocumentExportMarkdown,
   'knowledge.escolherArquivo': knowledgeEscolherArquivo,
   'knowledge.escolherPasta': knowledgeEscolherPasta,
   'knowledge.importar': knowledgeImportar,
@@ -595,6 +763,7 @@ export const dormantKnowledgeRouter = {
   'knowledge.search': knowledgeSearch,
   'knowledge.listarChunks': knowledgeListarChunks,
   'knowledge.graphData': knowledgeGraphData,
+  'knowledge.graph.nodeEvidence': knowledgeGraphNodeEvidence,
   'knowledge.graphExplore': knowledgeGraphExplore,
   'jobs.list': jobsList,
   'jobs.get': jobsGet,
@@ -611,9 +780,13 @@ export type DormantKnowledgeRouter = typeof dormantKnowledgeRouter
  */
 export const knowledgeStudioRouter = {
   'knowledge.stats': knowledgeStats,
+  'knowledge.document.get': knowledgeDocumentGet,
+  'knowledge.document.save': knowledgeDocumentSave,
+  'knowledge.document.versions': knowledgeDocumentVersions,
+  'knowledge.document.restore': knowledgeDocumentRestore,
+  'knowledge.document.exportMarkdown': knowledgeDocumentExportMarkdown,
   'knowledge.escolherArquivo': knowledgeEscolherArquivo,
   'knowledge.escolherPasta': knowledgeEscolherPasta,
-  'knowledge.importar': knowledgeImportar,
   'knowledge.bulkImport.start': knowledgeBulkImportStart,
   'knowledge.removerFonte': knowledgeRemoverFonte,
   'knowledge.toggleAtivo': knowledgeToggleAtivo,
@@ -629,8 +802,8 @@ export const knowledgeStudioRouter = {
   'knowledge.rebuildGraph': knowledgeRebuildGraph,
   'knowledge.graphStats': knowledgeGraphStats,
   'knowledge.search': knowledgeSearch,
-  'knowledge.listarChunks': knowledgeListarChunks,
   'knowledge.graphData': knowledgeGraphData,
+  'knowledge.graph.nodeEvidence': knowledgeGraphNodeEvidence,
   'knowledge.graphExplore': knowledgeGraphExplore,
   'jobs.list': jobsList,
   'jobs.get': jobsGet,

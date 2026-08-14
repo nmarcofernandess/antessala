@@ -24,6 +24,8 @@ import { servicoConhecimento } from '@/servicos/conhecimento'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { AppJob } from '@shared/types'
+import type { StructuredDocumentImport } from '@shared/structured-document-import'
+import { RichTextEditor } from '@/componentes/RichTextEditor'
 
 const MAX_PREVIEW_CHARS = 50_000
 
@@ -56,6 +58,8 @@ export function AdicionarConhecimentoDialog({
   const [bulkPath, setBulkPath] = useState<string | null>(null)
   const [bulkGroupName, setBulkGroupName] = useState('')
   const [bulkJob, setBulkJob] = useState<AppJob | null>(null)
+  const [structuredDocument, setStructuredDocument] = useState<StructuredDocumentImport | null>(null)
+  const [contentSha256, setContentSha256] = useState<string>()
 
   const conteudoCompletoRef = useRef('')
 
@@ -74,6 +78,8 @@ export function AdicionarConhecimentoDialog({
     setBulkPath(null)
     setBulkGroupName('')
     setBulkJob(null)
+    setStructuredDocument(null)
+    setContentSha256(undefined)
     conteudoCompletoRef.current = ''
   }, [])
 
@@ -83,6 +89,8 @@ export function AdicionarConhecimentoDialog({
   }, [onOpenChange, resetState])
 
   const populateFromText = useCallback(async (texto: string, nome?: string) => {
+    setStructuredDocument(null)
+    setContentSha256(undefined)
     conteudoCompletoRef.current = texto
     setConteudo(texto.length > MAX_PREVIEW_CHARS ? texto.slice(0, MAX_PREVIEW_CHARS) : texto)
     if (nome) {
@@ -105,14 +113,34 @@ export function AdicionarConhecimentoDialog({
     }
   }, [iaDisponivel])
 
+  const populateFromStructured = useCallback(async (document: StructuredDocumentImport, sha256: string) => {
+    setStructuredDocument(document)
+    setContentSha256(sha256)
+    conteudoCompletoRef.current = document.text
+    setConteudo(document.text)
+    setArquivoNome(document.metadata.fileName)
+    setTitulo(document.suggestedTitle)
+    setStep(2)
+    if (iaDisponivel && document.text.length > 20) {
+      setGerando({ titulo: true, quando: true })
+      const [tituloRes, quandoRes] = await Promise.allSettled([
+        servicoConhecimento.gerarMetadataIa(document.text, 'titulo'),
+        servicoConhecimento.gerarMetadataIa(document.text, 'quando_consultar'),
+      ])
+      if (tituloRes.status === 'fulfilled') setTitulo(tituloRes.value.resultado)
+      if (quandoRes.status === 'fulfilled') setQuandoConsultar(quandoRes.value.resultado)
+      setGerando({ titulo: false, quando: false })
+    }
+  }, [iaDisponivel])
+
   const handleExtrairArquivo = useCallback(async (caminho: string) => {
     try {
       const result = await servicoConhecimento.extrairTexto(caminho)
-      await populateFromText(result.texto, result.nome_arquivo)
+      await populateFromStructured(result.document, result.sha256)
     } catch (err: any) {
       toast.error('Erro ao extrair texto', { description: err?.message })
     }
-  }, [populateFromText])
+  }, [populateFromStructured])
 
   const handleEscolherArquivo = useCallback(async () => {
     const caminho = await servicoConhecimento.escolherArquivo()
@@ -150,6 +178,10 @@ export function AdicionarConhecimentoDialog({
     if (filePath) {
       await handleExtrairArquivo(filePath)
     } else {
+      if (/\.(pdf|docx)$/i.test(file.name)) {
+        toast.error('Para importar PDF ou DOCX, clique na área e selecione o arquivo.')
+        return
+      }
       try {
         const text = await file.text()
         await populateFromText(text, file.name.replace(/\.[^.]+$/, ''))
@@ -194,19 +226,26 @@ export function AdicionarConhecimentoDialog({
   }, [])
 
   const handleSalvar = useCallback(async () => {
-    if (!titulo.trim() || !quandoConsultar.trim()) return
+    if (!titulo.trim()) return
     setSalvando(true)
     try {
       const textoFinal = conteudoCompletoRef.current || conteudo
-      const result = await servicoConhecimento.importarCompleto(titulo.trim(), textoFinal, quandoConsultar.trim(), true)
+      const result = await servicoConhecimento.importarCompleto(
+        titulo.trim(),
+        textoFinal,
+        quandoConsultar.trim(),
+        true,
+        structuredDocument ?? undefined,
+        contentSha256,
+      )
       const enrichment = result.enrichment
       if (enrichment.status === 'completed') {
         toast.success('Documento salvo e enriquecido', {
-          description: `${result.chunks_count} chunks · ${enrichment.entities_count ?? 0} entidades · ${enrichment.relations_count ?? 0} relações`,
+          description: `${enrichment.entities_count ?? 0} conceitos · ${enrichment.relations_count ?? 0} relações`,
         })
       } else {
         toast.success('Documento salvo', {
-          description: enrichment.reason || `${result.chunks_count} chunks criados. O enriquecimento pode ser iniciado depois.`,
+          description: enrichment.reason || 'O conteúdo já pode ser lido e pesquisado. O enriquecimento pode ser iniciado depois.',
         })
       }
       resetState()
@@ -217,7 +256,7 @@ export function AdicionarConhecimentoDialog({
     } finally {
       setSalvando(false)
     }
-  }, [titulo, quandoConsultar, conteudo, resetState, onOpenChange, onSaved])
+  }, [titulo, quandoConsultar, conteudo, structuredDocument, contentSha256, resetState, onOpenChange, onSaved])
 
   const handleBulkImport = useCallback(async () => {
     if (!bulkPath || !bulkGroupName.trim()) {
@@ -281,7 +320,7 @@ export function AdicionarConhecimentoDialog({
 
         if (result.job.status === 'done') {
           toast.success('Importação em massa concluída.', {
-            description: `${result.job.metadata.imported_files ?? 0} arquivos · ${result.job.metadata.chunks_count ?? 0} chunks`,
+            description: `${result.job.metadata.imported_files ?? 0} documentos importados`,
           })
           onSaved()
         } else if (result.job.status === 'partial') {
@@ -307,7 +346,7 @@ export function AdicionarConhecimentoDialog({
     return () => window.clearInterval(timer)
   }, [bulkJob, onSaved])
 
-  const podeSalvar = titulo.trim().length > 0 && quandoConsultar.trim().length > 0 && conteudo.trim().length > 0
+  const podeSalvar = titulo.trim().length > 0 && conteudo.trim().length > 0
   const textoCompleto = conteudoCompletoRef.current || conteudo
   const charCount = textoCompleto.length
   const iaMetadataMessage = iaDisponivel
@@ -341,7 +380,7 @@ export function AdicionarConhecimentoDialog({
               onClick={handleEscolherArquivo}
             >
               <Upload className="size-8 text-muted-foreground" />
-              <p className="text-sm font-medium">Arraste um arquivo (.md .txt .jsonl .pdf .json .zip)</p>
+              <p className="text-sm font-medium">Arraste um PDF, DOCX, Markdown, TXT, HTML, CSV ou JSON</p>
               <p className="text-xs text-muted-foreground">ou clique para selecionar</p>
             </div>
 
@@ -445,7 +484,9 @@ export function AdicionarConhecimentoDialog({
                 {arquivoNome || 'Texto colado'}
               </span>
               <span className="ml-auto text-xs text-muted-foreground">
-                {charCount.toLocaleString()} caracteres
+                {structuredDocument
+                  ? `${structuredDocument.format.toUpperCase()} · ${structuredDocument.metadata.pageCount} pág. · ${structuredDocument.wordCount.toLocaleString('pt-BR')} palavras`
+                  : `${charCount.toLocaleString('pt-BR')} caracteres`}
               </span>
             </div>
 
@@ -536,8 +577,12 @@ export function AdicionarConhecimentoDialog({
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 max-h-60 overflow-y-auto rounded-md border bg-muted/50 p-3">
-                  <p className="whitespace-pre-wrap text-xs text-muted-foreground">{conteudo}</p>
+                <div className="mt-2 max-h-[420px] overflow-y-auto rounded-md border bg-muted/50 p-3">
+                  {structuredDocument ? (
+                    <RichTextEditor value={structuredDocument.tiptapJson} onChange={() => undefined} editable={false} />
+                  ) : (
+                    <p className="whitespace-pre-wrap text-xs text-muted-foreground">{conteudo}</p>
+                  )}
                   {charCount > MAX_PREVIEW_CHARS && (
                     <p className="mt-2 text-xs text-warning">
                       Preview truncado em {MAX_PREVIEW_CHARS.toLocaleString()} caracteres. O texto completo será salvo.

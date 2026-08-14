@@ -2,9 +2,16 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { insertReturningId, execute, queryOne, transaction } from '../db/query'
 import { chunkText } from './chunking'
+import { markdownToRichText } from './document-content'
 
 type ManifestEntity = { name: string; type: string }
-type ManifestRelation = { from: string; to: string; type: string; weight: number }
+type ManifestEvidence = {
+  source_id: string
+  source_revision: string
+  source_pages: string
+  section: string
+}
+type ManifestRelation = { from: string; to: string; type: string; weight: number; evidence: ManifestEvidence }
 type ManifestDocument = {
   id: string
   file: string
@@ -16,6 +23,12 @@ type ManifestDocument = {
   tags: string[]
   entities: ManifestEntity[]
   relations: ManifestRelation[]
+  source_revision: string
+  source_pages: string
+  content_mode: string
+  license_note: string
+  word_count: number
+  content_sha256: string
 }
 type CorpusManifest = {
   version: string
@@ -68,7 +81,24 @@ export function loadBundledKnowledgeCorpus(): {
   return { manifest, documents }
 }
 
-async function persistEntitiesAndRelations(document: ManifestDocument): Promise<{
+function pageCountFromEvidence(value: string): number | null {
+  const numbers = value.match(/\d+/g)?.map(Number).filter(Number.isFinite) ?? []
+  return numbers.length ? Math.max(...numbers) : null
+}
+
+function excerptForSection(content: string, section: string): string {
+  const marker = `## ${section}`
+  const start = content.indexOf(marker)
+  if (start < 0) return content.slice(0, 500)
+  const next = content.indexOf('\n## ', start + marker.length)
+  return content.slice(start, next < 0 ? start + 700 : Math.min(next, start + 700)).trim()
+}
+
+async function persistEntitiesAndRelations(
+  document: ManifestDocument,
+  sourceId: number,
+  content: string,
+): Promise<{
   entities: number
   relations: number
 }> {
@@ -109,10 +139,12 @@ async function persistEntitiesAndRelations(document: ManifestDocument): Promise<
       toId,
       relation.type,
     )
-    if (!existing) {
-      await execute(
+    let relationId = existing?.id ?? 0
+    if (!relationId) {
+      relationId = await insertReturningId(
         `INSERT INTO knowledge_relations (entity_from_id, entity_to_id, tipo_relacao, peso)
-         VALUES ($1, $2, $3, $4)`,
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
         fromId,
         toId,
         relation.type,
@@ -120,6 +152,17 @@ async function persistEntitiesAndRelations(document: ManifestDocument): Promise<
       )
       insertedRelations++
     }
+    await execute(
+      `INSERT INTO knowledge_relation_evidence (
+         relation_id, source_id, source_revision, section_ref, excerpt
+       ) VALUES ($1, $2, 1, $3, $4)
+       ON CONFLICT (relation_id, source_id, source_revision, section_ref)
+       DO UPDATE SET excerpt = EXCLUDED.excerpt, invalidated_at = NULL`,
+      relationId,
+      sourceId,
+      `${relation.evidence.section} · páginas ${relation.evidence.source_pages}`,
+      excerptForSection(content, relation.evidence.section),
+    )
   }
   return { entities: insertedEntities, relations: insertedRelations }
 }
@@ -142,8 +185,33 @@ export async function seedBundledKnowledgeCorpus(): Promise<BundledCorpusSeedRes
        AND metadata->>'bundled_corpus_version' IS NULL`,
   )
 
+  const staleSources = await queryOne<{ total: number }>(
+    `SELECT COUNT(*)::int AS total FROM knowledge_sources
+      WHERE metadata->>'bundled_document_id' IS NOT NULL
+        AND COALESCE(metadata->>'content_sha256', '') NOT IN (
+          SELECT value FROM jsonb_array_elements_text($1::jsonb)
+        )`,
+    JSON.stringify(documents.map((document) => document.content_sha256)),
+  )
+  if ((staleSources?.total ?? 0) > 0) {
+    await execute(
+      `DELETE FROM knowledge_sources
+        WHERE metadata->>'bundled_document_id' IS NOT NULL
+          AND COALESCE(metadata->>'content_sha256', '') NOT IN (
+            SELECT value FROM jsonb_array_elements_text($1::jsonb)
+          )`,
+      JSON.stringify(documents.map((document) => document.content_sha256)),
+    )
+    await execute(
+      `DELETE FROM knowledge_relations kr
+        WHERE NOT EXISTS (SELECT 1 FROM knowledge_relation_evidence ev WHERE ev.relation_id = kr.id)
+          AND EXISTS (SELECT 1 FROM knowledge_entities ke WHERE ke.id = kr.entity_from_id AND ke.origem = 'sistema')
+          AND EXISTS (SELECT 1 FROM knowledge_entities ke WHERE ke.id = kr.entity_to_id AND ke.origem = 'sistema')`,
+    )
+  }
+
   for (const document of documents) {
-    const existing = await queryOne<{ id: number }>(
+    let existing = await queryOne<{ id: number }>(
       `SELECT id FROM knowledge_sources WHERE metadata->>'bundled_document_id' = $1 LIMIT 1`,
       document.id,
     )
@@ -152,10 +220,17 @@ export async function seedBundledKnowledgeCorpus(): Promise<BundledCorpusSeedRes
       const chunks = chunkText(`Contexto: ${document.context}\n\n${document.content}`)
       await transaction(async () => {
         const sourceId = await insertReturningId(
-          `INSERT INTO knowledge_sources (tipo, titulo, conteudo_original, metadata, importance)
-           VALUES ('sistema', $1, $2, $3::jsonb, 'high')`,
+          `INSERT INTO knowledge_sources (
+             tipo, titulo, conteudo_original, content_json, content_markdown,
+             source_format, revision, page_count, word_count, enrichment_status,
+             enriched_revision, metadata, importance
+           ) VALUES ('sistema', $1, $2, $3::jsonb, $2, 'markdown', 1, $4, $5,
+             'ready', 1, $6::jsonb, 'high')`,
           document.title,
           document.content,
+          JSON.stringify(markdownToRichText(document.content)),
+          pageCountFromEvidence(document.source_pages),
+          document.word_count,
           JSON.stringify({
             bundled_document_id: document.id,
             bundled_corpus_version: manifest.version,
@@ -165,7 +240,21 @@ export async function seedBundledKnowledgeCorpus(): Promise<BundledCorpusSeedRes
             retrieved_at: manifest.retrieved_at,
             context_hint: document.context,
             derived_training_document: true,
+            source_revision: document.source_revision,
+            source_pages: document.source_pages,
+            content_mode: document.content_mode,
+            license_note: document.license_note,
+            content_sha256: document.content_sha256,
           }),
+        )
+        await execute(
+          `INSERT INTO knowledge_source_versions (
+             source_id, revision, titulo, content_json, content_markdown, plain_text, reason
+           ) VALUES ($1, 1, $2, $3::jsonb, $4, $4, 'bundled-corpus')`,
+          sourceId,
+          document.title,
+          JSON.stringify(markdownToRichText(document.content)),
+          document.content,
         )
         for (const content of chunks) {
           await execute(
@@ -191,11 +280,13 @@ export async function seedBundledKnowledgeCorpus(): Promise<BundledCorpusSeedRes
           )
         }
         chunksCount += chunks.length
+        existing = { id: sourceId }
       })
       imported++
     }
 
-    const graph = await persistEntitiesAndRelations(document)
+    if (!existing?.id) throw new Error(`Fonte do corpus não persistida: ${document.id}`)
+    const graph = await persistEntitiesAndRelations(document, existing.id, document.content)
     entitiesCount += graph.entities
     relationsCount += graph.relations
   }
@@ -206,7 +297,9 @@ export async function seedBundledKnowledgeCorpus(): Promise<BundledCorpusSeedRes
        (SELECT COUNT(*)::int FROM knowledge_chunks kc JOIN knowledge_sources ks ON ks.id = kc.source_id
          WHERE ks.metadata->>'bundled_corpus_version' = $1) AS chunks,
        (SELECT COUNT(*)::int FROM knowledge_entities WHERE origem = 'sistema' AND valid_to IS NULL) AS entities,
-       (SELECT COUNT(*)::int FROM knowledge_relations WHERE valid_to IS NULL) AS relations`,
+       (SELECT COUNT(DISTINCT kr.id)::int FROM knowledge_relations kr
+          JOIN knowledge_relation_evidence ev ON ev.relation_id = kr.id AND ev.invalidated_at IS NULL
+         WHERE kr.valid_to IS NULL) AS relations`,
     manifest.version,
   )
 

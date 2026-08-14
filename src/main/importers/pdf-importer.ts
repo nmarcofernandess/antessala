@@ -58,6 +58,9 @@ export async function importPdfStructured(filePath: string): Promise<StructuredD
       message: `A página ${page.number} não contém texto extraível e pode exigir OCR.`,
       page: page.number,
     }))
+  if (pages.length > 0 && pages.every((page) => !page.text.trim())) {
+    throw new Error('PDF sem camada de texto. OCR necessário antes da importação.')
+  }
   const markdown = pages.map((page) => `## Página ${page.number}\n\n${page.text || '_Texto não extraído; OCR necessário._'}`).join('\n\n')
 
   return buildStructuredDocument({

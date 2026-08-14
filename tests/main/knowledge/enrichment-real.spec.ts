@@ -166,6 +166,14 @@ describe('knowledge enrichment with real persistence', () => {
     )
     expect(first?.enriched_at).toBeNull()
     expect(target?.enriched_at).toBeTruthy()
+
+    await enrichAllChunksWithModel(model, { sourceId: firstSource })
+    const canonical = await queryOne<{ relations: number; evidence: number }>(`
+      SELECT
+        (SELECT COUNT(*)::int FROM knowledge_relations) AS relations,
+        (SELECT COUNT(*)::int FROM knowledge_relation_evidence) AS evidence
+    `)
+    expect(canonical).toEqual({ relations: 1, evidence: 2 })
   })
 
   it('installs the bundled corpus idempotently with searchable chunks and graph relations', async () => {
@@ -174,17 +182,45 @@ describe('knowledge enrichment with real persistence', () => {
 
     expect(first).toMatchObject({ imported: 10, sources_count: 10, corpus_version: 'perioperative-corpus-v2' })
     expect(second).toMatchObject({ imported: 0, sources_count: 10, corpus_version: 'perioperative-corpus-v2' })
-    const counts = await queryOne<{ sources: number; enriched: number; entities: number; relations: number }>(`
+    const counts = await queryOne<{
+      sources: number
+      structured: number
+      versions: number
+      enriched: number
+      entities: number
+      relations: number
+      evidence: number
+      orphan_evidence: number
+      relations_without_evidence: number
+    }>(`
       SELECT
         (SELECT COUNT(*)::int FROM knowledge_sources WHERE metadata->>'bundled_corpus_version' = 'perioperative-corpus-v2') AS sources,
+        (SELECT COUNT(*)::int FROM knowledge_sources
+          WHERE metadata->>'bundled_corpus_version' = 'perioperative-corpus-v2'
+            AND content_json IS NOT NULL AND content_markdown IS NOT NULL
+            AND word_count >= 800 AND page_count > 1) AS structured,
+        (SELECT COUNT(*)::int FROM knowledge_source_versions ksv
+          JOIN knowledge_sources ks ON ks.id = ksv.source_id
+          WHERE ks.metadata->>'bundled_corpus_version' = 'perioperative-corpus-v2') AS versions,
         (SELECT COUNT(*)::int FROM knowledge_chunks WHERE enriched_at IS NOT NULL) AS enriched,
         (SELECT COUNT(*)::int FROM knowledge_entities WHERE origem = 'sistema') AS entities,
-        (SELECT COUNT(*)::int FROM knowledge_relations) AS relations
+        (SELECT COUNT(*)::int FROM knowledge_relations) AS relations,
+        (SELECT COUNT(*)::int FROM knowledge_relation_evidence) AS evidence,
+        (SELECT COUNT(*)::int FROM knowledge_relation_evidence ev
+          LEFT JOIN knowledge_sources ks ON ks.id = ev.source_id AND ks.revision = ev.source_revision
+          WHERE ks.id IS NULL) AS orphan_evidence,
+        (SELECT COUNT(*)::int FROM knowledge_relations kr
+          WHERE NOT EXISTS (SELECT 1 FROM knowledge_relation_evidence ev WHERE ev.relation_id = kr.id)) AS relations_without_evidence
     `)
     expect(counts?.sources).toBe(10)
+    expect(counts?.structured).toBe(10)
+    expect(counts?.versions).toBe(10)
     expect(counts?.enriched).toBeGreaterThanOrEqual(10)
     expect(counts?.entities).toBeGreaterThanOrEqual(30)
     expect(counts?.relations).toBeGreaterThanOrEqual(40)
+    expect(counts?.evidence).toBeGreaterThanOrEqual(50)
+    expect(counts?.orphan_evidence).toBe(0)
+    expect(counts?.relations_without_evidence).toBe(0)
 
     for (const question of [
       'o que verificar antes da indução anestésica?',
