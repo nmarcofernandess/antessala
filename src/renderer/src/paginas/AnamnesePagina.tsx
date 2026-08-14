@@ -81,12 +81,21 @@ export function AnamnesePagina() {
         <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* ── composer ── */}
           <div>
-            <div className="flex items-center gap-3 pb-3">
-              <Rotulo>Protocolo pré-anestésico</Rotulo>
-              <span className="h-px flex-1 bg-border" aria-hidden />
-              <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
-                {tratados} / {blocos.length} tratados
-              </span>
+            <div className="pb-4">
+              <div className="flex items-baseline gap-3">
+                <Rotulo>Protocolo pré-anestésico</Rotulo>
+                <span className="h-px flex-1 bg-border" aria-hidden />
+                <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
+                  {tratados} / {blocos.length} tratados
+                </span>
+              </div>
+              {/* Progresso do protocolo: o traço cresce com o que já foi perguntado. */}
+              <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-foreground/60 transition-all duration-500"
+                  style={{ width: `${(tratados / blocos.length) * 100}%` }}
+                />
+              </div>
             </div>
 
             <div className="space-y-2.5">
@@ -258,12 +267,12 @@ function CartaoBloco({
   return (
     <div
       className={cn(
-        'group overflow-hidden rounded-xl border bg-card transition-colors',
+        'group overflow-hidden rounded-xl border bg-card transition-all duration-200',
         !tratado && 'border-dashed',
-        aberto && 'ring-1 ring-border',
+        aberto && 'border-foreground/15 shadow-sm',
       )}
     >
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className={cn('flex items-center gap-3 px-4 py-3', aberto && 'bg-muted/30')}>
         <GripVertical className="size-4 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
         <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
           {String(indice).padStart(2, '0')}

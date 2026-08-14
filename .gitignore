@@ -138,3 +138,7 @@ models/embeddings/*.bin
 # Agent session artifacts
 .grok/
 .playwright-mcp/
+
+# Vitrine: symlink de node_modules da worktree e provas visuais locais
+node_modules
+artifacts/
