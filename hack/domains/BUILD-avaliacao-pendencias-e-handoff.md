@@ -1,11 +1,12 @@
 # BUILD — Avaliação, pendências e handoff
 
-> **DRAFT INVALIDADO: O ANALYST RETIROU PDF LEGÍVEL DA RECEPÇÃO E ALTEROU A FRONTEIRA DE ENTREGA.**
+> **DRAFT INVALIDADO: O ANALYST ALTEROU PENDÊNCIA, EVIDÊNCIA, RETORNO, VERSIONAMENTO DO
+> RESULTADO E HANDOFF. ESTE BUILD NÃO PODE SER USADO NEM REMENDADO COMO FONTE.**
 
 ## State
 
 - Documento: blueprint; **não é Plan nem autorização para código**.
-- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE — ASSINATURA PENDENTE`.
+- Estado: `DRAFT_INVALIDATED_BY_ANALYST_CHANGE — REWRITE_REQUIRED — ASSINATURA PENDENTE`.
 - Pré-requisito: `ANALYST-avaliacao-pendencias-e-handoff.md` aprovado por Marco.
 - Dependências: caso canônico, acesso/capabilities e agenda/booking reconciliados no Build principal.
 

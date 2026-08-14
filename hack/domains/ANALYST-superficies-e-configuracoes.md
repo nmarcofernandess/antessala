@@ -76,7 +76,7 @@ fechamento do Build, em `hack/surfaces/`.
 
 ## Product Promise
 
-Ao entrar, cada profissional vê imediatamente o trabalho que lhe cabe e consegue levar um caso ao próximo responsável sem reconstruir contexto em outro sistema. A recepção cria o caso, agenda e registra check-in sem ler anamnese; a enfermagem encontra os casos aguardando triagem, submete a revisão final, confirma ou sobrescreve a necessidade calculada e só então a publica; o anestesiologista recebe o caso completo, abre pendências, marca se elas exigem retorno ou conclui, mas nunca escolhe a vaga. Quando o último bloqueio é cumprido, o service cria a solicitação de retorno se necessário; o serviço solicitante recebe o resultado. O administrador prepara contas e capacidade datada da demonstração e confere as versões dos serviços/procedimentos sem tocar no banco ou em código.
+Ao entrar, cada profissional vê imediatamente o trabalho que lhe cabe e consegue levar um caso ao próximo responsável sem reconstruir contexto em outro sistema. A recepção cria o caso, agenda e registra check-in sem ler anamnese; a enfermagem encontra os casos aguardando triagem, submete a revisão final, confirma ou sobrescreve a necessidade calculada e só então a publica; o anestesiologista recebe o caso completo, abre pendências, revisa evidências, decide impacto e retorno ou conclui, mas nunca escolhe a vaga. Somente uma decisão clínica explícita cria a solicitação de retorno; o serviço solicitante recebe a versão autorizada do resultado. O administrador prepara contas e capacidade datada da demonstração e confere as versões dos serviços/procedimentos sem tocar no banco ou em código.
 
 ## Story de Usuario
 
@@ -198,7 +198,7 @@ flowchart TD
   anesthesiaList --> evaluation["S09 Avaliação anestésica"]
   evaluation -->|"abre pendência"| assigned["S04A Pendências atribuídas"]
   home --> assigned
-  assigned -->|"último bloqueio cumprido"| evaluation
+  assigned -->|"evidência submetida"| evaluation
   evaluation -->|"concluída"| requester["S10 Resultados do serviço"]
   requester --> handoff["S11 Resultado e confirmação"]
   home --> caseDetail["S03 Detalhe e linha do tempo"]
@@ -237,7 +237,7 @@ stateDiagram-v2
   WAITING_ANESTHESIA --> IN_ASSESSMENT: anestesiologista inicia encontro
   IN_ASSESSMENT --> PENDING: exame ou informação solicitada
   PENDING --> IN_ASSESSMENT: anestesiologista retoma revisão sem retorno presencial
-  PENDING --> WAITING_RETURN: último bloqueio cumprido libera ReturnRequest
+  PENDING --> WAITING_RETURN: anestesiologista decide novo encontro
   WAITING_RETURN --> WAITING_RETURN: recepção confirma booking RETURN
   WAITING_RETURN --> WAITING_RETURN: cancelamento/no-show reabre a mesma solicitação
   WAITING_RETURN --> WAITING_ANESTHESIA: check-in RETURN pela recepção
@@ -403,11 +403,16 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 
 - Actor: `ANESTESIOLOGISTA`.
 - Read: referral, submitted nursing snapshot, classification provenance, timeline and pending items under `assessment:read`; prior result content, when shown, separately requires `result:content:read`.
-- Write: medical assessment fields, decision, pending items, requested exam/info,
-  `requiresReturn` por pendência e resultado/handoff seguro.
+- Write: avaliação médica, decisão, pendências, evidências revisadas, impacto explícito,
+  necessidade de novo encontro e resultado/handoff versionado.
 - Outcomes: save draft, `PENDING`, `WAITING_RETURN` ou `READY_FOR_HANDOFF`.
 - States: loading, draft, dirty, incomplete, submitting, pending, return, completed/read-only, version conflict, error.
-- Rule: nunca edita nem cria adendo no snapshot FINAL da enfermagem. Informação nova vive nos campos próprios do encounter enquanto ele está aberto ou na evidência tipada da pendência, sempre com autoria. Abrir/cancelar pendência exige `pendency:manage`; registrar seu cumprimento/evidência exige `pendency:evidence:register`. O anestesiologista decide `requiresReturn` ao abrir a pendência; somente o service cria o `ReturnRequest` quando o último bloqueio é cumprido. Somente a `RECEPCAO`, em S06/S07, consulta retornos prontos e confirma a reserva `RETURN`.
+- Rule: nunca sobrescreve o snapshot FINAL da enfermagem. Informação nova vive no encontro
+  ou na evidência da pendência, sempre com autoria. Evidência submetida aguarda revisão; o
+  anestesiologista decide suficiência, impacto e necessidade de retorno depois de revisar.
+  Somente a `RECEPCAO`, em S06/S07, consulta retornos decididos e confirma a reserva
+  `RETURN`. Correção da anamnese final exige revisão sucessora, não adendo médico no
+  snapshot de enfermagem.
 
 ### S10 — Resultados do serviço (`/resultados`)
 
@@ -421,17 +426,18 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 ### S11 — Resultado e handoff (`/casos/:casoId/resultado`)
 
 - Actor: `SOLICITANTE` for matching service; anesthesiologist can review; reception only sees operational status.
-- Content: final/pendence summary authorized for requester, timestamps, author and delivery receipt.
+- Content: versão corrente autorizada, relação com versões anteriores, pendências/limitações
+  pertinentes, autoria, horários e recibo de handoff.
 - Actions: recepção abre status com `result:status:read`, registra o envio da entrega com
   `delivery:manage` sem receber bytes, preview, path ou documento legível;
   anestesiologista lê conteúdo e exporta com permissões próprias; solicitante lê e pode
   exportar conteúdo do próprio serviço e confirma recebimento separadamente.
 - States: loading, pending/not final, available, confirming, received, and forbidden. Authorized
   exporter additionally has PDF generating/error states.
-- Rule: `ResultDelivery` segue somente `SENT → RECEIVED`; não existe cancelamento. Autoria,
-  horário e `contentHash` aparecem como proveniência local, nunca como assinatura digital. O
-  PDF declara “Protótipo com dados sintéticos — não assinado digitalmente”. A confirmação
-  encerra o handoff, não agenda cirurgia.
+- Rule: handoff distingue disponibilidade local, tentativa real de envio, falha,
+  acknowledgement de versão específica e supersessão. Operação local não finge envio
+  externo. Autoria, horário e hash aparecem como proveniência local, nunca assinatura
+  digital. Nova versão corrigida exige novo handoff. A confirmação não agenda cirurgia.
 
 ### S12 — Usuários e acesso (`/configuracoes/usuarios`)
 
@@ -558,8 +564,9 @@ Case detail is reached from worklists and need not become a permanent menu item.
      opaco e correlação, nunca stack, SQL, path ou mensagem do provedor.
 26. S05 não publica na submissão: revisão final efetiva + resultado classificatório são uma
     unidade; apenas `confirm/override` de proposta vigente publica a necessidade.
-27. S09 cria pendência e registra `requiresReturn`; somente o service cria `ReturnRequest`
-    após o último bloqueio, e somente a recepção agenda, reagenda e registra check-in.
+27. S09 cria pendência com impacto explícito; evidência submetida não é suficiência. Somente
+    decisão clínica posterior cria retorno, e somente a recepção agenda, reagenda e registra
+    check-in.
 28. Os cinco estados de `BookingDTO` — `CONFIRMED`, `CHECKED_IN`, `CANCELLED`, `COMPLETED`, `NO_SHOW` — têm representação explícita e não são comprimidos em booleanos.
 29. DTOs/actions de capacidade pertencem ao domínio agenda; configurações só consome e apresenta recursos, janelas datadas, bloqueios e materialização.
 30. O produto não expõe backup, restore ou reset. Reset de dados é operação exclusiva do harness de teste.

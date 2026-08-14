@@ -252,6 +252,11 @@ retorno conforme seu objetivo atual. A necessidade inicial pode aparecer como re
 não vinculante; não é copiada automaticamente. A agenda consome a decisão publicada sem
 recalcular sua justificativa clínica.
 
+A decisão nasce depois da revisão clínica que concluiu ser necessário outro encontro.
+Modalidade, duração, janela e recursos pertencem ao novo objetivo e não são herdados da
+consulta inicial. Cumprimento de pendência, passagem do tempo, no-show ou último item
+respondido não criam nem reabrem retorno automaticamente.
+
 ## Contrato das três classes
 
 Todos os valores desta tabela são `DEMO_DECISION`.

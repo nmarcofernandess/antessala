@@ -8,26 +8,28 @@
 - Confidence: `low` para o conteúdo clínico até pesquisa de fontes e licenças
 - Created: `2026-08-14`
 - Mode: `hybrid` — recon do legado e construção do contrato do protótipo
-- Verdict: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
+- Verdict: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`
 
 ## TL;DR
 
 O envelope versionado, o registry, a validação Zod, o composer e os catálogos offline do
 Antessala podem ser reutilizados. Os oito widgets herdados do DietFlow não formam uma
 anamnese pré-anestésica: três são adaptáveis, um fornece apenas um recorte reaproveitável e
-quatro são excluídos. A proposta atual contém 14 widgets, respostas semânticas, proveniência por
-campo e um snapshot por caso; nenhum paciente será cadastrado. Este contrato é somente para
-a demonstração com dados sintéticos e não constitui protocolo assistencial do HC.
+quatro são excluídos. A proposta atual contém 14 grupos de coleta, respostas semânticas,
+proveniência por campo e revisões do mesmo caso autônomo; nenhum paciente será cadastrado.
+Os grupos, campos e condicionais ainda são candidatos de demonstração, não protocolo
+clínico validado. Este artefato permanece aberto até pesquisa clínica, regulatória, de
+licenças e review multiprofissional.
 
 ## Phase 0 Grill
 
 | Signal | Verdict | Notes |
 |---|---|---|
-| Action clear | PASS | Coletar dados suficientes para estimar esforço operacional de agenda. |
-| Persona clear | PASS | Enfermagem coleta; recepção consome somente a consequência operacional; anestesiologista lê o snapshot final. |
-| Input/output clear | PASS | Encaminhamento + relato + aferições entram; anamnese versionada, pendências e fatos explicáveis saem. |
+| Action clear | PASS | Coletar dados estruturados para subsidiar uma necessidade operacional e a avaliação médica posterior. |
+| Persona clear | PARTIAL | O login é ENFERMAGEM, mas registrar, revisar e encerrar captura exigem qualificação profissional ainda não comprovada no contexto local. |
+| Input/output clear | PARTIAL | Encaminhamento, relato e observações entram; a matriz clínica e seus limites ainda exigem pesquisa. |
 | Scope clear | PASS | Protótipo local, dados sintéticos, sem paciente mestre, prontuário ou aptidão automática. |
-| Objective criteria clear | PASS | DTO, completude, proveniência, catálogo, versão e consumidor estão definidos para cada widget. |
+| Objective criteria clear | FAIL | O texto anterior antecipou campos, obrigatoriedade e validações que a pesquisa ainda não legitimou. |
 
 ## Source And Scope
 
@@ -37,21 +39,24 @@ a demonstração com dados sintéticos e não constitui protocolo assistencial d
   embarcados, pendências de dados, resumo por papel, versionamento e exportação.
 - Out of scope: protocolo institucional, prontuário longitudinal, histórico entre casos,
   prescrição, decisão de aptidão, recomendação de suspensão medicamentosa e dados reais.
-- Assumption: a demonstração decide regras operacionais explícitas. Toda regra clínica ou
-  institucional permanece fora da alegação do MVP.
+- `PRODUCT_LAW`: a demonstração pode decidir regras operacionais explícitas, sempre
+  rotuladas. Regra clínica ou institucional não comprovada permanece `UNRESOLVED`.
 
 ## Product Promise
 
-A enfermagem registra uma entrevista estruturada sem transformar silêncio em resposta
-negativa. O sistema preserva o que foi dito, medido ou copiado do encaminhamento, mostra o
-que falta e entrega à recepção apenas o requisito de vaga. O anestesiologista recebe o
-snapshot e a origem de cada informação. O caso não aponta para uma tabela de pacientes e
-nenhum dado é comparado com atendimento anterior.
+A enfermagem registra uma **coleta estruturada para subsidiar a avaliação
+pré-anestésica**, sem transformar silêncio em resposta negativa. O sistema preserva o que
+foi dito, medido, observado ou copiado de documento, mostra lacunas e entrega à recepção
+somente a necessidade operacional confirmada por humano. O anestesiologista recebe as
+revisões efetivas e a origem de cada informação. A coleta não é avaliação anestésica, não
+libera procedimento e não decide via aérea, risco, ASA, aptidão ou conduta.
 
 ## Story de Usuario
 
-- Como enfermeiro, quero conduzir uma entrevista única e saber quais perguntas ainda não
-  foram feitas, para entregar uma triagem completa sem presumir respostas.
+- Como profissional de enfermagem autorizado, quero registrar fatos e saber quais perguntas
+  ainda não foram feitas, sem confundir coleta encerrada com informação resolvida.
+- Como enfermeiro responsável pela revisão, quero distinguir o que foi coletado por mim ou
+  por membro supervisionado antes de declarar `CAPTURE_COMPLETE`.
 - Como recepcionista, quero receber apenas a categoria de vaga, o prazo e os recursos, para
   agendar sem interpretar diagnóstico, medicação ou exame.
 - Como anestesiologista, quero ler os dados, a fonte e as pendências do caso, para distinguir
@@ -61,14 +66,14 @@ nenhum dado é comparado com atendimento anterior.
 
 ## Story Tecnica
 
-Como sistema, o Antessala deve persistir uma anamnese autônoma em JSONB, validada por um
-registry versionado. Cada resposta carrega estado semântico e proveniência. Catálogos
-mestres são assets versionados, carregados no PGlite no primeiro boot e referenciados por ID;
-texto livre é preservado como fallback sem fingir correspondência. `submitFinal` rejeita
-conteúdo incompleto e, quando aceito, cria uma revisão final efetiva e um resultado
-`PROPOSED`, `HUMAN_DEFINITION_REQUIRED` ou `OUT_OF_DEMO_RANGE`. Erro de intake descoberto
-antes da publicação invalida essa revisão e seus derivados sem apagar a história e exige
-nova revisão da enfermagem.
+Como sistema, o Antessala deve persistir a coleta autônoma do caso, validar estrutura e
+preservar proveniência. Texto livre é obrigatório quando nenhum catálogo corresponde; item
+parecido nunca vira código verdadeiro. O fluxo separa `CAPTURE_COMPLETE`,
+`INFORMATION_RESOLVED`, `OPERATIONAL_REQUIREMENT_CONFIRMED` e
+`MEDICAL_EVALUATION_COMPLETE`. Uma revisão final é imutável, mas erro não é incorrigível:
+correção cria adendo ou versão substitutiva vinculada, sem apagar o original. O formato
+físico, os comandos e a repercussão pós-publicação pertencem ao Build somente depois que a
+semântica for assinada.
 
 ## Current Terrain
 
@@ -112,25 +117,36 @@ contratos, mas corta `patientId`, evolução e todos os dados nutricionais sem p
 | `hack/domains/ANALYST-acesso-e-auditoria.md` | 134-140 | O contrato transversal fecha os cinco papéis canônicos. | high |
 | `hack/domains/ANALYST-caso-e-encaminhamento.md` | 108-117 | Caso descartável e lifecycle pertencem a `preop_cases`, não à anamnese. | high |
 
-## Implementation Map
+## Evidência externa verificada e seus limites
 
-| Area | Path | Role | Decision |
-|---|---|---|---|
-| Context / entry | `hack/PRD.md` | Promessa e fronteira | preserve |
-| Backend contracts | `src/shared/anamnese/types.ts` | Envelope e definition | adapt |
-| Validation | `src/shared/anamnese/serialization.ts` | Parser runtime | adapt |
-| Widget registry | `src/shared/anamnese/registry.ts` | Registro exaustivo | replace catalog |
-| Widget definitions | `src/shared/anamnese/widgets/*` | DTOs herdados | 3 adapt, 1 extract, 4 reject |
-| Templates | `src/shared/anamnese/templates.ts` | Composição ativa | replace legacy template |
-| Persistence | `src/main/db/clinical-schema.ts` | JSONB e catálogos | migrate away from `registros` |
-| Seed | `src/main/db/seed.ts` | Carga offline | reuse |
-| Catalog DTO | `src/main/catalogos/dto.ts` | DB → renderer | expand |
-| IPC | `src/main/tipc.ts` | Commands/queries | replace clinical handlers |
-| Composer shell | `src/renderer/src/anamnese/Composer.tsx` | Ordenação/edição | reuse with fixed template |
-| Widget UI | `src/renderer/src/anamnese/widgets/*` | shadcn editors | adapt/create |
-| Tests | `tests/shared/anamnese/*` | contrato/round-trip | expand |
-| Seed proof | `tests/main/db/clinical-seed.spec.ts` | offline/catalog counts | reuse |
-| Renderer proof | `tests/renderer/anamnese/widgets.spec.tsx` | UI dos widgets | expand |
+| Fonte primária | O que sustenta | O que não autoriza |
+|---|---|---|
+| [COFEN 736/2024](https://www.cofen.gov.br/resolucao-cofen-no-736-de-17-de-janeiro-de-2024/), arts. 4º, 6º, 7º e 8º | Coleta subjetiva/objetiva, atribuições privativas do enfermeiro e participação de técnicos/auxiliares sob supervisão. | Tratar todo login `ENFERMAGEM` como profissional intercambiável ou permitir diagnóstico/conduta médica. |
+| [Lei 7.498/1986](https://www.planalto.gov.br/ccivil_03/leis/l7498.htm), arts. 11–15, e [Decreto 94.406/1987](https://www.planalto.gov.br/ccivil_03/decreto/1980-1989/d94406.htm), arts. 8º, 10 e 11 | Diferença legal entre enfermeiro, técnico e auxiliar e necessidade de supervisão. | Definir sozinho o protocolo local de coleta pré-anestésica. |
+| [CFM 2.174/2017](https://sistemas.cfm.org.br/normas/visualizar/resolucoes/BR/2017/2174), art. 1º e Anexo II | Avaliação pré-anestésica, via aérea, risco e decisão do ato anestésico pertencem ao anestesiologista. | Transformar a lista médica do anexo em checklist universal da enfermagem. |
+| [LGPD](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm), art. 18, III | Dado inexato deve ser corrigível. | Impor overwrite ou um desenho físico específico de adendo. |
+| [HL7 DataAbsentReason](https://www.hl7.org/fhir/R5/valueset-data-absent-reason.html) e [HL7 Provenance](https://hl7.org/fhir/provenance.html) | Referência semântica madura para motivos distintos de ausência e proveniência rica. | Virar lei brasileira ou schema obrigatório sem decisão do Build. |
+| [WHO Medication Reconciliation](https://www.who.int/publications/m/item/high5s-standard-operating-protocol-medication-reconciliation) e [NICE CG183](https://www.nice.org.uk/guidance/cg183/chapter/Recommendations) | Lista de uso real inclui via, frequência, OTC/fitoterápicos/PRN; alergia exige status e detalhes estruturados. | Criar checklist pré-anestésico universal ou autorizar inferência de causalidade/gravidade. |
+| [ANVISA DCB](https://www.gov.br/anvisa/pt-br/assuntos/farmacopeia/dcb), [WHO ATC/DDD](https://www.who.int/tools/atc-ddd-toolkit/atc-classification) e [SIGTAP](https://wiki.saude.gov.br/sigtap/index.php/Download) | Fontes versionadas possíveis para nomenclatura, classificação e procedimentos SUS. | Provar que os bundles atuais são completos, licenciados ou adequados a decisões anestésicas. |
+
+Fontes estrangeiras servem como evidência clínica ou terminológica, não como lei brasileira.
+Nenhuma dessas fontes valida os 14 grupos, suas obrigatoriedades, os minutos de agenda ou a
+operação específica do hospital.
+
+## Fronteira profissional
+
+O papel autenticado continua `ENFERMAGEM`; ele não apaga a categoria profissional.
+
+| Ação semântica | Enfermeiro | Técnico/auxiliar | Anestesiologista | Software |
+|---|---|---|---|---|
+| Registrar entrevista e observação compatíveis com protocolo | sim | participa conforme habilitação e supervisão | pode aprofundar | guia e registra fonte |
+| Revisar a coleta e declarar `CAPTURE_COMPLETE` | sim | não autonomamente | não substitui o registro de enfermagem | calcula lacunas; não julga suficiência clínica |
+| Confirmar necessidade operacional | `UNRESOLVED` | `UNRESOLVED` | não deve ser obrigado a operar agenda | pode sugerir somente como `DEMO_DECISION` |
+| Declarar `MEDICAL_EVALUATION_COMPLETE`, ASA, risco, aptidão ou conduta | não | não | sim | proibido |
+
+Para a encenação, a conta `ENFERMAGEM` que revisa/finaliza é explicitamente uma conta de
+enfermeiro. Credencial profissional, delegação e supervisão reais continuam `UNRESOLVED` e
+precisam de decisão institucional antes de qualquer operação real.
 
 ## Entities And State
 
@@ -140,7 +156,8 @@ ENTITY: CasoPreAnestesico
   status, createdAt
 - Actions: receber, iniciar/finalizar enfermagem, encaminhar para agenda, agendar, atender,
   registrar pendência/retorno, liberar laudo, entregar ou cancelar
-- Relations: 1 encaminhamento, no máximo 1 anamnese e no máximo 1 revisão FINAL, N pendências
+- Relations: 1 encaminhamento, no máximo 1 anamnese, 1 revisão efetiva por vez e revisões
+  históricas preservadas, N pendências
 - Source of truth: PGlite local do protótipo
 - Runtime states: RECEIVED_AT_RECEPTION, WAITING_NURSING, NURSING_IN_PROGRESS,
   TRIAGE_PENDING, READY_FOR_SCHEDULING, SCHEDULED, WAITING_ANESTHESIA, IN_ASSESSMENT,
@@ -151,20 +168,21 @@ ENTITY: Anamnese
 - Attributes: id, caseId, envelopeVersion, templateId, templateVersion, status,
   draftVersion, finalRevision
 - Actions: iniciar, salvar rascunho, submeter versão final
-- Relations: 1 caso, no máximo 1 revisão FINAL efetiva, revisões invalidadas históricas,
+- Relations: 1 caso, no máximo 1 revisão FINAL efetiva, revisões sucedidas/invalidadas históricas,
   14 widgets e 1 resultado classificatório vigente
 - Source of truth: snapshot JSONB validado
 - Runtime states: DRAFT, COMPLETE
-- Invalid states: COMPLETE com campo obrigatório NOT_ASKED; mais de uma revisão FINAL;
-  mutação, reabertura ou rebase depois de COMPLETE
+- Invalid states: COMPLETE com campo obrigatório NOT_ASKED; mais de uma revisão FINAL efetiva;
+  overwrite de revisão FINAL; correção sem autoria, motivo e vínculo com a anterior
 
 ENTITY: RespostaClinica
-- Attributes: status, value, provenance
-- Actions: responder, marcar negativo, desconhecido, não aplicável ou recusa
+- Attributes: collectionState, value nullable, absenceReason nullable, provenance
+- Actions: responder, registrar negativa explícita, ausência, recusa ou observação não realizada
 - Relations: pertence a campo de widget
 - Source of truth: JSONB da revisão
-- Runtime states: ANSWERED, NEGATIVE, UNKNOWN, NOT_APPLICABLE, NOT_ASKED, REFUSED
-- Invalid states: value presente fora de ANSWERED; NEGATIVE em campo que não admite negação
+- Runtime states: ANSWERED, UNKNOWN, NOT_APPLICABLE, NOT_ASKED, REFUSED, NOT_PERFORMED
+- Invalid states: valor default fingindo resposta; ausência sem motivo; negativa inferida de
+  lista vazia; NOT_PERFORMED tratado como normal ou não aplicável
 
 ENTITY: CatalogItem
 - Attributes: catalogId, itemId, label, source, revision, active
@@ -175,101 +193,46 @@ ENTITY: CatalogItem
 - Invalid states: referência silenciosa a item inexistente; texto livre fingindo item catalogado
 ```
 
-### Contrato comum de resposta
+### Contrato semântico comum de resposta
 
-```ts
-type AnswerStatus =
-  | 'ANSWERED'
-  | 'NEGATIVE'
-  | 'UNKNOWN'
-  | 'NOT_APPLICABLE'
-  | 'NOT_ASKED'
-  | 'REFUSED'
+`ANSWERED` contém um valor conhecido, inclusive `false`, zero ou lista vazia quando esse
+valor foi explicitamente obtido. Uma negativa documentada pode ser apresentada como
+`NEGATIVE`, mas semanticamente é valor conhecido; nunca nasce de default, silêncio ou lista
+vazia. Os demais estados explicam ausência de valor:
 
-type ClinicalSource =
-  | 'PATIENT_REPORT'
-  | 'REFERRAL'
-  | 'MEASUREMENT'
-  | 'PROFESSIONAL_OBSERVATION'
+| Estado | Significado | Pergunta tratada? | Informação resolvida? |
+|---|---|:---:|:---:|
+| `ANSWERED` | valor documentado, inclusive `false` | sim | sim, se válido |
+| `UNKNOWN` | houve tentativa, mas valor não é conhecido | sim | não |
+| `REFUSED` | informante recusou responder | sim | não |
+| `NOT_ASKED` | pergunta não foi feita | não | não |
+| `NOT_APPLICABLE` | regra versionada diz que o elemento não possui valor neste contexto | sim | sim quanto à aplicabilidade |
+| `NOT_PERFORMED` | aferição, observação ou teste não foi realizado | sim quanto à tentativa | não |
 
-type Provenance = {
-  source: ClinicalSource
-  actorId: string
-  actorRole: 'ADMIN' | 'RECEPCAO' | 'ENFERMAGEM' | 'ANESTESIOLOGISTA' | 'SOLICITANTE'
-  capturedAt: string
-}
+Campo dependente não vira `NOT_APPLICABLE` quando o controlador é `UNKNOWN`, `REFUSED` ou
+`NOT_ASKED`. O template nasce `NOT_ASKED`, sem valor e sem autor fictício.
 
-type Answer<T> =
-  | { status: 'ANSWERED'; value: T; provenance: Provenance }
-  | { status: 'NOT_ASKED'; provenance: null }
-  | {
-      status: Exclude<AnswerStatus, 'ANSWERED' | 'NOT_ASKED'>
-      provenance: Provenance
-    }
+### Proveniência mínima
 
-type ProvenancedListItem<T extends { id: string }> = T & {
-  itemProvenance: {
-    created: Provenance
-    lastUpdated: Provenance
-  }
-}
+Cada resposta registra informante e vínculo, coletor, categoria profissional, data/hora,
+roteiro/versão, documento ou método/dispositivo de origem, catálogo/release quando houver e
+motivo de ausência. Sugestão automatizada acrescenta provedor, modelo/versão, trecho-fonte,
+relações recuperadas e decisão humana. Mutação de lista preserva criação, última alteração e
+remoção append-only. Divergências entre relato, documento e observação permanecem visíveis;
+uma fonte não sobrescreve silenciosamente a outra.
 
-type ListItemFieldPath =
-  | 'allergies.items[*].substance'
-  | 'allergies.items[*].reaction'
-  | 'allergies.items[*].severity'
-  | 'medications.items[*].catalogId'
-  | 'medications.items[*].name'
-  | 'medications.items[*].activeIngredient'
-  | 'medications.items[*].dose'
-  | 'medications.items[*].frequency'
-  | 'medications.items[*].lastUse'
-  | 'medications.items[*].reason'
-  | 'medications.items[*].sourceText'
-  | 'diagnoses.items[*].cidId'
-  | 'diagnoses.items[*].code'
-  | 'diagnoses.items[*].name'
-  | 'diagnoses.items[*].controlled'
-  | 'diagnoses.items[*].currentSymptoms'
-  | 'diagnoses.items[*].detail'
-  | 'exams_pending.items[*].kind'
-  | 'exams_pending.items[*].name'
-  | 'exams_pending.items[*].requestedBy'
-  | 'exams_pending.items[*].requestedAt'
-  | 'exams_pending.items[*].dueAt'
-  | 'exams_pending.items[*].status'
-  | 'exams_pending.items[*].note'
+### Quatro marcos independentes
 
-type ListMutationReceipt = {
-  sequence: number
-  listPath: 'allergies.items' | 'medications.items' | 'diagnoses.items' | 'exams_pending.items'
-  itemId: string
-  operation: 'ADD_ITEM' | 'UPDATE_ITEM' | 'REMOVE_ITEM'
-  changedFieldPaths: ListItemFieldPath[]
-  provenance: Provenance
-}
-```
+| Marco | Significado | Autoridade |
+|---|---|---|
+| `CAPTURE_COMPLETE` | perguntas obrigatórias daquele estágio foram tratadas | enfermeiro na demo; política real `UNRESOLVED` |
+| `INFORMATION_RESOLVED` | não resta informação necessária desconhecida, recusada ou não realizada | enfermagem identifica; suficiência clínica é médica |
+| `OPERATIONAL_REQUIREMENT_CONFIRMED` | necessidade da agenda da demo foi confirmada ou alterada por humano | `UNRESOLVED`; não pode ser inferida por campo isolado |
+| `MEDICAL_EVALUATION_COMPLETE` | avaliação pré-anestésica e decisão médica concluídas | anestesiologista |
 
-`NOT_ASKED` é o único estado de rascunho. `UNKNOWN` significa que a pergunta foi feita e a
-pessoa não soube responder. `REFUSED` significa pergunta feita e resposta recusada.
-`NOT_APPLICABLE` só é aceito quando o schema do campo declara essa possibilidade.
-`NEGATIVE` é uma resposta explícita, nunca um array vazio.
-O template nasce com `NOT_ASKED` e `provenance=null`; ainda não existe autor ou horário.
-Ao tratar a pergunta, o main injeta ator, papel e horário confiáveis. Em campos booleanos,
-`ANSWERED` representa somente o positivo (`value=true`); o negativo usa `NEGATIVE` e
-`ANSWERED false` é inválido.
-
-Campos escalares de um item preservam a autoria da mutação em `itemProvenance`; campos do
-item que são `Answer<T>` preservam também a proveniência da própria resposta. Adicionar,
-alterar ou remover um item sempre acrescenta um `ListMutationReceipt`. A remoção retira o
-item da lista ativa, mas o receipt permanece no snapshot; portanto nem mesmo uma remoção
-apaga quem fez o quê e quando.
-
-Os estados do caso acima são o lifecycle canônico ponta a ponta. `DRAFT` e `COMPLETE`
-pertencem estritamente ao agregado interno `Anamnese`; não são sinônimos nem substitutos de
-estado do caso. `COMPLETE` é terminal no MVP. Os cinco valores de `actorRole` são o contrato
-canônico de identidade. Autorização continua por operação: por exemplo, um valor válido
-`SOLICITANTE` não ganha acesso à anamnese somente por pertencer à união.
+`UNKNOWN`, `REFUSED` ou `NOT_PERFORMED` podem encerrar a tentativa de coleta conforme regra
+local, mas não tornam a informação resolvida. Esses marcos pertencem ao mesmo caso; não
+criam histórico longitudinal entre pessoas ou encaminhamentos.
 
 ### Envelope canônico
 
@@ -809,6 +772,8 @@ sequenceDiagram
   parcial é aceito.
 - IF a correção ocorrer depois da revisão final e antes da publicação, THEN invalidar a
   revisão e proposta anteriores, preservar histórico e abrir novo draft coerente.
+- MUST NOT sobrescrever revisão FINAL. Correção cria revisão sucessora com autoria, motivo e
+  vínculo; a revisão consumida historicamente permanece preservada.
 - IF a necessidade já estiver publicada, THEN correção material não é escondida por
   override; bloqueia o uso e segue governança ainda `UNRESOLVED` para operação real.
 - IF um item catalogado for retirado, THEN manter label e revisão capturados no snapshot.

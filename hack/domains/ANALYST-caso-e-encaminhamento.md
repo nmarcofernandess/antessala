@@ -203,6 +203,11 @@ Fato registrado depois do check-in e antes do início do encontro: check-in equi
 abandono antes da consulta ou impossibilidade de iniciar. Possui autor, motivo, tipo de
 consulta e destino operacional explícito.
 
+Cancelamento de booking, interrupção de encontro, suspensão clínica e invalidação de
+registro são eventos distintos. Um encontro iniciado pode terminar `INTERROMPIDO`, com
+motivo e autoria, sem ser falsamente chamado de consulta concluída ou cancelamento anterior
+ao atendimento.
+
 ## Contrato de identidade
 
 1. A identidade canônica é local ao caso; o código humano serve somente à conferência, é

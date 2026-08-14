@@ -230,52 +230,60 @@ ENTITY: EncontroAnestesico
   assessmentContentV1, version, timestamps
 - Actions: iniciar a partir de booking CHECKED_IN, salvar rascunho, aguardar pendência,
   retomar revisão e finalizar resultado
-- Relations: N pendências; zero ou uma solicitação de retorno; zero ou um resultado FINAL
+- Relations: N pendências, N ciclos de retorno e N versões de resultado; uma única versão
+  corrente por contexto avaliado
 - Source of truth: PGlite local
 - Runtime states: IN_PROGRESS, WAITING_PENDING, COMPLETED
 - Invalid states: conclusão sem autor; edição de versão entregue; aptidão automática
 
 ENTITY: Pendencia
 - Attributes: id, encounterId, reviewCycle, kind, ownerRole, targetServiceId nullable,
-  requiresReturn, dueAt, requestContent, fulfillmentContent nullable,
+  impact, targetDate nullable, targetDateBasis nullable, requestContent, evidenceContent nullable,
   status, version, timestamps
-- Actions: abrir, registrar evidência, cumprir, cancelar por decisão do anestesiologista
-- Relations: pertence ao encontro; toda OPEN bloqueia conclusão; uma cumprida pode exigir
-  retorno; evidências documentais referenciam `CaseDocument` do mesmo caso
+- Actions: solicitar, submeter evidência, revisar suficiência, aceitar, reabrir, cancelar ou
+  superseder
+- Relations: pertence ao encontro; somente impacto `BLOCKS_CURRENT_RESULT` impede emissão;
+  evidência submetida exige decisão clínica antes de resolver; tipo não determina retorno
 - Source of truth: PGlite local
-- Runtime states: OPEN, FULFILLED, CANCELLED
-- Invalid states: avaliação concluída com pendência OPEN
+- Runtime states: REQUESTED, EVIDENCE_SUBMITTED, UNDER_CLINICAL_REVIEW,
+  RESOLVED_ACCEPTED, INSUFFICIENT_REOPENED, CANCELLED, SUPERSEDED
+- Invalid states: resultado emitido com bloqueio atual não resolvido; submissão tratada como
+  suficiência; prazo sem fundamento
 
 ENTITY: CaseDocument
 - Attributes: id, caseId, pendencyId nullable, resultId nullable, kind, title, mimeType,
   sizeBytes, contentHash, metadataJson, createdBy, createdAt
 - Actions: registrar metadados imutáveis; referenciar em cumprimento; registrar recibo de PDF
 - Relations: pertence a um caso e, quando informado, à pendência ou resultado do mesmo caso
-- Source of truth: PGlite local, somente metadados e hash SHA-256
-- Runtime states: immutable metadata receipt
-- Invalid states: bytes ou path persistidos; vínculo entre casos; hash ausente; update ou delete
+- Source of truth: recibo local com declaração explícita sobre retenção e acesso ao conteúdo
+- Runtime states: conteúdo acessível ou `CONTENT_NOT_RETAINED`; revisão e suficiência são
+  decisões separadas
+- Invalid states: vínculo entre casos; metadata/hash chamados de autenticidade, assinatura ou
+  conteúdo revisado sem acesso à fonte
 
 ENTITY: ReturnRequest
 - Attributes: id, caseId, sourceEncounterId, reviewCycle, triggerPendencyIds,
   necessidade operacional definida ou confirmada pelo anestesiologista, status, version,
   timestamps
-- Actions: criar ao cumprir o último bloqueio, reservar, fazer check-in, consumir ao iniciar retorno
+- Actions: anestesiologista decide após revisão; recepção reserva; check-in inicia novo ciclo
 - Relations: pertence ao caso e encontro de origem; zero ou uma reserva RETURN ativa
 - Source of truth: PGlite local
 - Runtime states: READY_FOR_BOOKING, BOOKED, CHECKED_IN, CONSUMED
-- Invalid states: duas solicitações ativas; snapshot incompleto; reserva INITIAL; consumo sem
-  booking CHECKED_IN; encontro de origem ainda aberto quando o retorno começa
+- Invalid states: retorno automático por cumprimento; herança silenciosa do requisito inicial;
+  reserva INITIAL; consumo sem booking CHECKED_IN
 - Demo rule: duração, data-alvo e recursos são definidos ou confirmados pelo
   anestesiologista; qualquer fallback numérico permanece `DEMO_DECISION`
 
 ENTITY: Resultado
 - Attributes: id, caseId, encounterId, status, content, finalizedBy, finalizedAt,
   contentHash
-- Actions: finalizar uma única vez, ler projeção autorizada, exportar
+- Actions: finalizar versão, corrigir, aditar, superseder, ler projeção autorizada, exportar
 - Relations: pertence ao caso e encontro; N entregas
 - Source of truth: snapshot imutável
-- Runtime states: FINAL
-- Invalid states: update, delete, segunda finalização ou entrega sem autorização
+- Runtime states: DRAFT_IN_ENCOUNTER, FINALIZED, CORRECTED, ADDENDED, SUPERSEDED,
+  VOIDED_WITH_REASON
+- Invalid states: overwrite/delete de versão finalizada; correção sem autor, motivo ou vínculo;
+  entrega sem autorização
 
 `finalizedBy`, `finalizedAt` e `contentHash` comprovam proveniência e integridade local. Não
 constituem assinatura digital, certificado profissional ou assinatura jurídica.
@@ -286,8 +294,10 @@ ENTITY: EntregaResultado
 - Actions: enviar e confirmar recebimento
 - Relations: pertence à versão FINAL do resultado e ao solicitante snapshot
 - Source of truth: PGlite local
-- Runtime states: SENT, RECEIVED
-- Invalid states: destinatário diferente do caso; recebimento sem envio; hash divergente
+- Runtime states: READY_FOR_HANDOFF, MADE_AVAILABLE_LOCALLY, SENT, DELIVERY_FAILED,
+  ACKNOWLEDGED, SUPERSEDED
+- Invalid states: destinatário diferente do caso; `SENT` sem tentativa real; acknowledgement de
+  outra versão ou serviço; estado local apresentado como entrega externa
 
 ENTITY: EventoAuditoria
 - Attributes: id, actorId, actorRole, action, entityType, entityId, occurredAt, reason, metadata
@@ -428,7 +438,7 @@ stateDiagram-v2
   WAITING_ANESTHESIA --> IN_ASSESSMENT: anestesiologista inicia
   IN_ASSESSMENT --> PENDING: exame ou informação pendente
   PENDING --> IN_ASSESSMENT: anestesiologista retoma revisão sem retorno presencial
-  PENDING --> WAITING_RETURN: último bloqueio cumprido libera ReturnRequest
+  PENDING --> WAITING_RETURN: anestesiologista decide novo encontro
   WAITING_RETURN --> WAITING_RETURN: recepção confirma booking RETURN
   WAITING_RETURN --> WAITING_RETURN: cancelamento/no-show reabre a mesma solicitação
   WAITING_RETURN --> WAITING_ANESTHESIA: check-in RETURN pela recepção
@@ -545,19 +555,19 @@ stateDiagram-v2
 
 - MUST: somente `ANESTESIOLOGISTA` inicia, altera ou conclui avaliação.
 - MUST: conclusão é decisão humana registrada, nunca derivada da triagem.
-- MUST: pendência usa união discriminada por tipo, papel responsável, alvo opcional,
-  necessidade de retorno, pedido e evidência de cumprimento.
-- MUST: toda pendência `OPEN` bloqueia conclusão; cumprir a última decide entre retomada
-  pelo anestesiologista e `ReturnRequest` para a recepção.
+- MUST: pendência declara objetivo, impacto, responsável, alvo opcional, evidência esperada
+  e data-alvo opcional com fundamento.
+- MUST: evidência submetida não é suficiência; somente o anestesiologista aceita, reabre,
+  cancela ou supersede e decide se retorno é necessário.
 - MUST: todo papel com pendência atribuída encontra seu trabalho em `/pendencias`; a query
   filtra `ownerRole` e, para `SOLICITANTE`, o `targetServiceId` da sessão.
-- MUST: evidência documental persiste somente metadados, hash SHA-256 e autoria em
-  `CaseDocument`; bytes e paths locais nunca entram no banco.
+- MUST: metadados, conteúdo acessível, hash, origem, assinatura, revisão e suficiência são
+  propriedades distintas. Se a demo não retiver conteúdo, declara `CONTENT_NOT_RETAINED`.
 - MUST: o anestesiologista define ou confirma duração, buffer, ocupação, prazo e recursos
   do retorno; a necessidade inicial é referência não vinculante. Iniciar o retorno conclui
   o encontro de origem como `COMPLETED/RETURN_STARTED` antes de consumir a solicitação.
-- MUST: só existe resultado `FINAL`; após criado, update, delete, adendo e segunda
-  finalização são rejeitados no MVP.
+- MUST: versão finalizada nunca sofre overwrite/delete; correção, adendo ou supersessão
+  criam nova versão vinculada e preservam as anteriores.
 - MUST: `finalizedBy + finalizedAt + contentHash` são proveniência e integridade local, não
   assinatura digital; o PDF declara que usa dados sintéticos e não é assinado digitalmente.
 - MUST: solicitante não acompanha o caso completo antes do resultado; lê apenas pendência
@@ -693,17 +703,19 @@ as dependências. Nenhum deles substitui Spec, Plan ou primeiro teste TDD.
 - [ ] `RECEPCAO` vê apenas slots compatíveis e reserva um deles.
 - [ ] Duas tentativas concorrentes não confirmam o mesmo slot.
 - [ ] Cancelamento libera o slot; falta preserva histórico e permite reagendamento.
-- [ ] `ANESTESIOLOGISTA` conclui ou abre pendência; pendência aberta bloqueia conclusão.
+- [ ] `ANESTESIOLOGISTA` classifica o impacto; somente bloqueio atual não resolvido impede
+  a emissão e evidência submetida exige revisão clínica.
 - [ ] Cada papel autorizado encontra em `/pendencias` somente itens atribuídos a ele; o
   solicitante recebe apenas itens do seu `serviceId`.
-- [ ] Evidência documental registra `CaseDocument` imutável do mesmo caso com metadados e
-  SHA-256, sem persistir bytes ou path local.
+- [ ] Evidência documental não é chamada de verificada sem conteúdo acessível e revisão;
+  recibo metadata-only declara `CONTENT_NOT_RETAINED`.
 - [ ] Retorno permanece no caso original.
 - [ ] `ReturnRequest` contém o requisito operacional completo e o início do retorno fecha o
   encontro de origem como `COMPLETED/RETURN_STARTED`.
 - [ ] `SOLICITANTE` lê apenas resultados do próprio serviço e confirma recebimento.
 - [ ] Solicitante não infere outro serviço por contagem, busca, paginação, código ou erro.
-- [ ] Resultado `FINAL` não muda e uma segunda finalização é rejeitada.
+- [ ] Versão finalizada não muda; correção/adendo cria nova versão, preserva a anterior e
+  exige novo handoff quando o conteúdo entregue mudar.
 - [ ] Resultado e PDF apresentam autoria, horário e hash como proveniência; nenhuma tela ou
   exportação os chama de assinatura digital.
 - [ ] Recepção não visualiza ou salva PDF clínico; opera somente status e entrega selada.

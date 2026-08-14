@@ -25,7 +25,7 @@ encaminhamento na recepção
 → reserva de vaga compatível
 → consulta com anestesiologista
 → pendência e retorno, quando necessários
-→ resultado FINAL imutável
+→ resultado finalizado, versionado e corrigível sem overwrite
 → recebimento pelo serviço solicitante
 ```
 
@@ -93,6 +93,10 @@ o estado do caso.
 Antes do encontro, `WAITING_ANESTHESIA` possui saídas explícitas: anulação de check-in volta
 ao estado anterior; presença sem início devolve INITIAL ao agendamento ou reabre RETURN;
 cancelamento terminal exige fato e motivo próprios.
+
+Pendência não é sinônimo de bloqueio. Evidência submetida não é suficiência clínica, e
+retorno não nasce automaticamente do último item respondido. Versões finalizadas são
+imutáveis; correção, adendo ou supersessão criam sucessoras e preservam o histórico.
 
 ### Fronteiras
 

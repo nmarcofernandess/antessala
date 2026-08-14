@@ -15,7 +15,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADJUSTED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 24 cenários após reconciliar caso, avaliação, superfícies, arquitetura e IA. |
 | `ANALYST-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar widgets, campos, completude, catálogos e licenças. |
 | `ANALYST-classificacao-e-agenda.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Atacar abstenção da regra, supersessão, redaction, retorno e falhas de capacidade após reconciliar a criticidade campo a campo da anamnese. |
-| `ANALYST-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar avaliação, pendência, retorno, resultado e entrega. |
+| `ANALYST-avaliacao-pendencias-e-handoff.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 25 cenários; resolver custódia, assinatura, documentos, correção substituta e canal institucional. |
 | `ANALYST-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Compor IA/memória somente após os contratos dos domínios. |
 | `ANALYST-arquitetura-offline-e-prova.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RECON_REQUIRED` | `7b8cdc4` | Reconciliar com `.context/architecture.yaml` e política de rede opcional. |
 | `ANALYST-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar privacidade, consentimento, proveniência e promoção de conhecimento. |
@@ -24,7 +24,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar novo adversarial e assinatura do Analyst; depois refazer fronteira física. |
 | `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar pesquisa clínica; depois provar schema e round-trip. |
 | `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar Analyst corrigido, adversarial e assinatura; depois reconciliar contratos físicos e provar o PGlite. |
-| `BUILD-avaliacao-pendencias-e-handoff.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar research e Analyst assinado; refazer PDF/entrega e isolamento por serviço. |
+| `BUILD-avaliacao-pendencias-e-handoff.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `9f501a9` | Não remendar: reescrever depois do Analyst assinado, incluindo suficiência, versões, documentos, retorno e handoff local/externo. |
 | `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Corrigir após os domínios; então criar Surface Blueprints. |
 | `BUILD-arquitetura-offline-e-prova.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Refazer política IPC/rede/IA e provar o runtime PGlite. |
 | `BUILD-ia-memoria-e-conhecimento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Permanecer DRAFT/BLOCKED até o Analyst fechar e Marco assinar. |
@@ -58,6 +58,13 @@ Adversarial de acesso/RBAC incorporado: revogação em voo, último admin concor
 não interferência por serviço, auditoria allowlisted, limite append-only, erro opaco,
 capabilities de IA e fronteiras de arquivo/cloud/PDF foram fechados semanticamente. O
 artefato continua `ADVERSARIAL_REQUIRED` até repetir os 24 cenários no novo SHA.
+
+Research clínico-documental de avaliação incorporado: pendência ganhou impacto explícito,
+evidência submetida foi separada de suficiência, retorno virou nova decisão, recibo sem
+conteúdo deixou de alegar verificabilidade, resultado ganhou versões sucessoras e handoff
+local deixou de fingir envio externo. O Analyst continua `ADVERSARIAL_REQUIRED` até
+repetir os 25 cenários e as lacunas institucionais continuam sem resposta inventada. O
+Build descendente foi invalidado integralmente.
 
 Nenhum estado nesta página substitui assinatura. Somente Marco pode produzir
 `APPROVED_BY_MARCO`.

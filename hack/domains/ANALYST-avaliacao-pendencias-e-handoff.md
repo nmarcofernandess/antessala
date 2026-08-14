@@ -1,564 +1,417 @@
 # ANALYST — Avaliação, pendências e handoff
 
-## State
+## Estado
 
-- Documento: `ANALYST-avaliacao-pendencias-e-handoff.md`
-- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
-- Escopo: check-in, encontro anestésico, pendências, retorno, resultado, PDF e entrega.
-- Fora deste domínio: classificação inicial, motor de fila, protocolo institucional, integração com o HC e prontuário longitudinal.
+- Estado: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`.
+- Escopo: encontro pré-anestésico, pendências, evidências, retorno, resultado versionado e
+  handoff ao serviço solicitante.
+- Bloqueio: este contrato não autoriza Build, Spec, Plan nem implementação.
+- Revisão incorporada: auditoria clínico-documental do snapshot `9f501a9`.
 
 ## TL;DR
 
-A recepção faz o check-in de um booking `INITIAL` ou `RETURN`; só depois o
-anestesiologista inicia o encontro. Toda pendência do MVP é bloqueadora e possui pedido e
-cumprimento tipados, responsável, prazo e decisão explícita sobre retorno. O último
-bloqueio libera a retomada do mesmo encontro ou cria um `ReturnRequest` para a recepção
-agendar. O rascunho vive no encontro. O único resultado persistido é `FINAL`, imutável e
-entregue apenas ao serviço solicitante correto.
+A recepção registra a chegada; o anestesiologista conduz e documenta a avaliação médica.
+Uma pendência representa uma necessidade não resolvida, mas não é automaticamente um
+bloqueio. A submissão de evidência não equivale à sua aceitação clínica. Somente o
+anestesiologista decide suficiência, impacto, necessidade de retorno e conclusão.
 
-Autoria humana, isolamento por serviço e proibição de decisão automática são
-`PRODUCT_LAW`. Campos da avaliação, tipos de pendência, retorno, prazo, imutabilidade sem
-adendo e canais de entrega são `DEMO_DECISION` ou `UNRESOLVED` até pesquisa clínica,
-operacional e regulatória.
+Uma versão finalizada do resultado nunca é sobrescrita ou apagada. Correção, adendo ou
+supersessão produzem outra versão, com autoria, motivo e vínculo com a anterior. O handoff
+distingue disponibilidade local, envio real e confirmação de recebimento; funcionamento
+offline nunca é descrito como entrega externa.
 
-## Phase 0 Grill
+## Classificação das afirmações
 
-| Pergunta | Decisão do MVP |
+| Marca | Significado |
 |---|---|
-| Quem registra a chegada? | `RECEPCAO`, por `scheduling.bookings.checkIn`. |
-| Quem inicia a consulta? | Apenas `ANESTESIOLOGISTA`, por `encounters.start` após check-in. |
-| Como distinguir consulta e retorno? | `bookingKind: INITIAL | RETURN`; `RETURN` exige `returnRequestId`. |
-| Toda pendência bloqueia? | Sim. Não existe `blocking=false`. |
-| Quem decide retorno? | O anestesiologista ao abrir a pendência, por `requiresReturn`. |
-| Quem cumpre? | O ator de `ownerRole`; solicitante também precisa coincidir com `targetServiceId`. |
-| Cumprimento aprova clinicamente? | Não. Retomada e conclusão continuam exclusivas do anestesiologista. |
-| Onde fica o rascunho? | Em `assessmentContentV1` no encontro. Não existe resultado `DRAFT`. |
-| O resultado final pode ser corrigido? | Não no MVP. Adendo ou correção exigem novo PRD. |
+| `PRODUCT_LAW` | decisão explícita de Marco ou do PRD |
+| `EVIDENCE_BACKED` | obrigação ou capacidade sustentada por fonte identificada |
+| `DEMO_DECISION` | escolha limitada aos dados sintéticos da prova de conceito |
+| `UNRESOLVED` | depende de protocolo, governança ou pesquisa ainda ausente |
 
-## Source And Scope
+Diretrizes profissionais e evidência científica orientam o desenho, mas não são
+apresentadas como protocolo do hospital.
 
-- `hack/PRD.md:53-70` define consulta, pendência, retorno e devolução.
-- `hack/PRD.md:133-168` exige contratos fechados e proíbe integração inventada.
-- `hack/domains/ANALYST-caso-e-encaminhamento.md:258-270` separa check-in de início do encontro.
-- `hack/domains/ANALYST-acesso-e-auditoria.md` é a fonte semântica de papéis, capabilities e
-  escopo do solicitante.
-- `hack/domains/ANALYST-classificacao-e-agenda.md` é a fonte semântica de booking,
-  compatibilidade e capacidade.
-- `src/main/export/pdf.ts:16-91` e `tests/main/export/pdf.spec.ts:53-150` provam PDF isolado e offline.
+## Fontes e limites
 
-O anestesiologista define ou confirma explicitamente classe, duração, capabilities e
-data-alvo do retorno conforme seu objetivo atual. O requisito inicial pode aparecer como
-referência não vinculante; não é copiado automaticamente. Este domínio não recalcula a
-triagem nem transforma necessidade operacional em risco clínico.
+- `PRODUCT_LAW`: o produto não atribui ASA, não declara aptidão, não decide urgência ou
+  conduta e não marca cirurgia.
+- `PRODUCT_LAW`: enfermagem e anestesiologista possuem autorias distintas; o sistema não
+  converte anamnese de enfermagem em avaliação médica.
+- `EVIDENCE_BACKED`: a regulamentação profissional brasileira atribui ao anestesiologista
+  a avaliação pré-anestésica e exige documentação cronológica e autoria profissional.
+- `EVIDENCE_BACKED`: o processo de enfermagem possui avaliação e registro próprios, dentro
+  de sua competência.
+- `EVIDENCE_BACKED`: integridade, autenticidade, confidencialidade e proteção contra
+  alteração não autorizada são propriedades distintas; hash isolado não satisfaz todas.
+- `UNRESOLVED`: se o Antessala integra prontuário formal, quem custodia os registros, qual
+  assinatura é aceita e qual canal realiza entrega real.
 
-## Product Promise
+Código e Builds podem provar capacidade técnica ou revelar contradições. Eles não definem
+conteúdo clínico, validade documental, papel profissional ou regra de retorno.
 
-O sistema permite descobrir qual booking teve check-in, quem conduziu cada encontro, o que
-faltou, quem devia fornecer, se o caso exige retorno, qual resultado final foi emitido e
-qual serviço confirmou o recebimento.
+### Fontes primárias incorporadas
 
-## Story de Usuário
-
-Como recepcionista, quero registrar a chegada e agendar retornos liberados sem iniciar uma
-avaliação clínica em nome do anestesiologista.
-
-Como anestesiologista, quero abrir pendências tipadas e decidir se preciso rever a pessoa,
-para concluir somente após todos os bloqueios.
-
-Como responsável por uma pendência, quero receber um pedido exato e registrar uma resposta
-compatível.
-
-Como solicitante, quero acessar apenas pendências atribuídas ao meu serviço e confirmar o resultado
-final recebido.
-
-## Story Técnica
-
-Como sistema local, quero persistir encontros, pendências, pedidos de retorno, resultado,
-receipts e entregas ligados ao `caseId`, com autoria de sessão, lock otimista e eventos
-append-only, para impedir check-in, retomada, retorno, conclusão ou handoff inválidos.
-
-## Current Terrain
-
-- **CONFIRMADO:** `src/main/db/clinical-schema.ts:3-52` não modela este domínio.
-- **CONFIRMADO:** `src/shared/clinical/registro.ts:3-38` contém estados provisórios.
-- **CONFIRMADO:** `src/main/tipc.ts:265-335` não possui estes guards e contratos.
-- **CONFIRMADO:** `src/renderer/src/App.tsx:13-56` não possui rota de avaliação ou resultado.
-- **CONFIRMADO:** `src/main/export/pdf.ts:16-91` atende o PDF sem rede.
-- **DECISÃO DA DEMO:** conteúdo clínico manual, sem ASA, aptidão ou protocolo do HC.
-
-## Evidence Matrix
-
-| Necessidade | Evidência | Consequência |
+| Fonte | Sustenta | Não sustenta |
 |---|---|---|
-| Check-in não é avaliação | `ANALYST-caso-e-encaminhamento.md:258-264` | Comandos e papéis separados. |
-| Permissão nasce no main | `ANALYST-acesso-e-auditoria.md` | Payload não escolhe ator, papel ou serviço; detalhes físicos pertencem ao Build. |
-| Retorno ocupa agenda | `ANALYST-classificacao-e-agenda.md` | Consumir compatibilidade e capacidade; arquitetura física pertence ao Build. |
-| Persistência ausente | `clinical-schema.ts:3-52` | Criar entidades canônicas no PGlite. |
-| PDF offline existente | `pdf.ts:16-91` | Projetar somente resultado autorizado. |
+| [Resolução CFM nº 2.174/2017](https://portal.cfm.org.br/noticias/novas-regras-para-a-pratica-do-ato-anestesico-reforcam-seguranca-do-paciente/) | responsabilidade do anestesiologista e documentação pré-anestésica | workflow, prazo ou retorno automático do Antessala |
+| [Código de Ética Médica, Resolução CFM nº 2.217/2018, art. 87](https://www.cem.cfm.org.br/) | cronologia, autoria, data, hora, assinatura e CRM no registro médico | que login e hash sejam assinatura jurídica suficiente |
+| [Resolução Cofen nº 736/2024](https://www.cofen.gov.br/resolucao-cofen-no-736-de-17-de-janeiro-de-2024/) | avaliação, processo e documentação próprios da enfermagem | conclusão médica pré-anestésica pela enfermagem |
+| [Lei nº 13.787/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13787.htm) | integridade, autenticidade, confidencialidade, proteção e retenção de prontuário | que hash sem conteúdo cumpra todas as propriedades |
+| [Lei nº 14.063/2020](https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2020/lei/l14063.htm) | classes e requisitos de assinaturas eletrônicas | nível aceito pela instituição para este documento |
+| [Portaria MS nº 1.820/2009](https://bvsms.saude.gov.br/bvs/saudelegis/gm/2009/prt1820_13_08_2009.html) | contexto, motivo, identificação, autoria e data no encaminhamento do SUS | canal tecnológico ou estados de entrega do HC |
 
-## Implementation Map
+Diretrizes internacionais e pareceres regionais citados na pesquisa permanecem material de
+apoio, não lei nacional nem protocolo institucional. O próximo adversarial deve conferir
+vigência, aplicabilidade e texto integral antes da assinatura de Marco.
 
-| Camada | Área | Responsabilidade |
+## Promessa do domínio
+
+O sistema deve permitir reconstruir:
+
+1. quem chegou e qual booking originou o encontro;
+2. quem praticou cada ato e com qual papel;
+3. o que foi investigado, observado, declarado e revisado;
+4. qual necessidade ficou pendente e qual seu impacto;
+5. quem submeteu evidência e quem julgou sua suficiência;
+6. por que houve retomada, retorno, interrupção ou conclusão;
+7. qual versão de resultado foi emitida, corrigida ou supersedida;
+8. qual versão foi disponibilizada, enviada e reconhecida pelo serviço correto.
+
+## Conceitos que não podem ser fundidos
+
+| Conceito | Significado | Não significa |
 |---|---|---|
-| Shared | `src/shared/clinical/assessment.ts` | enums, unions, DTOs e Zod |
-| Shared | `src/shared/scheduling/types.ts` | `BookingKind` e vínculo de retorno |
-| DB | `src/main/db/migrations/*` | tabelas, constraints, índices e receipts |
-| Main | `src/main/clinical/assessment-service.ts` | encontro, pendência, retomada e retorno |
-| Main | `src/main/clinical/document-service.ts` | recibos imutáveis de metadados/hash, sem binário |
-| Main | `src/main/clinical/result-service.ts` | resultado final e projeções autorizadas |
-| Main | `src/main/clinical/delivery-service.ts` | entrega e escopo |
-| Main | `src/main/clinical/result-document.ts` | HTML determinístico |
-| IPC | router clínico | capability, owner e service guards |
-| Renderer | avaliação, `/pendencias`, retorno e resultado | estados e ações autorizadas |
-| Tests | unit/service/IPC/E2E | transições, concorrência, redaction e PDF |
+| Encontro | episódio assistencial conduzido por profissional identificado | slot, booking ou resultado |
+| Avaliação | investigação e julgamento clínico documentado | aptidão automática ou cópia da anamnese |
+| Pendência | necessidade ainda não resolvida | bloqueio obrigatório |
+| Evidência submetida | informação ou documento fornecido | suficiência, autenticidade ou aceitação clínica |
+| Retorno | novo encontro decidido pelo anestesiologista | efeito automático de pendência |
+| Resultado | comunicação clínica versionada e contextual | autorização para cirurgia ou verdade permanente |
+| Handoff | disponibilização e recebimento controlados | marcação da cirurgia ou prova de compreensão |
 
-## Entities And State
+```text
+estado operacional do encontro
+≠ estado da avaliação clínica
+≠ estado das pendências
+≠ estado da agenda
+≠ estado do resultado
+≠ estado da entrega
+```
 
-### Capabilities consumidas do acesso
+## Atores e autoridade
 
-| Operação | Capability | Guarda adicional |
-|---|---|---|
-| confirmar, reagendar, cancelar e registrar no-show | `scheduling:booking:manage` | `RECEPCAO` |
-| fazer check-in | `scheduling:booking:check-in` | `RECEPCAO`; janela do booking |
-| anular check-in equivocado | `scheduling:booking:check-in` | `RECEPCAO`; encontro ainda não iniciado; motivo obrigatório |
-| ler encontro | `assessment:read` | caso autorizado |
-| iniciar, salvar, retomar e finalizar | `assessment:write` | `ANESTESIOLOGISTA` |
-| abrir e cancelar pendência | `pendency:manage` | `ANESTESIOLOGISTA` |
-| listar/ler pendência atribuída | `case:read:assigned` | `ownerRole` e, se aplicável, serviço |
-| registrar documento e cumprir pendência | `pendency:evidence:register` | `ownerRole` e, se aplicável, serviço |
-| ler status de resultado | `result:status:read` | `RECEPCAO`, `ANESTESIOLOGISTA` ou `SOLICITANTE`; solicitante exige `requireServiceScope` |
-| ler conteúdo de resultado | `result:content:read` | somente `ANESTESIOLOGISTA` ou `SOLICITANTE`; solicitante exige `requireServiceScope` |
-| exportar PDF legível | `result:export` | `ANESTESIOLOGISTA` ou `SOLICITANTE` do serviço correto; resultado `FINAL` |
-| enviar entrega | `delivery:manage` | `RECEPCAO` |
-| confirmar recebimento | `delivery:acknowledge` | serviço da sessão |
+| Ato | Autoridade |
+|---|---|
+| chegada, check-in e agendamento | `RECEPCAO` |
+| anamnese e processo de enfermagem | `ENFERMAGEM` |
+| iniciar, suspender, retomar e concluir avaliação médica | `ANESTESIOLOGISTA` |
+| abrir pendência clínica e decidir seu impacto | `ANESTESIOLOGISTA` |
+| submeter evidência | ator ou serviço efetivamente responsável |
+| aceitar ou rejeitar suficiência clínica | `ANESTESIOLOGISTA` |
+| decidir retorno e sua necessidade operacional | `ANESTESIOLOGISTA` |
+| reservar retorno compatível | `RECEPCAO` |
+| emitir, corrigir ou aditar resultado | anestesiologista legitimado, com autoria própria |
+| reconhecer recebimento | `SOLICITANTE` autenticado e vinculado ao serviço do caso |
 
-`ADMIN` não herda permissão clínica. Apenas o anestesiologista abre, decide
-`requiresReturn`, cancela pendência, retoma e conclui. Cumprir registra evidência; não
-decide suficiência clínica.
+`ADMIN` não herda leitura clínica. O renderer nunca escolhe papel, autoria, serviço ou
+projeção. A recepção vê estado e opera entrega selada; não recebe conteúdo clínico por
+conveniência operacional.
 
-`pendencies.listAssigned({ status?, overdue?, cursor?, limit? })` é a query da worklist
-compartilhada. Ela devolve página cursorada de `AssignedPendencyDTO`, com contexto
-operacional mínimo do caso (`displayCode`, `personName`, `procedureDescription`), pedido
-autorizado, prazo/atraso e versão. O main força `ownerRole` da sessão e, para
-`SOLICITANTE`, `targetServiceId`; o renderer não escolhe owner, view ou serviço.
+## Encontro e avaliação
 
-Não existe capability `result:read`. `results.getStatus` nunca devolve conteúdo;
-`results.getCurrent` é a única query genérica de conteúdo. O service de entrega da
-recepção carrega o `FINAL` internamente sob `delivery:manage`, sem conceder à recepção
-`result:content:read`.
+O encontro pode começar quando há caso identificável, booking apto ao atendimento,
+anestesiologista responsável e confirmação ou divergência documentada de pessoa e
+procedimento. O início não exige falsa completude: `UNKNOWN`, `REFUSED` e informação
+indisponível podem permanecer quando visíveis e considerados pelo profissional.
 
-### Segmento do `CaseStatus`
+Durante o encontro, o anestesiologista pode revisar dados sem assumir autoria alheia,
+corrigir o próprio rascunho, registrar limitações, abrir pendências, suspender a avaliação,
+decidir revisão documental posterior ou retorno e emitir uma versão de resultado quando
+clinicamente possível.
 
-O enum canônico não muda:
+### Razões de encerramento de um encontro
+
+| Razão | Efeito semântico |
+|---|---|
+| `RESULTADO_FINALIZADO` | uma versão final foi emitida |
+| `AGUARDANDO_EVIDENCIA` | avaliação suspensa sem conclusão automática |
+| `RETORNO_NECESSARIO` | novo encontro foi decidido |
+| `REVISAO_DOCUMENTAL_POSTERIOR` | análise posterior prevista, se admitida pela operação |
+| `INTERROMPIDO` | encontro iniciado e não concluído, com motivo |
+| `REGISTRO_INVALIDADO` | episódio indevido preservado para auditoria |
+
+Consumir o booking não conclui a avaliação. Interromper encontro, cancelar booking,
+suspender avaliação e invalidar registro são fatos diferentes.
+
+## Pendências
+
+### Impacto explícito
+
+Cada pendência declara um impacto decidido pelo anestesiologista:
+
+| Impacto | Consequência |
+|---|---|
+| `BLOCKS_CURRENT_RESULT` | impede emissão da versão atual até resolução clínica |
+| `FOLLOW_UP_WITHOUT_BLOCKING` | permanece visível, mas não impede conclusão contextual |
+| `MAY_PREVENT_PROCEDURE` | alerta clínico para decisão externa; não agenda nem cancela cirurgia |
+| `OPERATIONAL_ONLY` | tarefa operacional sem se passar por bloqueio clínico |
+| `INDETERMINATE_PENDING_REVIEW` | impacto ainda não decidido e não autoriza conclusão silenciosa |
+
+Tipo não determina automaticamente impacto ou retorno. As famílias iniciais — informação,
+exame/resultado, documento, avaliação especializada e questão operacional — são
+extensíveis e não formam ontologia clínica universal.
+
+### Ciclo semântico
 
 ```mermaid
 stateDiagram-v2
-  SCHEDULED --> WAITING_ANESTHESIA: check-in INITIAL
-  WAITING_ANESTHESIA --> SCHEDULED: check-in equivocado anulado
-  WAITING_ANESTHESIA --> READY_FOR_SCHEDULING: INITIAL não iniciado
-  WAITING_ANESTHESIA --> WAITING_RETURN: RETURN não iniciado
-  WAITING_ANESTHESIA --> IN_ASSESSMENT: start INITIAL ou RETURN
-  IN_ASSESSMENT --> PENDING: pendência aberta
-  PENDING --> IN_ASSESSMENT: resumeReview sem retorno
-  PENDING --> WAITING_RETURN: último bloqueio exige retorno
-  WAITING_RETURN --> WAITING_ANESTHESIA: check-in RETURN
-  IN_ASSESSMENT --> READY_FOR_HANDOFF: resultado FINAL
-  READY_FOR_HANDOFF --> DELIVERED_TO_REQUESTER: recebimento
+  [*] --> REQUESTED
+  REQUESTED --> EVIDENCE_SUBMITTED: responsável fornece evidência
+  EVIDENCE_SUBMITTED --> UNDER_CLINICAL_REVIEW: anestesiologista inicia revisão
+  UNDER_CLINICAL_REVIEW --> RESOLVED_ACCEPTED: evidência suficiente
+  UNDER_CLINICAL_REVIEW --> INSUFFICIENT_REOPENED: evidência insuficiente
+  INSUFFICIENT_REOPENED --> EVIDENCE_SUBMITTED: nova evidência
+  REQUESTED --> CANCELLED: perdeu aplicabilidade com motivo
+  REQUESTED --> SUPERSEDED: necessidade substituída
+  INSUFFICIENT_REOPENED --> SUPERSEDED: pedido mais específico
 ```
 
-### `Booking`
+Esses nomes são `DEMO_DECISION` para orientar a PoC; o Build pode propor representação
+física somente depois de o Analyst ser assinado.
 
-- `INITIAL` exige `returnRequestId=null`.
-- `RETURN` exige `returnRequestId` ativo do mesmo caso.
-- Check-in produz `CHECKED_IN`; `encounters.start` consome o booking e o marca `COMPLETED`.
-- `COMPLETED` significa que a agenda entregou o atendimento ao encontro; não significa
-  conclusão clínica.
-- A ocupação física do slot permanece até `slot.endsAt`, mesmo após o booking virar
-  `COMPLETED`.
-- Cancelamento ou no-show de `RETURN` reabre a mesma solicitação e mantém
-  `WAITING_RETURN`.
+### Conteúdo mínimo
 
-### Interrupção antes do encontro
+Uma pendência registra objetivo, motivo, impacto, responsável, serviço-alvo quando
+aplicável, evidência esperada, ciclo e histórico de decisões. Data-alvo é opcional. Quando
+existir, sua base deve ser declarada como decisão clínica, protocolo institucional,
+restrição do solicitante ou decisão de demo.
 
-Enquanto não existe encontro iniciado:
+Submeter evidência jamais fecha pendência, retoma encontro, cria retorno ou emite
+resultado automaticamente. A decisão de suficiência é exclusiva do anestesiologista.
+Pendência resolvida, cancelada ou supersedida permanece auditável.
 
-- a recepção anula check-in equivocado e retorna booking/caso exatamente ao estado anterior;
-- a recepção registra comparecimento seguido de saída antes da consulta;
-- o anestesiologista registra impossibilidade de iniciar, com motivo operacional seguro e
-  sem produzir conclusão clínica;
-- INITIAL não iniciado volta a `READY_FOR_SCHEDULING`; RETURN não iniciado reabre a mesma
-  solicitação em `WAITING_RETURN`;
-- se houver desistência do caso, a recepção registra primeiro a interrupção e depois o
-  cancelamento terminal com motivo distinto de cancelamento da reserva;
-- check-in, anulação, comparecimento e interrupção permanecem fatos auditáveis; nenhum é
-  apagado ou convertido em resultado anestésico.
+## Evidência e documento
 
-### `AnesthesiaEncounter`
+O sistema distingue:
 
-```text
-ENTITY: AnesthesiaEncounter
-- Attributes: id, caseId, bookingId, sequence, encounterType, status, reviewCycle,
-  completionReason, responsibleActor, assessmentContentV1, version, timestamps.
-- States: IN_PROGRESS | WAITING_PENDING | COMPLETED.
-- Invalid: start sem booking CHECKED_IN; RETURN sem ReturnRequest; dois encontros ativos;
-  edição após COMPLETED; ator escolhido pelo renderer.
-```
+1. metadados declarados;
+2. conteúdo acessível ao revisor;
+3. hash calculado;
+4. assinatura eletrônica e sua validação;
+5. origem declarada ou confirmada;
+6. revisão clínica;
+7. decisão de suficiência.
 
-`reviewCycle` inicia em 1 e aumenta em `resumeReview`. Cada pendência guarda o ciclo.
-`completionReason` vale `RETURN_STARTED` ou `RESULT_FINALIZED` quando concluído.
+Nenhum item implica automaticamente o seguinte. Hash não prova emissor, veracidade,
+assinatura nem suficiência. Quando conteúdo fundamenta decisão, ele deve estar acessível ao
+profissional ou possuir referência externa recuperável e controlada.
 
-### `CasePendency`
+Se a demonstração não retiver o conteúdo, o recibo deve declarar
+`CONTENT_NOT_RETAINED`. Nesse caso o produto não chama o documento de verificado,
+autêntico ou revisável posteriormente. Onde bytes, PDFs e documentos externos ficarão é
+`UNRESOLVED` institucional e arquitetural.
 
-```text
-ENTITY: CasePendency
-- Attributes: id, caseId, encounterId, reviewCycle, kind, ownerRole,
-  targetServiceId, description, requestedPayload, requiresReturn, dueAt, status,
-  fulfillmentPayload, authorship, version.
-- States: OPEN | FULFILLED | CANCELLED.
-- Invalid: item não bloqueador; kind/payload incompatível; owner indevido;
-  SOLICITANTE sem targetServiceId; outro owner com targetServiceId; overwrite.
-```
+## Retorno
 
-Todas são bloqueadoras. `dueAt` é obrigatório. Atraso apenas deriva `overdue=true`.
+Retorno é uma nova decisão clínica depois da revisão do que já existe. Não nasce ao abrir
+pendência e não é consequência automática do último item respondido.
 
-| Kind | Pedido | Cumprimento |
-|---|---|---|
-| `EXAM` | nome, pergunta clínica opcional, instrução opcional | `RECEIVED` com documento ou `UNAVAILABLE` com justificativa |
-| `INFORMATION` | pergunta, fonte esperada, instrução opcional | resposta, fonte real, documentos opcionais |
-| `DOCUMENT` | título, categoria, instrução opcional | ao menos um `documentId`, observação opcional |
-| `OTHER` | pedido e instrução opcional | resposta e documentos opcionais |
+Quando novo encontro for necessário, o anestesiologista define para esse retorno objetivo,
+modalidade, duração estimada, janela desejável e recursos necessários. Nada disso é copiado
+automaticamente do requisito inicial. Datas, durações e recursos da demo permanecem
+`DEMO_DECISION`, não SLA, protocolo ou urgência.
 
-O cumprimento usa o mesmo discriminante do pedido. Campos extras falham; documentos
-pertencem ao mesmo caso e à mesma pendência.
+Múltiplos ciclos são permitidos. Cancelamento ou falta preservam o histórico e exigem nova
+decisão sobre continuidade; não reabrem mecanicamente a mesma solicitação para sempre.
+Revisão documental sem novo encontro só existe se a política institucional a admitir.
 
-### `CaseDocument`
+## Resultado versionado
 
-```text
-ENTITY: CaseDocument
-- Attributes: id, caseId, pendencyId nullable, resultId nullable, kind, title, mimeType,
-  sizeBytes, contentHash, metadata, createdBy, createdAt.
-- Kinds: REFERRAL | EXAM | INFORMATION | RESULT_PDF_RECEIPT | OTHER.
-- State: recibo imutável de metadados.
-- Invalid: bytes ou path local persistidos; hash inválido; update/delete; vínculo entre
-  casos; pendencyId/resultId de outro caso; RESULT_PDF_RECEIPT pelo command público.
-```
+### Conteúdo semântico mínimo da PoC
 
-`documents.registerMetadata` recebe somente `caseId`, `pendencyId`, `kind`, `title`,
-`mimeType`, `sizeBytes`, `contentHash`, `metadata`, `requestId` e versões esperadas. A UI
-pode enviar `kind=EXAM | INFORMATION | OTHER`; `RESULT_PDF_RECEIPT` é reservado ao export
-interno. Pode selecionar um arquivo local e calcular SHA-256 no renderer, mas envia ao main apenas
-metadados e `contentHash = sha256:<64 hex minúsculos>`; bytes e path nunca atravessam o
-contrato nem são persistidos. `title` aceita 1–200 caracteres, `mimeType` 1–120,
-`sizeBytes` é inteiro não negativo e `metadata` é o objeto estrito
-`{ observedAt: string | null; issuer: string | null; note: string | null }`, com textos de
-até 500 caracteres. O command exige `pendency:evidence:register`, pendência `OPEN`, owner e
-escopo corretos; a pendência e o caso devem coincidir. `pendencies.fulfill` aceita somente
-IDs já registrados para essa pendência. `RESULT_PDF_RECEIPT` é criado internamente pelo
-export do resultado, sob `result:export`, com hash e tamanho do PDF gerado; não existe
-upload, download ou armazenamento de binário no MVP.
+Uma versão final contém identificação do caso e contexto avaliado, encontro de origem,
+autor e registro profissional, data e hora, síntese relevante, fontes consideradas,
+limitações/desconhecidos/recusas materialmente relevantes, pendências resolvidas e
+pendências não bloqueadoras ainda abertas, conclusão escrita pelo anestesiologista,
+recomendações, necessidade de nova avaliação, escopo contextual e relação com versões
+anteriores.
 
-### Regra do último bloqueio
+Isso não é checklist clínico universal. Sintomas, exame, via aérea, sinais vitais,
+medicamentos, alergias, anestesias anteriores, exames e especialistas são condicionais ao
+julgamento profissional e ao contrato clínico que ainda exige research.
 
-O service considera apenas `encounterId + reviewCycle`:
-
-1. se existe `OPEN`, caso e encontro permanecem `PENDING` e `WAITING_PENDING`;
-2. pendência cancelada deixa de exigir retorno;
-3. sem `OPEN` e sem pendência `FULFILLED requiresReturn=true`, o caso permanece `PENDING`
-   com `canResumeReview=true`; só `encounters.resumeReview` produz `IN_ASSESSMENT`;
-4. sem `OPEN` e com ao menos uma pendência `FULFILLED requiresReturn=true`, a transação
-   cria um `ReturnRequest READY_FOR_BOOKING`, com todos esses IDs ordenados, e produz
-   `WAITING_RETURN`;
-5. cumprimento nunca conclui encontro ou resultado.
-
-### `ReturnRequest`
-
-`ReturnRequest` pertence ao caso e ao encontro de origem, referencia as pendências que
-justificaram o retorno e possui estados `READY_FOR_BOOKING | BOOKED | CHECKED_IN |
-CONSUMED`. Não existe sem pendência cumprida que exija retorno, não aceita booking inicial,
-não atravessa casos e não pode ser consumido sem check-in.
-
-Ao criar o pedido, o anestesiologista define ou confirma a necessidade operacional atual:
-classe demonstrativa, duração, buffer, ocupação, data-alvo, tipos de recurso e
-capabilities. O requisito inicial é apenas referência histórica. A data de dez dias úteis e
-as durações `20/35/50` permanecem `DEMO_DECISION` até o research deste domínio; não são
-aplicadas como protocolo ou urgência. A recepção seleciona vaga compatível e não recalcula
-a decisão. Identidade física, relação com booking e persistência pertencem ao Build.
-
-### Conteúdo do encontro
-
-```ts
-type AssessmentNarrative =
-  | { state: 'ANSWERED'; text: string }
-  | { state: 'NEGATIVE' | 'UNKNOWN' | 'NOT_APPLICABLE'; text: null }
-
-type AssessmentContentV1 = {
-  _v: 1
-  confirmation: {
-    personConfirmed: boolean
-    procedureConfirmed: boolean
-    note: string | null
-  }
-  interview: {
-    intervalHistory: AssessmentNarrative
-    currentSymptoms: AssessmentNarrative
-  }
-  examination: {
-    generalExam: AssessmentNarrative
-    airwayExam: AssessmentNarrative
-    vitalSignsReview: AssessmentNarrative
-    additionalFindings: AssessmentNarrative
-  }
-  reviewedDocuments: Array<{
-    id: string
-    kind: 'EXAM' | 'REPORT' | 'OTHER'
-    title: string
-    observedAt: string | null
-    summary: string
-    sourceDocumentId: string | null
-  }>
-  synthesis: {
-    summary: string
-    limitations: string[]
-    nextAction: 'FINALIZE_RESULT' | 'OPEN_PENDING_ITEM'
-  }
-}
-```
-
-Narrativa `ANSWERED` exige 1–4.000 caracteres; outros estados exigem `text=null`.
-Notas aceitam até 500, documentos até 50, e listas até 20 itens. O encontro é o único
-rascunho persistido.
-
-### Resultado e entrega
-
-```ts
-type PreopResultContentV1 = {
-  _v: 1
-  assessmentSummary: string
-  conclusion: string
-  recommendations: string[]
-  limitations: string[]
-  returnInstructions: string | null
-}
-```
-
-O único estado persistido é `FINAL`. Há no máximo um resultado por caso. `UPDATE`,
-`DELETE`, segunda finalização, `DRAFT`, `SUPERSEDED`, adendo e reabertura não existem no
-MVP.
-
-`finalizedBy`, `finalizedAt` e `contentHash` registram autoria, horário e integridade local
-do conteúdo final. Isso é proveniência, não assinatura digital, certificado profissional ou
-assinatura jurídica. O PDF exibe “Protótipo com dados sintéticos — não assinado
-digitalmente” e carrega os mesmos identificador, horário e hash.
-
-`ResultDelivery` segue `SENT → RECEIVED`. O destinatário vem do `serviceId` do snapshot do
-caso. A sessão `SOLICITANTE` precisa corresponder ao serviço.
-
-`results.getStatus` projeta somente existência/finalização, hash, horários e estado de
-entrega, sem propriedade `content`. `results.getCurrent` devolve conteúdo somente ao
-anestesiologista ou ao solicitante do serviço correto. `results.getHistory` não existe:
-há um único `FINAL` no MVP.
-
-## Runtime / Data Flow
+### Versões e correções
 
 ```mermaid
-sequenceDiagram
-  actor REC as Recepção
-  actor ANE as Anestesiologista
-  actor OWN as Responsável
-  participant MAIN as Main
-  participant DB as PGlite
-
-  REC->>MAIN: bookings.checkIn(INITIAL)
-  MAIN->>DB: booking CHECKED_IN + WAITING_ANESTHESIA
-  ANE->>MAIN: encounters.start(bookingId)
-  MAIN->>DB: encounter INITIAL + IN_ASSESSMENT
-  ANE->>MAIN: pendencies.open(requiresReturn)
-  MAIN->>DB: OPEN + PENDING
-  OWN->>MAIN: pendencies.fulfill(payload tipado)
-  alt sem retorno
-    MAIN->>DB: canResumeReview=true
-    ANE->>MAIN: encounters.resumeReview()
-    MAIN->>DB: IN_ASSESSMENT
-  else com retorno
-    MAIN->>DB: ReturnRequest + WAITING_RETURN
-    REC->>MAIN: confirmar booking RETURN
-    MAIN->>DB: booking CONFIRMED e caso continua WAITING_RETURN
-    REC->>MAIN: bookings.checkIn(RETURN)
-    MAIN->>DB: booking CHECKED_IN + WAITING_ANESTHESIA
-    ANE->>MAIN: encounters.start(bookingId)
-    MAIN->>DB: source encounter COMPLETED/RETURN_STARTED
-    MAIN->>DB: ReturnRequest CONSUMED + booking COMPLETED + encounter RETURN + IN_ASSESSMENT
-  end
+flowchart LR
+  D["Rascunho no encontro"] --> V1["Versão 1 · FINALIZED"]
+  V1 -->|"informação complementar"| A2["Versão 2 · ADDENDUM"]
+  V1 -->|"erro factual"| C2["Versão 2 · CORRECTION"]
+  V1 -->|"registro indevido"| X2["Versão 2 · VOID_WITH_REASON"]
+  A2 --> CURRENT["versão corrente"]
+  C2 --> CURRENT
+  X2 --> CURRENT
+  V1 --> HISTORY["histórico preservado · SUPERSEDED quando aplicável"]
 ```
 
-O último passo não libera sala ou anestesiologista: as linhas de ocupação do slot
-permanecem até `slot.endsAt`.
+O diagrama é semântico: cada versão finalizada é imutável. Correção, adendo ou supersessão
+criam outra versão vinculada, com autor, horário e motivo; nenhuma versão anterior é
+apagada. Só uma versão é corrente por contexto avaliado. Conteúdo corrigido que já foi
+entregue exige novo handoff.
+
+`finalizedBy`, horário, auditoria e hash são proveniência operacional e integridade técnica
+local. Não constituem, isoladamente, assinatura avançada, assinatura qualificada,
+certificado profissional, carimbo do tempo ou validação jurídica. O estado de assinatura
+é separado e permanece `UNRESOLVED`.
+
+## Handoff e entrega
 
 ```mermaid
-sequenceDiagram
-  actor ANE as Anestesiologista
-  actor REC as Recepção
-  actor SOL as Solicitante
-  participant MAIN as Main
-  participant DB as PGlite
-  participant PDF as printToPDF
-
-  ANE->>MAIN: results.finalize()
-  MAIN->>DB: FINAL imutável + READY_FOR_HANDOFF
-  ANE->>MAIN: results.exportPdf()
-  MAIN->>PDF: DTO autorizado
-  MAIN->>DB: entrega selada disponível à recepção
-  REC->>MAIN: deliveries.send()
-  MAIN->>DB: SENT
-  SOL->>MAIN: results.exportPdf()
-  MAIN->>PDF: DTO do próprio serviço
-  SOL->>MAIN: deliveries.acknowledge()
-  MAIN->>DB: RECEIVED + DELIVERED_TO_REQUESTER
+stateDiagram-v2
+  [*] --> READY_FOR_HANDOFF
+  READY_FOR_HANDOFF --> MADE_AVAILABLE_LOCALLY: versão selada disponível no app
+  MADE_AVAILABLE_LOCALLY --> SENT: canal externo executou tentativa real
+  SENT --> ACKNOWLEDGED: serviço correto confirma versão específica
+  SENT --> DELIVERY_FAILED: canal informa falha
+  MADE_AVAILABLE_LOCALLY --> SUPERSEDED: versão corrigida substitui corrente
+  SENT --> SUPERSEDED: correção exige novo handoff
 ```
 
-## Redaction Contract
+Em uma PoC exclusivamente local, `MADE_AVAILABLE_LOCALLY` é o máximo que o sistema afirma
+sem integração externa. A conta sintética do solicitante pode reconhecer no próprio app a
+versão disponível; isso é prova da demo, não prova de transporte institucional.
 
-| Papel | Encontro | Pendência | Resultado | Entrega |
+O destinatário deriva do serviço do caso. Usuário de outro serviço não vê conteúdo nem
+reconhece recebimento. A recepção acompanha estado e opera a entrega selada, mas não lê,
+visualiza ou exporta conteúdo clínico. O serviço solicitante recebe o resultado; a marcação
+da cirurgia continua fora do Antessala.
+
+## Visibilidade por papel
+
+| Papel | Encontro | Pendências | Resultado | Handoff |
 |---|---|---|---|---|
-| `ANESTESIOLOGISTA` | conteúdo completo | pedido/cumprimento completos | status + conteúdo completo | recibo/status |
-| `RECEPCAO` | status sem conteúdo | status, dono, prazo; payload só se owner | somente status/metadados; entrega selada sem bytes/preview/path | gerenciamento |
-| `ENFERMAGEM` | status | pedido/formulário somente se owner | nenhum | nenhum |
-| `SOLICITANTE` | nenhum | pedido/formulário do próprio serviço | status + conteúdo do próprio serviço | confirmar recebimento |
-| `ADMIN` | nenhum | nenhum | nenhum | nenhum |
+| `ANESTESIOLOGISTA` | conteúdo autorizado | pedido, evidência e revisão | versões e conteúdo | estado e recibo |
+| `RECEPCAO` | estado operacional | dono, impacto e prazo operacional, sem conteúdo indevido | estado e versão corrente, sem conteúdo | operar entrega selada |
+| `ENFERMAGEM` | própria autoria e estado permitido | itens atribuídos e evidência que pode fornecer | sem conteúdo por padrão | sem ação |
+| `SOLICITANTE` | sem encontro completo | apenas itens atribuídos ao seu serviço | versão autorizada do próprio serviço | reconhecer versão específica |
+| `ADMIN` | sem conteúdo | sem conteúdo | sem conteúdo | auditoria sanitizada |
 
-O main deriva a projeção da sessão. Payload não recebe `role`, `view` nem escopo ampliável.
-Metadados de `CaseDocument` acompanham somente a pendência autorizada ou o recibo de export
-autorizado; nenhum papel recebe bytes/path, e `ADMIN` não recebe nem os metadados clínicos.
+## Regras e proibições
 
-## Rules And Invariants
+1. Check-in não inicia avaliação e consumo do booking não conclui encontro.
+2. Enfermagem não assume autoria médica; anestesiologista não assume autoria da coleta.
+3. Nem toda pendência bloqueia; impacto é decisão explícita do anestesiologista.
+4. Evidência submetida não é evidência aceita.
+5. Emissão exige zero pendência bloqueadora sem resolução clínica, não zero item aberto.
+6. Desconhecido ou recusa visível não vira negativa nem força dado inventado.
+7. Retorno é decisão nova e não herda automaticamente duração, janela ou recurso.
+8. Nenhum relógio, cumprimento ou último item finaliza encontro ou resultado.
+9. Versão finalizada não sofre overwrite ou delete.
+10. Correção, adendo e supersessão preservam versões anteriores.
+11. Hash não é assinatura, autenticidade clínica nem prova de conteúdo não retido.
+12. Handoff local não é apresentado como envio externo.
+13. Resultado não atribui ASA, não declara aptidão universal e não marca cirurgia.
+14. Caso individual não cria regra clínica global nem evolução entre casos.
 
-1. Recepção faz check-in; anestesiologista inicia encontro.
-2. `encounters.start` deriva o tipo do booking.
-3. Cada booking inicia no máximo um encontro.
-4. `encounters.start` marca o booking `COMPLETED`, mas preserva ocupações até `slot.endsAt`.
-5. Campo `blocking` e `Record<string, unknown>` são rejeitados.
-6. `ownerRole=SOLICITANTE` exige `targetServiceId`; outro owner exige nulo.
-7. Apenas o owner cumpre; apenas anestesiologista abre, decide e cancela.
-8. Cumprimento não aprova clinicamente.
-9. O relógio não muda estado.
-10. Sem retorno, `resumeReview` é obrigatório; com retorno, booking `RETURN` é obrigatório.
-11. Iniciar `RETURN` fecha o encontro de origem como `COMPLETED/RETURN_STARTED`, consome a
-    solicitação e cria o novo encontro na mesma transação.
-12. Finalização exige encontro ativo, confirmações e zero pendência `OPEN`.
-13. O rascunho vive no encontro; resultado `FINAL` é imutável.
-14. Todo command deste domínio usa `requestId + fingerprint + result`.
-15. Ator, papel, serviço, horários, hash e estado vêm do main.
-16. Redaction ocorre antes do IPC.
-17. PDF nasce do resultado autorizado carregado no main; sua autoria/hash são proveniência,
-    nunca assinatura digital.
-18. `CaseDocument` persiste somente metadados/hash e nunca bytes ou path local.
-19. Entrega usa o serviço do snapshot e recebimento exige esse escopo.
-20. A demo não envia dados ao HC.
-21. `results.getStatus` usa `result:status:read` e nunca possui campo `content`.
-22. `results.getCurrent` usa `result:content:read`; recepção nunca o chama.
-23. Export e entrega carregam o `FINAL` internamente sob suas capabilities específicas,
-    sem criar permissão genérica de conteúdo.
-24. Check-in equivocado, abandono e impossibilidade de início possuem saída antes do
-    encontro; nenhum caso permanece em `WAITING_ANESTHESIA` sem owner.
-25. Solicitante acessa somente pendência própria, resultado final e entrega do próprio
-    serviço; não recebe navegação geral do caso antes do resultado.
-26. Recepção não exporta, visualiza ou salva PDF clínico; apenas acompanha status e dispara
-    uma entrega selada sem receber conteúdo, bytes, preview, filename ou path.
+## Falhas que o produto deve tornar explícitas
 
-## Architecture Risks
+| Situação | Comportamento semântico esperado |
+|---|---|
+| documento ilegível ou irrelevante | evidência submetida, depois insuficiente/reaberta |
+| emissor declarado não confirmado | origem não verificada, sem promoção silenciosa |
+| pendência administrativa aberta | pode coexistir com resultado quando não bloqueadora |
+| retorno deixa de ser necessário | decisão registrada; nenhum booking automático |
+| falta repetida | histórico preservado e nova decisão de continuidade |
+| erro após entrega | nova versão corrigida e novo handoff |
+| autor original indisponível | substituto legitimado assume autoria própria; política permanece `UNRESOLVED` |
+| outro serviço tenta acessar | operação negada sem vazamento de existência/conteúdo |
+| app offline | fluxo-base continua; nenhum envio externo é alegado |
+| encontro interrompido | razão explícita, sem falso resultado ou conclusão |
+| documento-fonte deixa de estar acessível | limitação de auditabilidade fica visível |
 
-| Severidade | Risco | Fechamento |
-|---|---|---|
-| crítica | recepção iniciar avaliação | comandos/capabilities separados |
-| crítica | payload aberto | unions discriminadas e Zod strict |
-| crítica | cumprimento concluir automaticamente | retomada/finalização exclusivas |
-| crítica | duplicar retorno, resultado ou command | índices, lock e receipts |
-| alta | vazamento entre serviços | `targetServiceId` + scope guard |
-| alta | renderer escolher projeção | DTO montado no main |
-| alta | alterar resultado entregue | imutabilidade e novo PRD para adendo |
+## Cenários obrigatórios do próximo adversarial
 
-## Blueprint Handoff
+1. Documento submetido, mas ilegível.
+2. Hash confere, mas o emissor declarado é falso.
+3. Evidência não responde à pergunta clínica.
+4. Pendência administrativa aberta não bloqueia resultado.
+5. Pendência clínica não bloqueadora aparece como limitação.
+6. Retorno muda depois da revisão.
+7. A pessoa falta duas vezes ao retorno.
+8. Surge informação nova no segundo ciclo.
+9. Erro factual é descoberto após acknowledgement.
+10. Autor original está indisponível para corrigir.
+11. Recepção tenta exportar conteúdo.
+12. Outro serviço tenta reconhecer recebimento.
+13. PDF impresso perde validação eletrônica.
+14. App offline não enviou nada para fora.
+15. Pendência perde aplicabilidade e é cancelada.
+16. Pendência é supersedida por outra mais específica.
+17. Enfermagem submete evidência e tenta aprovar suficiência médica.
+18. Solicitante acessa somente resultado do próprio serviço.
+19. Versão corrigida exige novo handoff.
+20. Alguém tenta usar o resultado para marcar cirurgia automaticamente.
+21. Contexto clínico muda após a avaliação.
+22. Documento-fonte deixa de estar acessível.
+23. Resultado explicita desconhecidos e recusas relevantes.
+24. Encontro iniciado é interrompido sem resultado.
+25. Booking é consumido, mas encontro continua clinicamente aberto.
 
-O Build deve fechar tabelas, constraints, unions de pendência, DTOs de saída, command
-guards, transações, receipts, redaction, PDF e testes adversariais. A ordem de migrations é
-fixa: base da agenda com booking `INITIAL`; assessment com `return_requests` e encounters;
-integração da agenda com `kind`, `return_request_id` e
-`completed_by_encounter_id`.
+## Fronteira com o Build
 
-O handoff inclui `src/main/clinical/document-service.ts` para metadata receipts e
-`src/renderer/src/paginas/pendencias/*` para a worklist compartilhada. A superfície consome
-o DTO/query canônico deste domínio; não cria outra semântica de owner, documento ou
-cumprimento.
+Este Analyst define significado, autoridade, estados semânticos, visibilidade, falhas e
+proibições. Tabelas, colunas, índices, migrations, DTOs, schemas de validação, IPC,
+services, paths, locks, receipts, componentes e testes pertencem ao Build.
 
-## Acceptance Criteria
+O Build existente está invalidado por esta mudança e não pode ser remendado como fonte do
+domínio. Depois de pesquisa, novo adversarial e assinatura de Marco, ele deverá traduzir
+este contrato sem reintroduzir pendência sempre bloqueadora, resultado único ou entrega
+externa fictícia.
 
-- [ ] Recepção não inicia encontro; anestesiologista não faz check-in.
-- [ ] `INITIAL` e `RETURN` possuem vínculos válidos.
-- [ ] `RETURN` sem solicitação ativa falha.
-- [ ] Confirmar `RETURN` mantém `WAITING_RETURN`; check-in move para
-      `WAITING_ANESTHESIA`.
-- [ ] `encounters.start` marca booking `COMPLETED` sem liberar ocupação antes de
-      `slot.endsAt`.
-- [ ] Check-in equivocado pode ser anulado antes do encontro e volta ao estado anterior sem
-      apagar o fato.
-- [ ] Abandono ou impossibilidade de iniciar devolve INITIAL ao agendamento e reabre RETURN;
-      nenhum resultado clínico é criado.
-- [ ] Booking de retorno é derivado por `scheduling_bookings.return_request_id`; a tabela
-      `return_requests` não possui `booking_id`.
-- [ ] `blocking` e payload genérico falham.
-- [ ] Cada kind aceita apenas seu pedido/cumprimento.
-- [ ] Owner ou serviço incorreto não cumpre.
-- [ ] Último bloqueio sem retorno só libera `resumeReview`.
-- [ ] Último bloqueio com retorno cria uma única solicitação.
-- [ ] O anestesiologista define ou confirma classe, duração, buffer, ocupação, prazo,
-      recursos e capabilities do retorno; o requisito inicial é referência não vinculante.
-- [ ] Iniciar o encontro `RETURN` fecha o encontro de origem como
-      `COMPLETED/RETURN_STARTED` antes de consumir a solicitação, no mesmo commit.
-- [ ] Cancelamento/no-show reabre a mesma solicitação.
-- [ ] `/pendencias` lista somente itens do `ownerRole` corrente e aplica escopo de serviço
-      ao solicitante.
-- [ ] `documents.registerMetadata` e `pendencies.fulfill` recusam outro owner, outra
-      pendência/caso, bytes, path e hash inválido; o banco recebe apenas metadados e SHA-256.
-- [ ] Não existe resultado `DRAFT`.
-- [ ] Resultado final não pode ser alterado, removido ou repetido.
-- [ ] Replay idempotente devolve o mesmo resultado; fingerprint divergente falha.
-- [ ] DTOs escondem conteúdo por papel e serviço.
-- [ ] `result:read` e `results.getHistory` não existem.
-- [ ] `results.getStatus` usa `result:status:read` e seu DTO não possui `content`, nem nulo.
-- [ ] `results.getCurrent` usa `result:content:read`, nega recepção e exige
-      `requireServiceScope` do solicitante.
-- [ ] `results.exportPdf` aceita somente anestesiologista ou solicitante do serviço correto;
-      recepção recebe status e entrega selada, nunca documento legível.
-- [ ] `deliveries.send` carrega o `FINAL` internamente sob `delivery:manage` sem conceder
-      leitura genérica do conteúdo.
-- [ ] PDF continua offline.
-- [ ] Resultado e PDF chamam autor/horário/hash de proveniência e declaram que o protótipo
-      não possui assinatura digital.
-- [ ] Envio e recebimento são eventos distintos.
+## Lacunas institucionais
 
-## Open Questions
+- enquadramento do Antessala como prontuário ou ferramenta auxiliar;
+- controlador, custodiante, retenção e direito de acesso/correção;
+- vocabulário institucional da conclusão pré-anestésica;
+- pendências bloqueadoras e não bloqueadoras no serviço real;
+- revisão documental assíncrona e modalidades de retorno admitidas;
+- SLA, feriados e disponibilidade operacional;
+- guarda e validação de documentos externos;
+- assinatura eletrônica aceita e contingência em papel;
+- canal real de entrega e política de exportação/impressão;
+- correção quando o autor não está disponível e comunicação urgente de versão corrigida;
+- tratamento de mudança clínica e urgência/emergência fora do fluxo eletivo.
 
-O fluxo demonstrativo está descrito, mas sua matéria clínica, pendências, retorno,
-resultado e entrega ainda exigem pesquisa antes de poderem ser assinados.
+Nenhuma dessas lacunas pode ser resolvida silenciosamente por enum, constante ou Build.
 
-## Grill Verdict
+## Critérios de aceite do Analyst
 
-`RESEARCH_REQUIRED — ASSINATURA PENDENTE`.
+- [x] Check-in, encontro, avaliação, pendência, retorno, resultado e handoff estão separados.
+- [x] Evidência submetida e suficiência clínica são decisões diferentes.
+- [x] Pendência não bloqueadora pode coexistir com resultado e permanece visível.
+- [x] Data-alvo é opcional e possui fundamento explícito quando usada.
+- [x] Retorno possui decisão própria; não herda requisito inicial.
+- [x] Documento metadata-only declara `CONTENT_NOT_RETAINED`.
+- [x] Resultado finalizado é imutável, mas corrigível por versão sucessora.
+- [x] Nova versão entregue exige novo handoff.
+- [x] Fluxo offline não declara envio externo inexistente.
+- [x] Recepção não recebe conteúdo clínico.
+- [x] Limites clínicos e autoria humana estão explícitos.
+- [x] Detalhes físicos foram retirados do Analyst.
+- [ ] Lacunas institucionais receberam decisão ou limite aceito por Marco.
+- [ ] Os 25 cenários foram repetidos no texto corrigido.
+- [ ] Marco revisou e assinou este Analyst.
 
-## Recommended Next Phase
+## Veredito
 
-Revisão humana e assinatura de Marco. Nenhuma MiniSpec, Spec, Plan, teste ou código pode
-usar este contrato antes dessa assinatura.
+`RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`.
 
 ## Contrato de conclusão
 
-- [x] Atores, estados, payloads, regras e redaction descritos como proposta.
-- [ ] Check-in, encontro, pendência, retorno, resultado e handoff pesquisados e revisados.
-- [ ] Revisado e assinado por Marco.
-
 - Artefato: `hack/domains/ANALYST-avaliacao-pendencias-e-handoff.md`
-- Próxima fase autorizada: revisão humana
-- Status: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
+- Próxima fase autorizada: nova rodada de research e adversarial
+- Estado: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`
