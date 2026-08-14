@@ -15,29 +15,29 @@ export const CLASSES: Record<
     nome: 'Rápida',
     minutos: 20,
     buffer: 5,
-    tom: 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400',
-    ponto: 'bg-emerald-500',
+    tom: 'border-success/30 bg-success/5 text-success',
+    ponto: 'bg-success',
   },
   NORMAL: {
     nome: 'Normal',
     minutos: 35,
     buffer: 5,
-    tom: 'border-sky-500/30 bg-sky-500/5 text-sky-700 dark:text-sky-400',
-    ponto: 'bg-sky-500',
+    tom: 'border-primary/25 bg-primary/5 text-primary',
+    ponto: 'bg-primary',
   },
   ESTENDIDA: {
     nome: 'Estendida',
     minutos: 50,
     buffer: 10,
-    tom: 'border-violet-500/30 bg-violet-500/5 text-violet-700 dark:text-violet-400',
-    ponto: 'bg-violet-500',
+    tom: 'border-warning/30 bg-warning/5 text-warning',
+    ponto: 'bg-warning',
   },
   FORA_DA_FAIXA: {
     nome: 'Fora da faixa',
     minutos: 0,
     buffer: 0,
-    tom: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-    ponto: 'bg-amber-500',
+    tom: 'border-destructive/30 bg-destructive/5 text-destructive',
+    ponto: 'bg-destructive',
   },
 }
 
@@ -52,11 +52,11 @@ export type EstadoCaso =
 
 export const ESTADOS: Record<EstadoCaso, { nome: string; tom: string }> = {
   AGUARDA_ENFERMAGEM: { nome: 'Aguarda enfermagem', tom: 'text-muted-foreground' },
-  EM_ENTREVISTA: { nome: 'Em entrevista', tom: 'text-sky-600 dark:text-sky-400' },
-  PRONTO_PARA_AGENDAR: { nome: 'Pronto para agendar', tom: 'text-emerald-600 dark:text-emerald-400' },
-  AGENDADO: { nome: 'Agendado', tom: 'text-violet-600 dark:text-violet-400' },
-  EM_AVALIACAO: { nome: 'Em avaliação', tom: 'text-sky-600 dark:text-sky-400' },
-  PENDENCIA: { nome: 'Pendência aberta', tom: 'text-amber-600 dark:text-amber-400' },
+  EM_ENTREVISTA: { nome: 'Em entrevista', tom: 'text-primary' },
+  PRONTO_PARA_AGENDAR: { nome: 'Pronto para agendar', tom: 'text-success' },
+  AGENDADO: { nome: 'Agendado', tom: 'text-foreground' },
+  EM_AVALIACAO: { nome: 'Em avaliação', tom: 'text-primary' },
+  PENDENCIA: { nome: 'Pendência aberta', tom: 'text-warning' },
   CONCLUIDO: { nome: 'Concluído', tom: 'text-muted-foreground' },
 }
 

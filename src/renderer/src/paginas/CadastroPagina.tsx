@@ -263,7 +263,7 @@ function Resumo({ rotulo, valor }: { rotulo: string; valor: string }) {
           vazio ? 'text-muted-foreground/60' : 'font-medium',
         )}
       >
-        {!vazio && <Check className="size-3 shrink-0 text-emerald-600 dark:text-emerald-400" />}
+        {!vazio && <Check className="size-3 shrink-0 text-success" />}
         <span className="truncate">{vazio ? '—' : valor}</span>
       </span>
     </div>
