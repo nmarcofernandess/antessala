@@ -96,6 +96,20 @@ export const agenda = {
     chamar(() => client['scheduling.noShow'](input)),
 }
 
+export const capacidade = {
+  consultorios: () => chamar(() => client['capacity.resources']()),
+  salvarConsultorio: (input: Parameters<typeof client['capacity.saveResource']>[0]) =>
+    chamar(() => client['capacity.saveResource'](input)),
+  gerarVagas: (input: Parameters<typeof client['capacity.generateSlots']>[0]) =>
+    chamar(() => client['capacity.generateSlots'](input)),
+  limparVagasLivres: (input: Parameters<typeof client['capacity.clearFreeSlots']>[0]) =>
+    chamar(() => client['capacity.clearFreeSlots'](input)),
+  bloquearVaga: (input: Parameters<typeof client['capacity.blockSlot']>[0]) =>
+    chamar(() => client['capacity.blockSlot'](input)),
+  liberarVaga: (slotId: string) => chamar(() => client['capacity.unblockSlot']({ slotId })),
+  resumo: () => chamar(() => client['capacity.summary']()),
+}
+
 /* ══════════════ avaliação ══════════════ */
 
 export const encontros = {

@@ -226,6 +226,17 @@
   font-size: 0.85rem;
 }
 
+/* Vaga livre é oferta, não compromisso: borda tracejada, texto discreto. */
+.antessala-calendario .fc .vaga-livre {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.antessala-calendario .fc .vaga-livre .fc-event-title {
+  font-style: italic;
+  font-weight: 400;
+}
+
 .antessala-calendario .fc .fc-toolbar-title {
   font-size: 1.05rem;
   font-weight: 600;
