@@ -152,8 +152,10 @@ Uma forma normalizada pode apoiar busca e alerta, mas nunca provar identidade.
 
 ### `ProcedureSnapshot`
 
-Procedimento indicado, revisão do catálogo, lateralidade/local e observação daquela entrada.
-Rótulos posteriores do catálogo não reescrevem o caso.
+Procedimento indicado em texto estruturado, fonte, identificador local opcional,
+lateralidade/local e observação daquela entrada. Se houver catálogo formal, sua revisão é
+preservada; enquanto fonte, licença e cobertura não estiverem fechadas, ausência de código
+não bloqueia o caso e nenhum `OUTRO` inventado substitui o texto original.
 
 ### `RequesterSnapshot`
 

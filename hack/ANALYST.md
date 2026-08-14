@@ -20,7 +20,7 @@ O pacote descreve a jornada inteira do MVP local:
 
 ```text
 encaminhamento na recepção
-→ anamnese de enfermagem
+→ coleta estruturada de enfermagem
 → requisito operacional QUICK | STANDARD | EXTENDED
 → reserva de vaga compatível
 → consulta com anestesiologista
@@ -102,6 +102,11 @@ imutáveis; correção, adendo ou supersessão criam sucessoras e preservam o hi
 
 - A triagem geral do SUS termina antes do Antessala.
 - O produto não diagnostica, não atribui ASA e não declara aptidão anestésica.
+- A coleta de enfermagem subsidia, mas não substitui, a avaliação pré-anestésica do
+  anestesiologista. Na demo, a conta que encerra a captura representa um enfermeiro;
+  habilitação, delegação e supervisão reais continuam abertas à decisão institucional.
+- Captura completa, informação resolvida, requisito operacional confirmado e avaliação
+  médica concluída são marcos diferentes.
 - `QUICK`, `STANDARD` e `EXTENDED` descrevem carga de consulta, não cor de pulseira,
   gravidade clínica ou prioridade cirúrgica.
 - Um caso guarda um snapshot descartável da pessoa; não existe cadastro longitudinal de

@@ -4,6 +4,10 @@ Estes arquivos são versionados e embarcados no bundle do Antessala. O primeiro
 boot os carrega no PGlite local; nenhuma consulta à internet ou ao banco do
 DietFlow participa desse fluxo.
 
+O repositório prova **offline + contagem + hash**. Não prova que os arquivos são oficiais,
+atuais, completos, regeneráveis ou licenciados para redistribuição pública. Até esses gates
+fecharem, são recortes de demonstração com fallback textual obrigatório.
+
 Origem técnica: `DietFlow/prisma/seeds/system` e os recortes clínicos fornecidos
 em `/Volumes/Vader/Marco/antessala/src/data/`. O extrator ad hoc da primeira
 extração não foi versionado nem permaneceu disponível; portanto uma futura
@@ -29,13 +33,20 @@ Limites conhecidos:
   validadas contra o snapshot completo.
 - Os 382 medicamentos preservam 1.447 aliases, deduplicados dentro de cada
   medicamento por caixa, acento e espaços.
-- O arquivo de grupos preserva a conduta e o peso, mas não um mapa autônomo e
-  auditável de classes por grupo. Como o extrator original não foi preservado,
-  esse vínculo precisa ser especificado antes de uma regeneração.
-- Os 94 equivalentes metabólicos preservam os nomes canônicos, `met` e `metMax`;
-  o intervalo total é de 1 a 16 MET.
-- A origem está documentada, mas a licença de redistribuição dos dados ainda
-  precisa de confirmação antes de uma distribuição pública.
+- O arquivo de grupos preserva “conduta” e “peso”, mas não possui fonte clínica
+  reproduzível. Ele não integra o contrato clínico; no máximo é fixture não clínica de demo.
+- Os 94 equivalentes metabólicos preservam nomes, `met` e `metMax`; o intervalo total é de
+  1 a 16 MET. Servem somente como apoio de linguagem da atividade, não como capacidade
+  funcional individual, risco ou aptidão.
+- A origem técnica está documentada, mas fonte oficial, release/competência, idioma,
+  transformação reproduzível e licença do artefato exato ainda precisam de confirmação.
+- Não há catálogo documentado de procedimentos nem de exames. Até escolha formal,
+  procedimentos e documentos/exames usam texto estruturado com fonte; correspondência
+  aproximada nunca vira código verdadeiro.
+
+Qualquer release futuro precisa registrar steward, URL, versão/competência, data de
+obtenção, idioma, cobertura, hash original, transformação/extrator, hash embarcado,
+licença, direito de redistribuição offline, política de atualização/depreciação e fallback.
 
 Esses catálogos são matéria-prima. O dossiê
 `hack/domains/ANALYST-anamnese-e-catalogos.md` audita cobertura, limites, contratos e uso;

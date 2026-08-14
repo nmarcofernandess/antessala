@@ -1,11 +1,18 @@
 # Build — Anamnese pré-anestésica e catálogos
 
-> **DRAFT BLOQUEADO; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+> **DRAFT INVALIDADO PELO ANALYST; SEM AUTORIDADE DE IMPLEMENTAÇÃO.**
+>
+> Campos, seeds, regras, constraints e catálogos dependentes de `UNRESOLVED` ou
+> `DEMO_DECISION` são somente inventário histórico deste rascunho. Não adquirem autoridade
+> por aparecerem abaixo e não podem ser consumidos por Spec, Plan ou código. Em especial,
+> estão invalidados: proibição de `ANSWERED(false)`, `metMin/metMax` individual,
+> `controlled`, `pregnancyApplicable`, FINAL incorrigível, catálogo fictício obrigatório e
+> acoplamento entre encerramento da captura e publicação do requisito.
 
 ## State
 
 - Source: `hack/domains/ANALYST-anamnese-e-catalogos.md`
-- Status: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
+- Status: `INVALIDATED_BY_CHANGE — ASSINATURA PENDENTE`
 - Scope: arquitetura do domínio; não é Plan nem catálogo de tarefas
 - Confidence: `low` até pesquisa clínica, licença e recon PGlite
 
@@ -752,7 +759,7 @@ Build, Warlog, Sprints e Spec assinados.
 
 - Artefato: `hack/domains/BUILD-anamnese-e-catalogos.md`
 - Próxima fase após assinatura do Analyst: Critic do domínio
-- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
+- Estado: `INVALIDATED_BY_CHANGE — ASSINATURA PENDENTE`
 - Assinatura de Marco: `PENDENTE`
 - Data da revisão humana: `PENDENTE`
 - Revisão Git examinada por Marco: `PENDENTE`

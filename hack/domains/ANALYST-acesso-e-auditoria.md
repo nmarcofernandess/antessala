@@ -135,7 +135,7 @@ segunda cópia clínica na auditoria. Trocar de usuário ou escopo limpa o conte
 |---|---|---|
 | `ADMIN` | contas, capacidade, inventários, saúde técnica e auditoria sanitizada | conteúdo de caso, transcript, prompt, resultado ou conhecimento clínico |
 | `RECEPCAO` | intake, handoff inicial, agenda, check-in, status e entrega selada | anamnese, avaliação, explicação clínica, transcript e PDF legível |
-| `ENFERMAGEM` | handoff recebido, anamnese, requisito operacional e propostas dos campos que coleta | avaliação médica e promoção de regra global |
+| `ENFERMAGEM` | coleta estruturada, revisão conforme qualificação e proposta operacional da demo | avaliação médica e promoção de regra global |
 | `ANESTESIOLOGISTA` | avaliação, pendência, retorno, resultado, consulta e curadoria de conhecimento | reescrever anamnese final ou escolher vaga |
 | `SOLICITANTE` | cumprir pendência atribuída e receber resultado/entrega do próprio serviço | caso geral, outro serviço, anamnese, avaliação, IA e memória |
 | Sistema | resolver autoridade, filtrar, redigir, auditar e revogar | inferir papel, clínica ou escopo a partir do renderer |
@@ -213,9 +213,10 @@ antes da resposta. A forma física de serialização pertence ao Build.
 | abrir/corrigir/cancelar intake | sim | não | não | não | não |
 | ler identidade e encaminhamento necessários | sim | sim | sim | mínimo da pendência própria | não |
 | aceitar handoff inicial | não | sim | não | não | não |
-| criar/editar/submeter anamnese | não | sim | não | não | não |
+| registrar dados da coleta | não | sim, conforme qualificação/supervisão | não | não | não |
+| revisar e declarar `CAPTURE_COMPLETE` | não | somente conta identificada como enfermeiro na demo | não | não | não |
 | ler anamnese final | não | sim | sim | não | não |
-| confirmar/alterar requisito operacional | não | sim | não | não | não |
+| confirmar/alterar requisito operacional | não | `UNRESOLVED`; nunca técnico autônomo por inferência | não | não | não |
 | ler classe, duração e status operacionais | sim | sim | sim | não | não |
 | reservar/reagendar/cancelar/check-in | sim | não | não | não | capacidade, não booking clínico |
 | iniciar/salvar/finalizar avaliação | não | não | sim | não | não |

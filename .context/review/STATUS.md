@@ -13,7 +13,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `hack/analysis.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Ressintetizar depois das rodadas dos oito domínios; a integração de IA ainda é provisória. |
 | `ANALYST-caso-e-encaminhamento.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADJUSTED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 18 cenários após reconciliar anamnese, agenda, avaliação, acesso, IA e superfícies. |
 | `ANALYST-acesso-e-auditoria.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADJUSTED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 24 cenários após reconciliar caso, avaliação, superfícies, arquitetura e IA. |
-| `ANALYST-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Pesquisar widgets, campos, completude, catálogos e licenças. |
+| `ANALYST-anamnese-e-catalogos.md` | `IN_REVIEW` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `9f501a9` | Validar licenças e protocolo local; repetir casos clínico-semânticos no SHA corrigido com review multiprofissional. |
 | `ANALYST-classificacao-e-agenda.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Atacar abstenção da regra, supersessão, redaction, retorno e falhas de capacidade após reconciliar a criticidade campo a campo da anamnese. |
 | `ANALYST-avaliacao-pendencias-e-handoff.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `ADVERSARIAL_REQUIRED` | `9f501a9` | Repetir os 25 cenários; resolver custódia, assinatura, documentos, correção substituta e canal institucional. |
 | `ANALYST-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Compor IA/memória somente após os contratos dos domínios. |
@@ -22,7 +22,7 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 | `hack/BUILD.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Ressintetizar somente depois dos oito pares e Surface Blueprints. |
 | `BUILD-caso-e-encaminhamento.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar novo adversarial e assinatura do Analyst; depois refazer contratos físicos. |
 | `BUILD-acesso-e-auditoria.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar novo adversarial e assinatura do Analyst; depois refazer fronteira física. |
-| `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `RESEARCH_REQUIRED` | `7b8cdc4` | Aguardar pesquisa clínica; depois provar schema e round-trip. |
+| `BUILD-anamnese-e-catalogos.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `9f501a9` | Refazer somente após Analyst pesquisado, adversarial verde e assinatura de Marco. |
 | `BUILD-classificacao-e-agenda.md` | `RESEARCH_REQUIRED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Aguardar Analyst corrigido, adversarial e assinatura; depois reconciliar contratos físicos e provar o PGlite. |
 | `BUILD-avaliacao-pendencias-e-handoff.md` | `ADJUSTED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `9f501a9` | Não remendar: reescrever depois do Analyst assinado, incluindo suficiência, versões, documentos, retorno e handoff local/externo. |
 | `BUILD-superficies-e-configuracoes.md` | `NOT_REVIEWED` | `RECON_REQUIRED` | `ADVERSARIAL_REQUIRED` | `INVALIDATED_BY_CHANGE` | `7b8cdc4` | Corrigir após os domínios; então criar Surface Blueprints. |
@@ -40,10 +40,9 @@ Estados permitidos: `NOT_REVIEWED`, `RESEARCH_REQUIRED`, `RECON_REQUIRED`,
 
 ## Próxima rodada
 
-Próximo artefato: `hack/domains/ANALYST-anamnese-e-catalogos.md`.
-
-Objetivo: pesquisar o conjunto clínico, a semântica de resposta e completude, a origem dos
-catálogos e suas licenças. Não revisar o Build antes de corrigir o Analyst.
+Próximo gate deste domínio: review adversarial de semântica clínica, competência
+profissional e fatores humanos sobre o SHA corrigido de
+`hack/domains/ANALYST-anamnese-e-catalogos.md`.
 
 Research de classificação/agenda recebido e incorporado: as fontes sustentam variabilidade
 e calibração local, não os números do motor. O artefato segue para adversarial somente após
@@ -58,6 +57,12 @@ Adversarial de acesso/RBAC incorporado: revogação em voo, último admin concor
 não interferência por serviço, auditoria allowlisted, limite append-only, erro opaco,
 capabilities de IA e fronteiras de arquivo/cloud/PDF foram fechados semanticamente. O
 artefato continua `ADVERSARIAL_REQUIRED` até repetir os 24 cenários no novo SHA.
+
+Research clínico-regulatório de anamnese incorporado: estado de valor foi separado de
+ausência, `NOT_PERFORMED` entrou, encerramento da captura deixou de significar informação
+resolvida, FINAL ficou corrigível por versão vinculada, campos de julgamento clínico foram
+retirados ou rebaixados e catálogos foram assumidos como recortes. O domínio continua
+`RESEARCH_REQUIRED` por protocolo local, competências, licenças e review multiprofissional.
 
 Research clínico-documental de avaliação incorporado: pendência ganhou impacto explícito,
 evidência submetida foi separada de suficiência, retorno virou nova decisão, recibo sem

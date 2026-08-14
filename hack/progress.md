@@ -48,9 +48,10 @@ Taskgen assinado
 
 ## Próxima ação permitida
 
-Pesquisar `hack/domains/ANALYST-anamnese-e-catalogos.md`: conjunto clínico, estados de
-resposta, completude, catálogos e licenças. Depois, verificar fontes, corrigir esse Analyst,
-atualizar o tracker e publicar novo SHA. Não revisar o Build antes disso.
+Concluir as lacunas de pesquisa de `ANALYST-anamnese-e-catalogos.md` e executar review
+adversarial multiprofissional sobre o SHA corrigido: semântica de ausência, competência do
+enfermeiro/técnico, campos clínicos, licenças e correção pós-publicação. O Build pareado está
+invalidado e não pode ser refeito antes de Analyst assinado.
 
 ---
 

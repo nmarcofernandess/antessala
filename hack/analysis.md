@@ -10,6 +10,9 @@
 - Mode: `hybrid`
 - Verdict: `INVALIDATED_BY_CHANGE`; IA/memória entrou no MVP e os reviews ainda estão pendentes
 
+Documento invalidado não é fonte normativa para Analyst, Build, Spec, Plan ou código.
+Decisão reaproveitada precisa ser reintroduzida, classificada e justificada no artefato dono.
+
 ## TL;DR
 
 O MVP é um aplicativo Electron local que acompanha um caso pré-anestésico do
@@ -188,13 +191,13 @@ ENTITY: CasoPreAnestesico
 
 ENTITY: Anamnese
 - Attributes: id, caseId, templateVersion, contentVersion, contentJson, status, revision
-- Actions: iniciar, salvar rascunho, revisar contexto, finalizar, invalidar uma finalização
-  pré-publicação e produzir substituta sem apagar histórico
-- Relations: pertence a um caso; produz um requisito
+- Actions: iniciar, salvar rascunho, encerrar captura, corrigir por adendo/revisão sucessora
+- Relations: pertence a um caso; subsidia proposta operacional e avaliação médica
 - Source of truth: JSONB validado
-- Runtime states: DRAFT, COMPLETE; revisões podem ser FINAL_EFFECTIVE ou INVALIDATED
-- Invalid states: COMPLETE com NOT_ASKED obrigatório; revisão invalidada alimentando agenda,
-  avaliação, IA ou memória; duas revisões finais efetivas
+- Runtime states: DRAFT; CAPTURE_COMPLETE; revisões imutáveis podem ser EFFECTIVE,
+  SUPERSEDED ou INVALIDATED
+- Invalid states: ausência transformada em negativa; revisão sobrescrita; revisão
+  superseded alimentando nova decisão; captura completa confundida com suficiência clínica
 
 ENTITY: RequisitoAgenda
 - Attributes: id, caseId, anamnesisRevisionId, slotClass, durationMinutes,
@@ -498,21 +501,20 @@ stateDiagram-v2
 
 ### Anamnese
 
-- MUST: cada resposta distingue `ANSWERED`, `NEGATIVE`, `UNKNOWN`,
-  `NOT_APPLICABLE`, `NOT_ASKED` e `REFUSED`.
-- MUST: cada resposta registra fonte, autor, função e horário.
-- MUST: todo campo consumido por regra pertence a um widget versionado.
-- MUST: finalizar calcula a completude no processo principal.
-- MUST: `submitFinal` rejeita `INCOMPLETE`; quando aceito, cria a única revisão final efetiva
-  COMPLETE/FINAL e o resultado `PROPOSED`, `HUMAN_DEFINITION_REQUIRED` ou
-  `OUT_OF_DEMO_RANGE` no mesmo commit.
-- MUST: erro de intake descoberto antes da publicação invalida a revisão e proposta
-  anteriores, preserva-as como história, impede seu consumo e exige nova revisão da
-  enfermagem. Não é evolução entre casos nem edição silenciosa.
-- MUST NOT: array vazio representar resposta negativa.
-- MUST NOT: widget nutricional herdado entrar no template por conveniência.
-- IF um campo obrigatório estiver `NOT_ASKED`, THEN o resultado é `INCOMPLETE`, nenhum
-  requisito é criado e a finalização é recusada.
+- MUST: `ANSWERED` preservar valor explicitamente obtido, inclusive `false`; `UNKNOWN`,
+  `REFUSED`, `NOT_ASKED`, `NOT_APPLICABLE` e `NOT_PERFORMED` explicam ausência de valor.
+- MUST: cada resposta registrar informante/fonte, coletor, categoria, horário e método,
+  documento, catálogo ou IA quando aplicável.
+- MUST: separar `CAPTURE_COMPLETE`, `INFORMATION_RESOLVED`,
+  `OPERATIONAL_REQUIREMENT_CONFIRMED` e `MEDICAL_EVALUATION_COMPLETE`.
+- MUST: revisão FINAL ser imutável, mas corrigível por adendo ou sucessora vinculada, com
+  autoria, motivo e impacto controlado nos derivados.
+- MUST NOT: array vazio, silêncio ou default representar resposta negativa.
+- MUST NOT: MET de atividade virar capacidade individual; enfermagem/software concluir
+  “controle”, aplicabilidade de gravidez, risco, ASA, aptidão ou conduta.
+- IF um campo obrigatório estiver `NOT_ASKED`, THEN `CAPTURE_COMPLETE` é recusado.
+- IF houver `UNKNOWN`, `REFUSED` ou `NOT_PERFORMED`, THEN a tentativa pode encerrar conforme
+  regra local, mas a informação permanece não resolvida e não gera publicação automática.
 
 ### Classificação operacional
 

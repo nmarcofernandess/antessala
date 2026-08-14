@@ -234,7 +234,10 @@ uma fonte não sobrescreve silenciosamente a outra.
 local, mas não tornam a informação resolvida. Esses marcos pertencem ao mesmo caso; não
 criam histórico longitudinal entre pessoas ou encaminhamentos.
 
-### Envelope canônico
+### Envelope lógico provisório
+
+Este exemplo apenas mostra que a coleta é versionada e composta por blocos. Nomes físicos,
+versão, campos derivados e forma de persistência pertencem ao Build futuro.
 
 ```ts
 type PreAnesthesiaContent = {
@@ -257,10 +260,12 @@ type PreAnesthesiaBlock<T> = {
 }
 ```
 
-## Catálogo canônico de widgets
+## Inventário candidato de grupos da coleta
 
-Todos os 14 widgets abaixo pertencem ao template `pre_anesthesia_mvp@1`. A ordem é fixa no
-MVP; o composer permite colapsar, mas não remover um widget obrigatório.
+Os 14 grupos abaixo formam o template da demonstração como `DEMO_DECISION`; não são um
+mínimo clínico universal. Campo, obrigatoriedade, wording, população e ramo condicional
+continuam `UNRESOLVED` até validação multiprofissional. Os shapes são inventário semântico
+para revisar perguntas — não DTOs autorizados.
 
 ### 1. `procedure_context@1`
 
@@ -307,29 +312,33 @@ correção dentro do caso, não evolução longitudinal ou edição silenciosa d
 
 ```ts
 type AllergiesData = {
-  hasAllergy: Answer<true>
+  hasAllergy: Answer<boolean>
   items: Array<ProvenancedListItem<{
     id: string
     substance: Answer<string>
     reaction: Answer<string>
-    severity: Answer<'MILD' | 'MODERATE' | 'SEVERE' | 'UNKNOWN'>
+    documentedSeverity: Answer<'MILD' | 'MODERATE' | 'SEVERE'>
+    occurredAtOrPeriod: Answer<string>
+    reactionKind: Answer<'ALLERGY' | 'INTOLERANCE' | 'OTHER_ADVERSE_REACTION'>
   }>>
 }
 ```
 
-`hasAllergy=NEGATIVE` exige `items=[]`. `ANSWERED true` exige ao menos uma substância;
-reação pode ser `UNKNOWN`. Consumidor: carga de revisão e pendências, nunca conduta automática.
+Negativa exige pergunta explícita e lista ativa vazia; positivo exige substância e reação
+factual. Gravidade e tipo só são registrados quando explicitamente documentados ou
+observados, nunca inferidos pelo coletor. O fallback textual permanece disponível.
+Consumidor: revisão humana, nunca diagnóstico, urgência ou conduta automática.
 
 ### 3. `anesthesia_history@1`
 
 ```ts
 type AnesthesiaHistoryData = {
-  previousAnesthesia: Answer<true>
-  personalComplication: Answer<true>
+  previousAnesthesia: Answer<boolean>
+  personalComplication: Answer<boolean>
   personalComplicationDescription: Answer<string>
-  difficultAirwayHistory: Answer<true>
-  postoperativeNauseaVomiting: Answer<true>
-  familyAnesthesiaComplication: Answer<true>
+  difficultAirwayHistory: Answer<boolean>
+  postoperativeNauseaVomiting: Answer<boolean>
+  familyAnesthesiaComplication: Answer<boolean>
   familyComplicationDescription: Answer<string>
 }
 ```
@@ -341,12 +350,12 @@ estimativa de carga e destaque para leitura médica.
 
 ```ts
 type CardiovascularData = {
-  chestPain: Answer<true>
-  dyspneaAtRest: Answer<true>
-  syncope: Answer<true>
-  palpitation: Answer<true>
-  edema: Answer<true>
-  knownCardiovascularDisease: Answer<true>
+  chestPain: Answer<boolean>
+  dyspneaAtRest: Answer<boolean>
+  syncope: Answer<boolean>
+  palpitation: Answer<boolean>
+  edema: Answer<boolean>
+  knownCardiovascularDisease: Answer<boolean>
   detail: Answer<string>
 }
 ```
@@ -358,12 +367,12 @@ resumo clínico, não ASA/RCRI.
 
 ```ts
 type RespiratoryData = {
-  dyspnea: Answer<true>
-  wheezing: Answer<true>
-  recentRespiratoryInfection: Answer<true>
-  chronicCough: Answer<true>
-  sleepApneaDiagnosis: Answer<true>
-  usesRespiratorySupport: Answer<true>
+  dyspnea: Answer<boolean>
+  wheezing: Answer<boolean>
+  recentRespiratoryInfection: Answer<boolean>
+  chronicCough: Answer<boolean>
+  sleepApneaDiagnosis: Answer<boolean>
+  usesRespiratorySupport: Answer<boolean>
   supportDescription: Answer<string>
   detail: Answer<string>
 }
@@ -376,67 +385,73 @@ O widget `sono` DietFlow não atravessa: somente o fato respiratório relevante 
 ```ts
 type FunctionalCapacityData = {
   activity: Answer<{ catalogId: string | null; label: string }>
-  metMin: Answer<number>
-  metMax: Answer<number>
-  limitedBySymptoms: Answer<true>
+  limitedBySymptoms: Answer<boolean>
   limitationDescription: Answer<string>
 }
 ```
 
-MET vem do item catalogado quando selecionado; texto livre preserva `catalogId=null` e exige
-intervalo informado. Não calcula aptidão. Consumidor: esforço de entrevista e resumo.
+Registrar atividade relatada e sintomas limitantes. MET, quando exibido, é metadado do
+catálogo sobre custo energético médio da atividade; não é valor individual da pessoa, não
+entra na resposta clínica e não calcula capacidade, risco ou aptidão. Instrumento como DASI
+permanece `UNRESOLVED` até escolha, licença, população e interpretação serem aprovadas.
 
 ### 7. `medications@1`
 
 ```ts
 type MedicationsData = {
-  usesMedication: Answer<true>
+  usesMedication: Answer<boolean>
   items: Array<ProvenancedListItem<{
     id: string
     catalogId: string | null
     name: string
     activeIngredient: string | null
     dose: Answer<string>
+    route: Answer<string>
     frequency: Answer<string>
+    actualUse: Answer<string>
     lastUse: Answer<string>
     reason: Answer<string>
+    productKind: Answer<'PRESCRIBED' | 'OTC' | 'HERBAL' | 'SUPPLEMENT' | 'PRN' | 'OTHER'>
     sourceText: string
   }>>
 }
 ```
 
-Adapta `medicacoes`; preserva ID, princípio ativo, último uso e texto original. Grupo de
-risco catalogado pode ser mostrado ao clínico, mas não gera instrução de suspensão.
+Adapta `medicacoes`; preserva texto original, uso real, via, frequência, última utilização e
+fonte. Inclui prescrito, OTC, fitoterápico, suplemento, PRN e fallback livre. Ausência no
+recorte de 382 itens nunca bloqueia o registro. Grupo de “risco”, peso, conduta e orientação
+de suspensão/manutenção ficam fora do contrato clínico.
 
 ### 8. `diagnoses@1`
 
 ```ts
 type DiagnosesData = {
-  hasDiagnosis: Answer<true>
+  hasDiagnosis: Answer<boolean>
   items: Array<ProvenancedListItem<{
     id: string
     cidId: string | null
     code: string | null
     name: string
-    controlled: Answer<true>
-    currentSymptoms: Answer<true>
+    controlStatement: Answer<string>
+    currentSymptoms: Answer<boolean>
     detail: Answer<string>
   }>>
 }
 ```
 
-Adapta `problemas_saude`; preserva a identidade CID quando encontrada e mantém fallback
-livre explícito. Um array vazio nunca significa “sem diagnóstico”.
+Adapta `problemas_saude`; preserva condição referida/documentada, tratamento, sintomas,
+mudança recente e fallback livre. `controlStatement` só reproduz afirmação da fonte; não é
+conclusão da enfermagem nem do software. Um array vazio nunca significa “sem diagnóstico”.
 
 ### 9. `bleeding_thrombosis@1`
 
 ```ts
 type BleedingThrombosisData = {
-  abnormalBleeding: Answer<true>
-  easyBruising: Answer<true>
-  priorThrombosis: Answer<true>
-  familyBleedingDisorder: Answer<true>
-  receivesAnticoagulantOrAntiplatelet: Answer<true>
+  abnormalBleeding: Answer<boolean>
+  easyBruising: Answer<boolean>
+  priorThrombosis: Answer<boolean>
+  familyBleedingDisorder: Answer<boolean>
+  receivesAnticoagulantOrAntiplatelet: Answer<boolean>
   detail: Answer<string>
 }
 ```
@@ -458,50 +473,52 @@ type VitalSignsData = {
 }
 ```
 
-Cada valor usa `MEASUREMENT`. O widget inteiro pode ser `NOT_APPLICABLE` quando a demo não
-simula aferição; valores não são inferidos nem preenchidos com default.
+Cada valor aferido registra autor, data/hora, unidade e, quando pertinente, método ou
+dispositivo. Medida não feita usa `NOT_PERFORMED`, não `NOT_APPLICABLE`, normalidade ou
+default. Frequência respiratória e dor permanecem `UNRESOLVED` para decisão institucional.
 
 ### 11. `habits_substances@1`
 
 ```ts
 type HabitsSubstancesData = {
-  tobacco: Answer<{ current: true }>
+  tobacco: Answer<{ status: 'NEVER' | 'FORMER' | 'CURRENT' }>
   tobaccoAmountPerDay: Answer<number>
-  alcohol: Answer<{ current: true }>
+  tobaccoStoppedAtOrPeriod: Answer<string>
+  alcohol: Answer<{ status: 'NEVER' | 'FORMER' | 'CURRENT' }>
   alcoholFrequency: Answer<string>
-  recreationalSubstances: Answer<true>
+  recreationalSubstances: Answer<boolean>
   substancesDescription: Answer<string>
   recentUse: Answer<string>
 }
 ```
 
-`tobacco` e `alcohol` só aceitam `ANSWERED` com `current:true`; ausência de uso é
-`NEGATIVE`, nunca `ANSWERED {current:false}`. Quantidade/frequência ficam em respostas
-separadas para admitir `UNKNOWN` ou `REFUSED` sem perder o fato de uso atual. Consumidor:
-carga de revisão e resumo; nenhuma inferência de risco clínico.
+Tabaco e álcool distinguem nunca, uso anterior e uso atual; quantidade, unidade,
+frequência, cessação e última utilização são independentes e admitem desconhecimento ou
+recusa. Linguagem não estigmatizante e nenhuma inferência de dependência, risco ou urgência.
 
 ### 12. `special_conditions@1`
 
 ```ts
 type SpecialConditionsData = {
-  pregnancyApplicable: Answer<true>
-  pregnant: Answer<true>
-  lactating: Answer<true>
+  pregnant: Answer<boolean>
+  lactating: Answer<boolean>
   communicationAccommodation: Answer<string>
   mobilityAccommodation: Answer<string>
-  legalRepresentativeNeeded: Answer<true>
+  legalRepresentativeNeeded: Answer<boolean>
   otherCondition: Answer<string>
 }
 ```
 
-`pregnant` admite `NOT_APPLICABLE` quando `pregnancyApplicable` for negativo. Necessidades
-de comunicação/mobilidade afetam recurso/duração, não diagnóstico.
+O sistema não infere aplicabilidade por sexo ou gênero. Possibilidade/estado de gravidez e
+lactação são independentes, distinguem autorrelato de teste/documento e admitem
+`UNKNOWN`/`REFUSED`, conforme política institucional ainda `UNRESOLVED`. Necessidades de
+comunicação/mobilidade podem afetar recurso operacional, nunca diagnóstico ou urgência.
 
 ### 13. `exams_pending@1`
 
 ```ts
 type ExamsPendingData = {
-  documentsAvailable: Answer<true>
+  documentsAvailable: Answer<boolean>
   items: Array<ProvenancedListItem<{
     id: string
     kind: 'EXAM' | 'REPORT' | 'INFORMATION'
@@ -529,7 +546,17 @@ type ClinicalNotesData = {
 Adapta `observacoes_gerais`, remove HTML arbitrário do DTO e registra autoria. É opcional e
 nunca substitui campo estruturado obrigatório.
 
-### Matriz de validação do template
+### Matriz provisória de pesquisa — não normativa
+
+As duas matrizes abaixo preservam o inventário dos campos candidatos, mas **não autorizam
+schema, DTO, obrigatoriedade nem implementação**. Qualquer regra incompatível com o
+contrato semântico corrigido acima está invalidada. Em especial: `ANSWERED(false)` é valor
+legítimo obtido explicitamente; medida não feita usa `NOT_PERFORMED`; `metMin/metMax`,
+`controlled` e `pregnancyApplicable` foram retirados do contrato clínico; limites numéricos
+e quantidade máxima são `DEMO_DECISION`; campos obrigatórios/condicionais continuam
+`UNRESOLVED` até revisão multiprofissional.
+
+### Inventário de validações candidatas do template
 
 | Grupo | Contrato sintático e semântico |
 |---|---|
@@ -541,7 +568,7 @@ nunca substitui campo estruturado obrigatório.
 | Instantes | ISO 8601 com offset; `measuredAt` não pode estar no futuro da captura |
 | Listas clínicas | máximo 100 itens; IDs únicos; ordem preservada |
 | Valores catalogados | ID e label precisam corresponder à mesma revisão; fallback usa ID nulo |
-| Booleanos | positivo = `ANSWERED true`; negativo = `NEGATIVE`; `ANSWERED false` é recusado |
+| Booleanos | `ANSWERED(true/false)` é válido quando explicitamente obtido; default ou lista vazia não é resposta |
 | Defaults | todos os campos `NOT_ASKED`, sem valor e com `provenance=null` |
 
 Refinamentos por widget:
@@ -553,8 +580,8 @@ Refinamentos por widget:
   positivo exige item e negativo exige lista vazia.
 - `anesthesia_history`, `cardiovascular` e `respiratory`: detalhe condicionado usa
   1–2.000 caracteres; suporte respiratório positivo exige descrição.
-- `functional_capacity`: `metMin`/`metMax` entre 0 e 25, com `min <= max`; item
-  catalogado copia sua faixa; limitação positiva exige descrição.
+- `functional_capacity`: atividade relatada e limitação preservam texto/fonte; MET fica
+  somente como metadado do catálogo e não como valor individual.
 - `medications`: máximo 100 itens; nome 1–200, texto de origem 1–500; dose, frequência,
   último uso e motivo usam 1–200 quando respondidos; positivo exige item e negativo exige
   lista vazia.
@@ -564,17 +591,16 @@ Refinamentos por widget:
 - `vital_signs`: pressão sistólica 20–350 mmHg; diastólica 10–250; frequência 10–300 bpm;
   saturação 0–100%; peso 0,5–600 kg; altura 20–300 cm; temperatura 20–50 °C. Faixa é
   validação de entrada da demo, não interpretação clínica. Quando não aferido, cada campo
-  fica explicitamente `NOT_APPLICABLE`, `UNKNOWN` ou `REFUSED`.
-- `habits_substances`: `tobacco`/`alcohol` positivos aceitam apenas `{current:true}`;
-  quantidade de tabaco é inteiro 0–200/dia; uso positivo de substância recreativa exige
-  descrição; frequência e uso recente usam texto curto.
-- `special_conditions`: gravidez negativa ou inaplicável impede valor positivo
-  contraditório; necessidades preenchidas usam texto descritivo.
+  fica `NOT_PERFORMED`, `UNKNOWN` ou `NOT_ASKED`.
+- `habits_substances`: tabaco/álcool distinguem `NEVER`, `FORMER` e `CURRENT`; quantidade,
+  unidade e temporalidade continuam candidatas à validação institucional.
+- `special_conditions`: não existe `pregnancyApplicable`; gravidez e lactação são
+  independentes, respeitam recusa e política institucional.
 - `exams_pending`: máximo 100 itens; nome 1–200; datas ISO; `PRESENT` exige documento
   disponível e `MISSING/REQUESTED` produz pendência operacional.
 - `clinical_notes`: nota opcional; quando respondida usa 1–4.000 caracteres.
 
-### Matriz exaustiva de completude por `fieldPath`
+### Inventário provisório de completude por `fieldPath`
 
 Legenda:
 
@@ -587,8 +613,9 @@ Legenda:
 - `I-R`/`I-O`/`I-C`: a mesma semântica aplicada a cada item ativo da lista. Campos escalares
   `I-R` não usam `Answer`, mas exigem valor e recebem proveniência pela mutação do item.
 
-`NOT_APPLICABLE` é aceito **somente** nas condições abaixo. Estado negativo de qualquer
-`Answer<true>` é `NEGATIVE`; `ANSWERED false` nunca é uma forma alternativa.
+`NOT_APPLICABLE` é aceito **somente** por regra de aplicabilidade versionada. Negativa
+explícita pode ser `ANSWERED(false)` ou uma apresentação `NEGATIVE`, desde que preserve
+pergunta, escopo e proveniência; o Build só escolherá uma forma canônica após assinatura.
 Quando o controlador de um campo `C` está `UNKNOWN` ou `REFUSED`, o dependente pode
 permanecer `NOT_ASKED` sem bloquear; a completude reporta o controlador como tratado porém
 indeterminado e não inventa aplicabilidade. Se o controlador for corrigido depois, o
@@ -617,7 +644,7 @@ dependente volta a obedecer imediatamente ao ramo positivo/negativo.
 | `respiratory.supportDescription` | `C` | Obrigatória se `usesRespiratorySupport=ANSWERED`; `NOT_APPLICABLE` caso contrário. |
 | `respiratory.detail` | `C` | Obrigatório se qualquer fato respiratório for positivo; `NOT_APPLICABLE` se nenhum for positivo. |
 | `functional_capacity.activity` | `R` | Seleção catalogada ou fallback livre; ausência declarada usa `NEGATIVE`. |
-| `functional_capacity.metMin`<br>`functional_capacity.metMax` | `C` | Obrigatórios quando `activity=ANSWERED`: copiados do catálogo ou informados no fallback; `NOT_APPLICABLE` quando activity não é respondida positivamente. |
+| metadado MET da atividade | `O` | Somente apoio de linguagem do catálogo; não é resposta individual nem entra na completude. |
 | `functional_capacity.limitedBySymptoms` | `R` | Sem `NOT_APPLICABLE`. |
 | `functional_capacity.limitationDescription` | `C` | Obrigatória se limitação positiva; `NOT_APPLICABLE` caso contrário. |
 | `medications.usesMedication` | `R` | `NEGATIVE` exige lista ativa vazia; positivo exige ao menos um item. |
@@ -628,21 +655,20 @@ dependente volta a obedecer imediatamente ao ramo positivo/negativo.
 | `diagnoses.hasDiagnosis` | `R` | `NEGATIVE` exige lista ativa vazia; positivo exige ao menos um item. |
 | `diagnoses.items[*].name` | `I-R` | Texto não vazio em todo item ativo. |
 | `diagnoses.items[*].cidId`<br>`diagnoses.items[*].code` | `I-O` | Escalares nulos no fallback livre; não usam `Answer`. |
-| `diagnoses.items[*].controlled` | `I-R` | Tratada; `NOT_APPLICABLE` somente quando controle não se aplica à condição registrada. |
+| `diagnoses.items[*].controlStatement` | `I-O` | Somente frase atribuída ao paciente/documento; nunca conclusão da enfermagem/software. |
 | `diagnoses.items[*].currentSymptoms` | `I-R` | Sem `NOT_APPLICABLE`; negativo usa `NEGATIVE`. |
 | `diagnoses.items[*].detail` | `I-C` | Obrigatório se sintomas atuais forem positivos; `NOT_APPLICABLE` caso contrário. |
 | `bleeding_thrombosis.abnormalBleeding`<br>`bleeding_thrombosis.easyBruising`<br>`bleeding_thrombosis.priorThrombosis`<br>`bleeding_thrombosis.familyBleedingDisorder`<br>`bleeding_thrombosis.receivesAnticoagulantOrAntiplatelet` | `R` | Cada fato precisa ser tratado; sem `NOT_APPLICABLE`. |
 | `bleeding_thrombosis.detail` | `C` | Obrigatório se qualquer fato for positivo; `NOT_APPLICABLE` caso contrário. |
-| `vital_signs.measuredAt` | `R` | `ANSWERED` se qualquer valor foi aferido; `NOT_APPLICABLE` se a demo não simulou aferição. |
-| `vital_signs.systolicBpMmHg`<br>`vital_signs.diastolicBpMmHg`<br>`vital_signs.heartRateBpm`<br>`vital_signs.oxygenSaturationPct`<br>`vital_signs.weightKg`<br>`vital_signs.heightCm`<br>`vital_signs.temperatureC` | `R` | Cada campo é tratado; `NOT_APPLICABLE` somente quando aquela aferição não ocorreu, com provenance da decisão. |
-| `habits_substances.tobacco` | `R` | Positivo aceita apenas `{current:true}`; ausência de uso é `NEGATIVE`. |
+| `vital_signs.measuredAt` | `C` | `ANSWERED` quando qualquer valor foi aferido; ausência de aferição usa `NOT_PERFORMED`. |
+| `vital_signs.systolicBpMmHg`<br>`vital_signs.diastolicBpMmHg`<br>`vital_signs.heartRateBpm`<br>`vital_signs.oxygenSaturationPct`<br>`vital_signs.weightKg`<br>`vital_signs.heightCm`<br>`vital_signs.temperatureC` | `C` | Cada medida feita tem valor/unidade/proveniência; medida não feita usa `NOT_PERFORMED`. |
+| `habits_substances.tobacco` | `C` | Valor distingue `NEVER`, `FORMER` e `CURRENT`; ausência de coleta não vira nunca fumou. |
 | `habits_substances.tobaccoAmountPerDay` | `C` | Tratada se tabaco positivo; `NOT_APPLICABLE` se tabaco negativo. |
-| `habits_substances.alcohol` | `R` | Positivo aceita apenas `{current:true}`; ausência de uso é `NEGATIVE`. |
+| `habits_substances.alcohol` | `C` | Valor distingue `NEVER`, `FORMER` e `CURRENT`. |
 | `habits_substances.alcoholFrequency` | `C` | Tratada se álcool positivo; `NOT_APPLICABLE` se álcool negativo. |
 | `habits_substances.recreationalSubstances` | `R` | Positivo usa `ANSWERED true`; ausência é `NEGATIVE`. |
 | `habits_substances.substancesDescription`<br>`habits_substances.recentUse` | `C` | Tratadas se substância recreativa for positiva; `NOT_APPLICABLE` caso contrário. |
-| `special_conditions.pregnancyApplicable` | `R` | Positivo significa que perguntas de gravidez/lactação se aplicam; negativo desativa ambas. |
-| `special_conditions.pregnant`<br>`special_conditions.lactating` | `C` | Obrigatórias se `pregnancyApplicable=ANSWERED`; `NOT_APPLICABLE` se negativo. |
+| `special_conditions.pregnant`<br>`special_conditions.lactating` | `C` | Independentes; política de pergunta/teste, consentimento e confidencialidade é `UNRESOLVED`. |
 | `special_conditions.communicationAccommodation`<br>`special_conditions.mobilityAccommodation` | `R` | `ANSWERED` carrega a necessidade; `NEGATIVE` significa nenhuma. Não usar string vazia. |
 | `special_conditions.legalRepresentativeNeeded` | `R` | Positivo usa `ANSWERED true`; ausência é `NEGATIVE`. |
 | `special_conditions.otherCondition` | `O` | Pode ficar `NOT_ASKED`; `NEGATIVE` pode registrar explicitamente nenhuma outra condição. |
@@ -660,7 +686,11 @@ independente: `documentsAvailable=NEGATIVE` proíbe apenas item `PRESENT`, mas a
 sempre satisfaz todos os `I-R`/`I-C` aplicáveis e possui ID único. `listMutationLog` e
 `itemProvenance` são metadados gerados pelo main, não campos de completude editáveis.
 
-### Contrato de mutação do rascunho
+### Operações lógicas candidatas do rascunho
+
+O exemplo abaixo registra a necessidade semântica de alterar respostas e listas com
+autoria. Tipos, Zod, paths e granularidade física permanecem inválidos para implementação
+até o Build ser refeito.
 
 O renderer nunca envia o envelope inteiro nem um patch JSON arbitrário. A união fechada é:
 
@@ -731,19 +761,17 @@ sequenceDiagram
     N->>A: registra Answer + Provenance
     A->>A: valida schema e semântica
   end
-  N->>A: solicita finalização
+  N->>A: solicita encerramento da captura
   A->>A: calcula pendingFieldPaths
   alt "há NOT_ASKED obrigatório"
     A-->>N: bloqueia e lista campos
-  else "captura suficiente"
-    A->>A: executa regras sobre candidato imutável
-    alt "resultado INCOMPLETE"
-      A-->>N: aborta sem FINAL nem proposta e mantém NURSING_IN_PROGRESS
-    else "entrevista completa"
-      A->>DB: commit único: FINAL efetiva + COMPLETE + resultado classificatório
-      A-->>N: mantém caso NURSING_IN_PROGRESS para decisão humana quando aplicável
-      A-->>M: disponibiliza snapshot clínico final com origem
-    end
+  else "tentativa de coleta encerrável"
+    N->>A: enfermeiro revisa e declara CAPTURE_COMPLETE
+    A->>DB: grava revisão imutável com lacunas e proveniência
+    A->>A: produz somente proposta operacional rotulada
+    N->>A: humano confirma, altera com motivo ou abstém
+    A->>DB: grava OPERATIONAL_REQUIREMENT_CONFIRMED separadamente
+    A-->>M: disponibiliza revisão efetiva, lacunas e fontes
   end
 ```
 
@@ -755,25 +783,28 @@ sequenceDiagram
 - MUST registrar provenance em cada resposta.
 - MUST registrar provenance append-only em cada adição, alteração ou remoção de item.
 - MUST representar explicitamente a resposta negativa.
-- MUST bloquear finalização se um campo obrigatório permanecer `NOT_ASKED`.
-- MUST permitir `UNKNOWN` e `REFUSED`; esses estados podem gerar pendência, nunca valor falso.
+- MUST bloquear `CAPTURE_COMPLETE` se pergunta obrigatória daquele estágio permanecer
+  `NOT_ASKED`.
+- MUST permitir `ANSWERED(false)` quando explicitamente obtido.
+- MUST permitir `UNKNOWN`, `REFUSED` e `NOT_PERFORMED`; esses estados podem encerrar a
+  tentativa, mas nunca viram negativa nem informação resolvida.
 - MUST preservar texto livre quando catálogo não encontrar item, com ID catalogado nulo.
 - MUST gravar o ID do catálogo quando houver seleção confirmada.
 - MUST congelar a revisão usada pela classificação.
 - MUST projetar procedimento/serviço do caso como read-only; o widget não duplica esses
   snapshots no JSONB.
-- MUST executar `submitFinal` e a classificação da revisão como uma única unidade: sucesso
-  cria uma revisão `FINAL` efetiva, muda `DRAFT → COMPLETE` e produz `PROPOSED`,
-  `HUMAN_DEFINITION_REQUIRED` ou `OUT_OF_DEMO_RANGE`; `INCOMPLETE` não cria nenhum deles.
+- MUST separar captura, resolução informacional, proposta e confirmação operacional; o
+  software não publica necessidade de agenda só porque a captura encerrou.
 - MUST ancorar o draft na revisão conjunta do contexto e aplicar, a cada correção, a matriz
   de impacto do Analyst de caso a anamnese, classificação, IA e resumo.
 - MUST exigir revisão explícita de todo consumidor `STALE` antes de salvar ou submeter.
 - MUST garantir vencedor único entre `submitFinal` e `correctIntake`; nenhum resultado
   parcial é aceito.
-- IF a correção ocorrer depois da revisão final e antes da publicação, THEN invalidar a
-  revisão e proposta anteriores, preservar histórico e abrir novo draft coerente.
-- MUST NOT sobrescrever revisão FINAL. Correção cria revisão sucessora com autoria, motivo e
-  vínculo; a revisão consumida historicamente permanece preservada.
+- MUST NOT sobrescrever revisão FINAL. Correção cria adendo ou revisão sucessora com autoria,
+  horário, motivo, campos alterados e vínculo; a anterior permanece preservada.
+- IF a correção ocorrer antes da publicação operacional, THEN invalidar derivados e exigir
+  nova confirmação. Depois da publicação, repercussão em requisito/reserva é `UNRESOLVED` e
+  nunca pode ocorrer silenciosamente.
 - IF a necessidade já estiver publicada, THEN correção material não é escondida por
   override; bloqueia o uso e segue governança ainda `UNRESOLVED` para operação real.
 - IF um item catalogado for retirado, THEN manter label e revisão capturados no snapshot.
@@ -789,69 +820,99 @@ sequenceDiagram
 | critical | Defaults herdados simulam resposta | `tests/shared/anamnese/widgets.spec.ts:28-49` | Todos os novos campos nascem `NOT_ASKED`. |
 | critical | DTO livre perde identidade do catálogo | `src/shared/anamnese/widgets/medicacoes.ts:19-38` | Persistir `catalogId` e snapshot do label. |
 | high | Registro legado não representa caso/encaminhamento | `src/main/db/clinical-schema.ts:3-25` | Nova entidade de caso; legado somente leitura/migração. |
-| high | Atualização substitui JSONB sem controle de versão | `src/main/tipc.ts:303-313` | Commands com versão esperada, um único FINAL e aggregate terminal. |
+| high | Atualização substitui JSONB sem controle de versão | `src/main/tipc.ts:303-313` | Revisões imutáveis + correção vinculada, sem overwrite. |
 | high | Correção do caso pode invalidar evidência já finalizada | contrato transversal de contexto | Vencedor único; antes da publicação, invalidar revisão e derivados e exigir nova revisão. |
 | high | Catálogo medicamentoso é recorte e licença é pendente | `src/data/catalogos/README.md:27-38` | Alegação limitada à demo; fallback livre; não redistribuir publicamente sem revisão. |
 | medium | Blocos snapshot/resultado carregam semântica nutricional | `src/shared/anamnese/types.ts:56-98` | Template pré-anestésico aceita somente widget blocks. |
 | medium | HTML histórico pode vazar para export | `src/shared/anamnese/text-formatter.ts:40-62` | DTO novo usa texto puro e escaping no export. |
 
-## Blueprint Handoff
+## Handoff semântico bloqueado
 
-| Path/Area | Action | Reason | Validation |
-|---|---|---|---|
-| `src/shared/anamnese/types.ts` | Introduzir envelope v3 e resposta semântica | Contrato canônico | testes Zod e round-trip |
-| `src/shared/anamnese/widgets/` | Criar 14 definitions v1 | Catálogo exato | contract test parametrizado |
-| `src/shared/anamnese/registry.ts` | Registry exaustivo pré-anestésico | Impedir widget fora do catálogo | compile-time exhaustive test |
-| `src/shared/anamnese/templates.ts` | Ativar somente `pre_anesthesia_mvp@1` | Template fixo da demo | snapshot do template |
-| `src/main/db/migrations/*` | Adicionar anamnese, no máximo uma revisão FINAL e catálogos; consumir `preop_cases` sem recriá-lo | Source of truth tecnicamente versionada, sem evolução clínica | migration/constraint tests |
-| `src/main/db/seed.ts` | Seed de procedimento/serviço e revisões de catálogo | Offline | primeiro boot sem fetch |
-| `src/main/catalogos/dto.ts` | DTOs de todos os catálogos consumidos | Fronteira tipada | mapping tests |
-| `src/main/tipc.ts` | Commands por caso/revisão, queries filtradas por papel | Mutação segura | integration + negative RBAC |
-| `src/renderer/src/anamnese/` | Composer fixo e UIs dos 14 widgets | Fluxo de enfermagem | renderer tests |
-| `src/main/export/pdf.ts` | Consumir DTO de resumo com proveniência, não HTML clínico arbitrário | Export rastreável sem alegar assinatura digital | PDF contract test |
+O Build deverá traduzir este domínio em contratos físicos somente depois de pesquisa,
+adversarial multiprofissional e assinatura. Nenhum path, tabela, DTO, seed, componente ou
+constraint descrito no Build atual possui autoridade enquanto depender de `UNRESOLVED` ou
+`DEMO_DECISION`.
 
 ## Acceptance Criteria
 
-- [ ] O template ativo contém exatamente os 14 widgets e nenhuma peça nutricional rejeitada.
+- [ ] Os 14 grupos candidatos estão explicitamente rotulados `DEMO_DECISION`; a seleção
+      clínica final permanece aberta.
 - [ ] Todo campo começa `NOT_ASKED`; nenhum default clínico conta como resposta.
-- [ ] O parser recusa `ANSWERED` sem valor e valor fora de `ANSWERED`.
-- [ ] Finalização lista todos os campos obrigatórios ainda não perguntados.
+- [ ] `ANSWERED(false)` explícito é preservado; silêncio/default nunca vira negativa.
+- [ ] A captura lista campos não perguntados e separa tentativa encerrada de informação resolvida.
 - [ ] A matriz de `fieldPath` é exaustiva e o parser recusa `NOT_APPLICABLE` fora da condição declarada.
 - [ ] Medicação e diagnóstico preservam ID de catálogo ou fallback livre explícito.
 - [ ] Cada resposta exibe fonte, autor, papel e horário para o anestesiologista.
 - [ ] Cada item ativo mostra autoria de criação/última alteração e remoções permanecem no log.
 - [ ] `DraftOperation` rejeita path livre, patch vazio, campo desconhecido e mutação de item por `SET_ANSWER`.
-- [ ] Tabaco e álcool negativos são `NEGATIVE`; `ANSWERED {current:false}` é recusado.
+- [ ] Tabaco e álcool distinguem nunca, ex e atual sem inventar exposição ausente.
 - [ ] Pessoa, encaminhamento, procedimento e serviço vêm da revisão corrente do caso;
       correção aplica a matriz de impacto e bloqueia consumidores obsoletos até revisão.
-- [ ] `ProcedureContextProjectionDTO` sempre contém `procedure.catalogId` e
-      `requestingService.serviceId`; somente `procedure.code` pode ser nulo.
-- [ ] `submitFinal × correctIntake` possui vencedor único para qualquer segmento corrigível.
-- [ ] `submitFinal` grava a revisão final efetiva, anamnese `COMPLETE` e um resultado
-      classificatório coerente; o caso permanece `NURSING_IN_PROGRESS`.
+- [ ] Procedimento sem catálogo preserva texto/fonte e não bloqueia o caso.
+- [ ] Encerramento da captura, proposta e confirmação operacional são marcos separados.
+- [ ] Revisão final incorreta recebe adendo/substituição rastreável; nunca overwrite.
 - [ ] Recepção recebe somente requisito operacional e pendência administrativa.
-- [ ] Erro descoberto depois da finalização e antes da publicação invalida revisão/proposta
-      anteriores, abre novo draft e impede consumo dos artefatos inválidos.
+- [ ] Erro descoberto depois da finalização preserva a versão anterior e controla o impacto
+      nos derivados; política pós-publicação continua visivelmente aberta.
 - [ ] Um novo encaminhamento cria novo caso mesmo com nome idêntico.
 - [ ] O boot carrega catálogos sem rede e o app funciona com dados sintéticos.
 - [ ] Nenhuma saída usa ASA, RCRI, aptidão ou orientação de suspensão medicamentosa.
 
+## Catálogos: verdade atual e gate de publicação
+
+| Ativo embarcado | Verdade comprovada | Limite obrigatório |
+|---|---|---|
+| CID-10, 14.793 itens | snapshot offline e hash versionado | release, tradução, extrator e licença do arquivo exato `UNRESOLVED`; fallback livre obrigatório |
+| Medicamentos, 382 itens/1.447 aliases | recorte perioperatório local | não é base ANVISA; ausência nunca bloqueia; DCB/registro/ATC têm finalidades distintas |
+| 12 grupos de “risco” | arquivo local com peso/conduta | sem fonte clínica reproduzível; fora do contrato clínico ou fixture não clínica |
+| MET, 94 atividades | catálogo offline de atividades | fonte/tradução/licença abertas; apoio de linguagem, não capacidade individual |
+| 14 comorbidades/17 CIDs | atalhos locais | `DEMO_DECISION`, não catálogo universal |
+| Procedimentos | nenhum catálogo documentado | texto estruturado + fonte até escolha SIGTAP/local/híbrida |
+| Exames | nenhum catálogo documentado | inventário textual no MVP |
+
+Qualquer release futuro registra steward, URL, versão/competência, data, idioma, cobertura,
+hash do original e do derivado, transformação reproduzível, licença, direito de
+redistribuição offline, atualização, depreciação e fallback. Download público não prova
+direito de adaptação ou redistribuição.
+
+## Decisões da demonstração
+
+Permanecem `DEMO_DECISION`: exatamente 14 grupos e sua ordem; wording, obrigatoriedade e
+ramos; forma física da negativa; critérios para encerrar captura com lacuna; conta
+`ENFERMAGEM` representando enfermeiro; QUICK/STANDARD/EXTENDED, minutos, buffers, prazos,
+pesos e caps; uso dos recortes de medicamentos, MET e comorbidades; faixas de plausibilidade;
+fixtures de procedimento/serviço; recursos de acessibilidade; campos que alimentam a
+explicação operacional; e se o sistema sugere ou a enfermagem redige a necessidade.
+
+Toda decisão demonstrativa deve aparecer como não validada na interface, apresentação,
+fixtures e testes. Não representa protocolo hospitalar, risco, urgência, ASA, aptidão,
+duração real ou necessidade assistencial.
+
 ## Open Questions
 
-As leis de ausência de resposta, proveniência e confirmação humana são `PRODUCT_LAW`. A
-seleção dos 14 widgets, campos obrigatórios, condicionais, faixas e cobertura/licença dos
-catálogos permanece `UNRESOLVED` e exige pesquisa antes do Build formal.
+Continuam `UNRESOLVED`: nome assistencial do formulário; quais profissionais coletam,
+revisam e encerram cada grupo; protocolo mínimo por população/procedimento; frequência
+respiratória e dor; eventual instrumento funcional; política de gravidez/menores/privacidade;
+quando lacunas bloqueiam; origem/licença/atualização de cada catálogo; catálogo de
+procedimentos; repercussão de correção após requisito/reserva; divergências entre fontes;
+proveniência de IA; quem confirma a necessidade operacional; e compatibilização jurídica
+institucional das normas profissionais no fluxo real.
 
 ## Grill Verdict
 
-- Verdict: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
-- Why: matriz clínica, completude e fontes/licenças ainda não foram pesquisadas.
-- Next stage: Build do domínio, somente após assinatura de Marco.
+- Verdict: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`
+- Why: fontes centrais foram incorporadas, mas protocolo local, competências operacionais,
+  licenças, campos obrigatórios e correção pós-publicação continuam abertos.
+- Next stage: review adversarial multiprofissional da versão corrigida; não Build.
 
 ## Recommended Next Phase
 
-Consumir este documento em `BUILD-anamnese-e-catalogos.md`. Nenhuma implementação ou Spec
-de minispec é autorizada por este artefato.
+Publicar a versão corrigida e repetir os casos de mesa com anestesiologista, enfermeiro,
+técnico se existir na operação, segurança/informática clínica e jurídico/LGPD. Testar ao
+menos: alergia não perguntada, medicamento desconhecido, recusa sobre gravidez, “controle”
+apenas relatado, via aérea difícil informada, vital não medido, catálogo sem correspondência,
+divergência entre fontes, correção pós-final e sugestão de IA. Nenhuma implementação ou
+Spec é autorizada.
 
 ---
 
@@ -859,7 +920,7 @@ de minispec é autorizada por este artefato.
 
 - Artefato: `hack/domains/ANALYST-anamnese-e-catalogos.md`
 - Gate: Analyst de anamnese e catálogos → Build do domínio
-- Estado: `RESEARCH_REQUIRED — ASSINATURA PENDENTE`
+- Estado: `RESEARCH_REQUIRED · ADVERSARIAL_REQUIRED · ASSINATURA PENDENTE`
 - Assinatura de Marco: `PENDENTE`
 - Data da revisão humana: `PENDENTE`
 - Revisão Git examinada por Marco: `PENDENTE`
