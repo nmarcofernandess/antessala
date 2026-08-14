@@ -130,119 +130,194 @@
       "content_sha256": "30fdafc73a81c000a219dbb9514b4c807afdee09e2c39a38bcbcdf6097ac3c07"
     },
     {
-      "id": "checklist-oms-v2",
-      "file": "02-checklist-oms.md",
-      "title": "Lista de Verificação de Segurança Cirúrgica da OMS",
-      "context": "Consultar para explicar Sign In, Time Out, Sign Out e os itens essenciais da lista da OMS.",
-      "source_url": "https://www.who.int/teams/integrated-health-services/quality-of-care-and-patient-safety/patient-safety-guidance-and-tools/safe-surgery/tool-and-resources",
-      "publisher": "World Health Organization",
-      "summary": "A lista da OMS estrutura dezenove verificações em entrada, pausa cirúrgica e saída.",
+      "id": "prevencao-iras-anvisa-v1",
+      "file": "02-prevencao-iras.md",
+      "title": "Prevenção de Infecções Relacionadas à Assistência à Saúde",
+      "context": "Consultar para prevenção de IRAS, pneumonia associada à ventilação, infecção urinária, corrente sanguínea, sítio cirúrgico, bundles e vigilância.",
+      "source_url": "https://www.gov.br/anvisa/pt-br/centraisdeconteudo/publicacoes/servicosdesaude/publicacoes/caderno-4-medidas-de-prevencao-de-infeccao-relacionada-a-assistencia-a-saude.pdf/view",
+      "publisher": "Agência Nacional de Vigilância Sanitária",
+      "summary": "O Caderno 4 organiza medidas baseadas em evidências para prevenir as principais infecções relacionadas à assistência à saúde.",
       "tags": [
-        "OMS",
-        "Sign In",
-        "Time Out",
-        "Sign Out",
-        "dezenove itens",
-        "segurança cirúrgica"
+        "Anvisa",
+        "IRAS",
+        "pneumonia associada à ventilação",
+        "infecção do trato urinário",
+        "corrente sanguínea",
+        "sítio cirúrgico",
+        "bundles",
+        "vigilância"
       ],
       "entities": [
         {
-          "name": "Lista de cirurgia segura",
-          "type": "documento"
+          "name": "Infecções relacionadas à assistência à saúde",
+          "type": "risco"
         },
         {
-          "name": "Sign In",
-          "type": "etapa"
+          "name": "Pneumonia associada à ventilação mecânica",
+          "type": "risco"
         },
         {
-          "name": "Time Out",
-          "type": "etapa"
+          "name": "Infecção do trato urinário",
+          "type": "risco"
         },
         {
-          "name": "Sign Out",
-          "type": "etapa"
+          "name": "Infecção da corrente sanguínea",
+          "type": "risco"
         },
         {
-          "name": "Comunicação em equipe",
-          "type": "conceito"
+          "name": "Infecção do sítio cirúrgico",
+          "type": "risco"
         },
         {
-          "name": "Paciente",
-          "type": "pessoa"
+          "name": "Higiene das mãos",
+          "type": "barreira"
         },
         {
-          "name": "Equipe perioperatória",
+          "name": "Profilaxia antimicrobiana",
+          "type": "barreira"
+        },
+        {
+          "name": "Bundles de prevenção",
+          "type": "processo"
+        },
+        {
+          "name": "Vigilância epidemiológica",
+          "type": "processo"
+        },
+        {
+          "name": "Equipe multiprofissional",
           "type": "funcao"
         }
       ],
       "relations": [
         {
-          "from": "Lista de cirurgia segura",
-          "to": "Sign In",
-          "type": "possui_etapa",
+          "from": "Infecções relacionadas à assistência à saúde",
+          "to": "Pneumonia associada à ventilação mecânica",
+          "type": "inclui",
           "weight": 1,
           "evidence": {
-            "source_id": "checklist-oms-v2",
-            "source_revision": "WHO Checklist revision 1/2009",
-            "source_pages": "Checklist 1; recursos oficiais 1-3",
-            "section": "Sign In — participantes e momento"
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "14",
+            "section": "Documento oficial — página 14"
           }
         },
         {
-          "from": "Lista de cirurgia segura",
-          "to": "Time Out",
-          "type": "possui_etapa",
+          "from": "Infecções relacionadas à assistência à saúde",
+          "to": "Infecção do trato urinário",
+          "type": "inclui",
           "weight": 1,
           "evidence": {
-            "source_id": "checklist-oms-v2",
-            "source_revision": "WHO Checklist revision 1/2009",
-            "source_pages": "Checklist 1; recursos oficiais 1-3",
-            "section": "Time Out — confirmação compartilhada"
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "33",
+            "section": "Documento oficial — página 33"
           }
         },
         {
-          "from": "Lista de cirurgia segura",
-          "to": "Sign Out",
-          "type": "possui_etapa",
+          "from": "Infecções relacionadas à assistência à saúde",
+          "to": "Infecção da corrente sanguínea",
+          "type": "inclui",
           "weight": 1,
           "evidence": {
-            "source_id": "checklist-oms-v2",
-            "source_revision": "WHO Checklist revision 1/2009",
-            "source_pages": "Checklist 1; recursos oficiais 1-3",
-            "section": "Sign Out — encerramento seguro"
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "44",
+            "section": "Documento oficial — página 44"
           }
         },
         {
-          "from": "Lista de cirurgia segura",
-          "to": "Comunicação em equipe",
-          "type": "fortalece",
+          "from": "Infecções relacionadas à assistência à saúde",
+          "to": "Infecção do sítio cirúrgico",
+          "type": "inclui",
           "weight": 1,
           "evidence": {
-            "source_id": "checklist-oms-v2",
-            "source_revision": "WHO Checklist revision 1/2009",
-            "source_pages": "Checklist 1; recursos oficiais 1-3",
-            "section": "Comunicação, interrupção e autoridade para falar"
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "80",
+            "section": "Documento oficial — página 80"
           }
         },
         {
-          "from": "Equipe perioperatória",
-          "to": "Paciente",
-          "type": "protege",
+          "from": "Higiene das mãos",
+          "to": "Infecções relacionadas à assistência à saúde",
+          "type": "reduz_risco_de",
+          "weight": 1,
+          "evidence": {
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "18",
+            "section": "Documento oficial — página 18"
+          }
+        },
+        {
+          "from": "Vigilância epidemiológica",
+          "to": "Infecções relacionadas à assistência à saúde",
+          "type": "monitora",
+          "weight": 1,
+          "evidence": {
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "17",
+            "section": "Documento oficial — página 17"
+          }
+        },
+        {
+          "from": "Bundles de prevenção",
+          "to": "Pneumonia associada à ventilação mecânica",
+          "type": "reduz_risco_de",
           "weight": 0.9,
           "evidence": {
-            "source_id": "checklist-oms-v2",
-            "source_revision": "WHO Checklist revision 1/2009",
-            "source_pages": "Checklist 1; recursos oficiais 1-3",
-            "section": "Comunicação, interrupção e autoridade para falar"
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "19",
+            "section": "Documento oficial — página 19"
+          }
+        },
+        {
+          "from": "Bundles de prevenção",
+          "to": "Infecção da corrente sanguínea",
+          "type": "reduz_risco_de",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "44",
+            "section": "Documento oficial — página 44"
+          }
+        },
+        {
+          "from": "Profilaxia antimicrobiana",
+          "to": "Infecção do sítio cirúrgico",
+          "type": "reduz_risco_de",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "85",
+            "section": "Documento oficial — página 85"
+          }
+        },
+        {
+          "from": "Equipe multiprofissional",
+          "to": "Bundles de prevenção",
+          "type": "executa",
+          "weight": 0.9,
+          "evidence": {
+            "source_id": "prevencao-iras-anvisa-v1",
+            "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+            "source_pages": "44",
+            "section": "Documento oficial — página 44"
           }
         }
       ],
-      "source_revision": "WHO Checklist revision 1/2009",
-      "source_pages": "Checklist 1; recursos oficiais 1-3",
-      "content_mode": "faithful_structured_paraphrase",
-      "license_note": "Estrutura fiel e paráfrase educativa; sem logotipo ou alegação de endosso da OMS.",
-      "word_count": 1234,
-      "content_sha256": "5f27597764c58091d99410f6790fcb4e16e9fe72849e33ba32a581db3b81a4d0"
+      "source_revision": "Caderno 4 versão 1.1 (2017-08-04)",
+      "source_pages": "1-122",
+      "content_mode": "integral_page_transcription",
+      "license_note": "Conteúdo oficial publicado no portal gov.br sob Creative Commons Atribuição-SemDerivações 3.0 Não Adaptada; transcrição sem adaptação, com atribuição e sem marcas ou diagramação.",
+      "word_count": 46189,
+      "content_sha256": "b74b36ee25d02765cacd570a7474380ce66807f37f0938fd26bc2a9ee73cf498",
+      "source_asset_sha256": "53be94f1e4f6d009c5c0117179d32b8dd244a6ec75e8ec243a976af91e88d06c"
     },
     {
       "id": "implantacao-checklist-v2",

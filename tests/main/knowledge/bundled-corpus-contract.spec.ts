@@ -20,7 +20,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(corpusDir, 'manifest.json'
 
 const expectedTitles = [
   'Cirurgia segura: três pausas que organizam a equipe',
-  'Lista de Verificação de Segurança Cirúrgica da OMS',
+  'Prevenção de Infecções Relacionadas à Assistência à Saúde',
   'Como implantar um checklist cirúrgico sem virar burocracia',
   'Diretrizes para cirurgia segura e cuidado perioperatório',
   'Responsabilidades antes, durante e depois da anestesia',
