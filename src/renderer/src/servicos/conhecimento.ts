@@ -5,10 +5,37 @@ import type {
   KnowledgeEnrichmentConfig,
   KnowledgeEnrichmentModelOption,
 } from '@shared/types'
+import type { StructuredDocumentImport } from '@shared/structured-document-import'
+import type { RichTextJson } from '@/componentes/RichTextEditor'
+
+export type KnowledgeDocument = {
+  id: number
+  titulo: string
+  content_json: RichTextJson
+  content_markdown: string
+  plain_text: string
+  source_format: string
+  revision: number
+  page_count: number | null
+  word_count: number
+  enrichment_status: 'pending' | 'indexing' | 'ready' | 'failed'
+  atualizada_em: string
+  metadata: Record<string, unknown>
+}
+
+export type KnowledgeDocumentVersion = {
+  revision: number
+  titulo: string
+  content_json: RichTextJson
+  content_markdown: string
+  plain_text: string
+  reason: string
+  criada_em: string
+}
 
 export const servicoConhecimento = {
-  stats: () =>
-    knowledgeClient['knowledge.stats']() as Promise<{
+  stats: (query?: string) =>
+    knowledgeClient['knowledge.stats']({ query }) as Promise<{
       fontes: Array<{
         id: number
         tipo: string
@@ -17,22 +44,37 @@ export const servicoConhecimento = {
         ativo: boolean
         criada_em: string
         atualizada_em: string
+        source_format: string
+        page_count: number | null
+        word_count: number
+        enrichment_status: 'pending' | 'indexing' | 'ready' | 'failed'
         chunks_count: number
       }>
       totais: {
-        total_fontes: number
-        total_chunks: number
-        total_sistema: number
-        total_usuario: number
+        total_documentos: number
+        total_conceitos: number
+        total_relacoes: number
       }
     }>,
+
+  obterDocumento: (id: number) =>
+    knowledgeClient['knowledge.document.get']({ id }) as Promise<KnowledgeDocument>,
+
+  salvarDocumento: (input: { id: number; expected_revision: number; titulo: string; content_json: RichTextJson }) =>
+    knowledgeClient['knowledge.document.save'](input) as Promise<KnowledgeDocument>,
+
+  listarVersoes: (id: number) =>
+    knowledgeClient['knowledge.document.versions']({ id }) as Promise<KnowledgeDocumentVersion[]>,
+
+  restaurarVersao: (id: number, revision: number, expected_revision: number) =>
+    knowledgeClient['knowledge.document.restore']({ id, revision, expected_revision }) as Promise<KnowledgeDocument>,
+
+  exportarMarkdown: (id: number) =>
+    knowledgeClient['knowledge.document.exportMarkdown']({ id }) as Promise<{ saved: boolean; path?: string }>,
 
   escolherArquivo: () => knowledgeClient['knowledge.escolherArquivo']() as Promise<string | null>,
 
   escolherPasta: () => knowledgeClient['knowledge.escolherPasta']() as Promise<string | null>,
-
-  importar: (caminho_arquivo: string) =>
-    knowledgeClient['knowledge.importar']({ caminho_arquivo }) as Promise<{ source_id: number; chunks_count: number; entities_count: number }>,
 
   iniciarBulkImport: (input: BulkRagImportInput) =>
     knowledgeClient['knowledge.bulkImport.start'](input) as Promise<AppJob>,
@@ -57,7 +99,10 @@ export const servicoConhecimento = {
     knowledgeClient['knowledge.obterTextoOriginal']({ id }) as Promise<{ titulo: string; conteudo_original: string; context_hint: string | null }>,
 
   extrairTexto: (caminho_arquivo: string) =>
-    knowledgeClient['knowledge.extrairTexto']({ caminho_arquivo }) as Promise<{ texto: string; nome_arquivo: string }>,
+    knowledgeClient['knowledge.extrairTexto']({ caminho_arquivo }) as Promise<{
+      document: StructuredDocumentImport
+      sha256: string
+    }>,
 
   metadataStatus: () => knowledgeClient['knowledge.metadataStatus']() as Promise<{
     available: boolean
@@ -70,8 +115,15 @@ export const servicoConhecimento = {
   gerarMetadataIa: (texto: string, campo: 'titulo' | 'quando_consultar' | 'texto') =>
     knowledgeClient['knowledge.gerarMetadataIa']({ texto, campo }) as Promise<{ resultado: string }>,
 
-  importarCompleto: (titulo: string, conteudo: string, quando_consultar: string, auto_enrich = true) =>
-    knowledgeClient['knowledge.importarCompleto']({ titulo, conteudo, quando_consultar, auto_enrich }) as Promise<{
+  importarCompleto: (
+    titulo: string,
+    conteudo: string,
+    quando_consultar: string,
+    auto_enrich = true,
+    structured_document?: StructuredDocumentImport,
+    content_sha256?: string,
+  ) =>
+    knowledgeClient['knowledge.importarCompleto']({ titulo, conteudo, quando_consultar, auto_enrich, structured_document, content_sha256 }) as Promise<{
       source_id: number
       chunks_count: number
       entities_count: number
@@ -93,14 +145,7 @@ export const servicoConhecimento = {
   listarEnrichmentModels: () =>
     knowledgeClient['knowledge.enrichmentModels.list']() as Promise<KnowledgeEnrichmentModelOption[]>,
 
-  carregarDemonstracao: () => knowledgeClient['knowledge.demo.seed']() as Promise<{
-    imported: number
-    sources_count: number
-    source_ids: number[]
-    fixture_version: string
-  }>,
-
-  enrich: () => knowledgeClient['knowledge.enrich']({}) as Promise<{
+  enrich: (sourceId?: number) => knowledgeClient['knowledge.enrich']({ sourceId }) as Promise<{
     chunks_enriquecidos: number
     entities_count: number
     relations_count: number
@@ -131,10 +176,28 @@ export const servicoConhecimento = {
       exported_to: string
     }>,
 
-  graphData: (origem?: 'sistema' | 'usuario', limite?: number) =>
-    knowledgeClient['knowledge.graphData']({ origem, limite }) as Promise<{
+  graphData: (origem?: 'sistema' | 'usuario', limite?: number, sourceId?: number, entityTypes?: string[]) =>
+    knowledgeClient['knowledge.graphData']({ origem, limite, sourceId, entityTypes }) as Promise<{
       nodes: Array<{ id: number; nome: string; tipo: string }>
-      links: Array<{ source: number; target: number; tipo_relacao: string; peso: number }>
+      links: Array<{ source: number; target: number; tipo_relacao: string; peso: number; evidence_count: number }>
+    }>,
+
+  graphNodeEvidence: (entityId: number) =>
+    knowledgeClient['knowledge.graph.nodeEvidence']({ entityId }) as Promise<{
+      entity: { id: number; nome: string; tipo: string; description: string }
+      relations: Array<{
+        relation_id: number
+        tipo_relacao: string
+        direction: 'entrada' | 'saida'
+        neighbor_id: number
+        neighbor_name: string
+        neighbor_type: string
+        source_id: number
+        source_title: string
+        source_revision: number
+        section_ref: string
+        excerpt: string | null
+      }>
     }>,
 
   graphExplore: (entidade: string, profundidade?: number) =>
@@ -168,14 +231,4 @@ export const servicoConhecimento = {
     }
   },
 
-  async listarChunks(sourceId: number) {
-    return (await knowledgeClient['knowledge.listarChunks']({ source_id: sourceId })) as Array<{
-      id: number
-      source_id: number
-      conteudo: string
-      importance: string
-      last_accessed_at: string | null
-      access_count: number
-    }>
-  },
 }

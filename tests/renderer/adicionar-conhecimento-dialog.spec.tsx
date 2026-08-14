@@ -36,6 +36,26 @@ vi.mock('sonner', () => ({
 }))
 
 describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
+  const structured = (fileName: string, text: string) => ({
+    format: 'markdown' as const,
+    tiptapJson: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] },
+    markdown: text,
+    text,
+    suggestedTitle: fileName.replace(/\.md$/, ''),
+    pages: [{ number: 1, text, wordCount: text.split(/\s+/).length }],
+    wordCount: text.split(/\s+/).length,
+    warnings: [],
+    metadata: {
+      fileName,
+      extension: '.md',
+      mimeType: 'text/markdown',
+      byteSize: text.length,
+      modifiedAt: '2026-08-14T00:00:00.000Z',
+      pageCount: 1,
+      sourcePath: `/tmp/${fileName}`,
+    },
+  })
+
   beforeEach(() => {
     mocks.escolherArquivo.mockReset()
     mocks.extrairTexto.mockReset()
@@ -47,10 +67,9 @@ describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
 
   it('explains unavailable cloud metadata, keeps filename fallback, and still saves manually', async () => {
     mocks.escolherArquivo.mockResolvedValue('/tmp/protocolo-cientifico.md')
-    mocks.extrairTexto.mockResolvedValue({
-      nome_arquivo: 'protocolo-cientifico.md',
-      texto: 'Conteudo longo para importar no RAG com contexto suficiente para passar pela validacao.',
-    })
+    const text = 'Conteudo longo para importar no RAG com contexto suficiente para passar pela validacao.'
+    const document = structured('protocolo-cientifico.md', text)
+    mocks.extrairTexto.mockResolvedValue({ document, sha256: 'abc123' })
     mocks.importarCompleto.mockResolvedValue({
       source_id: 7,
       chunks_count: 2,
@@ -69,30 +88,31 @@ describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
         onOpenChange={onOpenChange}
         onSaved={onSaved}
         iaDisponivel={false}
-        iaRouteMessage="OpenRouter ainda não tem um token configurado."
+        iaRouteMessage="Gemini ainda não tem uma chave configurada."
         iaRouteAction="Revise as Configurações de IA."
       />,
     )
 
-    await user.click(screen.getByText(/Arraste um arquivo/i))
+    await user.click(screen.getByText(/Arraste um PDF/i))
 
-    expect(await screen.findByDisplayValue('protocolo-cientifico.md')).toBeTruthy()
+    expect(await screen.findByDisplayValue('protocolo-cientifico')).toBeTruthy()
     expect(screen.getByText('Metadados automáticos indisponíveis')).toBeTruthy()
-    expect(screen.getByText('OpenRouter ainda não tem um token configurado.')).toBeTruthy()
+    expect(screen.getByText('Gemini ainda não tem uma chave configurada.')).toBeTruthy()
     expect(screen.getByText('Revise as Configurações de IA.')).toBeTruthy()
     expect((screen.getByRole('button', { name: /Gerar título com IA/i }) as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: /Gerar sugestão com IA/i }) as HTMLButtonElement).disabled).toBe(true)
     expect(mocks.gerarMetadataIa).not.toHaveBeenCalled()
 
-    await user.type(screen.getByLabelText(/Sobre o quê/i), 'Protocolo científico de avaliação pré-operatória')
     await user.click(screen.getByRole('button', { name: /Salvar documento/i }))
 
     await waitFor(() => {
       expect(mocks.importarCompleto).toHaveBeenCalledWith(
-        'protocolo-cientifico.md',
-        'Conteudo longo para importar no RAG com contexto suficiente para passar pela validacao.',
-        'Protocolo científico de avaliação pré-operatória',
+        'protocolo-cientifico',
+        text,
+        '',
         true,
+        document,
+        'abc123',
       )
     })
     expect(onSaved).toHaveBeenCalledTimes(1)
@@ -100,10 +120,9 @@ describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
 
   it('asks Gemini for both metadata fields and starts enrichment when saving', async () => {
     mocks.escolherArquivo.mockResolvedValue('/tmp/seguranca-cirurgica.md')
-    mocks.extrairTexto.mockResolvedValue({
-      nome_arquivo: 'seguranca-cirurgica.md',
-      texto: 'Documento sobre verificação perioperatória, comunicação da equipe e prevenção de eventos evitáveis.',
-    })
+    const text = 'Documento sobre verificação perioperatória, comunicação da equipe e prevenção de eventos evitáveis.'
+    const document = structured('seguranca-cirurgica.md', text)
+    mocks.extrairTexto.mockResolvedValue({ document, sha256: 'def456' })
     mocks.gerarMetadataIa
       .mockResolvedValueOnce({ resultado: 'Segurança perioperatória' })
       .mockResolvedValueOnce({ resultado: 'Checklist, comunicação e prevenção de eventos perioperatórios' })
@@ -125,7 +144,7 @@ describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
       />,
     )
 
-    await user.click(screen.getByText(/Arraste um arquivo/i))
+    await user.click(screen.getByText(/Arraste um PDF/i))
     expect(await screen.findByDisplayValue('Segurança perioperatória')).toBeTruthy()
     expect(mocks.gerarMetadataIa).toHaveBeenNthCalledWith(1, expect.any(String), 'titulo')
     expect(mocks.gerarMetadataIa).toHaveBeenNthCalledWith(2, expect.any(String), 'quando_consultar')
@@ -137,6 +156,8 @@ describe('AdicionarConhecimentoDialog AI metadata readiness', () => {
         expect.any(String),
         'Checklist, comunicação e prevenção de eventos perioperatórios',
         true,
+        document,
+        'def456',
       )
     })
   })

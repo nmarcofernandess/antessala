@@ -63,6 +63,15 @@ CREATE TABLE IF NOT EXISTS knowledge_sources (
     CHECK (tipo IN ('manual', 'auto_capture', 'sistema', 'importacao_usuario', 'importacao_conversa', 'session')),
   titulo TEXT NOT NULL,
   conteudo_original TEXT NOT NULL,
+  content_json JSONB,
+  content_markdown TEXT,
+  source_format TEXT NOT NULL DEFAULT 'text',
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+  page_count INTEGER CHECK (page_count IS NULL OR page_count > 0),
+  word_count INTEGER NOT NULL DEFAULT 0 CHECK (word_count >= 0),
+  enrichment_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (enrichment_status IN ('pending', 'indexing', 'ready', 'failed')),
+  enriched_revision INTEGER CHECK (enriched_revision IS NULL OR enriched_revision > 0),
   group_id INTEGER REFERENCES knowledge_groups(id) ON DELETE SET NULL,
   metadata JSONB DEFAULT '{}',
   importance TEXT NOT NULL DEFAULT 'high'
@@ -123,6 +132,31 @@ CREATE TABLE IF NOT EXISTS knowledge_relations (
   valid_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   valid_to TIMESTAMPTZ DEFAULT NULL,
   criada_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_source_versions (
+  id SERIAL PRIMARY KEY,
+  source_id INTEGER NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
+  revision INTEGER NOT NULL CHECK (revision > 0),
+  titulo TEXT NOT NULL,
+  content_json JSONB NOT NULL,
+  content_markdown TEXT NOT NULL,
+  plain_text TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT 'autosave',
+  criada_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(source_id, revision)
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_relation_evidence (
+  id SERIAL PRIMARY KEY,
+  relation_id INTEGER NOT NULL REFERENCES knowledge_relations(id) ON DELETE CASCADE,
+  source_id INTEGER NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
+  source_revision INTEGER NOT NULL CHECK (source_revision > 0),
+  section_ref TEXT NOT NULL,
+  excerpt TEXT,
+  invalidated_at TIMESTAMPTZ,
+  criada_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(relation_id, source_id, source_revision, section_ref)
 );
 `
 
@@ -195,6 +229,12 @@ CREATE INDEX IF NOT EXISTS idx_relations_from
   ON knowledge_relations(entity_from_id);
 CREATE INDEX IF NOT EXISTS idx_relations_to
   ON knowledge_relations(entity_to_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_versions_source
+  ON knowledge_source_versions(source_id, revision DESC);
+CREATE INDEX IF NOT EXISTS idx_knowledge_evidence_relation
+  ON knowledge_relation_evidence(relation_id, invalidated_at);
+CREATE INDEX IF NOT EXISTS idx_knowledge_evidence_source
+  ON knowledge_relation_evidence(source_id, source_revision, invalidated_at);
 
 -- IA Chat: message ordering + conversation filtering
 CREATE INDEX IF NOT EXISTS idx_ia_mensagens_conversa
@@ -214,6 +254,15 @@ DO $$ BEGIN
   ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES knowledge_groups(id) ON DELETE SET NULL;
 EXCEPTION WHEN others THEN NULL;
 END $$;
+
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS content_json JSONB;
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS content_markdown TEXT;
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS source_format TEXT NOT NULL DEFAULT 'text';
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS page_count INTEGER;
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS word_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS enrichment_status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE knowledge_sources ADD COLUMN IF NOT EXISTS enriched_revision INTEGER;
 
 -- Bulk RAG imports can finish with imported data plus file/enrichment warnings.
 DO $$ BEGIN

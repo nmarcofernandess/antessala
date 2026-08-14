@@ -13,9 +13,9 @@ export interface LaunchedApp {
   dbPath: string
 }
 
-export async function launchApp(testName: string): Promise<LaunchedApp> {
+export async function launchApp(testName: string, existingDbPath?: string): Promise<LaunchedApp> {
   const safeName = testName.replace(/[^a-z0-9-]/gi, '-')
-  const dbPath = fs.mkdtempSync(path.join(os.tmpdir(), `antessala-e2e-${safeName}-`))
+  const dbPath = existingDbPath ?? fs.mkdtempSync(path.join(os.tmpdir(), `antessala-e2e-${safeName}-`))
   const app = await electron.launch({
     args: [path.join(__dirname, '../../out/main/index.js')],
     env: {
