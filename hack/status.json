@@ -1,10 +1,10 @@
 {
   "schema_version": "antessala.status.v2",
-  "updated_at": "2026-08-14T04:55:00-03:00",
+  "updated_at": "2026-08-14T07:10:37-03:00",
   "product": "Antessala",
   "mode": "hackathon_poc",
   "current_phase": "final_congruence_review",
-  "decision": "needs_final_review",
+  "decision": "needs_correction_verification",
   "canonical_flow": [
     "prd",
     "analyst",
@@ -34,13 +34,13 @@
     "build": {
       "artifact": "BUILD.md",
       "appendices": "domains/BUILD-*.md",
-      "status": "ready_for_final_congruence_review",
+      "status": "adjusted_after_external_review",
       "individual_gates": false
     },
     "final_congruence_review": {
       "tracker": "../.context/review/STATUS.md",
-      "status": "pending_external_review",
-      "blocking_condition": "unresolved_p0"
+      "status": "corrections_pending_recheck",
+      "blocking_condition": "verify_confirmed_fixes_on_published_head"
     },
     "warlog": {
       "artifact": "WARLOG.md",
@@ -82,7 +82,7 @@
   },
   "next_action": {
     "artifact": "BUILD.md",
-    "action": "external_final_congruence_review",
+    "action": "verify_congruence_corrections_on_published_head",
     "on_success": "create_WARLOG_and_cut_minispecs",
     "on_p0": "correct_canonical_artifact_and_repeat_review"
   }

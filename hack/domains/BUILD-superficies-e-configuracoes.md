@@ -425,7 +425,7 @@ prévia editável ou outro cálculo de renderer.
 
 `/pendencias` consome diretamente `CursorPage<AssignedPendencyDTO>` de
 `pendencies.listAssigned` e os retornos canônicos de `documents.registerMetadata` e
-`pendencies.fulfill`. Este Build não cria um segundo DTO de pendência ou documento;
+`pendencies.submitEvidence`. Este Build não cria um segundo DTO de pendência ou documento;
 `CaseDocumentDTO` nunca contém bytes, base64 ou path local.
 
 `encounters.list` em S08 é uma worklist compartilhada do pool. Este Build não introduz
@@ -556,14 +556,14 @@ solicitante existe apenas no `RequesterSnapshotDTO` do caso.
 |---|---|---|---|
 | S01 Home | `home.get` | — | `home:read` |
 | S02 Intake | `catalogs.services.search`, `catalogs.procedures.search` | `cases.create` | `case:intake:create` |
-| S03 Detail | `cases.get` + projeção do domínio autorizada | `cases.correctIntake` → `case:intake:correct` + estado permitido + ausência de revisão `FINAL/COMPLETE` e requirement `CALCULATED`/publicado; `cases.cancel` → `case:cancel`; `pendencies.fulfill` → `pendency:evidence:register` | `case:read` + escopo na leitura; capability e state gate próprios em cada ação |
+| S03 Detail | `cases.get` + projeção do domínio autorizada | `cases.correctIntake` → `case:intake:correct` + estado permitido + ausência de revisão `FINAL/COMPLETE` e requirement `CALCULATED`/publicado; `cases.cancel` → `case:cancel`; `pendencies.submitEvidence` → `pendency:evidence:register` | `case:read` + escopo na leitura; capability e state gate próprios em cada ação |
 | S04 Triage queue | `cases.listForActor` | em `WAITING_NURSING`, `handoffs.acknowledge` → `handoff:receive`; somente após sucesso, `clinicalAnamnesis.start` → `clinical:anamnesis:edit` | `triage:worklist:read`; capability própria em cada ação |
-| S04A Assigned pendencies | `pendencies.listAssigned` → `AssignedPendencyDTO` | `documents.registerMetadata`, `pendencies.fulfill` | `case:read:assigned`, `pendency:evidence:register`; ownership/escopo no main |
+| S04A Assigned pendencies | `pendencies.listAssigned` → `AssignedPendencyDTO` | `documents.registerMetadata`, `pendencies.submitEvidence` | `case:read:assigned`, `pendency:evidence:register`; ownership/escopo no main |
 | S05 Triage | `clinicalAnamnesis.getClinical` | `clinicalAnamnesis.saveDraft/markPending/resume/submitFinal` → `clinical:anamnesis:edit`; `clinicalAnamnesis.rebaseCaseContext` → `clinical:anamnesis:edit` somente em `DRAFT` pré-FINAL após intake corrigido; `scheduling.requirements.confirm/override` → mesma autoria de enfermagem | `clinical:anamnesis:read`; capability e state gate próprios em cada ação |
 | S06 Booking queue | `cases.listForActor` para `INITIAL READY_FOR_SCHEDULING` + `returnRequests.listReady` para `RETURN READY_FOR_BOOKING`, preservando discriminante | — | `scheduling:queue:read`; retorno pronto exige `scheduling:booking:manage` |
 | S07 Agenda | `scheduling.slots.listCompatible` → `SLOTS | CAPACITY_SHORTAGE` | `scheduling.bookings.confirm/reschedule/cancel/markNoShow` → `scheduling:booking:manage`; `scheduling.bookings.checkIn` → `scheduling:booking:check-in` | `scheduling:read`; capability própria em cada ação |
 | S08 Assessment queue | `encounters.list` | `encounters.start` somente após `BookingDTO.CHECKED_IN` | `assessment:read`, `assessment:write` |
-| S09 Assessment | `encounters.getClinical` → `assessment:read`; quando existir resultado final, `results.getCurrent` → `result:content:read` | `encounters.saveAssessment/resumeReview` e `results.finalize` → `assessment:write`; `pendencies.open/cancel` → `pendency:manage`; `pendencies.fulfill` → `pendency:evidence:register` | capability própria em cada leitura/ação |
+| S09 Assessment | `encounters.getClinical` → `assessment:read`; quando existir resultado final, `results.getCurrent` → `result:content:read` | `encounters.saveAssessment/resumeReview`, `returnRequests.decide` e `results.finalize/revise` → `assessment:write`; `pendencies.open/cancel/reviewEvidence` → `pendency:manage`; `pendencies.submitEvidence` → `pendency:evidence:register` | capability própria em cada leitura/ação |
 | S10 Results | `results.listForActor` já filtrado pelo `serviceId` da sessão | — | `result:status:read`; conteúdo não acompanha a lista |
 | S11 Handoff | `results.getStatus` → `result:status:read`; `results.getCurrent` → `result:content:read` | `deliveries.send` → `delivery:manage`; `deliveries.acknowledge` → `delivery:acknowledge`; `results.exportPdf` → `result:export` | projeção e capability próprias por leitura/ação; não existe cancelamento de entrega |
 | S12 Users | `usuarios.listar` | `usuarios.criar`, `usuarios.atualizar`, `usuarios.resetarSenha` | `users:manage` |
@@ -578,9 +578,9 @@ requirement `CALCULATED` no mesmo commit, mantendo `NURSING_IN_PROGRESS`; apenas
 exclusivamente por `markPending` quando a incompletude está descrita por `missingFieldPaths`
 e motivo; `resume` volta ao draft. Se o intake mudar antes da revisão final,
 `rebaseCaseContext` atualiza somente o `DRAFT`. Depois de `FINAL + CALCULATED`, não existe
-edição, adendo ou rebase. Em S09, o anestesiologista abre a pendência com
-`requiresReturn`; quando o último bloqueio é cumprido, o service de avaliação cria o
-`ReturnRequestDTO` único. Essa superfície não chama booking. A recepção o encontra em S06,
+edição, adendo ou rebase. Em S09, a evidência submetida permanece aguardando revisão
+clínica; depois dessa revisão o anestesiologista decide explicitamente se cria um
+`ReturnRequestDTO` e informa seu requisito completo. Essa superfície não chama booking. A recepção o encontra em S06,
 agenda em S07 e registra o check-in explicitamente antes de `encounters.start`.
 
 S04 não encadeia as duas mutações de forma otimista: aguarda
@@ -614,7 +614,7 @@ reclassifica requirement calculado ou publicado.
 - One `CaseWorklist` component accepts columns/actions as typed config, but DTOs remain role-specific.
 - `AssignedPendencyWorklist` consumes only `AssignedPendencyDTO`; it shows kind, authorized
   request, owner, due/overdue, `caseContext.displayCode/personName/procedureDescription` and
-  the discriminated fulfillment form. It does not reuse a clinical encounter DTO.
+  the discriminated evidence-submission form. It does not reuse a clinical encounter DTO.
 - Desktop table at ≥1200px; compact rows at 1024px.
 - Search delayed 250ms and applied by backend for real lists; demo may still return one page.
 - Empty and filter-empty have different copy and reset action.
@@ -663,7 +663,7 @@ reclassifica requirement calculado ou publicado.
 | Detail | loading, ready, not-found/forbidden indistinguishable to unauthorized, stale error |
 | Form | loading, pristine, dirty, validation error, submitting, success, conflict, fatal error |
 | Agenda | loading, slots, capacity shortage, selected, confirming, conflict, confirmed, checked-in, cancelled, completed, no-show |
-| Pendência atribuída | loading, empty, filter-empty, hashing metadata, invalid, saving, fulfilled, conflict, forbidden, error |
+| Pendência atribuída | loading, empty, filter-empty, hashing metadata, invalid, saving, evidence submitted, conflict, forbidden, error |
 | Handoff/PDF | unavailable, available, confirming, received, generating, export error |
 | User/capacity write | loading, empty, dialog, invalid, saving, conflict, deactivate/remove warning |
 | Read-only fixtures/catalog status | loaded, empty, missing, divergent, read error |
@@ -772,8 +772,8 @@ retorna `BookingDTO.CHECKED_IN`. Só então a avaliação habilita `encounters.s
   metadata-only `CaseDocument`, invalid cross-case reference and no bytes/path in TIPC/DB.
 - Agenda grid/list contain same `slotId`s; union shortage, conflict reload e os cinco estados de `BookingDTO`.
 - Check-in somente pela recepção e `encounters.start` bloqueado antes de `CHECKED_IN`.
-- Assessment marca `requiresReturn`; o service cria `ReturnRequest` após o último bloqueio,
-  sem ação direta da página, e o retorno volta à fila da recepção.
+- Assessment revisa suficiência e oferece decisão explícita de `ReturnRequest`; submissão
+  de evidência e último blocker nunca criam retorno automaticamente.
 - Requester scoped by session `serviceId`, payload redigido, result/PDF states, proveniência
   explicitamente não digital e prova negativa entre serviços.
 - Admin forms de usuário/recursos/janelas datadas/bloqueios; fixtures read-only; zero backup/restore/reset no produto.
@@ -789,7 +789,8 @@ retorna `BookingDTO.CHECKED_IN`. Só então a avaliação habilita `encounters.s
 4. Logout/login RECEPCAO; find only compatible slot, reserve and explicitly check in.
 5. Logout/login ANESTESIOLOGISTA; start only after check-in and open a return-required
    pendency. Logout/login as its owner, open `/pendencias`, register metadata/SHA-256 without
-   storing bytes and fulfill it; prove the service-generated `ReturnRequest`. Do not choose
+   storing bytes and submit evidence; then, as anesthesiologist, review it and explicitly
+   decide whether a `ReturnRequest` is needed. Do not choose
    a date/slot in the assessment or pendency surfaces.
 6. Logout/login RECEPCAO; see the `RETURN` discriminant in S06, book and check it in;
    logout/login

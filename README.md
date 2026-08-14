@@ -4,9 +4,10 @@ Prova de conceito para transformar a anamnese pré-anestésica de enfermagem em 
 necessidade operacional de agenda explicável e conduzir o caso até o resultado voltar ao
 serviço solicitante.
 
-> O PRD está aprovado. Analyst e BUILD foram consolidados e aguardam o review final de
-> congruência. Código começa somente depois do Warlog, do Writing Plan da primeira
-> minispec e de um teste relevante observado em RED.
+> O PRD está aprovado. Analyst e BUILD foram consolidados; o review final encontrou
+> bloqueadores, e as correções aguardam verificação no SHA publicado. Código começa somente
+> depois do Warlog, do Writing Plan da primeira minispec e de um teste relevante observado
+> em RED.
 
 ## Problema e objetivo
 

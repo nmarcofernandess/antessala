@@ -28,7 +28,8 @@
 4. **Pendências** — abre pedido tipado, acompanha owner/prazo e registra cumprimento.
 5. **Retornos** — recepção agenda `ReturnRequest READY_FOR_BOOKING`.
 6. **Conclusão** — anestesiologista revisa o conteúdo e cria o único resultado `FINAL`.
-7. **Handoff** — recepção exporta/envia; solicitante do serviço correto confirma.
+7. **Handoff** — anestesiologista ou solicitante autorizado exporta; recepção registra o
+   envio operacional sem receber conteúdo; solicitante do serviço correto confirma.
 
 ### Estados de interface
 
@@ -36,7 +37,7 @@
 |---|---|---|---|---|---|
 | Check-in | nenhum agendamento | skeleton | consulta falhou | fora da janela/sem permissão | chegada registrada |
 | Encontro | conteúdo vazio | snapshots + skeleton | leitura/save falhou | sem check-in, terminal ou conflito | rascunho salvo |
-| Pendências | nenhuma | skeleton | mutação falhou | terminal/owner indevido | cumprimento registrado |
+| Pendências | nenhuma | skeleton | mutação falhou | terminal/owner indevido | evidência submetida ou revisada |
 | Retornos | nenhum liberado | slots skeleton | agenda falhou | bloqueio aberto/slot ocupado | retorno marcado |
 | Conclusão | encontro incompleto | revisão skeleton | finalização falhou | pendência aberta/versão mudou | `FINAL` criado |
 | Handoff | nenhuma entrega | preparação | PDF/envio falhou | sem `FINAL`/escopo incorreto | recebido |
@@ -52,8 +53,8 @@ Nenhuma copy usa “enviado ao HC”. O PDF mantém “Antessala — demonstraç
 | `src/shared/scheduling/types.ts` | `BookingKind` e referência discriminada de retorno | Shared/Agenda |
 | `src/main/db/migrations/00y_assessment.sql` | tabelas e índices deste domínio, após agenda base | DB |
 | migration posterior de integração da agenda | `kind`, `return_request_id`, `completed_by_encounter_id` e FKs cruzadas | DB/Agenda |
-| `src/main/clinical/assessment-service.ts` | encontro, pendência, last blocker e retorno | Main |
-| `src/main/clinical/result-service.ts` | `FINAL` imutável e projeções | Main |
+| `src/main/clinical/assessment-service.ts` | encontro, pendência, revisão de evidência e decisão explícita de retorno | Main |
+| `src/main/clinical/result-service.ts` | versões imutáveis, head corrente e projeções | Main |
 | `src/main/clinical/delivery-service.ts` | envio/recebimento e scope | Main |
 | `src/main/clinical/result-document.ts` | HTML determinístico | Main |
 | `src/main/clinical/assessment-router.ts` | TIPC e guards | Main |
@@ -126,18 +127,29 @@ CREATE TABLE case_pendencies (
     owner_role IN ('RECEPCAO','ENFERMAGEM','ANESTESIOLOGISTA','SOLICITANTE')
   ),
   target_service_id TEXT REFERENCES catalogo_servicos_solicitantes(id) ON DELETE RESTRICT,
+  impact TEXT NOT NULL CHECK (impact IN (
+    'BLOCKS_CURRENT_RESULT','FOLLOW_UP_WITHOUT_BLOCKING','MAY_PREVENT_PROCEDURE',
+    'OPERATIONAL_ONLY','INDETERMINATE_PENDING_REVIEW'
+  )),
   description TEXT NOT NULL CHECK (char_length(description) BETWEEN 10 AND 500),
   requested_payload JSONB NOT NULL,
-  requires_return BOOLEAN NOT NULL,
-  due_at TIMESTAMPTZ NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('OPEN','FULFILLED','CANCELLED')),
+  due_at TIMESTAMPTZ,
+  due_at_basis TEXT,
+  status TEXT NOT NULL CHECK (status IN (
+    'REQUESTED','EVIDENCE_SUBMITTED',
+    'RESOLVED_ACCEPTED','INSUFFICIENT_REOPENED','CANCELLED','SUPERSEDED'
+  )),
   opened_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
   opened_by_snapshot JSONB NOT NULL,
   opened_at TIMESTAMPTZ NOT NULL,
-  fulfillment_payload JSONB,
-  fulfilled_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
-  fulfilled_by_snapshot JSONB,
-  fulfilled_at TIMESTAMPTZ,
+  evidence_payload JSONB,
+  evidence_submitted_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  evidence_submitted_by_snapshot JSONB,
+  evidence_submitted_at TIMESTAMPTZ,
+  reviewed_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  reviewed_by_snapshot JSONB,
+  reviewed_at TIMESTAMPTZ,
+  review_reason TEXT,
   cancelled_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
   cancelled_by_snapshot JSONB,
   cancellation_reason TEXT,
@@ -146,42 +158,45 @@ CREATE TABLE case_pendencies (
   UNIQUE (id, case_id),
   FOREIGN KEY (encounter_id, case_id)
     REFERENCES anesthesia_encounters(id, case_id) ON DELETE RESTRICT,
-  CHECK (due_at > opened_at),
+  CHECK (due_at IS NULL OR due_at > opened_at),
+  CHECK ((due_at IS NULL AND due_at_basis IS NULL) OR
+         (due_at IS NOT NULL AND due_at_basis IS NOT NULL
+          AND char_length(trim(due_at_basis)) BETWEEN 5 AND 500)),
   CHECK (cancellation_reason IS NULL OR char_length(trim(cancellation_reason)) BETWEEN 10 AND 500),
   CHECK (jsonb_typeof(opened_by_snapshot) = 'object'),
-  CHECK (fulfilled_by_snapshot IS NULL OR jsonb_typeof(fulfilled_by_snapshot) = 'object'),
+  CHECK (evidence_submitted_by_snapshot IS NULL OR jsonb_typeof(evidence_submitted_by_snapshot) = 'object'),
+  CHECK (reviewed_by_snapshot IS NULL OR jsonb_typeof(reviewed_by_snapshot) = 'object'),
   CHECK (cancelled_by_snapshot IS NULL OR jsonb_typeof(cancelled_by_snapshot) = 'object'),
   CHECK (
     (owner_role = 'SOLICITANTE' AND target_service_id IS NOT NULL)
     OR (owner_role <> 'SOLICITANTE' AND target_service_id IS NULL)
   ),
   CHECK (
-    (status = 'OPEN'
-      AND fulfillment_payload IS NULL AND fulfilled_by_actor_id IS NULL
-      AND fulfilled_by_snapshot IS NULL AND fulfilled_at IS NULL
-      AND cancelled_by_actor_id IS NULL AND cancelled_by_snapshot IS NULL
-      AND cancellation_reason IS NULL AND cancelled_at IS NULL)
-    OR (status = 'FULFILLED' AND fulfillment_payload IS NOT NULL
-      AND fulfilled_by_actor_id IS NOT NULL AND fulfilled_by_snapshot IS NOT NULL
-      AND fulfilled_at IS NOT NULL
-      AND cancelled_by_actor_id IS NULL AND cancelled_by_snapshot IS NULL
-      AND cancellation_reason IS NULL AND cancelled_at IS NULL)
-    OR (status = 'CANCELLED' AND cancelled_by_actor_id IS NOT NULL
-      AND cancelled_by_snapshot IS NOT NULL AND cancellation_reason IS NOT NULL
-      AND cancelled_at IS NOT NULL
-      AND fulfillment_payload IS NULL AND fulfilled_by_actor_id IS NULL
-      AND fulfilled_by_snapshot IS NULL AND fulfilled_at IS NULL)
+    (status = 'REQUESTED' AND evidence_payload IS NULL
+      AND evidence_submitted_by_actor_id IS NULL AND evidence_submitted_at IS NULL
+      AND reviewed_by_actor_id IS NULL AND reviewed_at IS NULL)
+    OR (status = 'EVIDENCE_SUBMITTED' AND evidence_payload IS NOT NULL
+      AND evidence_submitted_by_actor_id IS NOT NULL AND evidence_submitted_at IS NOT NULL)
+    OR (status = 'RESOLVED_ACCEPTED' AND reviewed_by_actor_id IS NOT NULL
+      AND reviewed_at IS NOT NULL AND review_reason IS NOT NULL)
+    OR (status = 'INSUFFICIENT_REOPENED' AND evidence_payload IS NOT NULL
+      AND evidence_submitted_by_actor_id IS NOT NULL AND evidence_submitted_at IS NOT NULL
+      AND reviewed_by_actor_id IS NOT NULL AND reviewed_at IS NOT NULL
+      AND review_reason IS NOT NULL)
+    OR (status IN ('CANCELLED','SUPERSEDED') AND cancelled_by_actor_id IS NOT NULL
+      AND cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL)
   ),
   CHECK (jsonb_typeof(requested_payload) = 'object'),
-  CHECK (fulfillment_payload IS NULL OR jsonb_typeof(fulfillment_payload) = 'object')
+  CHECK (evidence_payload IS NULL OR jsonb_typeof(evidence_payload) = 'object')
 );
 
 CREATE INDEX pendencies_current_cycle
   ON case_pendencies(encounter_id, review_cycle, status);
 ```
 
-Não existe coluna `blocking`. Toda linha bloqueia enquanto `OPEN`. Trigger/service impede
-alterar pedido, owner, retorno ou prazo após abertura.
+`impact` é decisão explícita do anestesiologista. Somente uma pendência
+`BLOCKS_CURRENT_RESULT` ainda não `RESOLVED_ACCEPTED`, `CANCELLED` ou `SUPERSEDED` impede
+emitir a versão atual. Submeter evidência nunca resolve a pendência nem cria retorno.
 
 ### `return_requests`
 
@@ -235,10 +250,11 @@ CREATE UNIQUE INDEX one_active_return_request_per_case
   WHERE status IN ('READY_FOR_BOOKING','BOOKED','CHECKED_IN');
 ```
 
-`return_request_pendencies` contém, em ordem lexical materializada por `ordinal`, todos os
-IDs de pendências `FULFILLED` do mesmo encontro/ciclo com `requires_return=true`; nunca um
-subconjunto escolhido pelo renderer. A relação possui FKs compostas para impedir IDs de
-outro caso. O snapshot contém o `requirementId` e o `RequirementEffectiveDTO` completo:
+`return_request_pendencies` contém, em ordem lexical materializada por `ordinal`, somente
+os IDs que o anestesiologista selecionou em `returnRequests.decide` depois de revisar a
+evidência; o service exige mesmo encontro/ciclo/caso e estado revisado. A relação possui FKs
+compostas para impedir IDs de outro caso. O snapshot contém o `requirementId` e o
+`RequirementEffectiveDTO` completo:
 classe, duração, buffer, ocupação, prazo, kinds e capabilities. `return_requests` não possui `booking_id`: o
 booking atual ou histórico é sempre derivado pela FK
 `scheduling_bookings.return_request_id`.
@@ -273,10 +289,14 @@ Invariantes:
 ```sql
 CREATE TABLE preop_results (
   id TEXT PRIMARY KEY,
-  case_id TEXT NOT NULL UNIQUE REFERENCES preop_cases(id) ON DELETE RESTRICT,
-  encounter_id TEXT NOT NULL UNIQUE,
-  version_number INTEGER NOT NULL DEFAULT 1 CHECK (version_number = 1),
-  status TEXT NOT NULL DEFAULT 'FINAL' CHECK (status = 'FINAL'),
+  case_id TEXT NOT NULL REFERENCES preop_cases(id) ON DELETE RESTRICT,
+  encounter_id TEXT NOT NULL,
+  version_number INTEGER NOT NULL CHECK (version_number > 0),
+  emission_type TEXT NOT NULL CHECK (
+    emission_type IN ('FINAL','CORRECTION','ADDENDUM')
+  ),
+  predecessor_result_id TEXT,
+  reason TEXT,
   content JSONB NOT NULL,
   finalized_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
   finalized_by_snapshot JSONB NOT NULL,
@@ -284,16 +304,38 @@ CREATE TABLE preop_results (
   content_hash TEXT NOT NULL CHECK (char_length(content_hash) = 64),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (id, case_id),
+  UNIQUE (id, version_number, case_id),
+  UNIQUE (case_id, version_number),
   FOREIGN KEY (encounter_id, case_id)
     REFERENCES anesthesia_encounters(id, case_id) ON DELETE RESTRICT,
+  FOREIGN KEY (predecessor_result_id, case_id)
+    REFERENCES preop_results(id, case_id) ON DELETE RESTRICT,
   CHECK (jsonb_typeof(content) = 'object'),
-  CHECK (jsonb_typeof(finalized_by_snapshot) = 'object')
+  CHECK (jsonb_typeof(finalized_by_snapshot) = 'object'),
+  CHECK (
+    (version_number = 1 AND emission_type = 'FINAL'
+      AND predecessor_result_id IS NULL AND reason IS NULL)
+    OR (version_number > 1 AND emission_type IN ('CORRECTION','ADDENDUM')
+      AND predecessor_result_id IS NOT NULL
+      AND char_length(trim(reason)) BETWEEN 10 AND 1000)
+  )
+);
+
+CREATE TABLE preop_result_heads (
+  case_id TEXT PRIMARY KEY REFERENCES preop_cases(id) ON DELETE RESTRICT,
+  current_result_id TEXT NOT NULL,
+  current_version_number INTEGER NOT NULL CHECK (current_version_number > 0),
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  updated_at TIMESTAMPTZ NOT NULL,
+  FOREIGN KEY (current_result_id, current_version_number, case_id)
+    REFERENCES preop_results(id, version_number, case_id) ON DELETE RESTRICT,
+  UNIQUE (case_id, current_version_number)
 );
 
 CREATE FUNCTION reject_preop_result_mutation()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  RAISE EXCEPTION 'preop result FINAL is immutable';
+  RAISE EXCEPTION 'preop result version is immutable';
 END;
 $$;
 
@@ -302,8 +344,10 @@ BEFORE UPDATE OR DELETE ON preop_results
 FOR EACH ROW EXECUTE FUNCTION reject_preop_result_mutation();
 ```
 
-Trigger rejeita `UPDATE` e `DELETE`. Não há `DRAFT`, `SUPERSEDED`, adendo ou segunda
-finalização. O rascunho é `assessment_content`.
+Trigger rejeita `UPDATE` e `DELETE` das versões. O rascunho continua em
+`assessment_content`; `preop_result_heads` é o único ponteiro mutável e avança por CAS na
+mesma transação que insere a próxima versão. `CURRENT` é o ID apontado pelo head;
+`SUPERSEDED` é qualquer versão anterior; conteúdo e recibos históricos nunca são apagados.
 
 ### `case_documents`
 
@@ -400,8 +444,9 @@ CREATE TABLE assessment_command_receipts (
   request_id TEXT PRIMARY KEY,
   command TEXT NOT NULL CHECK (command IN (
     'START_ENCOUNTER', 'SAVE_ASSESSMENT', 'OPEN_PENDENCY', 'CANCEL_PENDENCY',
-    'REGISTER_DOCUMENT_METADATA', 'FULFILL_PENDENCY', 'RESUME_REVIEW',
-    'FINALIZE_RESULT', 'SEND_DELIVERY', 'ACKNOWLEDGE_DELIVERY'
+    'REGISTER_DOCUMENT_METADATA', 'SUBMIT_PENDENCY_EVIDENCE',
+    'REVIEW_PENDENCY_EVIDENCE', 'DECIDE_RETURN', 'RESUME_REVIEW',
+    'FINALIZE_RESULT', 'REVISE_RESULT', 'SEND_DELIVERY', 'ACKNOWLEDGE_DELIVERY'
   )),
   actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
   input_fingerprint TEXT NOT NULL,
@@ -432,7 +477,7 @@ type ActorSnapshotDTO = {
 
 type AssessmentNarrative =
   | { state: 'ANSWERED'; text: string }
-  | { state: 'NEGATIVE' | 'UNKNOWN' | 'NOT_APPLICABLE'; text: null }
+  | { state: 'UNKNOWN' | 'NOT_APPLICABLE' | 'NOT_PERFORMED'; text: null }
 
 type AssessmentDraftNarrative =
   | { state: 'NOT_RECORDED'; text: null }
@@ -535,7 +580,7 @@ type ExamRequestV1 = {
   clinicalQuestion: string | null
   instructions: string | null
 }
-type ExamFulfillmentV1 =
+type ExamEvidenceV1 =
   | {
       _v: 1
       outcome: 'RECEIVED'
@@ -557,7 +602,7 @@ type InformationRequestV1 = {
   expectedSource: ExpectedInformationSource
   instructions: string | null
 }
-type InformationFulfillmentV1 = {
+type InformationEvidenceV1 = {
   _v: 1
   answer: string
   actualSource: ExpectedInformationSource
@@ -571,7 +616,7 @@ type DocumentRequestV1 = {
   category: DocumentCategory
   instructions: string | null
 }
-type DocumentFulfillmentV1 = {
+type DocumentEvidenceV1 = {
   _v: 1
   documentIds: [string, ...string[]]
   note: string | null
@@ -582,7 +627,7 @@ type OtherRequestV1 = {
   requestText: string
   instructions: string | null
 }
-type OtherFulfillmentV1 = {
+type OtherEvidenceV1 = {
   _v: 1
   responseText: string
   documentIds: string[]
@@ -590,10 +635,10 @@ type OtherFulfillmentV1 = {
 }
 
 type PendencyContent =
-  | { kind: 'EXAM'; requestedPayload: ExamRequestV1; fulfillmentPayload: ExamFulfillmentV1 | null }
-  | { kind: 'INFORMATION'; requestedPayload: InformationRequestV1; fulfillmentPayload: InformationFulfillmentV1 | null }
-  | { kind: 'DOCUMENT'; requestedPayload: DocumentRequestV1; fulfillmentPayload: DocumentFulfillmentV1 | null }
-  | { kind: 'OTHER'; requestedPayload: OtherRequestV1; fulfillmentPayload: OtherFulfillmentV1 | null }
+  | { kind: 'EXAM'; requestedPayload: ExamRequestV1; evidencePayload: ExamEvidenceV1 | null }
+  | { kind: 'INFORMATION'; requestedPayload: InformationRequestV1; evidencePayload: InformationEvidenceV1 | null }
+  | { kind: 'DOCUMENT'; requestedPayload: DocumentRequestV1; evidencePayload: DocumentEvidenceV1 | null }
+  | { kind: 'OTHER'; requestedPayload: OtherRequestV1; evidencePayload: OtherEvidenceV1 | null }
 ```
 
 Validação:
@@ -633,9 +678,15 @@ type PendencyOpenBase = CommandBase & {
   expectedEncounterVersion: number
   ownerRole: 'RECEPCAO' | 'ENFERMAGEM' | 'ANESTESIOLOGISTA' | 'SOLICITANTE'
   targetServiceId: string | null
+  impact:
+    | 'BLOCKS_CURRENT_RESULT'
+    | 'FOLLOW_UP_WITHOUT_BLOCKING'
+    | 'MAY_PREVENT_PROCEDURE'
+    | 'OPERATIONAL_ONLY'
+    | 'INDETERMINATE_PENDING_REVIEW'
   description: string
-  requiresReturn: boolean
-  dueAt: string
+  dueAt: string | null
+  dueAtBasis: string | null
 }
 
 type OpenPendencyDTO =
@@ -644,36 +695,52 @@ type OpenPendencyDTO =
   | (PendencyOpenBase & { kind: 'DOCUMENT'; requestedPayload: DocumentRequestV1 })
   | (PendencyOpenBase & { kind: 'OTHER'; requestedPayload: OtherRequestV1 })
 
-type FulfillPendencyDTO =
+type SubmitPendencyEvidenceDTO =
   | (CommandBase & {
       pendencyId: string
       expectedPendencyVersion: number
       kind: 'EXAM'
-      fulfillmentPayload: ExamFulfillmentV1
+      evidencePayload: ExamEvidenceV1
     })
   | (CommandBase & {
       pendencyId: string
       expectedPendencyVersion: number
       kind: 'INFORMATION'
-      fulfillmentPayload: InformationFulfillmentV1
+      evidencePayload: InformationEvidenceV1
     })
   | (CommandBase & {
       pendencyId: string
       expectedPendencyVersion: number
       kind: 'DOCUMENT'
-      fulfillmentPayload: DocumentFulfillmentV1
+      evidencePayload: DocumentEvidenceV1
     })
   | (CommandBase & {
       pendencyId: string
       expectedPendencyVersion: number
       kind: 'OTHER'
-      fulfillmentPayload: OtherFulfillmentV1
+      evidencePayload: OtherEvidenceV1
     })
 
 type CancelPendencyDTO = CommandBase & {
   pendencyId: string
   expectedPendencyVersion: number
   reason: string
+}
+
+type ReviewPendencyEvidenceDTO = CommandBase & {
+  pendencyId: string
+  expectedPendencyVersion: number
+  decision: 'ACCEPT' | 'REOPEN_AS_INSUFFICIENT'
+  reason: string
+}
+
+type DecideReturnDTO = CommandBase & {
+  encounterId: string
+  expectedEncounterVersion: number
+  expectedCaseVersion: number
+  triggerPendencyIds: string[]
+  objective: string
+  schedulingRequirement: RequirementEffectiveDTO
 }
 
 type RegisterDocumentMetadataDTO = CommandBase & {
@@ -705,6 +772,15 @@ type FinalizeResultDTO = CommandBase & {
   encounterId: string
   expectedEncounterVersion: number
   expectedCaseVersion: number
+  content: PreopResultContentV1
+}
+
+type ReviseResultDTO = CommandBase & {
+  caseId: string
+  expectedHeadVersion: number
+  predecessorResultId: string
+  emissionType: 'CORRECTION' | 'ADDENDUM'
+  reason: string
   content: PreopResultContentV1
 }
 
@@ -748,12 +824,14 @@ do retorno reutiliza o `ConfirmBookingInput` discriminado e owned pela agenda; e
 não define um segundo command concorrente.
 
 `documents.registerMetadata` aceita somente `RegisterDocumentMetadataDTO`, exige
-`pendency:evidence:register`, pendência `OPEN`, owner derivado da sessão e escopo do mesmo
+`pendency:evidence:register`, pendência `REQUESTED` ou `INSUFFICIENT_REOPENED`, owner derivado da sessão e escopo do mesmo
 caso. `contentHash` precisa corresponder exatamente a `sha256:` + 64 hex minúsculos;
 `sizeBytes` é inteiro seguro não negativo. O schema estrito não possui bytes, base64,
 `file://`, path ou URL. Mesmo `requestId`/fingerprint devolve o mesmo `CaseDocumentDTO`; o
-mesmo ID com payload diferente falha `IDEMPOTENCY_KEY_REUSED`. `pendencies.fulfill` aceita
-somente documentos já vinculados àquela pendência e ao mesmo caso.
+mesmo ID com payload diferente falha `IDEMPOTENCY_KEY_REUSED`. `pendencies.submitEvidence`
+aceita somente documentos já vinculados àquela pendência e ao mesmo caso;
+`pendencies.reviewEvidence` é exclusivo do anestesiologista e decide suficiência.
+`returnRequests.decide` é outro comando explícito e nunca efeito colateral da evidência.
 
 ### Outputs exatos
 
@@ -805,8 +883,14 @@ type PendencyBaseDTO = {
   kind: 'EXAM' | 'INFORMATION' | 'DOCUMENT' | 'OTHER'
   ownerRole: 'RECEPCAO' | 'ENFERMAGEM' | 'ANESTESIOLOGISTA' | 'SOLICITANTE'
   targetServiceId: string | null
-  requiresReturn: boolean
-  dueAt: string
+  impact:
+    | 'BLOCKS_CURRENT_RESULT'
+    | 'FOLLOW_UP_WITHOUT_BLOCKING'
+    | 'MAY_PREVENT_PROCEDURE'
+    | 'OPERATIONAL_ONLY'
+    | 'INDETERMINATE_PENDING_REVIEW'
+  dueAt: string | null
+  dueAtBasis: string | null
   overdue: boolean
   openedBy: ActorSnapshotDTO
   openedAt: string
@@ -814,25 +898,45 @@ type PendencyBaseDTO = {
 
 type PendencyStateDTO =
   | {
-      status: 'OPEN'
-      fulfilledBy: null
-      fulfilledAt: null
+      status: 'REQUESTED'
+      evidenceSubmittedBy: null
+      evidenceSubmittedAt: null
+      reviewedBy: null
+      reviewedAt: null
+      reviewReason: null
       cancelledBy: null
       cancelledAt: null
       cancellationReason: null
     }
   | {
-      status: 'FULFILLED'
-      fulfilledBy: ActorSnapshotDTO
-      fulfilledAt: string
+      status: 'EVIDENCE_SUBMITTED'
+      evidenceSubmittedBy: ActorSnapshotDTO
+      evidenceSubmittedAt: string
+      reviewedBy: null
+      reviewedAt: null
+      reviewReason: null
       cancelledBy: null
       cancelledAt: null
       cancellationReason: null
     }
   | {
-      status: 'CANCELLED'
-      fulfilledBy: null
-      fulfilledAt: null
+      status: 'RESOLVED_ACCEPTED' | 'INSUFFICIENT_REOPENED'
+      evidenceSubmittedBy: ActorSnapshotDTO
+      evidenceSubmittedAt: string
+      reviewedBy: ActorSnapshotDTO
+      reviewedAt: string
+      reviewReason: string
+      cancelledBy: null
+      cancelledAt: null
+      cancellationReason: null
+    }
+  | {
+      status: 'CANCELLED' | 'SUPERSEDED'
+      evidenceSubmittedBy: ActorSnapshotDTO | null
+      evidenceSubmittedAt: string | null
+      reviewedBy: ActorSnapshotDTO | null
+      reviewedAt: string | null
+      reviewReason: string | null
       cancelledBy: ActorSnapshotDTO
       cancelledAt: string
       cancellationReason: string
@@ -895,8 +999,11 @@ type PreopResultDTO = {
   id: string
   caseId: string
   encounterId: string
-  versionNumber: 1
-  status: 'FINAL'
+  versionNumber: number
+  emissionType: 'FINAL' | 'CORRECTION' | 'ADDENDUM'
+  predecessorResultId: string | null
+  reason: string | null
+  isCurrent: boolean
   content: PreopResultContentV1
   contentHash: string
   finalizedBy: ActorSnapshotDTO
@@ -915,8 +1022,8 @@ type ResultStatusDTO =
       caseId: string
       result: {
         id: string
-        versionNumber: 1
-        status: 'FINAL'
+        versionNumber: number
+        emissionType: 'FINAL' | 'CORRECTION' | 'ADDENDUM'
         contentHash: string
         finalizedAt: string
       }
@@ -1004,7 +1111,7 @@ type RequesterActionDTO = {
   }
   result: {
     resultId: string
-    versionNumber: 1
+    versionNumber: number
     contentHash: string
     finalizedAt: string
   }
@@ -1059,8 +1166,9 @@ type ResultListItemDTO = {
 
 `ResultStatusDTO` é o único output de `results.getStatus` e deliberadamente não possui
 propriedade `content`, nem mesmo com valor nulo. `AuthorizedResultDTO` é exclusivo de
-`results.getCurrent`. Não existe `results.getHistory`, pois o MVP admite somente um
-resultado `FINAL`.
+`results.getCurrent`. `results.getHistory` retorna somente metadados/versionamento
+autorizados; conteúdo de versão histórica exige a mesma capability e escopo de
+`results.getCurrent`.
 
 `encounters.list`, `pendencies.listAssigned` e `results.listForActor` são as queries
 canônicas das três worklists. Todas usam cursor opaco, limite 1–100 e ordenação estável
@@ -1099,16 +1207,17 @@ Projeções:
 | `encounters.getClinical` | `assessment:read` | anestesiologista |
 | `encounters.getOperational` | `case:read:assigned` | recepção/enfermagem |
 | `encounters.start/saveAssessment/resumeReview` | `assessment:write` | anestesiologista |
-| `pendencies.open/cancel` | `pendency:manage` | anestesiologista |
+| `pendencies.open/cancel/reviewEvidence` | `pendency:manage` | anestesiologista |
 | `pendencies.listAssigned/get` | `case:read:assigned` | owner autorizado; scope de serviço e `AssignedPendencyDTO` |
 | `documents.registerMetadata` | `pendency:evidence:register` | owner da pendência; mesmo caso; metadados/hash sem bytes |
-| `pendencies.fulfill` | `pendency:evidence:register` | owner autorizado; scope de serviço |
+| `pendencies.submitEvidence` | `pendency:evidence:register` | owner autorizado; scope de serviço; não decide suficiência |
+| `returnRequests.decide` | `assessment:write` | anestesiologista; requisito de retorno explícito e completo |
 | `returnRequests.listReady` | `scheduling:booking:manage` | recepção |
-| `results.finalize` | `assessment:write` | anestesiologista |
+| `results.finalize/revise` | `assessment:write` | anestesiologista; `revise` exige head atual, predecessor e motivo |
 | `results.listForActor` | `result:status:read` | lista sem conteúdo; scope de serviço obrigatório ao solicitante |
 | `results.getStatus` | `result:status:read` | `RECEPCAO`, `ANESTESIOLOGISTA`, `SOLICITANTE`; solicitante passa por `requireServiceScope`; retorna `ResultStatusDTO` |
-| `results.getCurrent` | `result:content:read` | somente `ANESTESIOLOGISTA` ou `SOLICITANTE`; solicitante passa por `requireServiceScope` |
-| `results.exportPdf` | `result:export` | somente `RECEPCAO` ou `ANESTESIOLOGISTA`; `FINAL` carregado internamente |
+| `results.getCurrent/getHistory` | `result:content:read` | somente `ANESTESIOLOGISTA` ou `SOLICITANTE`; solicitante passa por `requireServiceScope` |
+| `results.exportPdf` | `result:export` | somente `ANESTESIOLOGISTA` ou `SOLICITANTE`; solicitante passa por `requireServiceScope` |
 | `deliveries.send` | `delivery:manage` | recepção; `FINAL` carregado internamente sem chamar `results.getCurrent` |
 | `deliveries.acknowledge` | `delivery:acknowledge` | serviço solicitante |
 
@@ -1128,7 +1237,7 @@ type AssessmentErrorCode =
   | 'SERVICE_SCOPE_MISMATCH'
   | 'OPEN_BLOCKERS'
   | 'RETURN_REQUIRED'
-  | 'RESULT_ALREADY_FINAL'
+  | 'RESULT_VERSION_CONFLICT'
   | 'VERSION_CONFLICT'
   | 'IDEMPOTENCY_KEY_REUSED'
   | 'FORBIDDEN'
@@ -1167,39 +1276,45 @@ Não existe capability `result:read`.
 
 1. Exigir encontro `IN_PROGRESS` ou `WAITING_PENDING` e mesmo ciclo.
 2. Validar union, owner, service, prazo e documentos.
-3. Inserir `OPEN`; no primeiro item, mover encontro para `WAITING_PENDING` e caso para
+3. Inserir `REQUESTED`; no primeiro item, mover encontro para `WAITING_PENDING` e caso para
    `PENDING`.
 4. Gravar receipt/eventos. Itens adicionais do mesmo ciclo não repetem transição.
 
-### 4. Cumprir ou cancelar e aplicar last blocker
+### 4. Submeter e revisar evidência
 
 1. Lock por versão e receipt.
 2. `documents.registerMetadata`, quando usado, trava caso e pendência, exige ambos na versão
    esperada e no mesmo caso, insere documento imutável + receipt no mesmo commit e não muda
    estado da pendência.
-3. `fulfill`: exigir status `OPEN`, owner e payload do mesmo kind; cada `documentId` precisa
-   já apontar à própria pendência/caso.
-4. `cancel`: exigir status `OPEN`, anestesiologista e motivo 10–500.
-5. Encerrar a pendência sem alterar pedido.
-6. Se resta `OPEN`, manter estados.
-7. Se não resta `OPEN` e nenhuma `FULFILLED requiresReturn=true`, não persistir flag alguma;
-   manter caso `PENDING`. A query passa a derivar `canResumeReview=true`.
-8. Se não resta `OPEN` e existe `FULFILLED requiresReturn=true`, criar exatamente um
-   request com snapshot do requisito e mudar caso para `WAITING_RETURN`.
-9. Gravar receipt/eventos.
+3. `submitEvidence`: exigir `REQUESTED` ou `INSUFFICIENT_REOPENED`, owner e payload do mesmo
+   kind; cada `documentId` precisa apontar à própria pendência/caso. Persistir
+   `EVIDENCE_SUBMITTED`; não resolver, retomar encontro ou criar retorno.
+4. `reviewEvidence`: exigir anestesiologista e evidência `EVIDENCE_SUBMITTED`; `ACCEPT`
+   produz `RESOLVED_ACCEPTED`, enquanto `REOPEN_AS_INSUFFICIENT` produz
+   `INSUFFICIENT_REOPENED`, sempre com motivo/autoria no mesmo commit.
+5. `cancel` ou `supersede`: exigir estado ainda não terminal, anestesiologista e motivo.
+6. Recalcular blockers pelo predicado literal: impacto `BLOCKS_CURRENT_RESULT` e estado não
+   terminal/resolvido. Pendências não bloqueadoras permanecem visíveis sem impedir versão.
+7. Nenhuma dessas ações cria `ReturnRequest`.
+8. Gravar receipt/eventos.
 
 ### 5. Retomar sem retorno
 
-1. Exigir anestesiologista, encontro `WAITING_PENDING`, caso `PENDING`, zero `OPEN`,
-   nenhuma pendência `FULFILLED requiresReturn=true` no ciclo e nenhuma solicitação ativa;
-   essa é a mesma expressão SQL que deriva `canResumeReview=true`.
+1. Exigir anestesiologista, encontro `WAITING_PENDING`, caso `PENDING`, zero blocker atual
+   não resolvido e nenhuma solicitação de retorno ativa; essa é a mesma expressão SQL que
+   deriva `canResumeReview=true`.
 2. Incrementar `reviewCycle`, mudar encontro para `IN_PROGRESS` e caso para
    `IN_ASSESSMENT`.
 3. Gravar receipt/eventos.
 
-### 6. Reservar retorno
+### 6. Decidir e reservar retorno
 
-`scheduling.bookings.confirm` recebe o `ConfirmBookingInput` canônico com
+`returnRequests.decide` exige anestesiologista, evidências já revisadas, objetivo, IDs do
+mesmo encontro/ciclo e `RequirementEffectiveDTO` completo definido ou confirmado por ele.
+Cria exatamente um request ativo e muda o caso para `WAITING_RETURN`. Não é chamado por
+`submitEvidence`, `reviewEvidence` ou pelo último blocker.
+
+Depois dessa decisão, `scheduling.bookings.confirm` recebe o `ConfirmBookingInput` canônico com
 `need.kind='RETURN'`, `returnRequestId` e versão. Valida o snapshot, confirma slot
 compatível pela FK `scheduling_bookings.return_request_id` e muda request para `BOOKED`.
 O caso permanece `WAITING_RETURN`. Cancelamento/no-show encerra o booking e reabre o mesmo
@@ -1211,26 +1326,40 @@ request; não existe `return_requests.booking_id` para limpar.
    montar o candidato trocando somente `state: 'DRAFT'` por `state: 'COMPLETE'` e validá-lo
    pelo schema `AssessmentContentV1`; `NOT_RECORDED`, confirmação nula ou síntese incompleta
    bloqueiam.
-2. Exigir zero pendência `OPEN` no caso e nenhum resultado existente.
-3. Persistir o assessment convertido para `state='COMPLETE'`, inserir `FINAL`, hash e
-   autoria; concluir encontro com `RESULT_FINALIZED`.
+2. Exigir zero pendência `BLOCKS_CURRENT_RESULT` ainda não resolvida e nenhuma versão
+   corrente já finalizada para o mesmo encontro.
+3. Persistir o assessment convertido para `state='COMPLETE'`, inserir versão 1 `FINAL`,
+   hash e autoria e criar `preop_result_heads`; concluir encontro com `RESULT_FINALIZED`.
 4. Mover caso para `READY_FOR_HANDOFF`; gravar receipt/eventos.
-5. Trigger impede qualquer alteração posterior.
+5. Trigger impede alteração da versão; somente o head pode avançar por comando próprio.
+
+### 7a. Corrigir ou aditar resultado
+
+1. Exigir anestesiologista, `predecessorResultId` igual ao head e
+   `expectedHeadVersion` atual; validar motivo e novo conteúdo.
+2. Inserir versão imutável `n+1` com `CORRECTION` ou `ADDENDUM`, apontando para a
+   predecessora; avançar o head por CAS.
+3. Se a versão predecessora já possuía delivery, preservá-lo, mover o caso de volta a
+   `READY_FOR_HANDOFF` e criar novo ciclo de handoff para a versão corrente. Nunca atualizar
+   ou apagar receipt anterior.
+4. Gravar evento, auditoria e receipt na mesma transação.
 
 ### 8. Enviar e receber
 
-1. `send`: exigir recepção + `delivery:manage`; o delivery service carrega o `FINAL`
+1. `send`: exigir recepção + `delivery:manage`; o delivery service carrega a versão
+   corrente apontada pelo head
    diretamente do repositório dentro da transação, sem chamar `results.getCurrent` e sem
    conceder `result:content:read`; copia `serviceId`/recipient do caso, insere `SENT` e
    grava receipt/eventos; não mover o caso.
-2. `acknowledge`: exigir solicitante do mesmo serviço, `SENT` e versões atuais; produzir
-   `RECEIVED` e `DELIVERED_TO_REQUESTER`.
+2. `acknowledge`: exigir solicitante do mesmo serviço, `SENT`, resultId ainda corrente e
+   versões atuais; produzir `RECEIVED` e `DELIVERED_TO_REQUESTER`. Se nova versão surgir
+   antes do recebimento, a entrega antiga continua histórica e não encerra o caso.
 
 Falha em qualquer passo reverte domínio, evento, auditoria e receipt.
 
 `canResumeReview` nunca é coluna, metadata, evento nem valor de receipt. Cada query o deriva
-no ciclo atual como: encontro `WAITING_PENDING` + caso `PENDING` + zero pendência `OPEN` +
-zero pendência `FULFILLED AND requires_return=TRUE` + zero `ReturnRequest` ativo. Um contract
+no ciclo atual como: encontro `WAITING_PENDING` + caso `PENDING` + zero blocker atual não
+resolvido + zero `ReturnRequest` ativo. Um contract
 test executa a mesma predicate usada por `encounters.resumeReview`, impedindo drift entre
 CTA e command.
 
@@ -1242,7 +1371,7 @@ CTA e command.
 | `AssessmentCasePage` | snapshots + encontro autorizado |
 | `AssessmentEditor` | rascunho explícito, conflito sem last-write-wins |
 | `PendenciesPanel` | union por kind, owner, prazo e status |
-| `PendencyFulfillmentForm` | renderiza somente schema do kind |
+| `PendencyEvidenceForm` | renderiza somente schema do kind; submissão não equivale a aceite clínico |
 | `ReturnRequestsPage` | slots compatíveis e booking `RETURN` |
 | `ResultReview` | motivo de bloqueio e confirmação final |
 | `DeliveryPanel` | metadata/hash, PDF, envio e recebimento |
@@ -1254,8 +1383,8 @@ Regras de UI:
 - pendência mostra próxima ação, owner e atraso; payload só aparece na projeção autorizada;
 - “Retomar avaliação” aparece ao anestesiologista quando `canResumeReview`;
 - `ReturnRequest READY_FOR_BOOKING` aparece à recepção, nunca como conclusão;
-- recepção chama `results.getStatus`, vê somente `ResultStatusDTO` e exporta pelo main,
-  sem receber conteúdo JSON;
+- recepção chama `results.getStatus` e vê somente `ResultStatusDTO`; não recebe conteúdo
+  JSON nem exporta PDF;
 - solicitante vê apenas `RequesterActionDTO` do próprio serviço;
 - salvar PDF não marca envio nem recebimento.
 
@@ -1283,17 +1412,18 @@ Regras de UI:
 - start sem check-in e retorno sem request falham sem efeito;
 - booking inicia um único encontro, vira `COMPLETED` no start e referencia esse encontro;
 - start não remove ocupações; o bundle segue ocupado até `slot.ends_at`;
-- último bloqueio falso mantém `PENDING` até `resumeReview`;
+- evidência submetida mantém `PENDING` até revisão clínica e eventual `resumeReview`;
 - `canResumeReview` não existe no DDL e a query usa exatamente a mesma predicate do command;
-- último bloqueio verdadeiro cria um request mesmo com concorrência;
+- somente `returnRequests.decide` cria request, com requisito completo e concorrência tratada;
 - mistura de pendências usa somente o ciclo atual;
 - cancelamento clínico só pelo anestesiologista;
 - no-show/cancelamento reabre o mesmo return request;
-- finalização falha com `OPEN` e segunda finalização falha;
-- `UPDATE`/`DELETE` de `FINAL` falham;
+- finalização falha com blocker atual não resolvido e segunda versão corrente do mesmo
+  contexto falha;
+- `UPDATE`/`DELETE` de qualquer versão falham; correção/adendo insere versão e avança head;
 - todos os commands produzem events/receipt na mesma transação.
 - `documents.registerMetadata` aceita metadata/hash válidos, recusa bytes/path/hash inválido
-  e `pendencies.fulfill` recusa documento de outra pendência ou caso;
+  e `pendencies.submitEvidence` recusa documento de outra pendência ou caso;
 - CHECKs de encounter, pendência, ReturnRequest e delivery recusam timestamps/atores
   incompatíveis com o status.
 
@@ -1301,7 +1431,7 @@ Regras de UI:
 
 - replay igual devolve o mesmo DTO sem nova linha/evento;
 - fingerprint divergente retorna `IDEMPOTENCY_KEY_REUSED`;
-- dois fulfills da mesma versão deixam um vencedor;
+- duas submissões/revisões concorrentes da mesma versão deixam um vencedor;
 - duas criações de return request deixam uma;
 - duas finalizações deixam um `FINAL`;
 - conflito não gera receipt de sucesso.
@@ -1316,21 +1446,23 @@ Regras de UI:
   `results.listForActor` não carregam assessment/result content;
 - admin não recebe DTO clínico;
 - projections anulam conteúdo conforme os tipos exatos;
-- `result:read` e `results.getHistory` não existem;
+- `result:read` não existe; `results.getHistory` exige `result:content:read` e escopo;
 - recepção, anestesiologista e solicitante autorizado recebem `ResultStatusDTO` sem
   conteúdo por `result:status:read`;
 - recepção recebe `FORBIDDEN` em `results.getCurrent`;
 - `results.getCurrent` exige `result:content:read`; solicitante de outro serviço recebe
   `NOT_FOUND`;
-- `results.exportPdf` aceita somente recepção/anestesiologista com `result:export`;
+- `results.exportPdf` aceita somente anestesiologista/solicitante autorizado com
+  `result:export`; recepção nunca recebe conteúdo ou bytes do PDF;
 - `deliveries.send` funciona sob `delivery:manage` sem conceder à recepção
   `result:content:read`;
 - logs/auditoria não contêm pedido integral, cumprimento, avaliação ou resultado.
 
 ### PDF
 
-- somente `FINAL` autorizado exporta;
-- exportação carrega o `FINAL` internamente e não devolve `PreopResultDTO` à recepção;
+- somente a versão corrente (`FINAL`, `CORRECTION` ou `ADDENDUM`) exporta;
+- exportação carrega a versão corrente internamente e não devolve `PreopResultDTO` à
+  recepção;
 - HTML nasce no main e escapa conteúdo;
 - rede e JavaScript continuam bloqueados;
 - falha não altera entrega.
@@ -1367,8 +1499,8 @@ destrutiva não pertence ao MVP.
 
 - **Autoria local não é assinatura institucional.**
 - **Cumprimento não é decisão clínica.**
-- **Retorno reaproveita requisito; não recalcula risco.**
-- **Resultado final não possui correção no MVP.**
+- **Retorno recebe requisito operacional explícito do anestesiologista; não herda o inicial nem calcula risco.**
+- **Resultado corrigido/aditado nasce como nova versão imutável e novo handoff.**
 - **Redaction pertence ao main; UI escondida não é autorização.**
 - **PDF exportado sai do controle do app; o MVP registra hash e não promete revogação.**
 - **Dados reais exigem threat model e aprovação fora do hackathon.**

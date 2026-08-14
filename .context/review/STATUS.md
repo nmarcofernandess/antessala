@@ -8,7 +8,7 @@ Estados: `INCORPORATED`, `REFERENCE_ONLY`, `NEEDS_FINAL_REVIEW`, `ADJUSTED`, `SU
 | Artefato | Research/recon incorporado | Estado | Último SHA externo | Próxima ação |
 |---|---|---|---|---|
 | `hack/PRD.md` | fluxo e decisões de Marco | `INCORPORATED` | `9f501a9` | baseline aprovada; não alterar no hack |
-| `hack/analysis.md` | oito Analysts reconciliados | `INCORPORATED` | `9f501a9` | participar do review final junto do BUILD |
+| `hack/analysis.md` | oito Analysts reconciliados e corrigidos pelo review de congruência | `ADJUSTED` | `60106ca` | verificar as correções no novo SHA publicado |
 | `ANALYST-caso-e-encaminhamento.md` | adversarial de 18 cenários | `REFERENCE_ONLY` | `9f501a9` | consultar como detalhe; `analysis.md` prevalece |
 | `ANALYST-acesso-e-auditoria.md` | adversarial de 24 cenários | `REFERENCE_ONLY` | `9f501a9` | consultar como detalhe; `analysis.md` prevalece |
 | `ANALYST-anamnese-e-catalogos.md` | research clínico-regulatório | `REFERENCE_ONLY` | `9f501a9` | limites institucionais permanecem fora da PoC |
@@ -17,7 +17,7 @@ Estados: `INCORPORATED`, `REFERENCE_ONLY`, `NEEDS_FINAL_REVIEW`, `ADJUSTED`, `SU
 | `ANALYST-superficies-e-configuracoes.md` | recon e catálogo de superfícies | `REFERENCE_ONLY` | `9f501a9` | contratos integrados no BUILD |
 | `ANALYST-arquitetura-offline-e-prova.md` | recon Electron/PGlite | `REFERENCE_ONLY` | `9f501a9` | capacidade atual está em `.context/architecture.yaml` |
 | `ANALYST-ia-memoria-e-conhecimento.md` | research regulatório e de segurança | `REFERENCE_ONLY` | `9f501a9` | Gemini sintético único; uso real fora do escopo |
-| `hack/BUILD.md` | oito Builds reconciliados | `NEEDS_FINAL_REVIEW` | `9f501a9` | review final PRD → Analyst → BUILD no SHA publicado |
+| `hack/BUILD.md` | oito Builds reconciliados; P0 confirmados incorporados | `ADJUSTED` | `60106ca` | verificar somente as correções no novo SHA; sem P0, promover a `READY_FOR_WARLOG` |
 | `domains/BUILD-*.md` | contratos técnicos de detalhe | `REFERENCE_ONLY` | `9f501a9` | Writing Plans consultam sem superar `BUILD.md` |
 
 ## Decisões congeladas para a demonstração

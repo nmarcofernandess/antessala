@@ -1120,7 +1120,7 @@ Nenhum campo clínico participa do DTO.
 - cinco medicações e três diagnósticos aplicam incrementos uma vez.
 - accommodations adicionam 10 minutos e capability.
 - documento pendente é explicado, mas soma zero.
-- `ANSWERED(false)`, `NEGATIVE`, `UNKNOWN`, `REFUSED` e `NOT_PERFORMED` não pontuam.
+- `ANSWERED(false)`, `UNKNOWN`, `REFUSED` e `NOT_PERFORMED` não pontuam.
 - NOT_ASKED obrigatório → INCOMPLETE.
 - snapshot da tabela de `signalCode + fieldPaths + predicate + incremento/capability` é
   literal; campo novo não entra por varredura.
@@ -1243,7 +1243,7 @@ A sequência é topológica, não um Plan executável.
 - [ ] Topologia agenda base → assessment → integração provada no PGlite.
 - [ ] Superfície semanal confirmada pelos futuros Surface Blueprints.
 - [x] Conteúdo da PoC incorporado ao Analyst integrado.
-- [ ] Critic revisar este blueprint.
+- [ ] Review final de congruência verificar este anexo contra o BUILD integrado.
 - [ ] Review final de congruência do BUILD integrado antes do Warlog.
 
 ---

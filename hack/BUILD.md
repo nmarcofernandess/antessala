@@ -3,11 +3,11 @@
 ## State
 
 - Tipo: síntese técnica Product → Backend → Frontend → Validation
-- Estado: `READY_FOR_FINAL_CONGRUENCE_REVIEW`
+- Estado: `ADJUSTED_PENDING_CONGRUENCE_RECHECK`
 - Autoridade: especificação técnica integrada do hackathon
 - Fonte do produto: [PRD.md](PRD.md)
 - Fonte analítica: [analysis.md](analysis.md) e oito Analysts de domínio
-- Próximo passo: review final de congruência; depois, Warlog
+- Próximo passo: verificar as correções no SHA publicado; sem P0 material, Warlog
 
 Este BUILD incorpora os oito Builds de domínio e, junto do PRD e do Analyst integrado,
 substitui uma Spec separada. Os Builds de domínio são anexos técnicos: em conflito, este
@@ -117,7 +117,6 @@ type SlotClass = 'QUICK' | 'STANDARD' | 'EXTENDED'
 
 type AnswerState =
   | 'ANSWERED'
-  | 'NEGATIVE'
   | 'UNKNOWN'
   | 'NOT_APPLICABLE'
   | 'NOT_ASKED'
@@ -182,7 +181,7 @@ ações distintas; nenhum caso promove conhecimento automaticamente.
 | Documento pendente | item `MISSING` ou `REQUESTED` | `+0`; somente explicação/pêndencia |
 
 Mapeamento: `20 → QUICK`, `25–35 → STANDARD`, `40–50 → EXTENDED`; acima de 50 retorna
-`OUT_OF_DEMO_RANGE`, sem cap. `ANSWERED(false)`, `NEGATIVE`, `UNKNOWN`, `REFUSED`,
+`OUT_OF_DEMO_RANGE`, sem cap. `ANSWERED(false)`, `UNKNOWN`, `REFUSED`,
 `NOT_PERFORMED`, texto clínico, CID, medicamento e valor vital não pontuam por inferência.
 Os paths e predicados completos vivem na matriz homônima do Analyst e viram uma constante
 literal testada. `desiredBy` é outro eixo: data planejada menos cinco dias úteis da demo ou
@@ -221,7 +220,7 @@ conclusão da triagem mais dez; ele filtra a janela, mas nunca altera classe ou 
 | Avaliação | `anesthesia_encounters`, `case_pendencies`, `return_requests`, `return_request_pendencies`, `assessment_command_receipts` | avaliação |
 | Resultado | `preop_results`, `case_documents`, `result_deliveries` | avaliação/handoff |
 | IA assistiva | `ai_invocations`, `case_transcripts`, `ai_field_proposals` | IA/memória |
-| Conhecimento | `knowledge_sources`, `knowledge_relations`, `curated_examples`, `knowledge_events` | IA/memória |
+| Conhecimento | `knowledge_sources`, `knowledge_relations` | IA/memória |
 
 Nenhum domínio cria tabela paralela de caso, migração, sessão ou auditoria. Toda FK clínica
 aponta para `preop_cases`, nunca para paciente. O profissional solicitante é snapshot do
@@ -262,8 +261,8 @@ erDiagram
   ANESTHESIA_ENCOUNTER ||--o| RETURN_REQUEST : solicita
   RETURN_REQUEST ||--o| SCHEDULING_BOOKING : agenda
   SCHEDULING_BOOKING ||--o| ANESTHESIA_ENCOUNTER : habilita
-  ANESTHESIA_ENCOUNTER ||--o| PREOP_RESULT : finaliza
-  PREOP_RESULT ||--o{ RESULT_DELIVERY : entrega
+  ANESTHESIA_ENCOUNTER ||--o{ PREOP_RESULT : versiona
+  PREOP_RESULT ||--o| RESULT_DELIVERY : entrega
 ```
 
 ### IPC protocol
@@ -322,7 +321,7 @@ type ActionResult<
 ```
 
 Cada BUILD exporta sua união fechada de códigos; o envelope apenas agrega essas unions.
-`VERSION_CONFLICT`, `DUPLICATE_REFERRAL`, erros de login e erros de scheduling não são
+`VERSION_CONFLICT`, `REFERENCE_REUSE_CONFIRMATION_REQUIRED`, erros de login e erros de scheduling não são
 renomeados silenciosamente. Mensagens ao renderer são sanitizadas. Erro interno, payload
 clínico, SQL, stack, senha e token nunca atravessam a fronteira.
 
@@ -340,19 +339,25 @@ clínico, SQL, stack, senha e token nunca atravessam a fronteira.
 5. Check-in: booking `INITIAL | RETURN` vira `CHECKED_IN` e o caso vai a
    `WAITING_ANESTHESIA`; iniciar encontro consome esse booking, conclui-o e move o caso a
    `IN_ASSESSMENT`, sem liberar a ocupação física antes do fim do slot.
-6. Abrir/cumprir pendência: união discriminada + evidência registrada por metadata/hash +
-   último bloqueio; sem retorno o anestesiologista retoma o encontro, com retorno nasce
-   `ReturnRequest` para a recepção. `canResumeReview` é query derivada, nunca coluna.
-7. Finalizar resultado: validar zero pendências `OPEN` + snapshot único `FINAL` + hash + estado.
-8. Entregar/confirmar: resultado FINAL/hash vigente + escopo do serviço + estado/eventos.
-9. Cancelar caso: locks e versões do caso, handoff e booking + liberação da capacidade +
+6. Abrir/revisar pendência: união discriminada + impacto explícito + evidência registrada
+   por metadata/hash. Submeter evidência não decide suficiência nem cria retorno; o
+   anestesiologista aceita, reabre ou cancela e, em comando separado, retoma o encontro ou
+   cria `ReturnRequest`. `canResumeReview` é query derivada, nunca coluna.
+7. Finalizar resultado: validar zero pendência corrente com impacto
+   `BLOCKS_CURRENT_RESULT` ainda não resolvida + assessment `COMPLETE`; criar versão 1
+   `FINAL`, hash e head por caso.
+8. Corrigir/aditar resultado: inserir versão imutável sucessora, avançar o head
+   por CAS e abrir novo handoff quando a versão anterior já foi entregue.
+9. Entregar/confirmar: versão corrente publicável/hash vigente + escopo do serviço +
+   estado/eventos.
+10. Cancelar caso: locks e versões do caso, handoff e booking + liberação da capacidade +
    `closedAt` + evento/auditoria, tudo ou nada.
-10. Gerar propostas: snapshot da revisão DRAFT + transcript revisado + schema dos widgets +
+11. Gerar propostas: snapshot da revisão DRAFT + transcript revisado + schema dos widgets +
     relações `KNOWLEDGE_ACTIVE`; Gemini devolve lote validado e cada campo persiste `DRAFT`
     com origem, evidência, modelo e versão da instrução. Lote inválido não escreve parcialmente.
-11. Decidir proposta: capability + owner do campo + versão esperada; aceitar/corrigir aplica
+12. Decidir proposta: capability + owner do campo + versão esperada; aceitar/corrigir aplica
     uma operação da anamnese e grava decisão na mesma transação; rejeitar não cria negativa.
-12. Curar conhecimento: sugerir → aprovar inativo → ativar são comandos separados.
+13. Curar conhecimento: sugerir → aprovar inativo → ativar são comandos separados.
     Retirar/superseder remove a relação de novas buscas sem apagar histórico.
 
 Lock otimista, constraints e idempotência são complementares. Um deles não substitui os
@@ -495,7 +500,7 @@ demo fora de qualquer caso clínico, mas logs e IPC nunca retornam senha.
 | Case | homônimos, replay do mesmo documento, snapshots, responsabilidade derivada e transições inválidas |
 | Anamnese | 14 widgets, seis estados de resposta, proveniência, revisão e redaction |
 | Agenda | compatibilidade, janela Mon–Fri same-day, lock/overlap, recurso com booking ativo imutável, materialização SYSTEM/USER, corrida, idempotência, cancelamento e no-show |
-| Avaliação | draft parcial, validação completa no finalize, evidência metadata/hash, pendência discriminada, retorno com effective completo, versão FINAL imutável e handoff |
+| Avaliação | draft parcial, validação completa no finalize, evidência metadata/hash, pendência discriminada, retorno com effective completo, versões imutáveis com head corrente e handoff |
 | Renderer | cinco menus/homes, todos os estados, teclado, light/dark/system |
 | Network | boot e jornada com egress HTTP/HTTPS/WS bloqueado |
 | E2E | encaminhamento → triagem → reserva → avaliação → pendência/retorno → resultado → recebimento |
@@ -577,14 +582,16 @@ com paths, testes RED e ordem de commits; não existe Spec intermediária.
 - [x] IA/memória possuem contrato físico mínimo e não dependem de STT ou embeddings.
 - [x] Perfil `PITCH_CRITICAL` separa o fluxo demonstrável do hardening sem enfraquecer os invariantes P0.
 - [x] Decisões sintéticas estão rotuladas; produção institucional permanece fora do escopo.
-- [ ] Review final de congruência não encontrou bloqueador P0 sem resposta.
+- [x] Review final de congruência executado; bloqueadores confirmados foram incorporados.
+- [ ] Correções verificadas no novo SHA sem bloqueador P0 material restante.
 
 ---
 
 ## Estado de consolidação
 
 - Artefato canônico: `BUILD.md`.
-- Estado: `READY_FOR_FINAL_CONGRUENCE_REVIEW`.
+- Estado: `ADJUSTED_PENDING_CONGRUENCE_RECHECK`.
 - Anexos consumidos: oito `domains/BUILD-*.md`.
 - Gate individual por anexo: inexistente.
-- Próximo passo: review final; sem P0 aberto, criar Warlog e Writing Plans por minispec.
+- Próximo passo: recheck focado das correções; sem P0 aberto, criar Warlog e Writing Plans
+  por minispec.

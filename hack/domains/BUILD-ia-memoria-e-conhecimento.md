@@ -18,8 +18,9 @@ Este arquivo preserva o recon e os riscos que sustentam o contrato integrado em
 3. restrições que já vêm das leis do produto;
 4. limites que o Writing Plan não pode violar.
 
-Tabelas, namespaces, provider Gemini único, superfícies e transações canônicas vivem em
-`hack/BUILD.md`; este anexo não cria alternativa paralela.
+O `hack/BUILD.md` fixa ownership e integração. Este anexo fecha o contrato físico mínimo
+de tabelas, namespaces, Gemini, superfícies e transações que o Writing Plan deve executar;
+não existe uma alternativa paralela.
 
 ## Fontes consumidas
 
@@ -45,7 +46,7 @@ Tabelas, namespaces, provider Gemini único, superfícies e transações canôni
 | Captura de áudio | Componente `DORMENTE` | `FlowSpeechInput` grava WAV, mas o input ativo é somente texto (`FlowSpeechInput.tsx:14-66`; `IaChatInput.tsx:14-55`). |
 | STT local | `INCOMPLETO` | Main possui catálogo, download e sidecar, mas `ia.stt.*` não está no router ativo (`src/main/stt/*`; `src/main/tipc.ts:373-409`). |
 | Modelo STT | Opcional e externo | Catálogo aponta para artefato de 478 MB (`src/main/stt/catalog.ts:8-24`); download usa `fetch` explícito (`src/main/stt/download.ts:51-79`). |
-| Preload | `ATIVO`, amplo | Expõe `invoke(channel: string)` genérico (`src/preload/index.ts:1-17`). |
+| Preload | `ATIVO`, allowlist fechada | O bridge ainda oferece `invoke`, mas `assertActiveIpcChannel` rejeita qualquer nome fora dos 17 canais publicados (`src/preload/index.ts:1-18`; `src/shared/active-ipc-channels.ts`). Isso reduz a superfície, sem substituir autenticação e capability no main. |
 | Propostas por campo | `INEXISTENTE` | Não há contrato que ligue transcript, widget, origem e decisão humana. |
 | Relação aprovada/versionada | `INEXISTENTE` | `knowledge_relations` guarda arestas e vigência, mas não aprovação, versão, justificativa ou auditoria clínica (`src/main/db/schema.ts:105-126`). |
 
@@ -92,24 +93,243 @@ Estas restrições decorrem de leis do produto e não dependem da escolha de arq
 14. Conteúdo não confiável não amplia tools, rede, campos, papel ou transição, e a IA não
     recebe ferramenta mutadora.
 
-## Decisões físicas consumidas pelo BUILD integrado
+## Contrato físico mínimo da PoC
 
-| Área | Limite preservado | Decisão integrada |
+O corte não implementa chat, áudio, STT, embeddings ou uma base clínica universal. Ele
+fecha somente uma proposta Gemini sobre transcript sintético digitado e uma recuperação
+textual de relação ativa.
+
+### Persistência
+
+```sql
+CREATE TABLE case_transcripts (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES preop_cases(id) ON DELETE RESTRICT,
+  anamnesis_id TEXT NOT NULL,
+  draft_revision INTEGER NOT NULL CHECK (draft_revision > 0),
+  kind TEXT NOT NULL CHECK (kind = 'SYNTHETIC_TYPED'),
+  data_classification TEXT NOT NULL CHECK (data_classification = 'FICTIONAL_NON_DERIVED'),
+  content TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 12000),
+  content_hash TEXT NOT NULL CHECK (char_length(content_hash) = 64),
+  status TEXT NOT NULL CHECK (status IN ('ACTIVE','INVALIDATED')),
+  created_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL,
+  invalidated_at TIMESTAMPTZ,
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  UNIQUE (id, case_id)
+);
+
+CREATE TABLE ai_invocations (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL REFERENCES preop_cases(id) ON DELETE RESTRICT,
+  transcript_id TEXT NOT NULL,
+  provider TEXT NOT NULL CHECK (provider = 'GEMINI'),
+  model TEXT NOT NULL,
+  instruction_version TEXT NOT NULL,
+  input_hash TEXT NOT NULL CHECK (char_length(input_hash) = 64),
+  status TEXT NOT NULL CHECK (status IN ('REQUESTED','SUCCEEDED','FAILED','CANCELLED')),
+  safe_error_code TEXT,
+  requested_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  requested_at TIMESTAMPTZ NOT NULL,
+  finished_at TIMESTAMPTZ,
+  UNIQUE (id, case_id),
+  FOREIGN KEY (transcript_id, case_id)
+    REFERENCES case_transcripts(id, case_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE ai_field_proposals (
+  id TEXT PRIMARY KEY,
+  invocation_id TEXT NOT NULL,
+  case_id TEXT NOT NULL,
+  anamnesis_id TEXT NOT NULL,
+  draft_revision INTEGER NOT NULL CHECK (draft_revision > 0),
+  widget_type TEXT NOT NULL,
+  field_path TEXT NOT NULL,
+  proposed_answer JSONB NOT NULL,
+  source_excerpt TEXT NOT NULL,
+  evidence_state TEXT NOT NULL CHECK (evidence_state IN (
+    'SUPPORTED','AMBIGUOUS','CONFLICTING','NO_EVIDENCE','OUT_OF_SCOPE'
+  )),
+  status TEXT NOT NULL CHECK (status IN (
+    'DRAFT','ACCEPTED','REJECTED','CORRECTED','INVALIDATED'
+  )),
+  decided_answer JSONB,
+  decided_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  decided_at TIMESTAMPTZ,
+  decision_reason TEXT,
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  UNIQUE (id, case_id),
+  UNIQUE (invocation_id, widget_type, field_path),
+  FOREIGN KEY (invocation_id, case_id)
+    REFERENCES ai_invocations(id, case_id) ON DELETE RESTRICT,
+  CHECK (jsonb_typeof(proposed_answer) = 'object'),
+  CHECK (decided_answer IS NULL OR jsonb_typeof(decided_answer) = 'object'),
+  CHECK (
+    (status = 'DRAFT' AND decided_by_actor_id IS NULL AND decided_at IS NULL)
+    OR (status IN ('ACCEPTED','REJECTED','CORRECTED','INVALIDATED')
+      AND decided_by_actor_id IS NOT NULL AND decided_at IS NOT NULL)
+  )
+);
+
+CREATE TABLE knowledge_sources (
+  id TEXT NOT NULL,
+  version INTEGER NOT NULL CHECK (version > 0),
+  title TEXT NOT NULL,
+  locator TEXT NOT NULL,
+  license_or_basis TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  limitations TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('ACTIVE','RETIRED')),
+  created_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (id, version)
+);
+
+CREATE TABLE knowledge_relations (
+  id TEXT PRIMARY KEY,
+  predecessor_id TEXT,
+  subject TEXT NOT NULL,
+  predicate TEXT NOT NULL,
+  object TEXT NOT NULL,
+  scope TEXT NOT NULL,
+  limitations TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  source_version INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN (
+    'SUGGESTED','APPROVED_INACTIVE','ACTIVE','REJECTED','SUPERSEDED','RETIRED'
+  )),
+  proposed_by_actor_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+  reviewed_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  review_decision TEXT CHECK (review_decision IN ('APPROVE','REJECT')),
+  activated_by_actor_id TEXT REFERENCES usuarios(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL,
+  reviewed_at TIMESTAMPTZ,
+  activated_at TIMESTAMPTZ,
+  retired_at TIMESTAMPTZ,
+  version_lock INTEGER NOT NULL DEFAULT 1 CHECK (version_lock > 0),
+  FOREIGN KEY (source_id, source_version)
+    REFERENCES knowledge_sources(id, version) ON DELETE RESTRICT,
+  FOREIGN KEY (predecessor_id)
+    REFERENCES knowledge_relations(id) ON DELETE RESTRICT,
+  CHECK (predecessor_id IS NULL OR predecessor_id <> id),
+  CHECK (
+    (status = 'SUGGESTED' AND reviewed_by_actor_id IS NULL
+      AND review_decision IS NULL AND reviewed_at IS NULL
+      AND activated_by_actor_id IS NULL AND activated_at IS NULL AND retired_at IS NULL)
+    OR (status = 'APPROVED_INACTIVE' AND reviewed_by_actor_id IS NOT NULL
+      AND review_decision = 'APPROVE' AND reviewed_at IS NOT NULL
+      AND activated_by_actor_id IS NULL AND activated_at IS NULL AND retired_at IS NULL)
+    OR (status = 'ACTIVE' AND reviewed_by_actor_id IS NOT NULL
+      AND review_decision = 'APPROVE' AND reviewed_at IS NOT NULL
+      AND activated_by_actor_id IS NOT NULL AND activated_at IS NOT NULL AND retired_at IS NULL)
+    OR (status = 'REJECTED' AND reviewed_by_actor_id IS NOT NULL
+      AND review_decision = 'REJECT' AND reviewed_at IS NOT NULL
+      AND activated_by_actor_id IS NULL AND activated_at IS NULL AND retired_at IS NULL)
+    OR (status IN ('SUPERSEDED','RETIRED') AND reviewed_by_actor_id IS NOT NULL
+      AND reviewed_at IS NOT NULL AND retired_at IS NOT NULL)
+  )
+);
+
+CREATE INDEX knowledge_relations_text_search
+  ON knowledge_relations(status, lower(subject), lower(predicate), lower(object));
+```
+
+`knowledge_sources` guarda versões imutáveis pelo par `(id, version)`. A relação usa
+`version_lock` para CAS do lifecycle e cria outra linha ligada por `predecessor_id` quando
+for supersedida; nunca altera a fonte histórica. As migrations contêm CHECKs adicionais de
+tamanho e timestamps, mas não podem alterar os enums/lifecycles acima. Não existe FK entre
+caso e `knowledge_relations`: conhecimento global nasce somente por comando explícito de
+curadoria.
+
+### DTOs e channels
+
+```ts
+type GenerateFieldProposalsInput = {
+  caseId: string
+  anamnesisId: string
+  expectedDraftRevision: number
+  transcriptId: string
+  acknowledgement: 'SYNTHETIC_DEMO_ONLY'
+  requestId: string
+}
+
+type DecideFieldProposalInput = {
+  proposalId: string
+  expectedProposalVersion: number
+  decision: 'ACCEPT' | 'REJECT' | 'CORRECT'
+  correctedAnswer?: unknown
+  reason?: string
+  requestId: string
+}
+
+type KnowledgeRelationInput = {
+  subject: string
+  predicate: string
+  object: string
+  scope: string
+  limitations: string
+  sourceId: string
+  sourceVersion: number
+}
+```
+
+| Channel | Capability | Resultado |
 |---|---|---|
-| Autorização de captura | Texto apresentado, revogação e separação da base legal. | Persistência, lifecycle, UI e prova do recibo. |
-| Áudio | Política de retenção e STT permitido. | Limites, formato, diretório temporário, descarte e isolamento. |
-| Transcript | Retenção, correção e acesso por papel. | Schema físico, versionamento, DTOs e transações. |
-| Propostas de campo | Campos/widgets demonstrados e explicação mínima. | Schema, parser estrito, canais, serviço e write atômico. |
-| Resumo assistivo | Sinais permitidos e fronteira com o motor de agenda. | Entrada/saída física e composição sem duplicar classificação. |
-| Relações | Taxonomia mínima, aprovador e fontes aceitas. | Modelo de versionamento, constraints, consulta e desativação. |
-| Exemplos | Critério de promoção e de-identificação. | Separação física, validação e auditoria. |
-| RAG/grafo | Fontes, ranking, conflitos e fallback. | Índice, query, filtros de estado e projeção de proveniência. |
-| Embeddings | Necessidade, provider, licença e tamanho. | Adapter, armazenamento, rebuild e modo textual. |
-| Cloud | Gemini demo-only já decidido; operação real e segredo seguem abertos. | Remover OpenRouter do alvo; cofre local, allowlist Gemini, minimização e envelopes de erro. |
-| Permissões | Aprovação final dos papéis/capabilities. | Guards no main e DTOs redigidos por papel. |
-| Auditoria | Conteúdo seguro versus proibido. | Eventos, sanitização, atomicidade e testes negativos. |
-| Superfícies | Trabalho e momento exatos em cada tela. | Surface Blueprints na fase correta; não criar agora. |
-| Migração | Destino das tabelas e conversas legadas. | Estratégia expand-only, compatibilidade e contenção. |
+| `ai.transcripts.createSynthetic` | `ai:proposal:generate` | transcript local classificado e hashado |
+| `ai.proposals.generate` | `ai:proposal:generate` | invocation + propostas `DRAFT` validadas pelo schema dos widgets |
+| `ai.proposals.list` | `clinical:anamnesis:read` | propostas somente do caso/revisão autorizados |
+| `ai.proposals.decide` | `ai:proposal:decide` | proposta decidida + operação aplicada atomicamente no draft |
+| `knowledge.relations.searchActive` | `knowledge:read` | somente relações `ACTIVE`, fonte e limitações |
+| `knowledge.relations.suggest` | `knowledge:suggest` | relação `SUGGESTED` |
+| `knowledge.relations.approve` | `knowledge:approve` | `APPROVED_INACTIVE` |
+| `knowledge.relations.activate` | `knowledge:activate` | `ACTIVE` |
+| `knowledge.relations.retire` | `knowledge:activate` | `RETIRED`; sai imediatamente de novas buscas |
+| `ia.configuracao.obter/salvar/testar` | `ai:config:manage` | Gemini/modelo/estado; nunca devolve segredo |
+
+Capabilities: `ai:proposal:generate` e `ai:proposal:decide` pertencem à `ENFERMAGEM`;
+`knowledge:read/suggest/approve/activate` ao `ANESTESIOLOGISTA`; `ai:config:manage` ao
+`ADMIN`. Na demo o mesmo anestesiologista pode aprovar e ativar em ações separadas; isso
+fica explicitamente rotulado como limitação da PoC.
+
+### Transações e invalidação
+
+1. `generate` exige transcript `ACTIVE`, anamnese `DRAFT`, revisão exata e texto sintético;
+   cria invocation `REQUESTED`, faz uma chamada Gemini e, após parser `.strict()`, persiste
+   lote de proposals ou `FAILED` sem write clínico parcial.
+2. `decide` trava proposta e draft. `ACCEPT/CORRECT` aplica uma única operação do schema
+   canônico da anamnese e persiste decisão/autoria na mesma transação; `REJECT` não altera
+   resposta. Aceitar uma proposta não decide outras.
+3. Mudança de transcript, schema ou revisão do draft invalida propostas `DRAFT`; propostas
+   decididas permanecem como recibo histórico, nunca são reaplicadas.
+4. `suggest → approve → activate` são três comandos CAS e três eventos. Somente `ACTIVE`
+   entra em `searchActive`; retire/supersede altera o índice antes de responder sucesso.
+5. Busca vazia retorna coleção vazia e a copy “nenhum conhecimento aprovado encontrado”.
+
+### Segredo, egress e contenção
+
+- O alvo remove OpenRouter, `/ia` e o painel global da árvore ativa.
+- A chave Gemini é criptografada com `electron.safeStorage.encryptString`; PGlite guarda
+  somente ciphertext. Se `safeStorage.isEncryptionAvailable()` for falso, salvar/testar
+  falha com `SECRET_STORAGE_UNAVAILABLE` e o caminho manual continua.
+- Só `GeminiGateway` no main pode abrir rede, apenas após `generate` ou teste explícito,
+  para host fixo do Gemini, timeout finito, `redirect: 'error'`, JSON e limite de payload.
+- Logs/auditoria guardam invocationId, modelo, hashes, duração e código seguro; nunca token,
+  transcript, prompt integral ou proposta clínica.
+- `PROVIDER_UNAVAILABLE`, `NETWORK_UNAVAILABLE`, `INVALID_PROVIDER_RESPONSE`,
+  `PROPOSAL_STALE`, `SECRET_STORAGE_UNAVAILABLE`, `FORBIDDEN` e `VERSION_CONFLICT` são
+  códigos estáveis; todos preservam o draft manual.
+- Chat, conversas, memórias automáticas, importadores, grafo extraído e downloads STT
+  permanecem fora do router ativo.
+
+### Componentes e superfícies
+
+- `/casos/:caseId/triagem`: `SyntheticTranscriptPanel`, `GenerateProposalsDisclosure` e
+  `FieldProposalCard` ao lado do campo alvo; sem apply-all.
+- `/conhecimento`: `KnowledgeSearch`, `KnowledgeRelationForm`, fila de aprovação e ações
+  separadas de ativação/retirada.
+- `/configuracoes/ia`: Gemini, modelo, segredo mascarado e teste técnico sem conteúdo.
+- Loading, vazio, cloud indisponível, resposta inválida, stale, forbidden e conflito são
+  estados obrigatórios. Nenhuma superfície de IA bloqueia salvar/submeter manualmente.
 
 ## Fronteiras com outros Builds
 
@@ -125,22 +345,12 @@ Estas restrições decorrem de leis do produto e não dependem da escolha de arq
 
 Divergência entre owners retorna ao Analyst; este Build não resolve conflito silenciosamente.
 
-## Detalhamento obrigatório nos Writing Plans
+## Limite dos Writing Plans
 
-Cada Writing Plan deverá materializar, sem deixar valores implícitos:
-
-- migrations e ownership de cada entidade;
-- DTOs discriminados e validação runtime para transcript, proposta, decisão e relação;
-- channels TIPC allowlisted e matriz ator × ação × estado;
-- serviços e fronteiras transacionais;
-- estratégia de redaction e armazenamento de segredo;
-- política de egress do processo main e indicação no renderer;
-- lifecycle de áudio, transcript, proposta, exemplo e relação;
-- consulta textual/RAG/grafo e comportamento sem embeddings;
-- integração exata com widgets e requirement sem escrita direta da IA;
-- componentes compartilhados e Surface Blueprints somente na fase de Build;
-- fixtures sintéticas e provas de 0, 1, conflito, indisponibilidade e 1.000 relações;
-- rollout/containment do chat, memória e importadores herdados.
+O Writing Plan escolhe arquivos, ordem TDD, fixtures e commits para materializar o contrato
+acima. Ele não pode inventar coluna, enum, capability, channel, transação, provider,
+lifecycle, política de segredo ou egress. Áudio/STT, embeddings, chat, importadores e grafo
+continuam fora do corte; reintroduzi-los exige reabrir o BUILD integrado.
 
 ## Provas que o Build definitivo deverá tornar executáveis
 
@@ -168,13 +378,13 @@ da arquitetura já consolidada.
 
 | Risco | Severidade | Estado |
 |---|---|---|
-| Dado clínico sair pelo main apesar da policy do renderer | Crítica | `UNRESOLVED`; requer egress allowlist e prova do processo inteiro. |
-| Caso virar memória por processamento herdado | Crítica | `UNRESOLVED`; conter auto-indexação antes de reuso. |
-| Relação inferida ganhar aparência de protocolo | Crítica | `UNRESOLVED`; lifecycle humano e rotulagem obrigatórios. |
-| Token persistido em texto recuperável | Alta | `UNRESOLVED`; storage seguro precisa de decisão. |
-| Prompt injection em transcript/fonte | Alta | `UNRESOLVED`; ameaça e parser estrito precisam de research/adversarial. |
-| Áudio sobreviver ao descarte prometido | Alta | `UNRESOLVED`; lifecycle e prova negativa precisam ser fechados. |
-| Modelo local inflar pacote ou iniciar download | Alta | `UNRESOLVED`; estratégia de distribuição precisa de decisão. |
+| Dado sair pelo main fora da ação explícita | Crítica | Contido por `GeminiGateway` único, host fixo, payload sintético e testes negativos. |
+| Caso virar memória por processamento herdado | Crítica | Contido: não há FK/canal de promoção automática; chat/importadores/grafo ficam fora do router. |
+| Relação inferida ganhar aparência de protocolo | Crítica | Contido por `SUGGESTED → APPROVED_INACTIVE → ACTIVE`, fonte e limitações visíveis. |
+| Token persistido em texto recuperável | Alta | Resolvido no alvo por `safeStorage`; indisponibilidade desativa Gemini sem bloquear o fluxo. |
+| Prompt injection em transcript/fonte | Alta | Contenção de efeitos: parser estrito, zero tools mutadoras e decisão humana por campo; não se promete invulnerabilidade do modelo. |
+| Áudio sobreviver ao descarte prometido | Alta | Fora da PoC: nenhuma captura/áudio/STT entra na árvore ativa. |
+| Modelo local inflar pacote ou iniciar download | Alta | Fora da PoC: catálogo/downloader STT permanece dormente e nenhum boot o chama. |
 | Chat global capturar contexto indevido | Alta | `CONFIRMADO`; superfície ativa atual não é reutilizável como está. |
 | Embeddings ausentes degradarem silenciosamente | Média | `CONFIRMADO`; modo textual deve ser explícito e testado. |
 

@@ -168,9 +168,8 @@ extensíveis e não formam ontologia clínica universal.
 stateDiagram-v2
   [*] --> REQUESTED
   REQUESTED --> EVIDENCE_SUBMITTED: responsável fornece evidência
-  EVIDENCE_SUBMITTED --> UNDER_CLINICAL_REVIEW: anestesiologista inicia revisão
-  UNDER_CLINICAL_REVIEW --> RESOLVED_ACCEPTED: evidência suficiente
-  UNDER_CLINICAL_REVIEW --> INSUFFICIENT_REOPENED: evidência insuficiente
+  EVIDENCE_SUBMITTED --> RESOLVED_ACCEPTED: anestesiologista aceita como suficiente
+  EVIDENCE_SUBMITTED --> INSUFFICIENT_REOPENED: anestesiologista rejeita como insuficiente
   INSUFFICIENT_REOPENED --> EVIDENCE_SUBMITTED: nova evidência
   REQUESTED --> CANCELLED: perdeu aplicabilidade com motivo
   REQUESTED --> SUPERSEDED: necessidade substituída
@@ -248,7 +247,6 @@ flowchart LR
   D["Rascunho no encontro"] --> V1["Versão 1 · FINALIZED"]
   V1 -->|"informação complementar"| A2["Versão 2 · ADDENDUM"]
   V1 -->|"erro factual"| C2["Versão 2 · CORRECTION"]
-  V1 -->|"registro indevido"| X2["Versão 2 · VOID_WITH_REASON"]
   A2 --> CURRENT["versão corrente"]
   C2 --> CURRENT
   X2 --> CURRENT

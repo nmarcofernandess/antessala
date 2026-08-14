@@ -287,7 +287,7 @@ da tabela não entra no cálculo por varredura ou semelhança.
 |---|---|
 | campo obrigatório `NOT_ASKED` | `INCOMPLETE`; sem requisito |
 | `UNKNOWN` ou `REFUSED` | nunca recebe minutos universais; segue a criticidade do campo |
-| `NEGATIVE` | negativa explícita; nunca equivale a silêncio, `false` cru ou lista vazia |
+| `ANSWERED(false)` | negativa explícita confirmada; nunca equivale a silêncio ou lista vazia |
 | `NOT_APPLICABLE` | aceito somente quando a condição de aplicabilidade estiver satisfeita |
 | documento indispensável ausente | pendência; não recebe minutos por padrão |
 | accommodation de comunicação ou mobilidade | capability necessária; tempo só se definido pela decisão humana ou futura validação |
@@ -305,7 +305,7 @@ Predicados auxiliares:
 - `current(a)`: `a.status === 'ANSWERED' && a.value.current === true`;
 - `answeredText(a)`: `a.status === 'ANSWERED' && a.value.trim().length > 0`.
 
-`ANSWERED(false)` e `NEGATIVE` não casam. `UNKNOWN`, `REFUSED`, `NOT_PERFORMED` e
+`ANSWERED(false)` não casa. `UNKNOWN`, `REFUSED`, `NOT_PERFORMED` e
 `NOT_APPLICABLE` nunca recebem minutos automáticos. Quando ocorrerem em path obrigatório,
 a completude ou a definição humana decide antes do motor.
 

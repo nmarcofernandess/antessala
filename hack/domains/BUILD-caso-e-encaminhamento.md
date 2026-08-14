@@ -130,12 +130,15 @@ CREATE TABLE preop_cases (
   CHECK (
     referral_source_reference_normalized IS NULL
     OR length(trim(referral_source_reference_normalized)) BETWEEN 1 AND 100
-  ),
-  UNIQUE (requesting_service_id, referral_source_reference_normalized)
+  )
 );
 
 CREATE INDEX idx_preop_cases_requesting_service
   ON preop_cases(requesting_service_id, updated_at DESC);
+
+CREATE INDEX idx_preop_cases_source_reference_warning
+  ON preop_cases(requesting_service_id, referral_source_reference_normalized)
+  WHERE referral_source_reference_normalized IS NOT NULL;
 
 CREATE TABLE case_command_receipts (
   idempotency_key TEXT PRIMARY KEY,
@@ -159,10 +162,10 @@ CREATE TABLE case_events (
     'ANAMNESIS_FINALIZED', 'REQUIREMENT_CALCULATED', 'REQUIREMENT_CONFIRMED',
     'REQUIREMENT_OVERRIDDEN', 'BOOKING_CONFIRMED', 'BOOKING_CHECKED_IN',
     'BOOKING_CANCELLED', 'BOOKING_RESCHEDULED', 'BOOKING_NO_SHOW',
-    'ENCOUNTER_STARTED', 'PENDENCY_OPENED', 'PENDENCY_FULFILLED',
-    'PENDENCY_CANCELLED', 'RETURN_REQUEST_CREATED', 'RETURN_REQUEST_BOOKED',
+    'ENCOUNTER_STARTED', 'PENDENCY_OPENED', 'PENDENCY_EVIDENCE_SUBMITTED',
+    'PENDENCY_EVIDENCE_REVIEWED', 'PENDENCY_CANCELLED', 'RETURN_REQUEST_CREATED', 'RETURN_REQUEST_BOOKED',
     'RETURN_REQUEST_CHECKED_IN', 'RETURN_REQUEST_CONSUMED',
-    'ASSESSMENT_REVIEW_RESUMED', 'RESULT_FINALIZED', 'DELIVERY_SENT',
+    'ASSESSMENT_REVIEW_RESUMED', 'RESULT_FINALIZED', 'RESULT_REVISED', 'DELIVERY_SENT',
     'DELIVERY_RECEIVED', 'CASE_CANCELLED'
   )),
   from_status TEXT,
@@ -324,6 +327,11 @@ interface CreateCaseDTO {
   referral: ReferralInputDTO
   procedure: ProcedureInputDTO
   requester: RequesterInputDTO
+  duplicateReferenceAcknowledgement: null | {
+    decision: 'CREATE_NEW'
+    matchedCaseIds: string[]
+    reason: string
+  }
   idempotencyKey: string
 }
 
@@ -389,8 +397,9 @@ type CaseEventPayloadByType = {
   BOOKING_RESCHEDULED: { previousBookingId: string; bookingId: string }
   BOOKING_NO_SHOW: { bookingId: string }
   ENCOUNTER_STARTED: { encounterId: string; bookingId: string }
-  PENDENCY_OPENED: { pendencyId: string; ownerRole: Papel; requiresReturn: boolean }
-  PENDENCY_FULFILLED: { pendencyId: string }
+  PENDENCY_OPENED: { pendencyId: string; ownerRole: Papel; impact: string }
+  PENDENCY_EVIDENCE_SUBMITTED: { pendencyId: string }
+  PENDENCY_EVIDENCE_REVIEWED: { pendencyId: string; decision: 'ACCEPT' | 'REOPEN_AS_INSUFFICIENT' }
   PENDENCY_CANCELLED: { pendencyId: string }
   RETURN_REQUEST_CREATED: { returnRequestId: string }
   RETURN_REQUEST_BOOKED: { returnRequestId: string; bookingId: string }
@@ -398,6 +407,7 @@ type CaseEventPayloadByType = {
   RETURN_REQUEST_CONSUMED: { returnRequestId: string; encounterId: string }
   ASSESSMENT_REVIEW_RESUMED: { encounterId: string; reviewCycle: number }
   RESULT_FINALIZED: { resultId: string; contentHash: string }
+  RESULT_REVISED: { resultId: string; predecessorResultId: string; emissionType: 'CORRECTION' | 'ADDENDUM' }
   DELIVERY_SENT: { deliveryId: string; targetServiceId: string }
   DELIVERY_RECEIVED: { deliveryId: string; targetServiceId: string }
   CASE_CANCELLED: { cancelledBookingId: string | null; cancelledHandoffId: string | null }
@@ -466,13 +476,6 @@ interface CaseSummaryDTO {
 
 type CaseDetailCommonDTO = CaseSummaryDTO
 
-type RequesterCaseEventDTO = {
-  eventType: 'RESULT_FINALIZED' | 'DELIVERY_SENT' | 'DELIVERY_RECEIVED'
-  toStatus: 'READY_FOR_HANDOFF' | 'DELIVERED_TO_REQUESTER'
-  occurredAt: string
-  sequence: number
-}
-
 type AuthorizedCaseDetailDTO =
   | (CaseDetailCommonDTO & {
       view: 'INTAKE'
@@ -492,16 +495,11 @@ type AuthorizedCaseDetailDTO =
       timeline: CaseEventDTO[]
       openHandoff: CaseHandoffDTO | null
     })
-  | (CaseDetailCommonDTO & {
-      view: 'REQUESTER_SCOPE'
-      person: Pick<PersonSnapshotDTO, '_v' | 'fullName' | 'birthDate' | 'ageYearsAtOpening' | 'sexReported'>
-      referral: null
-      procedure: ProcedureSnapshotDTO
-      requester: Pick<RequesterSnapshotDTO, '_v' | 'serviceId' | 'serviceName' | 'physicianName'>
-      timeline: RequesterCaseEventDTO[]
-      openHandoff: null
-    })
 ```
+
+`SOLICITANTE` não recebe `AuthorizedCaseDetailDTO` nem chama `cases.get`; sua única visão é
+composta por `pendencies.listAssigned`, `results.listForActor/getCurrent` e delivery do
+próprio `serviceId`.
 
 O main carimba `_v: 1`, calcula idade na data `referral.receivedAt` quando há
 `birthDate`, resolve labels/revisions de serviço e procedimento a partir dos IDs e rejeita
@@ -563,8 +561,11 @@ o envio.
 2. Consulte `case_command_receipts.idempotency_key` pelo `idempotencyKey`. Mesmo action
    `CREATE` + fingerprint devolve `CaseCommandReceiptResult`; action ou fingerprint diferente
    retorna `DUPLICATE_REQUEST`.
-3. Se `sourceReference` existir, normalize e verifique a unicidade por
-   `requesting_service_id`; conflito retorna `DUPLICATE_REFERRAL`.
+3. Se `sourceReference` existir, normalize e procure coincidências no mesmo
+   `requesting_service_id`. Sem `duplicateReferenceAcknowledgement`, devolva
+   `REFERENCE_REUSE_CONFIRMATION_REQUIRED` com os display codes autorizados; com a
+   confirmação e motivo, continue e registre ambos no receipt/auditoria. A referência
+   nunca participa de constraint de unicidade.
 4. Gere `caseId` e `referralId` com `crypto.randomUUID()` e obtenha o próximo valor de
    `preop_case_display_code_seq` para `displayCode = ANT-<ano-local>-<sequência padded>`.
 5. Insira o caso primeiro em `RECEIVED_AT_RECEPTION`.
@@ -574,8 +575,10 @@ o envio.
    caso para `WAITING_NURSING` e versão 2.
 7. Grave auditoria sanitizada e commit. Qualquer falha reverte todos os itens.
 
-Uma corrida da mesma `idempotencyKey` ou `sourceReference` perde na constraint, reabre o
-receipt/caso existente quando aplicável e retorna o código tipado; nunca cria timeline parcial.
+Uma corrida da mesma `idempotencyKey` perde na constraint do receipt, reabre o caso
+existente e retorna o resultado anterior. Referências iguais podem criar casos diferentes;
+somente a confirmação humana evita que um clique acidental passe silenciosamente. Nunca há
+timeline parcial.
 `result_json` contém somente `CaseCommandReceiptResult`, que já é conhecido antes dos IDs
 BIGSERIAL dos eventos. No replay, o service usa `caseId` para montar um `AuthorizedCaseDetailDTO`
 atual e autorizada; a promessa idempotente é a mesma entidade, não uma projeção clínica
@@ -594,7 +597,8 @@ congelada e potencialmente vazada.
    labels/revisions vêm do catálogo, nunca do renderer.
 5. Recalcule `requesting_service_id` e `referral_source_reference_normalized` junto dos
    snapshots. Se `birthDate` ou `referral.receivedAt` mudou, recalcule também
-   `ageYearsAtOpening`; a constraint do par decide corrida/duplicidade.
+   `ageYearsAtOpening`. Coincidência com outro caso gera somente alerta auditável; não
+   bloqueia nem mescla.
 6. Se procedure/requester mudou e existe anamnese ainda `DRAFT`, antes da publicação do
    requirement, chame `markCaseContextStale(caseId,newCaseVersion)` na mesma transação e
    exija seu rebase. Nenhum conteúdo clínico é copiado para o evento.
@@ -666,7 +670,7 @@ fecha `cases.correctIntake` de forma irreversível no MVP.
 | `NOT_FOUND` | Case or handoff does not exist/visible. | Route to list with toast. |
 | `VERSION_CONFLICT` | `expectedVersion` is stale. | Reload detail and show changed fields. |
 | `DUPLICATE_REQUEST` | Same idempotency key has incompatible payload. | Stop and show receipt reference. |
-| `DUPLICATE_REFERRAL` | Same non-empty source reference already exists in the requesting service. | Link the existing display code; never compare person fields. |
+| `REFERENCE_REUSE_CONFIRMATION_REQUIRED` | A mesma referência não vazia aparece no serviço e o comando ainda não contém confirmação. | Mostrar casos autorizados; permitir abrir um deles ou confirmar novo encaminhamento com motivo. |
 | `INVALID_TRANSITION` | Event does not match current state. | Keep state; explain allowed next step. |
 
 ## Frontend Blueprint
@@ -687,7 +691,8 @@ fecha `cases.correctIntake` de forma irreversível no MVP.
 - Success navigates to case detail and shows `displayCode`.
 - `referralId` and `displayCode` are generated by the main process. The optional
   `sourceReference` is copied from the paper and checked only inside the chosen service.
-- No patient search, dedup warning or patient history.
+- No patient search or patient history. Coincidência de referência gera aviso documental
+  não bloqueante; confirmar novo encaminhamento sempre produz novos `caseId` e `referralId`.
 
 ### Case detail
 
@@ -706,7 +711,7 @@ fecha `cases.correctIntake` de forma irreversível no MVP.
   version.
 - Permission: positive and negative test for every action, including SOLICITANTE attempting
   list/get across two different service IDs.
-- Correction: empty patch/duplicate source fail; os quatro estados aceitam somente sem revisão
+- Correction: empty patch fails; source reference repetida apenas gera alerta; os quatro estados aceitam somente sem revisão
   `FINAL/COMPLETE` e sem requirement `CALCULATED/CONFIRMED/OVERRIDDEN`; cada marco e
   `READY_FOR_SCHEDULING+` falha sem escrita, inclusive com caso ainda `NURSING_IN_PROGRESS`;
   correção válida recalcula idade/derivados e marca stale/rebase somente na anamnese `DRAFT`.
@@ -715,9 +720,9 @@ fecha `cases.correctIntake` de forma irreversível no MVP.
 - Check-in: explicit INITIAL/RETURN success paths and wrong type/window/version failures;
   advancing wall clock alone never changes case or booking.
 - Renderer: field errors, empty/loading/error/conflict/forbidden/success.
-- E2E: create equal-person cases with different/absent source references, reject a repeated
-  non-empty source reference in the same service, accept handoff as nursing and reconstruct
-  the two-event opening timeline.
+- E2E: create equal-person cases with different/absent source references; repeated non-empty
+  reference first asks for acknowledgement and then creates a distinct case; accept handoff
+  as nursing and reconstruct the two-event opening timeline.
 - Regression: legacy `registros` does not appear in new service imports.
 
 ## Operations Blueprint
@@ -752,7 +757,7 @@ This is dependency order for Build. The Writing Plan must split it into executab
 |---|---|
 | Snapshot JSON drifts. | `_v` in each snapshot, Zod parse and migration function. |
 | Two clicks create two cases. | Client idempotency key plus receipt/fingerprint replay. |
-| Same paper is entered twice. | Optional normalized source reference unique per service; no person dedup. |
+| Same paper is entered twice. | Busca normalizada e confirmação explícita de novo caso; sem UNIQUE, merge ou dedup de pessoa. |
 | Actor spoofing from renderer. | Actor comes from main-process session only. |
 | Corrections destroy provenance. | Optimistic lock and append-only correction event. |
 | Case status conflicts with other domains. | Shared enum reviewed by the Build synthesis before Plan. |

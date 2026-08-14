@@ -194,9 +194,8 @@ ENTITY: CatalogItem
 ### Contrato semântico comum de resposta
 
 `ANSWERED` contém um valor conhecido, inclusive `false`, zero ou lista vazia quando esse
-valor foi explicitamente obtido. Uma negativa documentada pode ser apresentada como
-`NEGATIVE`, mas semanticamente é valor conhecido; nunca nasce de default, silêncio ou lista
-vazia. Os demais estados explicam ausência de valor:
+valor foi explicitamente obtido. Uma negativa documentada é `ANSWERED(false)`; nunca nasce
+de default, silêncio ou lista vazia. Os demais estados explicam ausência de valor:
 
 | Estado | Significado | Pergunta tratada? | Informação resolvida? |
 |---|---|:---:|:---:|
@@ -612,8 +611,7 @@ Legenda:
   `I-R` não usam `Answer`, mas exigem valor e recebem proveniência pela mutação do item.
 
 `NOT_APPLICABLE` é aceito **somente** por regra de aplicabilidade versionada. Negativa
-explícita pode ser `ANSWERED(false)` ou uma apresentação `NEGATIVE`, desde que preserve
-pergunta, escopo e proveniência; o BUILD integrado escolhe a forma canônica da PoC.
+explícita é sempre `ANSWERED(false)`, preservando pergunta, escopo e proveniência.
 Quando o controlador de um campo `C` está `UNKNOWN` ou `REFUSED`, o dependente pode
 permanecer `NOT_ASKED` sem bloquear; a completude reporta o controlador como tratado porém
 indeterminado e não inventa aplicabilidade. Se o controlador for corrigido depois, o
@@ -627,12 +625,12 @@ dependente volta a obedecer imediatamente ao ramo positivo/negativo.
 | `procedure_context.plannedDate` | `O` | `NOT_APPLICABLE` apenas quando não há data planejada. |
 | `procedure_context.laterality` | `O` | `NOT_APPLICABLE` quando o procedimento/sítio não possui lateralidade aplicável. |
 | `procedure_context.referralNotes` | `O` | `NOT_APPLICABLE` quando o encaminhamento não traz observação adicional. |
-| `allergies.hasAllergy` | `R` | `NEGATIVE` exige lista ativa vazia; positivo exige ao menos um item. |
+| `allergies.hasAllergy` | `R` | `ANSWERED(false)` exige lista ativa vazia; `ANSWERED(true)` exige ao menos um item. |
 | `allergies.items[*].substance` | `I-R` | Todo item ativo; sem `NOT_APPLICABLE`. |
 | `allergies.items[*].reaction` | `I-R` | Todo item ativo; `UNKNOWN`/`REFUSED` admitidos, não `NOT_APPLICABLE`. |
 | `allergies.items[*].severity` | `I-R` | Todo item ativo; desconhecimento usa estado `UNKNOWN` ou o valor legado `UNKNOWN`, nunca silêncio. |
-| `anesthesia_history.previousAnesthesia` | `R` | Positivo ativa os três fatos pessoais abaixo; `NEGATIVE` os torna `NOT_APPLICABLE`. |
-| `anesthesia_history.personalComplication`<br>`anesthesia_history.difficultAirwayHistory`<br>`anesthesia_history.postoperativeNauseaVomiting` | `C` | Obrigatórios se `previousAnesthesia=ANSWERED`; `NOT_APPLICABLE` se `previousAnesthesia=NEGATIVE`. |
+| `anesthesia_history.previousAnesthesia` | `R` | `ANSWERED(true)` ativa os três fatos pessoais abaixo; `ANSWERED(false)` os torna `NOT_APPLICABLE`. |
+| `anesthesia_history.personalComplication`<br>`anesthesia_history.difficultAirwayHistory`<br>`anesthesia_history.postoperativeNauseaVomiting` | `C` | Obrigatórios se `previousAnesthesia=ANSWERED(true)`; `NOT_APPLICABLE` se `previousAnesthesia=ANSWERED(false)`. |
 | `anesthesia_history.personalComplicationDescription` | `C` | Obrigatória se `personalComplication=ANSWERED`; `NOT_APPLICABLE` em qualquer outro estado tratado. |
 | `anesthesia_history.familyAnesthesiaComplication` | `R` | Independente de anestesia pessoal prévia. |
 | `anesthesia_history.familyComplicationDescription` | `C` | Obrigatória se a complicação familiar for positiva; `NOT_APPLICABLE` caso contrário. |
@@ -641,20 +639,20 @@ dependente volta a obedecer imediatamente ao ramo positivo/negativo.
 | `respiratory.dyspnea`<br>`respiratory.wheezing`<br>`respiratory.recentRespiratoryInfection`<br>`respiratory.chronicCough`<br>`respiratory.sleepApneaDiagnosis`<br>`respiratory.usesRespiratorySupport` | `R` | Cada fato precisa ser tratado; sem `NOT_APPLICABLE`. |
 | `respiratory.supportDescription` | `C` | Obrigatória se `usesRespiratorySupport=ANSWERED`; `NOT_APPLICABLE` caso contrário. |
 | `respiratory.detail` | `C` | Obrigatório se qualquer fato respiratório for positivo; `NOT_APPLICABLE` se nenhum for positivo. |
-| `functional_capacity.activity` | `R` | Seleção catalogada ou fallback livre; ausência declarada usa `NEGATIVE`. |
+| `functional_capacity.activity` | `R` | Seleção catalogada ou fallback livre; incapacidade declarada usa valor explícito versionado, nunca estado de ausência. |
 | metadado MET da atividade | `O` | Somente apoio de linguagem do catálogo; não é resposta individual nem entra na completude. |
 | `functional_capacity.limitedBySymptoms` | `R` | Sem `NOT_APPLICABLE`. |
 | `functional_capacity.limitationDescription` | `C` | Obrigatória se limitação positiva; `NOT_APPLICABLE` caso contrário. |
-| `medications.usesMedication` | `R` | `NEGATIVE` exige lista ativa vazia; positivo exige ao menos um item. |
+| `medications.usesMedication` | `R` | `ANSWERED(false)` exige lista ativa vazia; `ANSWERED(true)` exige ao menos um item. |
 | `medications.items[*].name`<br>`medications.items[*].sourceText` | `I-R` | Texto não vazio em todo item ativo. |
 | `medications.items[*].catalogId`<br>`medications.items[*].activeIngredient` | `I-O` | Escalares nulos no fallback livre; não usam `Answer`. |
 | `medications.items[*].dose`<br>`medications.items[*].frequency`<br>`medications.items[*].lastUse` | `I-R` | Cada pergunta é tratada; desconhecimento usa `UNKNOWN`/`REFUSED`, não `NOT_APPLICABLE`. |
 | `medications.items[*].reason` | `I-R` | Tratada em cada item; `NOT_APPLICABLE` permitido quando não há motivo informado/aplicável. |
-| `diagnoses.hasDiagnosis` | `R` | `NEGATIVE` exige lista ativa vazia; positivo exige ao menos um item. |
+| `diagnoses.hasDiagnosis` | `R` | `ANSWERED(false)` exige lista ativa vazia; `ANSWERED(true)` exige ao menos um item. |
 | `diagnoses.items[*].name` | `I-R` | Texto não vazio em todo item ativo. |
 | `diagnoses.items[*].cidId`<br>`diagnoses.items[*].code` | `I-O` | Escalares nulos no fallback livre; não usam `Answer`. |
 | `diagnoses.items[*].controlStatement` | `I-O` | Somente frase atribuída ao paciente/documento; nunca conclusão da enfermagem/software. |
-| `diagnoses.items[*].currentSymptoms` | `I-R` | Sem `NOT_APPLICABLE`; negativo usa `NEGATIVE`. |
+| `diagnoses.items[*].currentSymptoms` | `I-R` | Sem `NOT_APPLICABLE`; negativo usa `ANSWERED(false)`. |
 | `diagnoses.items[*].detail` | `I-C` | Obrigatório se sintomas atuais forem positivos; `NOT_APPLICABLE` caso contrário. |
 | `bleeding_thrombosis.abnormalBleeding`<br>`bleeding_thrombosis.easyBruising`<br>`bleeding_thrombosis.priorThrombosis`<br>`bleeding_thrombosis.familyBleedingDisorder`<br>`bleeding_thrombosis.receivesAnticoagulantOrAntiplatelet` | `R` | Cada fato precisa ser tratado; sem `NOT_APPLICABLE`. |
 | `bleeding_thrombosis.detail` | `C` | Obrigatório se qualquer fato for positivo; `NOT_APPLICABLE` caso contrário. |
@@ -664,13 +662,13 @@ dependente volta a obedecer imediatamente ao ramo positivo/negativo.
 | `habits_substances.tobaccoAmountPerDay` | `C` | Tratada se tabaco positivo; `NOT_APPLICABLE` se tabaco negativo. |
 | `habits_substances.alcohol` | `C` | Valor distingue `NEVER`, `FORMER` e `CURRENT`. |
 | `habits_substances.alcoholFrequency` | `C` | Tratada se álcool positivo; `NOT_APPLICABLE` se álcool negativo. |
-| `habits_substances.recreationalSubstances` | `R` | Positivo usa `ANSWERED true`; ausência é `NEGATIVE`. |
+| `habits_substances.recreationalSubstances` | `R` | Presença usa `ANSWERED(true)`; ausência confirmada usa `ANSWERED(false)`. |
 | `habits_substances.substancesDescription`<br>`habits_substances.recentUse` | `C` | Tratadas se substância recreativa for positiva; `NOT_APPLICABLE` caso contrário. |
 | `special_conditions.pregnant`<br>`special_conditions.lactating` | `C` | Independentes; política de pergunta/teste, consentimento e confidencialidade é `UNRESOLVED`. |
-| `special_conditions.communicationAccommodation`<br>`special_conditions.mobilityAccommodation` | `R` | `ANSWERED` carrega a necessidade; `NEGATIVE` significa nenhuma. Não usar string vazia. |
-| `special_conditions.legalRepresentativeNeeded` | `R` | Positivo usa `ANSWERED true`; ausência é `NEGATIVE`. |
-| `special_conditions.otherCondition` | `O` | Pode ficar `NOT_ASKED`; `NEGATIVE` pode registrar explicitamente nenhuma outra condição. |
-| `exams_pending.documentsAvailable` | `R` | Qualquer item `PRESENT` exige positivo; `NEGATIVE` significa nenhum documento disponível. |
+| `special_conditions.communicationAccommodation`<br>`special_conditions.mobilityAccommodation` | `R` | `ANSWERED(true)` carrega a necessidade; `ANSWERED(false)` significa nenhuma. Não usar string vazia. |
+| `special_conditions.legalRepresentativeNeeded` | `R` | Presença usa `ANSWERED(true)`; ausência confirmada usa `ANSWERED(false)`. |
+| `special_conditions.otherCondition` | `O` | Pode ficar `NOT_ASKED`; `ANSWERED(false)` pode registrar explicitamente nenhuma outra condição. |
+| `exams_pending.documentsAvailable` | `R` | Qualquer item `PRESENT` exige `ANSWERED(true)`; `ANSWERED(false)` significa nenhum documento disponível. |
 | `exams_pending.items[*].kind`<br>`exams_pending.items[*].name`<br>`exams_pending.items[*].status` | `I-R` | Escalares obrigatórios em todo item ativo; não usam `Answer`. |
 | `exams_pending.items[*].requestedBy`<br>`exams_pending.items[*].requestedAt` | `I-C` | Tratados quando `status=REQUESTED`; `NOT_APPLICABLE` quando o item não foi solicitado. |
 | `exams_pending.items[*].dueAt` | `I-O` | `NOT_APPLICABLE` quando não existe prazo; se respondido, não precede `requestedAt`. |
@@ -678,8 +676,8 @@ dependente volta a obedecer imediatamente ao ramo positivo/negativo.
 | `clinical_notes.note` | `O` | Pode ficar `NOT_ASKED`; nunca satisfaz outro campo. |
 
 Em `allergies`, `medications` e `diagnoses`, controlador positivo exige ao menos um item;
-`NEGATIVE`, `UNKNOWN` ou `REFUSED` exigem lista ativa vazia. Em `exams_pending`, a lista é
-independente: `documentsAvailable=NEGATIVE` proíbe apenas item `PRESENT`, mas admite
+`ANSWERED(false)`, `UNKNOWN` ou `REFUSED` exigem lista ativa vazia. Em `exams_pending`, a lista é
+independente: `documentsAvailable=ANSWERED(false)` proíbe apenas item `PRESENT`, mas admite
 `MISSING/REQUESTED`; qualquer item `PRESENT` exige controlador positivo. Um item ativo
 sempre satisfaz todos os `I-R`/`I-C` aplicáveis e possui ID único. `listMutationLog` e
 `itemProvenance` são metadados gerados pelo main, não campos de completude editáveis.
@@ -798,8 +796,9 @@ sequenceDiagram
 - MUST exigir revisão explícita de todo consumidor `STALE` antes de salvar ou submeter.
 - MUST garantir vencedor único entre `submitFinal` e `correctIntake`; nenhum resultado
   parcial é aceito.
-- MUST NOT sobrescrever revisão FINAL. Correção cria adendo ou revisão sucessora com autoria,
-  horário, motivo, campos alterados e vínculo; a anterior permanece preservada.
+- MUST NOT sobrescrever revisão FINAL. Nesta PoC, correção posterior é rejeitada; informação
+  nova pertence ao encontro ou à evidência de pendência e recebe autoria e horário nesse
+  domínio. A revisão FINAL da enfermagem permanece preservada.
 - IF a correção ocorrer antes da publicação operacional, THEN invalidar derivados e exigir
   nova confirmação. Depois da publicação, repercussão em requisito/reserva é `UNRESOLVED` e
   nunca pode ocorrer silenciosamente.

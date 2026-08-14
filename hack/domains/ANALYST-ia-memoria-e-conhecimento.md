@@ -420,7 +420,7 @@ redistribuir ou ampliar essas fronteiras.
 1. Uma proposta não aceita não altera o formulário.
 2. Aceitar todas por lote é proibido na prova.
 3. Proposta incompatível com o estado semântico do campo é `INVALID`.
-4. Texto não mencionado não gera `NEGATIVE`; silêncio continua `NOT_ASKED`.
+4. Texto não mencionado não gera `ANSWERED(false)`; silêncio continua `NOT_ASKED`.
 5. “Não sei” e recusa preservam seus estados semânticos; a IA não os normaliza para “não”.
 6. Resumo não substitui os campos nem oculta lacunas.
 7. Relação sugerida nunca é consultável como ativa.

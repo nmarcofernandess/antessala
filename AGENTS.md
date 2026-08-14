@@ -6,8 +6,9 @@ vivem no PRD, nos Analysts, nos Builds e em `.context`. Em conflito, siga a hier
 
 ## Estado e trabalho permitido
 
-Marco aprovou o PRD. O Analyst e o BUILD integrados aguardam a revisão final de
-congruência antes do Warlog. Consulte [`hack/status.json`](hack/status.json) e
+Marco aprovou o PRD. O review final encontrou bloqueadores; Analyst e BUILD integrados
+foram ajustados e aguardam recheck no SHA publicado antes do Warlog. Consulte
+[`hack/status.json`](hack/status.json) e
 [o tracker](.context/review/STATUS.md) antes de agir. Até o Warlog definir as fatias e a
 fatia ativa possuir um Writing Plan com o primeiro teste em RED, não escreva código de
 produto.

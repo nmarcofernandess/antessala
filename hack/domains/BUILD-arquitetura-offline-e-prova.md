@@ -70,7 +70,7 @@
 | `src/main/ipc/parse-command.ts` | criar | Zod estrito, limite de payload e envelope de erros |
 | `src/shared/ipc/channels.ts` | criar | `MVP_CHANNELS`, registry literal único consumido por main/preload/superfícies |
 | `src/main/ipc/active-mvp-routers.ts` | criar | allowlist fechada dos únicos handlers registráveis no MVP |
-| `src/main/network/network-intent.ts` | criar | choke point interno; allowlist vazia no MVP e sem ação TIPC pública |
+| `src/main/network/network-intent.ts` | criar | choke point interno; somente Gemini por ações explícitas do domínio IA, sem transporte genérico público |
 | `scripts/check-active-router-network-boundary.ts` | criar | falhar se o grafo ativo importar cliente cloud ou transporte direto |
 | `scripts/proof/create-demo-userdata.ts` | criar | diretório temporário guardado + seed determinístico para provas |
 | `src/main/index.ts` | adaptar | migrate → seed/cinco fixtures → acesso sem sessão → guards/routers → window |
@@ -365,8 +365,8 @@ entra em `LocalHealthDTO`, não em auditoria de usuário.
 - main, preload e registry de superfícies importam todos os IDs de `MVP_CHANNELS`; string
   equivalente, alias ou channel ativo fora da allowlist falha no teste arquitetural.
 - teste arquitetural falha se um router ativo importar `src/main/ia/cliente.ts`, `fetch`,
-  `http(s)` ou outro transporte fora do choke point; teste direto de canais cloud retorna
-  `FEATURE_DISABLED` e registra zero tentativa de rede.
+  `http(s)` ou outro transporte fora do choke point. Só o `GeminiGateway` pode abrir rede,
+  após ação explícita de proposta ou teste técnico, com host fixo e payload sintético.
 
 ### Harness temporário
 
@@ -379,7 +379,8 @@ entra em `LocalHealthDTO`, não em auditoria de usuário.
 
 - unit tests existentes da policy do renderer continuam verdes;
 - PDF continua bloqueando toda request;
-- E2E instrumenta `session.webRequest` e APIs HTTP do main para falhar qualquer tentativa fora da allowlist vazia;
+- E2E instrumenta `session.webRequest` e APIs HTTP do main: boot e fluxo-base registram zero
+  hits; a prova opcional de IA autoriza somente o host Gemini durante a ação explícita;
 - servidor sentinela local registra zero hits durante boot e fluxo clínico;
 - a prova não exige desligar Wi-Fi e não interfere na conversa de desenvolvimento.
 
@@ -440,7 +441,7 @@ Qualquer piloto real reinicia em PRD → Analyst → Build com threat model e co
 - [x] Product, Backend e Frontend descritos como proposta.
 - [ ] Arquivos, schema, IPC e DTOs reconciliados com o HEAD.
 - [ ] Boot, migrations, seed, rede, IA opcional e prova revisados.
-- [ ] Validação, rollback e compatibilidade PGlite atacados pelo Critic.
+- [ ] Validação, rollback e compatibilidade PGlite atacados no review final de congruência.
 - [x] Conteúdo da PoC incorporado ao Analyst e ao BUILD integrados.
 - [ ] Review final de congruência do BUILD integrado.
 

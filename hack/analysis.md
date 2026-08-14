@@ -254,8 +254,8 @@ ENTITY: Pendencia
 - Relations: pertence ao encontro; somente impacto `BLOCKS_CURRENT_RESULT` impede emissão;
   evidência submetida exige decisão clínica antes de resolver; tipo não determina retorno
 - Source of truth: PGlite local
-- Runtime states: REQUESTED, EVIDENCE_SUBMITTED, UNDER_CLINICAL_REVIEW,
-  RESOLVED_ACCEPTED, INSUFFICIENT_REOPENED, CANCELLED, SUPERSEDED
+- Runtime states: REQUESTED, EVIDENCE_SUBMITTED, RESOLVED_ACCEPTED,
+  INSUFFICIENT_REOPENED, CANCELLED, SUPERSEDED
 - Invalid states: resultado emitido com bloqueio atual não resolvido; submissão tratada como
   suficiência; prazo sem fundamento
 
@@ -289,8 +289,7 @@ ENTITY: Resultado
 - Actions: finalizar versão, corrigir, aditar, superseder, ler projeção autorizada, exportar
 - Relations: pertence ao caso e encontro; N entregas
 - Source of truth: snapshot imutável
-- Runtime states: DRAFT_IN_ENCOUNTER, FINALIZED, CORRECTED, ADDENDED, SUPERSEDED,
-  VOIDED_WITH_REASON
+- Runtime states: DRAFT_IN_ENCOUNTER, FINALIZED, CORRECTED, ADDENDED, SUPERSEDED
 - Invalid states: overwrite/delete de versão finalizada; correção sem autor, motivo ou vínculo;
   entrega sem autorização
 
@@ -534,7 +533,7 @@ stateDiagram-v2
   até três grupos positivos explícitos de revisão a `+5`; volume de medicações `+5` uma
   vez; volume de diagnósticos `+5` uma vez; accommodations `+10` uma vez; documento
   pendente `+0`; total acima de 50 vira `OUT_OF_DEMO_RANGE`.
-- MUST: `ANSWERED(false)`, `NEGATIVE`, `UNKNOWN`, `REFUSED`, `NOT_PERFORMED`, CID, nome de
+- MUST: `ANSWERED(false)`, `UNKNOWN`, `REFUSED`, `NOT_PERFORMED`, CID, nome de
   doença, nome de medicamento e valores vitais não pontuam por inferência.
 - MUST: `desiredBy` ser calculado separadamente — data planejada menos cinco dias úteis da
   demo ou conclusão mais dez — e nunca alterar duração, classe, gravidade ou prioridade.
@@ -770,12 +769,12 @@ bloqueiam o hack e não podem ser respondidas por invenção:
 - Verdict: `CONSOLIDATED_FOR_BUILD`
 - Why: os oito domínios foram incorporados, decisões de demo foram rotuladas e lacunas de
   produção foram retiradas do caminho crítico sem serem apresentadas como resolvidas.
-- Next stage: fechar o BUILD técnico integrado e submetê-lo a um review final de congruência.
+- Next stage: verificar no SHA publicado as correções do review final de congruência.
 
 ## Recommended Next Phase
 
-Reconciliar [BUILD.md](BUILD.md) com os oito Builds de domínio. Depois do review final de
-congruência, o Warlog corta fatias verticais. Nenhuma Spec separada será criada: cada
+Verificar [BUILD.md](BUILD.md) com os oito Builds de domínio após as correções do review
+final. Sem P0 material, o Warlog corta fatias verticais. Nenhuma Spec separada será criada: cada
 minispec deriva seu Writing Plan diretamente do PRD, deste Analyst e do BUILD.
 
 ---
@@ -786,4 +785,4 @@ minispec deriva seu Writing Plan diretamente do PRD, deste Analyst e do BUILD.
 - Estado: `CONSOLIDATED_FOR_BUILD`.
 - Anexos consumidos: oito `domains/ANALYST-*.md`.
 - Gate individual por anexo: inexistente.
-- Próximo checkpoint: congruência do `BUILD.md`, sem assinatura intermediária.
+- Próximo checkpoint: recheck das correções do `BUILD.md`, sem assinatura intermediária.

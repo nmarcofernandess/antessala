@@ -25,7 +25,8 @@ Introduzir uma fronteira de confiança local e pequena: usuários criados pelo a
 ## Current Terrain
 
 - Não há modelo de usuário/sessão/auditoria no core (`src/main/db/schema.ts:8-25`).
-- O preload aceita qualquer nome de canal encaminhado pelo renderer (`src/preload/index.ts:3-16`).
+- O preload só encaminha os 17 canais da allowlist (`src/preload/index.ts:1-18` e
+  `src/shared/active-ipc-channels.ts`), mas allowlist não autentica usuário nem autoriza ação.
 - O router TIPC exporta handlers diretamente, sem contexto ou autorização (`src/main/tipc.ts:373-399`).
 - `App.tsx` monta a casca antes de qualquer prova de identidade (`src/renderer/src/App.tsx:15-46`).
 - O menu é fixo (`src/renderer/src/componentes/AppSidebar.tsx:28-32`).
@@ -219,7 +220,7 @@ CREATE INDEX IF NOT EXISTS idx_auditoria_usuario
 
 `catalogo_servicos_solicitantes` é criado pelo Build de anamnese/catálogos antes de
 `usuarios`. A fatia de acesso não cria nem edita serviços; apenas referencia a fixture
-versionada. A Spec não pode implementar esta DDL antes daquela tabela. Essa dependência é
+versionada. O Writing Plan não pode implementar esta DDL antes daquela tabela. Essa dependência é
 topológica, não uma decisão aberta.
 
 Trigger obrigatório:
@@ -324,7 +325,7 @@ export const CAPABILITIES = {
   'home:read': ['ADMIN', 'RECEPCAO', 'ENFERMAGEM', 'ANESTESIOLOGISTA', 'SOLICITANTE'],
   'case:intake:create': ['RECEPCAO'],
   'case:intake:correct': ['RECEPCAO'],
-  'case:read': ['RECEPCAO', 'ENFERMAGEM', 'ANESTESIOLOGISTA', 'SOLICITANTE'],
+  'case:read': ['RECEPCAO', 'ENFERMAGEM', 'ANESTESIOLOGISTA'],
   'case:read:assigned': ['RECEPCAO', 'ENFERMAGEM', 'ANESTESIOLOGISTA', 'SOLICITANTE'],
   'case:cancel': ['RECEPCAO'],
   'handoff:receive': ['ENFERMAGEM'],
@@ -341,7 +342,7 @@ export const CAPABILITIES = {
   'pendency:manage': ['ANESTESIOLOGISTA'],
   'result:status:read': ['RECEPCAO', 'ANESTESIOLOGISTA', 'SOLICITANTE'],
   'result:content:read': ['ANESTESIOLOGISTA', 'SOLICITANTE'],
-  'result:export': ['RECEPCAO', 'ANESTESIOLOGISTA'],
+  'result:export': ['ANESTESIOLOGISTA', 'SOLICITANTE'],
   'delivery:manage': ['RECEPCAO'],
   'delivery:acknowledge': ['SOLICITANTE'],
   'config:read': ['ADMIN'],
@@ -500,14 +501,15 @@ flowchart TD
 9. Implementar administração de usuários e auditoria.
 10. Executar integração e E2E negativos antes do caminho feliz completo.
 
-Essa ordem é dependência técnica; o Plan futuro transforma cada passo em tarefa TDD pequena.
+Essa ordem é dependência técnica; o Writing Plan da fatia transforma cada passo em tarefa TDD
+pequena, sem redecidir o contrato.
 
 ## Recommended Next Phase
 
 O BUILD integrado absorve este blueprint e segue para a revisão final de congruência.
-O fluxo forense literal é `PRD → Analyst → Build → Critic → Warlog → Sprints/Minispecs →
-Spec → Plan → primeiro teste TDD → implementação → QA`. Nenhuma fase posterior é
-autorizada enquanto a anterior não estiver fechada no Writing Plan e no QA.
+O fluxo do hack é `PRD aprovado → Analyst integrado → BUILD integrado → review final de
+congruência → Warlog → minispec → writing-plan.md → primeiro teste TDD em RED →
+implementação → QA`. Não existe Spec intermediária nem gate individual deste anexo.
 
 ## Rollback / Containment
 

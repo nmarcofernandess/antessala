@@ -254,8 +254,8 @@ O código usa os tipos definidos no Analyst. Zod aplica as seguintes refinements
 
 1. `ANSWERED` exige `value`; os demais estados proíbem `value`.
 2. `NOT_ASKED` exige `provenance=null`; todo estado tratado exige provenance confiável.
-3. `NEGATIVE` só é aceito por campo que declara negação; booleano recusa
-   `ANSWERED false`.
+3. Negativa explícita usa `ANSWERED` com valor `false`; silêncio, lista vazia ou default
+   nunca fabricam essa resposta.
 4. condição positiva exige item/detalhe condicionado.
 5. `COMPLETE` proíbe `NOT_ASKED` obrigatório.
 6. os 14 `widgetType` aparecem exatamente uma vez e na ordem do template.
@@ -284,7 +284,7 @@ type AnswerInput<T> =
       source: ClinicalSource
     }
   | {
-      status: 'NEGATIVE' | 'UNKNOWN' | 'NOT_APPLICABLE' | 'REFUSED'
+      status: 'UNKNOWN' | 'NOT_APPLICABLE' | 'NOT_ASKED' | 'NOT_PERFORMED' | 'REFUSED'
       source: ClinicalSource
     }
 
@@ -293,41 +293,41 @@ type RootAnswerValueByPath = {
   'procedure_context.plannedDate': string
   'procedure_context.laterality': 'LEFT' | 'RIGHT' | 'BILATERAL'
   'procedure_context.referralNotes': string
-  'allergies.hasAllergy': true
-  'anesthesia_history.previousAnesthesia': true
-  'anesthesia_history.personalComplication': true
+  'allergies.hasAllergy': boolean
+  'anesthesia_history.previousAnesthesia': boolean
+  'anesthesia_history.personalComplication': boolean
   'anesthesia_history.personalComplicationDescription': string
-  'anesthesia_history.difficultAirwayHistory': true
-  'anesthesia_history.postoperativeNauseaVomiting': true
-  'anesthesia_history.familyAnesthesiaComplication': true
+  'anesthesia_history.difficultAirwayHistory': boolean
+  'anesthesia_history.postoperativeNauseaVomiting': boolean
+  'anesthesia_history.familyAnesthesiaComplication': boolean
   'anesthesia_history.familyComplicationDescription': string
-  'cardiovascular.chestPain': true
-  'cardiovascular.dyspneaAtRest': true
-  'cardiovascular.syncope': true
-  'cardiovascular.palpitation': true
-  'cardiovascular.edema': true
-  'cardiovascular.knownCardiovascularDisease': true
+  'cardiovascular.chestPain': boolean
+  'cardiovascular.dyspneaAtRest': boolean
+  'cardiovascular.syncope': boolean
+  'cardiovascular.palpitation': boolean
+  'cardiovascular.edema': boolean
+  'cardiovascular.knownCardiovascularDisease': boolean
   'cardiovascular.detail': string
-  'respiratory.dyspnea': true
-  'respiratory.wheezing': true
-  'respiratory.recentRespiratoryInfection': true
-  'respiratory.chronicCough': true
-  'respiratory.sleepApneaDiagnosis': true
-  'respiratory.usesRespiratorySupport': true
+  'respiratory.dyspnea': boolean
+  'respiratory.wheezing': boolean
+  'respiratory.recentRespiratoryInfection': boolean
+  'respiratory.chronicCough': boolean
+  'respiratory.sleepApneaDiagnosis': boolean
+  'respiratory.usesRespiratorySupport': boolean
   'respiratory.supportDescription': string
   'respiratory.detail': string
   'functional_capacity.activity': { catalogId: string | null; label: string }
   'functional_capacity.metMin': number
   'functional_capacity.metMax': number
-  'functional_capacity.limitedBySymptoms': true
+  'functional_capacity.limitedBySymptoms': boolean
   'functional_capacity.limitationDescription': string
-  'medications.usesMedication': true
-  'diagnoses.hasDiagnosis': true
-  'bleeding_thrombosis.abnormalBleeding': true
-  'bleeding_thrombosis.easyBruising': true
-  'bleeding_thrombosis.priorThrombosis': true
-  'bleeding_thrombosis.familyBleedingDisorder': true
-  'bleeding_thrombosis.receivesAnticoagulantOrAntiplatelet': true
+  'medications.usesMedication': boolean
+  'diagnoses.hasDiagnosis': boolean
+  'bleeding_thrombosis.abnormalBleeding': boolean
+  'bleeding_thrombosis.easyBruising': boolean
+  'bleeding_thrombosis.priorThrombosis': boolean
+  'bleeding_thrombosis.familyBleedingDisorder': boolean
+  'bleeding_thrombosis.receivesAnticoagulantOrAntiplatelet': boolean
   'bleeding_thrombosis.detail': string
   'vital_signs.measuredAt': string
   'vital_signs.systolicBpMmHg': number
@@ -341,17 +341,17 @@ type RootAnswerValueByPath = {
   'habits_substances.tobaccoAmountPerDay': number
   'habits_substances.alcohol': { current: true }
   'habits_substances.alcoholFrequency': string
-  'habits_substances.recreationalSubstances': true
+  'habits_substances.recreationalSubstances': boolean
   'habits_substances.substancesDescription': string
   'habits_substances.recentUse': string
-  'special_conditions.pregnancyApplicable': true
-  'special_conditions.pregnant': true
-  'special_conditions.lactating': true
+  'special_conditions.pregnancyApplicable': boolean
+  'special_conditions.pregnant': boolean
+  'special_conditions.lactating': boolean
   'special_conditions.communicationAccommodation': string
   'special_conditions.mobilityAccommodation': string
-  'special_conditions.legalRepresentativeNeeded': true
+  'special_conditions.legalRepresentativeNeeded': boolean
   'special_conditions.otherCondition': string
-  'exams_pending.documentsAvailable': true
+  'exams_pending.documentsAvailable': boolean
   'clinical_notes.note': string
 }
 
@@ -386,8 +386,8 @@ type DiagnosisItemInput = {
   cidId: string | null
   code: string | null
   name: string
-  controlled: AnswerInput<true>
-  currentSymptoms: AnswerInput<true>
+  controlled: AnswerInput<boolean>
+  currentSymptoms: AnswerInput<boolean>
   detail: AnswerInput<string>
 }
 
@@ -526,7 +526,7 @@ const draftOperationSchema = z.union([
 `satisfies` contra os três registries acima: chave ausente ou extra falha no typecheck. Cada
 objeto Zod é `.strict()`. O parser primeiro discrimina `type`, depois seleciona o schema pela
 chave literal e por fim roda `superRefine` do envelope para as condições da matriz. Patch
-vazio, troca de `id`, item inexistente, path `items[*]` em `SET_ANSWER`, `ANSWERED false`,
+vazio, troca de `id`, item inexistente, path `items[*]` em `SET_ANSWER`,
 `NOT_APPLICABLE` fora da condição e campo desconhecido falham como `VALIDATION_ERROR`.
 
 Handlers:
@@ -726,7 +726,7 @@ BUILD integrado, Warlog e Writing Plan da fatia.
 | Risk | Containment |
 |---|---|
 | Duplicação entre v2/v3 | namespace explícito e nenhum adapter implícito |
-| Scope de 14 widgets | template fixo, componentes comuns e Plan em minispecs |
+| Scope de 14 widgets | template fixo, componentes comuns e corte vertical pelo Warlog |
 | Catálogo incompleto | fallback livre rotulado; nenhuma alegação de completude ANVISA |
 | Papel falsificado no IPC | sessão/actor resolvido no main; input não decide autorização |
 | Escrita concorrente no PGlite | optimistic revision + transação curta |
@@ -742,7 +742,7 @@ BUILD integrado, Warlog e Writing Plan da fatia.
 - [ ] Tabelas, DTOs, commands, queries e constraints provados no runtime.
 - [ ] Estados, sequência e rollback aprovados pelo adversarial.
 - [x] Conteúdo da PoC incorporado ao Analyst integrado.
-- [ ] Critic revisar este blueprint.
+- [ ] Review final de congruência verificar este anexo contra o BUILD integrado.
 - [ ] Review final de congruência do BUILD integrado antes do Warlog.
 
 ---

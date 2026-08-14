@@ -332,17 +332,17 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 - Actor: `RECEPCAO`, `ENFERMAGEM`, `ANESTESIOLOGISTA` ou `SOLICITANTE`; a rota pode abrir
   vazia, mas só lista itens em que a sessão é owner. `ADMIN` não acessa.
 - Query: `pendencies.listAssigned` retorna a projeção canônica `AssignedPendencyDTO` somente para
-  itens `OPEN` cujo `ownerRole` coincide
+  itens ainda acionáveis cujo `ownerRole` coincide
   com a sessão; para `SOLICITANTE`, também exige `targetServiceId` igual ao serviço da sessão.
 - Rows: protocolo, pessoa embutida, procedimento, tipo, pedido autorizado, responsável,
   prazo, atraso derivado e ação. Conteúdo do encontro e anamnese não acompanham a lista.
-- Actions: abrir detalhe redigido, registrar metadados/hash de `CaseDocument` e cumprir pela
-  união discriminada do kind. Arquivo local pode ser escolhido apenas para calcular SHA-256;
+- Actions: abrir detalhe redigido, registrar metadados/hash de `CaseDocument` e submeter
+  evidência pela união discriminada do kind. Arquivo local pode ser escolhido apenas para calcular SHA-256;
   bytes e path não são enviados nem persistidos.
-- Commands: `documents.registerMetadata` e `pendencies.fulfill`, ambos sob
+- Commands: `documents.registerMetadata` e `pendencies.submitEvidence`, ambos sob
   `pendency:evidence:register`, ownership, escopo, versão e mesmo `caseId/pendencyId`.
 - States: loading, sem itens atribuídos, filtro vazio, documento calculando hash, form
-  inválido, saving, fulfilled, version conflict, forbidden e erro recuperável.
+  inválido, saving, evidence submitted, version conflict, forbidden e erro recuperável.
 
 ### S05 — Anamnese de enfermagem (`/casos/:casoId/triagem`)
 
@@ -400,15 +400,15 @@ iniciar possuem recuperação explícita sem inventar resultado clínico.
 - Actor: `ANESTESIOLOGISTA`.
 - Read: referral, submitted nursing snapshot, classification provenance, timeline and pending items under `assessment:read`; prior result content, when shown, separately requires `result:content:read`.
 - Write: avaliação médica, decisão, pendências, evidências revisadas, impacto explícito,
-  necessidade de novo encontro e resultado/handoff versionado.
+  necessidade de novo encontro por decisão explícita e resultado/handoff versionado.
 - Outcomes: save draft, `PENDING`, `WAITING_RETURN` ou `READY_FOR_HANDOFF`.
 - States: loading, draft, dirty, incomplete, submitting, pending, return, completed/read-only, version conflict, error.
 - Rule: nunca sobrescreve o snapshot FINAL da enfermagem. Informação nova vive no encontro
   ou na evidência da pendência, sempre com autoria. Evidência submetida aguarda revisão; o
   anestesiologista decide suficiência, impacto e necessidade de retorno depois de revisar.
   Somente a `RECEPCAO`, em S06/S07, consulta retornos decididos e confirma a reserva
-  `RETURN`. Correção da anamnese final exige revisão sucessora, não adendo médico no
-  snapshot de enfermagem.
+  `RETURN`. Nesta PoC, correção da anamnese após `FINAL` é rejeitada; informação posterior
+  vive no encontro ou na evidência da pendência, sem reabrir o snapshot da enfermagem.
 
 ### S10 — Resultados do serviço (`/resultados`)
 
@@ -611,7 +611,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 | `src/renderer/src/paginas/Dashboard.tsx` | role home | Replace placeholder. | five home fixtures. |
 | `src/renderer/src/paginas/casos/*` | new | Intake/detail/timeline. | form, DTO redaction, not found/forbidden. |
 | `src/renderer/src/paginas/triagens/*` | new | Worklist and anamnese. | widget/completude/dirty/conflict tests. |
-| `src/renderer/src/paginas/pendencias/*` | new | Worklist compartilhada por owner e registro de evidência. | role/service scope, metadata-only document and fulfillment tests. |
+| `src/renderer/src/paginas/pendencias/*` | new | Worklist compartilhada por owner e registro de evidência. | role/service scope, metadata-only document and evidence-submission tests. |
 | `src/renderer/src/paginas/agenda/*` | new | Booking and own weekly-grid/list projection. | no-slot and concurrent conflict. |
 | `src/renderer/src/paginas/avaliacoes/*` | new | Medical workflow. | pending/return/complete. |
 | `src/renderer/src/paginas/resultados/*` | new | Requester handoff. | service scoping and PDF. |
@@ -668,7 +668,7 @@ Case detail is reached from worklists and need not become a permanent menu item.
 - [ ] Check-in equivocado, abandono e impossibilidade de início possuem ações, motivos e
       destinos distintos; nenhum caso fica preso aguardando encontro.
 - [ ] Avaliação trata rascunho, pendência, `ReturnRequest` e conclusão; anestesiologista não escolhe vaga de retorno.
-- [ ] `/pendencias` mostra a cada papel somente pendências `OPEN` atribuídas; solicitante é
+- [ ] `/pendencias` mostra a cada papel somente pendências acionáveis atribuídas; solicitante é
       filtrado também por `serviceId`, e owner incorreto falha mesmo por chamada direta.
 - [ ] Documento de evidência persiste somente metadados e SHA-256 do mesmo caso/pendência;
       bytes e path local não entram no payload nem no banco.
