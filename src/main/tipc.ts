@@ -5,6 +5,20 @@ import { iaEnviarMensagem, iaTestarConexao } from './ia/cliente'
 import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
+import type { SemanticAnswer } from '../shared/mvp/workflow'
+import {
+  bookCompatibleSlot,
+  confirmRequirement,
+  createCase,
+  getCurrentSession,
+  listCasesForCurrentRole,
+  listCompatibleSlots,
+  listFixtureUsers,
+  login,
+  logout,
+  saveAndSubmitTriage,
+  startNursing,
+} from './mvp/service'
 
 const require = createRequire(import.meta.url)
 const { tipc } = require('@egoist/tipc/main') as typeof import('@egoist/tipc/main')
@@ -255,6 +269,44 @@ const iaMensagensDeletarApos = t.procedure
   })
 
 export const router = {
+  'auth.login': t.procedure
+    .input<{ email: string; password: string }>()
+    .action(async ({ input }) => login(input)),
+  'auth.logout': t.procedure.action(async () => logout()),
+  'auth.current': t.procedure.action(async () => getCurrentSession()),
+  'mvp.cases.list': t.procedure.action(async () => listCasesForCurrentRole()),
+  'mvp.cases.create': t.procedure
+    .input<{
+      personName: string
+      sex: string
+      age: number
+      procedure: string
+      requesterService: string
+      externalReference: string | null
+    }>()
+    .action(async ({ input }) => createCase(input)),
+  'mvp.cases.startNursing': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => startNursing(input.caseId)),
+  'mvp.triage.submit': t.procedure
+    .input<{ caseId: string; answers: Record<string, SemanticAnswer> }>()
+    .action(async ({ input }) => saveAndSubmitTriage(input.caseId, input.answers)),
+  'mvp.requirements.confirm': t.procedure
+    .input<{
+      caseId: string
+      decision: 'CONFIRM' | 'OVERRIDE'
+      reason: string | null
+      slotClass?: 'QUICK' | 'STANDARD' | 'EXTENDED'
+      minutes?: number
+    }>()
+    .action(async ({ input }) => confirmRequirement(input.caseId, input)),
+  'mvp.slots.listCompatible': t.procedure
+    .input<{ caseId: string }>()
+    .action(async ({ input }) => listCompatibleSlots(input.caseId)),
+  'mvp.bookings.confirm': t.procedure
+    .input<{ caseId: string; slotId: string }>()
+    .action(async ({ input }) => bookCompatibleSlot(input.caseId, input.slotId)),
+  'mvp.users.list': t.procedure.action(async () => listFixtureUsers()),
   'ia.configuracao.obter': iaConfiguracaoObter,
   'ia.configuracao.salvar': iaConfiguracaoSalvar,
   'ia.configuracao.testar': iaConfiguracaoTestar,

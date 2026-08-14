@@ -1,34 +1,16 @@
-import { useEffect } from 'react'
-import { Outlet, useLocation, createHashRouter } from 'react-router-dom'
+import { Outlet, createHashRouter } from 'react-router-dom'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
-import { useIaStore } from '@/store/iaStore'
 import { AppSidebar } from './componentes/AppSidebar'
 import { ErrorBoundary } from './componentes/ErrorBoundary'
-import { IaChatPanel } from './componentes/IaChatPanel'
-import { Dashboard } from './paginas/Dashboard'
 import { ConfiguracoesPagina } from './paginas/ConfiguracoesPagina'
-import { IaPagina } from './paginas/IaPagina'
 import { NaoEncontrado } from './paginas/NaoEncontrado'
+import { AuthProvider, useAuth } from './mvp/AuthProvider'
+import { LoginPagina } from './mvp/LoginPagina'
+import { OperacaoPagina } from './mvp/OperacaoPagina'
 
-export const ACTIVE_ROUTE_PATHS = ['/', '/ia', '/configuracoes'] as const
+export const ACTIVE_ROUTE_PATHS = ['/', '/configuracoes'] as const
 
 function AppLayout() {
-  const location = useLocation()
-  const { toggleAberto } = useIaStore()
-
-  // Cmd+J abre/fecha painel IA
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'j' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        if (location.pathname === '/ia') return
-        toggleAberto()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [toggleAberto, location.pathname])
-
   return (
     <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar />
@@ -39,19 +21,24 @@ function AppLayout() {
               <Outlet />
             </ErrorBoundary>
           </main>
-          {location.pathname !== '/ia' && <IaChatPanel />}
         </div>
       </SidebarInset>
     </SidebarProvider>
   )
 }
 
+function MvpGate() {
+  const { session, loading, login } = useAuth()
+  if (loading) return <div className="grid min-h-svh place-items-center text-sm text-muted-foreground">Abrindo banco local…</div>
+  if (!session) return <LoginPagina onLogin={login} />
+  return <AppLayout />
+}
+
 export const router = createHashRouter([
   {
-    element: <AppLayout />,
+    element: <AuthProvider><MvpGate /></AuthProvider>,
     children: [
-      { path: '/', element: <Dashboard /> },
-      { path: '/ia', element: <IaPagina /> },
+      { path: '/', element: <OperacaoPagina /> },
       { path: '/configuracoes', element: <ConfiguracoesPagina /> },
       { path: '*', element: <NaoEncontrado /> },
     ],

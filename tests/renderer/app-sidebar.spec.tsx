@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SidebarProvider } from '../../src/renderer/src/components/ui/sidebar'
 import { AppSidebar } from '../../src/renderer/src/componentes/AppSidebar'
+import { AuthProvider } from '../../src/renderer/src/mvp/AuthProvider'
 
 const themeMock = vi.hoisted(() => ({
   theme: 'system',
@@ -18,6 +19,15 @@ vi.mock('next-themes', () => ({
 function stubElectron() {
   const invoke = vi.fn(async (channel: string) => {
     if (channel === 'app:version') return '1.0.0'
+    if (channel === 'auth.current') {
+      return {
+        userId: 'admin-fixture',
+        email: 'admin@antessala.demo',
+        name: 'Admin Demo',
+        role: 'ADMIN',
+        requesterService: null,
+      }
+    }
     return undefined
   })
   Object.assign(window, {
@@ -41,9 +51,11 @@ function stubMatchMedia() {
 function renderSidebar(path = '/') {
   render(
     <MemoryRouter initialEntries={[path]}>
-      <SidebarProvider>
-        <AppSidebar />
-      </SidebarProvider>
+      <AuthProvider>
+        <SidebarProvider>
+          <AppSidebar />
+        </SidebarProvider>
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -61,12 +73,12 @@ describe('AppSidebar — casca ativa do Antessala', () => {
 
     await screen.findByText('v1.0.0')
 
-    expect(screen.getByRole('link', { name: 'Início' })).toHaveAttribute('href', '/')
-    expect(screen.getByRole('link', { name: 'Assistente IA' })).toHaveAttribute('href', '/ia')
+    expect(screen.getByRole('link', { name: 'Operação' })).toHaveAttribute('href', '/')
     expect(screen.getByRole('link', { name: 'Configurações' })).toHaveAttribute(
       'href',
       '/configuracoes',
     )
+    expect(screen.queryByRole('link', { name: 'Assistente IA' })).not.toBeInTheDocument()
 
     for (const removedOrHidden of [
       'Memória',
