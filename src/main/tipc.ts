@@ -28,6 +28,7 @@ import {
   openPendency,
   proposeFieldsFromTranscript,
   reviseResult,
+  requireMvpRole,
   saveAndSubmitTriage,
   sendResultToRequester,
   searchApprovedKnowledge,
@@ -77,6 +78,7 @@ function publicIaConfig(config: IaConfiguracao | undefined) {
 }
 
 const iaConfiguracaoObter = t.procedure.action(async () => {
+  requireMvpRole('ADMIN')
   const config = await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1')
   return publicIaConfig(config)
 })
@@ -89,6 +91,7 @@ const iaConfiguracaoSalvar = t.procedure
     provider_configs_json?: string
   }>()
   .action(async ({ input }) => {
+    requireMvpRole('ADMIN')
     assertProvider(input.provider)
     const modelo = input.modelo.trim() || PROVIDER_DEFAULTS[input.provider]
     const current = await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1')
@@ -133,6 +136,7 @@ const iaConfiguracaoTestar = t.procedure
     provider_configs_json?: string
   }>()
   .action(async ({ input }) => {
+    requireMvpRole('ADMIN')
     assertProvider(input.provider)
     const current = await queryOne<IaConfiguracao>('SELECT * FROM configuracao_ia WHERE id = 1')
     const settings = parseProviderSettings(current?.provider_configs_json)
@@ -158,6 +162,7 @@ const iaChatEnviar = t.procedure
 const iaConversasListar = t.procedure
   .input<{ status?: 'ativo' | 'arquivado'; busca?: string } | undefined>()
   .action(async ({ input }) => {
+    requireMvpRole('ADMIN')
     const status = input?.status ?? 'ativo'
     const busca = input?.busca?.trim() ?? ''
     return queryAll(

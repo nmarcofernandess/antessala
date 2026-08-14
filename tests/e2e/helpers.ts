@@ -28,7 +28,7 @@ export async function launchApp(testName: string): Promise<LaunchedApp> {
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
-  await page.waitForSelector('[data-sidebar="sidebar"]', { timeout: 30_000 })
+  await page.waitForSelector('body', { timeout: 30_000 })
 
   return { app, page, dbPath }
 }

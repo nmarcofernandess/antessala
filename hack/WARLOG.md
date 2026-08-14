@@ -50,3 +50,8 @@ O Warlog termina quando um caso sintético atravessa as três fatias, cada papel
 responsabilidade, o app inicia offline, a IA falha sem bloquear o fluxo, autoria/eventos são
 reconstruíveis e a suíte final está verde.
 
+## Encerramento
+
+As três fatias foram implementadas por TDD. A prova final passou com 58 arquivos e 236
+testes, typecheck, build, empacotamento macOS e E2E da janela Electron. O artefato local
+gerado é `dist/mac-arm64/Antessala.app`; a assinatura de distribuição ficou fora desta prova.

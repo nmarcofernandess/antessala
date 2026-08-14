@@ -5,8 +5,8 @@
 - PRD: `APPROVED_PRODUCT_BASELINE` por decisão explícita de Marco em `2026-08-14`.
 - Analyst: `CONSOLIDATED_FOR_BUILD` em [analysis.md](analysis.md).
 - BUILD: `USED_FOR_WARLOG` em [BUILD.md](BUILD.md).
-- Fase atual: três minispecs cortadas; iniciar a 001 pelo primeiro teste em RED.
-- Código de produto: autorizado dentro do Writing Plan ativo após observar RED.
+- Fase atual: implementação concluída; QA final em fechamento.
+- Código de produto: três fatias implementadas após testes relevantes observados em RED.
 
 Os oito Analysts e oito Builds de domínio foram absorvidos pelas sínteses principais. Eles
 permanecem como anexos de detalhe, sem assinatura ou gate individual. Em conflito,
@@ -30,7 +30,12 @@ permanecem como anexos de detalhe, sem assinatura ou gate individual. Em conflit
 - [x] Correções verificadas localmente no novo SHA, sem P0 material restante.
 - [x] Warlog criado e três minispecs cortadas.
 - [x] Writing Plans das três fatias criados.
-- [ ] TDD, implementação e QA executados.
+- [x] TDD e implementação das três fatias executados.
+- [x] Fluxo até agenda provado no serviço e na janela Electron.
+- [x] Consulta, pendência, retorno, resultado versionado e handoff provados.
+- [x] Gemini assistivo e memória aprovada integrados sem bloquear o offline.
+- [x] Suíte completa: 58 arquivos e 236 testes verdes.
+- [x] Typecheck, build Electron e E2E da janela real verdes.
 
 ## Fluxo operacional
 
@@ -53,5 +58,4 @@ Plan traduz a fatia em arquivos, passos, testes e provas; não redecide produto 
 
 ## Próxima ação exata
 
-Escrever e observar o primeiro teste de contrato da minispec 001 em RED. Depois implementar
-somente o necessário para fechar o fluxo até a agenda e executar a prova da fatia.
+Empacotar a aplicação, registrar o SHA final e publicar a branch para o handoff do pitch.

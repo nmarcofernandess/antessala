@@ -1,4 +1,4 @@
-import { Outlet, createHashRouter } from 'react-router-dom'
+import { Navigate, Outlet, createHashRouter } from 'react-router-dom'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from './componentes/AppSidebar'
 import { ErrorBoundary } from './componentes/ErrorBoundary'
@@ -34,12 +34,17 @@ function MvpGate() {
   return <AppLayout />
 }
 
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth()
+  return session?.role === 'ADMIN' ? children : <Navigate to="/" replace />
+}
+
 export const router = createHashRouter([
   {
     element: <AuthProvider><MvpGate /></AuthProvider>,
     children: [
       { path: '/', element: <OperacaoPagina /> },
-      { path: '/configuracoes', element: <ConfiguracoesPagina /> },
+      { path: '/configuracoes', element: <AdminOnly><ConfiguracoesPagina /></AdminOnly> },
       { path: '*', element: <NaoEncontrado /> },
     ],
   },

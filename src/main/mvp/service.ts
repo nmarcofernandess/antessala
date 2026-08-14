@@ -133,6 +133,10 @@ function requireSession(...roles: DemoRole[]): MvpSession {
   return currentSession
 }
 
+export function requireMvpRole(...roles: DemoRole[]): MvpSession {
+  return requireSession(...roles)
+}
+
 async function audit(action: string, entityType: string, entityId?: string): Promise<void> {
   const session = currentSession
   await execute(

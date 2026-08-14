@@ -4,10 +4,9 @@ Prova de conceito para transformar a anamnese pré-anestésica de enfermagem em 
 necessidade operacional de agenda explicável e conduzir o caso até o resultado voltar ao
 serviço solicitante.
 
-> O PRD está aprovado. Analyst e BUILD foram consolidados; o review final encontrou
-> bloqueadores, e as correções aguardam verificação no SHA publicado. Código começa somente
-> depois do Warlog, do Writing Plan da primeira minispec e de um teste relevante observado
-> em RED.
+> O PRD está aprovado, Analyst e BUILD foram consolidados, o Warlog cortou três fatias e a
+> prova de conceito ponta a ponta está implementada. O fluxo-base funciona localmente sem
+> Gemini; a IA é opcional e só cria rascunhos que exigem decisão humana.
 
 ## Problema e objetivo
 
@@ -75,13 +74,19 @@ continuam funcionando. O contrato completo está no
 
 ## Base técnica atual
 
-O repositório contém uma casca Electron com processo principal, preload e renderer React;
-PGlite local; cliente TIPC tipado; catálogos versionados carregados sem rede; política de
-egress do renderer; e PDF pelo motor de impressão do Electron. A casca ativa ainda expõe
-somente Início, IA e Configurações: o fluxo clínico ponta a ponta não está implementado.
+O repositório contém um aplicativo Electron com processo principal, preload e renderer
+React; PGlite local; cliente TIPC tipado; catálogos versionados carregados sem rede; política
+de egress do renderer; e PDF pelo motor de impressão do Electron. A casca ativa expõe a
+operação por papel e Configurações apenas ao administrador.
 
-Gravação em WAV, peças de transcrição, RAG, grafo, memória e importadores existem em
-estados incompletos ou dormentes. Existência no código não autoriza reativação. O inventário
+O MVP implementa encaminhamento, entrevista, requisito explicável, confirmação humana,
+vaga compatível, check-in, consulta, pendência, retorno, resultado versionado, entrega,
+propostas Gemini em rascunho e memória local aprovada. As cinco contas fixture usam a senha
+`demo123`; os botões da tela de entrada fazem o login sem exigir digitação durante o pitch.
+
+Gravação em WAV, peças de STT, RAG, grafo e importadores legados continuam incompletos ou
+dormentes. A prova atual usa transcript sintético digitado e memória textual mínima;
+existência de código legado não autoriza reativação. O inventário
 com evidências e limites vive em [.context/architecture.yaml](.context/architecture.yaml).
 
 ## Mapa documental
@@ -160,7 +165,11 @@ Mermaid e `git diff --check`; CI pesado só roda quando a superfície alterada j
 
 ---
 
-## Estado
+## Estado e prova
+
+No fechamento do MVP: 58 arquivos/236 testes, typecheck, build Electron e E2E da janela
+real passaram. O E2E abre uma base temporária nova, confirma o boot local, login por papel,
+encaminhamento, navegação restrita e os três modos de tema.
 
 Consulte [status.json](hack/status.json) para a fase operacional e
 [STATUS.md](.context/review/STATUS.md) para o review final.

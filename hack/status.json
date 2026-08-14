@@ -1,10 +1,10 @@
 {
   "schema_version": "antessala.status.v2",
-  "updated_at": "2026-08-14T07:16:45-03:00",
+  "updated_at": "2026-08-14T07:34:00-03:00",
   "product": "Antessala",
   "mode": "hackathon_poc",
-  "current_phase": "minispec_writing_plans",
-  "decision": "implementation_authorized_after_tdd_red",
+  "current_phase": "complete",
+  "decision": "mvp_implemented_and_verified",
   "canonical_flow": [
     "prd",
     "analyst",
@@ -54,11 +54,11 @@
       "plan_approval_gate": false
     },
     "implementation": {
-      "status": "waiting_first_tdd_red",
+      "status": "complete",
       "requires": ["writing_plan", "tdd_red"]
     },
     "qa": {
-      "status": "blocked_until_implementation",
+      "status": "complete",
       "human_signature_gate": false,
       "evidence_required": true
     }
@@ -80,10 +80,16 @@
     "ai_may_change_product_law": false,
     "evidence_may_be_fabricated": false
   },
+  "verification": {
+    "tests": "58 files, 236 tests passed",
+    "typecheck": "passed",
+    "build": "passed",
+    "electron_e2e": "passed"
+  },
   "next_action": {
-    "artifact": "minispecs/001-fluxo-ate-agenda/writing-plan.md",
-    "action": "write_first_failing_contract_test",
-    "on_success": "implement_minispec_001",
-    "on_p0": "stop_and_reopen_canonical_contract"
+    "artifact": "repository HEAD",
+    "action": "package_and_publish",
+    "on_success": "handoff_for_pitch",
+    "on_p0": "fix_before_publish"
   }
 }
