@@ -1,440 +1,454 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ComponentType } from 'react'
 import { ChevronDown, GripVertical, Plus, Search, Trash2, X } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageHeader } from '@/componentes/PageHeader'
 import { cn } from '@/lib/utils'
-import { CLASSES, iniciais } from '@/vitrine/dados'
 import { CarimboSintetico, Rotulo, TituloTela } from '@/vitrine/pecas'
+import { TAMANHO_CATALOGOS } from '@/vitrine/catalogos'
 import {
   CATEGORIAS,
-  CICLO,
-  ESTADOS_RESPOSTA,
+  PACIENTE,
   PROTOCOLO,
   WIDGETS,
-  calcular,
+  widgetPorTipo,
   type Bloco,
   type Categoria,
-  type EstadoResposta,
-} from '@/vitrine/widgets'
-
-let seq = 0
-const novo = (tipo: string): Bloco => ({
-  id: `b${++seq}`,
-  tipo,
-  estado: 'NAO_PERGUNTADO',
-  quantidade: tipo === 'medications' || tipo === 'diagnoses' ? 0 : undefined,
-})
+  type DefWidget,
+} from '@/vitrine/widgets/registro'
+import { BASE_MINUTOS, CLASSES, calcularRequisito } from '@/vitrine/widgets/requisito'
 
 /**
- * S05 — Anamnese de enfermagem.
+ * S05 — Anamnese pré-anestésica.
  *
- * O protocolo nasce inteiro em NÃO PERGUNTADO: nenhum campo tem valor
- * padrão que finja resposta. O requisito à direita recalcula a cada toque.
+ * O protocolo abre com os blocos do dia e a coluna da direita traduz, ao vivo,
+ * o que foi respondido em uma necessidade de agenda. A regra é a mesma que roda
+ * no processo principal: base de vinte minutos, teto de três domínios e a
+ * acomodação somando por fora.
  */
 export function AnamnesePagina() {
-  const [blocos, setBlocos] = useState<Bloco[]>(() => PROTOCOLO.map(novo))
-  const [paleta, setPaleta] = useState(false)
-  const [busca, setBusca] = useState('')
+  const [blocos, setBlocos] = useState<Bloco[]>(() =>
+    PROTOCOLO.map((tipo, i) => ({
+      id: `${tipo}_${i}`,
+      tipo,
+      dados: widgetPorTipo(tipo)!.dadosIniciais(),
+    })),
+  )
+  const [abertos, setAbertos] = useState<string[]>(['allergies_1'])
+  const [paletaAberta, setPaletaAberta] = useState(false)
 
-  const req = useMemo(() => calcular(blocos), [blocos])
-  const tratados = blocos.filter((b) => b.estado !== 'NAO_PERGUNTADO').length
+  const requisito = useMemo(() => calcularRequisito(blocos), [blocos])
+  const classe = CLASSES[requisito.classe]
 
-  const ciclar = (id: string) =>
-    setBlocos((bs) =>
-      bs.map((b) =>
-        b.id === id ? { ...b, estado: CICLO[(CICLO.indexOf(b.estado) + 1) % CICLO.length] } : b,
-      ),
-    )
-  const remover = (id: string) => setBlocos((bs) => bs.filter((b) => b.id !== id))
-  const quantidade = (id: string, q: number) =>
-    setBlocos((bs) => bs.map((b) => (b.id === id ? { ...b, quantidade: Math.max(0, q) } : b)))
-  const adicionar = (tipo: string) => {
-    setBlocos((bs) => [...bs, novo(tipo)])
-    setPaleta(false)
+  const alterar = (id: string, dados: unknown) =>
+    setBlocos((bs) => bs.map((b) => (b.id === id ? { ...b, dados } : b)))
+
+  const adicionar = (def: DefWidget) => {
+    const id = `${def.tipo}_${Date.now()}`
+    setBlocos((bs) => [...bs, { id, tipo: def.tipo, dados: def.dadosIniciais() }])
+    setAbertos((a) => [...a, id])
+    setPaletaAberta(false)
   }
 
-  const usados = new Set(blocos.map((b) => b.tipo))
-  const disponiveis = WIDGETS.filter(
-    (w) =>
-      !usados.has(w.tipo) &&
-      (w.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        w.descricao.toLowerCase().includes(busca.toLowerCase())),
-  )
-  const porCategoria = Object.keys(CATEGORIAS).map((c) => ({
-    id: c as Categoria,
-    itens: disponiveis.filter((w) => w.categoria === c),
-  }))
+  const alternar = (id: string) =>
+    setAbertos((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]))
 
-  const c = CLASSES[req.classe]
+  const usados = new Set(blocos.map((b) => b.tipo))
+  const tratados = blocos.length - requisito.pendentes.length
 
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
-        breadcrumbs={[{ label: 'Antessala' }, { label: 'Triagem' }, { label: 'Marta R. Alves' }]}
+        breadcrumbs={[{ label: 'Antessala' }, { label: 'Triagem' }, { label: PACIENTE.nome }]}
       />
 
-      <div className="mx-auto w-full max-w-7xl p-6 lg:p-8">
+      <div className="mx-auto w-full max-w-[1400px] p-6 lg:p-8">
         <TituloTela
           rotulo="Enfermagem · S05"
           titulo="Anamnese pré-anestésica"
-          apoio="O protocolo abre com quinze blocos em não perguntado. Toque no estado de cada bloco para registrar a resposta — campo em branco nunca vira “não”."
+          apoio="Cada bloco pergunta uma coisa e revela o resto conforme a resposta. Campo em branco nunca vira “não”: a negativa é uma resposta que alguém ouviu e registrou."
           acao={
             <>
               <CarimboSintetico />
-              <Button variant="outline" size="sm" onClick={() => setPaleta(true)}>
-                <Plus className="size-4" /> Adicionar bloco
+              <Button variant="outline" size="sm" onClick={() => setPaletaAberta(true)}>
+                <Plus className="size-4" />
+                Adicionar bloco
               </Button>
             </>
           }
         />
 
-        <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px]">
           {/* ── composer ── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 pb-1">
+          <div>
+            <div className="flex items-center gap-3 pb-3">
               <Rotulo>Protocolo pré-anestésico</Rotulo>
               <span className="h-px flex-1 bg-border" aria-hidden />
-              <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
                 {tratados} / {blocos.length} tratados
               </span>
             </div>
 
-            {blocos.map((b, i) => (
-              <CartaoWidget
-                key={b.id}
-                bloco={b}
-                indice={i + 1}
-                onCiclar={() => ciclar(b.id)}
-                onRemover={() => remover(b.id)}
-                onQuantidade={(q) => quantidade(b.id, q)}
-              />
-            ))}
+            <div className="space-y-2.5">
+              {blocos.map((bloco, i) => (
+                <CartaoBloco
+                  key={bloco.id}
+                  indice={i + 1}
+                  bloco={bloco}
+                  aberto={abertos.includes(bloco.id)}
+                  onAlternar={() => alternar(bloco.id)}
+                  onAlterar={(d) => alterar(bloco.id, d)}
+                  onRemover={() => setBlocos((bs) => bs.filter((b) => b.id !== bloco.id))}
+                />
+              ))}
+            </div>
 
             <button
               type="button"
-              onClick={() => setPaleta(true)}
-              className={cn(
-                'flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-4',
-                'text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground',
-              )}
+              onClick={() => setPaletaAberta(true)}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent/40"
             >
-              <Plus className="size-4" /> Adicionar bloco ao protocolo
+              <Plus className="size-4" />
+              Adicionar bloco ao protocolo
             </button>
           </div>
 
-          {/* ── requisito vivo ── */}
-          <aside className="xl:sticky xl:top-6 xl:self-start">
+          {/* ── requisito ao vivo ── */}
+          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
             <div className="overflow-hidden rounded-xl border bg-card">
-              <div className="flex items-center justify-between border-b px-5 py-3.5">
+              <div className="flex items-center justify-between border-b px-5 py-3">
                 <Rotulo>Requisito proposto</Rotulo>
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   demo-workload-v1
                 </span>
               </div>
 
-              <div className={cn('px-5 py-6 transition-colors', req.classe === 'FORA_DA_FAIXA' && 'bg-amber-500/5')}>
+              <div className="px-5 py-4">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-[52px] font-light leading-none tabular-nums tracking-tight">
-                    {req.minutos}
+                  <span className="font-mono text-[52px] font-light leading-none tabular-nums">
+                    {requisito.minutos}
                   </span>
                   <span className="text-sm text-muted-foreground">min</span>
                 </div>
-                <p
+
+                <div
                   className={cn(
-                    'mt-3 font-mono text-[11px] font-medium uppercase tracking-[0.14em]',
-                    req.classe === 'FORA_DA_FAIXA'
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-foreground',
+                    'mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1',
+                    'font-mono text-[11px] font-medium uppercase tracking-[0.08em]',
+                    classe.tom,
                   )}
                 >
-                  {req.classe === 'FORA_DA_FAIXA'
-                    ? 'Fora da faixa da demonstração'
-                    : `Vaga ${c.nome.toLowerCase()} · + ${c.buffer} min`}
-                </p>
+                  <span className={cn('size-1.5 rounded-full', classe.ponto)} aria-hidden />
+                  {classe.nome} · + {classe.buffer} min
+                </div>
 
-                <div className="mt-5 space-y-1.5">
-                  {req.sinais.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Nenhum sinal positivo até agora.
-                    </p>
-                  )}
-                  {req.sinais.map((s, i) => (
-                    <div key={i} className="flex items-baseline gap-2 text-xs">
-                      <span className={cn('min-w-0 flex-1 truncate', s.noTeto && 'text-muted-foreground')}>
-                        {s.rotulo}
-                      </span>
-                      <span
-                        className={cn(
-                          'shrink-0 font-mono tabular-nums',
-                          s.noTeto ? 'text-amber-600 dark:text-amber-400' : 'text-foreground',
-                        )}
-                      >
-                        {s.noTeto ? 'teto · +0' : `+${s.minutos}`}
-                      </span>
-                    </div>
+                <div className="mt-4 space-y-2">
+                  <LinhaSinal rotulo="Base da consulta" minutos={BASE_MINUTOS} />
+                  {requisito.sinais.map((s, i) => (
+                    <LinhaSinal
+                      key={`${s.rotulo}_${i}`}
+                      rotulo={s.rotulo}
+                      origem={s.origem}
+                      minutos={s.minutos}
+                      noTeto={s.noTeto}
+                    />
                   ))}
                 </div>
 
-                <p className="mt-5 border-t pt-4 text-xs leading-relaxed text-muted-foreground">
-                  {req.explicacao}
+                <p className="mt-4 border-t pt-3 text-xs leading-relaxed text-muted-foreground">
+                  {requisito.explicacao} O teto de três domínios existe porque a entrevista não
+                  cresce sem fim com a lista de queixas.
                 </p>
+
+                {requisito.classe === 'FORA_DA_FAIXA' && (
+                  <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs leading-relaxed">
+                    Passou de 50 minutos, e a regra não trunca o resultado para caber. Este caso
+                    sai da sugestão automática e vai para definição humana — o sistema prefere
+                    admitir o próprio limite a inventar uma vaga que não serve.
+                  </p>
+                )}
               </div>
 
               <div className="border-t px-5 py-4">
-                {req.incompleto ? (
-                  <>
-                    <Button className="w-full" disabled>
-                      Bloco sem tratamento
-                    </Button>
-                    <p className="mt-2.5 text-center text-[11px] leading-relaxed text-muted-foreground">
-                      Todo bloco precisa de um estado antes de publicar. Ausência não vira negativa.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <Button className="w-full">Confirmar e enviar à recepção</Button>
-                    <p className="mt-2.5 text-center text-[11px] leading-relaxed text-muted-foreground">
-                      A recepção recebe duração, recurso e prazo. Nunca o conteúdo clínico.
-                    </p>
-                  </>
+                <Button className="w-full" disabled={requisito.pendentes.length > 0}>
+                  {requisito.pendentes.length > 0
+                    ? `Faltam ${requisito.pendentes.length} blocos`
+                    : 'Publicar para a recepção'}
+                </Button>
+                {requisito.pendentes.length > 0 && (
+                  <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
+                    Aguardando resposta: {requisito.pendentes.join(', ')}.
+                  </p>
                 )}
               </div>
             </div>
 
-            <div className="mt-4 flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-background text-[11px] font-semibold">
-                {iniciais('Marta Ribeiro Alves')}
-              </span>
-              <div className="min-w-0 text-xs">
-                <p className="truncate font-medium">Marta Ribeiro Alves</p>
-                <p className="font-mono tabular-nums text-muted-foreground">78 anos · ANT-4A91C2</p>
+            <div className="rounded-xl border bg-card px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-foreground text-xs font-semibold text-background">
+                  MA
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{PACIENTE.nome}</p>
+                  <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                    {PACIENTE.idade} anos · {PACIENTE.codigo}
+                  </p>
+                </div>
               </div>
+              <p className="mt-3 border-t pt-3 text-xs leading-relaxed text-muted-foreground">
+                {PACIENTE.procedimento} · {PACIENTE.servico}
+                <br />
+                {PACIENTE.solicitante}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-dashed px-5 py-4">
+              <Rotulo>Catálogos embarcados</Rotulo>
+              <div className="mt-2.5 space-y-1 font-mono text-[11px] tabular-nums text-muted-foreground">
+                <p>{TAMANHO_CATALOGOS.cid.toLocaleString('pt-BR')} categorias CID-10</p>
+                <p>
+                  {TAMANHO_CATALOGOS.medicamentos} medicamentos ·{' '}
+                  {TAMANHO_CATALOGOS.comerciais.toLocaleString('pt-BR')} apelidos
+                </p>
+                <p>{TAMANHO_CATALOGOS.met} atividades com MET de referência</p>
+              </div>
+              <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                Tudo local. A busca funciona com o cabo de rede na mão.
+              </p>
             </div>
           </aside>
         </div>
       </div>
 
-      {paleta && (
-        <Paleta
-          grupos={porCategoria}
-          busca={busca}
-          onBusca={setBusca}
-          onFechar={() => setPaleta(false)}
-          onAdicionar={adicionar}
-        />
+      {paletaAberta && (
+        <Paleta usados={usados} onEscolher={adicionar} onFechar={() => setPaletaAberta(false)} />
       )}
     </div>
   )
 }
 
-/** Cartão de bloco: cabeçalho com estado alternável, corpo com os campos reais. */
-function CartaoWidget({
-  bloco,
+/* ══════════════ cartão de bloco ══════════════ */
+
+function CartaoBloco({
   indice,
-  onCiclar,
+  bloco,
+  aberto,
+  onAlternar,
+  onAlterar,
   onRemover,
-  onQuantidade,
 }: {
-  bloco: Bloco
   indice: number
-  onCiclar: () => void
+  bloco: Bloco
+  aberto: boolean
+  onAlternar: () => void
+  onAlterar: (d: unknown) => void
   onRemover: () => void
-  onQuantidade: (q: number) => void
 }) {
-  const [aberto, setAberto] = useState(false)
-  const def = WIDGETS.find((w) => w.tipo === bloco.tipo)
+  const def = widgetPorTipo(bloco.tipo)
   if (!def) return null
-  const est = ESTADOS_RESPOSTA[bloco.estado]
-  const tratado = bloco.estado !== 'NAO_PERGUNTADO'
-  const temQuantidade = bloco.quantidade !== undefined && bloco.estado === 'RESPONDIDO'
+
+  const dados = bloco.dados as never
+  const tratado = def.tratado(dados)
+  const Componente = def.Componente as unknown as ComponentType<{
+    dados: unknown
+    onChange: (d: unknown) => void
+  }>
+  const Icone = def.icone
 
   return (
     <div
       className={cn(
-        'group rounded-xl border bg-card transition-colors',
-        tratado ? 'border-border' : 'border-dashed',
+        'group overflow-hidden rounded-xl border bg-card transition-colors',
+        !tratado && 'border-dashed',
+        aberto && 'ring-1 ring-border',
       )}
     >
       <div className="flex items-center gap-3 px-4 py-3">
         <GripVertical className="size-4 shrink-0 cursor-grab text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
-        <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground/60">
+        <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
           {String(indice).padStart(2, '0')}
         </span>
+        <Icone className="size-4 shrink-0 text-muted-foreground" />
 
         <button
           type="button"
-          onClick={() => setAberto((a) => !a)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          onClick={onAlternar}
+          className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 text-left"
         >
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-medium">{def.nome}</span>
-            <span className="block truncate font-mono text-[10.5px] text-muted-foreground">
-              {def.tipo}@1
-            </span>
+          <span className="shrink-0 text-sm font-medium">{def.nome}</span>
+          <span className="truncate text-[13px] text-muted-foreground">
+            {tratado ? def.resumo(dados) : def.descricao}
           </span>
-          <ChevronDown
-            className={cn(
-              'size-4 shrink-0 text-muted-foreground transition-transform',
-              aberto && 'rotate-180',
-            )}
-          />
         </button>
 
-        {def.sinal && (
-          <Badge variant="outline" className="hidden shrink-0 font-mono text-[10px] sm:inline-flex">
-            +{def.minutos}
-          </Badge>
+        {!tratado && (
+          <span className="shrink-0 rounded-full border border-dashed px-2 py-0.5 text-[10.5px] text-muted-foreground">
+            aguarda resposta
+          </span>
         )}
 
         <button
           type="button"
-          onClick={onCiclar}
-          title="Alternar estado da resposta"
-          className={cn(
-            'shrink-0 rounded-md border px-2.5 py-1 font-mono text-[10.5px] font-medium uppercase tracking-[0.08em] transition-colors',
-            'hover:bg-accent',
-            tratado ? 'border-border' : 'border-dashed',
-            est.tom,
-          )}
+          onClick={onRemover}
+          aria-label={`Remover ${def.nome}`}
+          className="shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
         >
-          {est.nome}
+          <Trash2 className="size-3.5" />
         </button>
 
         <button
           type="button"
-          onClick={onRemover}
-          title="Remover bloco"
-          className="shrink-0 rounded-md p-1.5 text-muted-foreground/50 opacity-0 transition-all hover:bg-accent hover:text-destructive group-hover:opacity-100"
+          onClick={onAlternar}
+          aria-label={aberto ? 'Fechar bloco' : 'Abrir bloco'}
+          className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent"
         >
-          <Trash2 className="size-3.5" />
+          <ChevronDown className={cn('size-4 transition-transform', aberto && 'rotate-180')} />
         </button>
       </div>
 
       {aberto && (
-        <div className="border-t px-4 py-3.5 pl-[52px]">
-          <p className="text-xs leading-relaxed text-muted-foreground">{def.descricao}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {def.campos.map((c) => (
-              <span
-                key={c}
-                className="rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {temQuantidade && (
-        <div className="flex items-center gap-3 border-t px-4 py-2.5 pl-[52px]">
-          <span className="text-xs text-muted-foreground">
-            {bloco.tipo === 'medications' ? 'Itens em uso' : 'Diagnósticos ativos'}
-          </span>
-          <Input
-            type="number"
-            min={0}
-            value={bloco.quantidade}
-            onChange={(e) => onQuantidade(Number(e.target.value))}
-            className="h-7 w-16 text-center font-mono text-xs tabular-nums"
-          />
-          <span className="font-mono text-[10.5px] text-muted-foreground">
-            limiar {bloco.tipo === 'medications' ? 5 : 3} · +5
-          </span>
+        <div className="border-t bg-muted/20 px-5 py-4">
+          <Componente dados={bloco.dados} onChange={onAlterar} />
         </div>
       )}
     </div>
   )
 }
 
-/** Gaveta de adicionar bloco, agrupada por categoria. */
-function Paleta({
-  grupos,
-  busca,
-  onBusca,
-  onFechar,
-  onAdicionar,
+function LinhaSinal({
+  rotulo,
+  origem,
+  minutos,
+  noTeto,
 }: {
-  grupos: { id: Categoria; itens: typeof WIDGETS }[]
-  busca: string
-  onBusca: (v: string) => void
-  onFechar: () => void
-  onAdicionar: (tipo: string) => void
+  rotulo: string
+  origem?: string
+  minutos: number
+  noTeto?: boolean
 }) {
-  const vazio = grupos.every((g) => g.itens.length === 0)
+  return (
+    <div className="flex items-baseline gap-2 text-[13px]">
+      <span className={cn('min-w-0 flex-1', noTeto && 'text-muted-foreground')}>
+        <span className="block truncate">{rotulo}</span>
+        {origem && (
+          <span className="block truncate text-[11px] text-muted-foreground">{origem}</span>
+        )}
+      </span>
+      <span
+        className={cn(
+          'shrink-0 font-mono text-[11px] tabular-nums',
+          noTeto ? 'text-muted-foreground' : 'text-foreground',
+        )}
+      >
+        {noTeto ? 'teto · +0' : `+${minutos}`}
+      </span>
+    </div>
+  )
+}
+
+/* ══════════════ paleta ══════════════ */
+
+function Paleta({
+  usados,
+  onEscolher,
+  onFechar,
+}: {
+  usados: Set<string>
+  onEscolher: (d: DefWidget) => void
+  onFechar: () => void
+}) {
+  const [busca, setBusca] = useState('')
+
+  const lista = WIDGETS.filter(
+    (w) =>
+      w.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      w.descricao.toLowerCase().includes(busca.toLowerCase()),
+  )
+
+  const porCategoria = (Object.keys(CATEGORIAS) as Categoria[])
+    .map((c) => ({ categoria: c, itens: lista.filter((w) => w.categoria === c) }))
+    .filter((g) => g.itens.length > 0)
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button
         type="button"
-        aria-label="Fechar"
+        aria-label="Fechar paleta"
         onClick={onFechar}
-        className="absolute inset-0 bg-background/70 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/25"
       />
-      <div className="relative flex h-full w-full max-w-md flex-col border-l bg-card shadow-2xl">
-        <div className="flex items-center justify-between border-b px-5 py-4">
+
+      <div className="relative flex h-full w-full max-w-md flex-col border-l bg-background shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
           <div>
-            <Rotulo>Adicionar ao protocolo</Rotulo>
+            <Rotulo>Blocos disponíveis</Rotulo>
             <p className="mt-1 text-sm text-muted-foreground">
-              Blocos que ainda não estão nesta anamnese
+              Os quatorze blocos da anamnese pré-anestésica.
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onFechar}>
+          <button
+            type="button"
+            onClick={onFechar}
+            aria-label="Fechar"
+            className="rounded p-1 text-muted-foreground hover:bg-accent"
+          >
             <X className="size-4" />
-          </Button>
+          </button>
         </div>
 
-        <div className="border-b px-5 py-3">
+        <div className="border-b p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
               value={busca}
-              onChange={(e) => onBusca(e.target.value)}
+              onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar bloco"
               className="pl-9"
             />
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
-          {vazio && (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Todos os blocos disponíveis já estão no protocolo.
-            </p>
-          )}
-          {grupos.map(
-            (g) =>
-              g.itens.length > 0 && (
-                <div key={g.id} className="mb-6">
-                  <Rotulo>{CATEGORIAS[g.id].nome}</Rotulo>
-                  <div className="mt-2.5 space-y-2">
-                    {g.itens.map((w) => (
-                      <button
-                        key={w.tipo}
-                        type="button"
-                        onClick={() => onAdicionar(w.tipo)}
-                        className="w-full rounded-lg border px-3.5 py-3 text-left transition-colors hover:border-foreground/25 hover:bg-accent"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                            {w.nome}
-                          </span>
-                          {w.sinal && (
-                            <Badge variant="outline" className="shrink-0 font-mono text-[10px]">
-                              +{w.minutos}
-                            </Badge>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {porCategoria.map((g) => (
+            <div key={g.categoria} className="mb-5">
+              <Rotulo>{CATEGORIAS[g.categoria]}</Rotulo>
+              <div className="mt-2 space-y-1.5">
+                {g.itens.map((w) => {
+                  const jaUsado = usados.has(w.tipo)
+                  const Icone = w.icone
+                  return (
+                    <button
+                      key={w.tipo}
+                      type="button"
+                      onClick={() => onEscolher(w)}
+                      className="flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-accent"
+                    >
+                      <Icone className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-baseline gap-2">
+                          <span className="text-[13px] font-medium">{w.nome}</span>
+                          {jaUsado && (
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                              no protocolo
+                            </span>
                           )}
-                        </div>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        </span>
+                        <span className="mt-0.5 block text-[11.5px] leading-relaxed text-muted-foreground">
                           {w.descricao}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ),
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+
+          {lista.length === 0 && (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              Nenhum bloco com esse nome.
+            </p>
           )}
         </div>
       </div>
