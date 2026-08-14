@@ -1,387 +1,252 @@
-# BUILD — plano mestre do Antessala
+# BUILD — plano mestre do MVP Antessala
 
-**Estado:** `BLOCKED BY ANALYST`
-**Execução liberada:** nenhuma minispec
-**Quantidade máxima de sprints:** 3
-**Última revisão:** 14/08/2026
+**Estado:** `READY FOR BUILD`
+**Execução liberada:** MiniSpec 001 agora; 002 e 003 em sequência
+**Plataforma:** Electron local + PGlite
+**Prazo:** entrega do hackathon
 
 ---
 
-## 0. Contrato do Build
+## 0. Objetivo
 
-Este é o único plano mestre de construção. Ele organiza dependências, cortes e provas;
-não possui autoridade para preencher lacunas do [`ANALYST.md`](ANALYST.md).
-
-Cada sprint vive numa minispec com exatamente dois arquivos:
+Construir a narrativa inteira no Mac:
 
 ```text
-spec.md          → contrato do que precisa ser verdade
-writing-plan.md  → sequência executável depois do PASS do Analyst
+encaminhamento
+→ triagem/anamnese
+→ RAPIDO | NORMAL | ESTENDIDO
+→ booking compatível
+→ avaliação/pendência/retorno
+→ handoff ao serviço solicitante
 ```
 
-O writing plan pode existir como rascunho bloqueado. Só vira ordem de execução quando o
-Analyst registrar `PASS` para a minispec. Descoberta, entrevistas, inventários e ADRs são
-trabalho interno do Analyst; não consomem um dos três sprints de build.
+O Build não abre novas investigações. Quando houver mais de uma opção tecnicamente
+válida, escolhe a mais simples que preserve a demonstração.
 
----
+## 1. Fundação disponível
 
-## 1. Objetivo da construção
+- Electron + React + shadcn/ui;
+- PGlite, migrations e helpers de transação;
+- IPC tipado;
+- composer e oito widgets;
+- catálogos offline;
+- tema, rich text e PDF;
+- Vitest e Playwright;
+- primeiro boot local.
 
-Demonstrar, com casos sintéticos e fronteiras honestas, que uma solicitação de consulta
-pré-anestésica pode ser qualificada antes da alocação para produzir requisitos de agenda
-diferentes e explicáveis, sob decisão humana.
+Não reconstruir essa base.
 
-O produto construído precisa preservar esta causalidade:
+## 2. Arquitetura do MVP
 
 ```text
-paciente + procedimento + dados com origem
-→ fatos, ausências, conflitos e pendências
-→ avaliação/revisão humana
-→ prioridade + esforço + recurso + prontidão
-→ recomendação ou alocação compatível
-→ auditoria da decisão
+Renderer
+  Recepção | Triagem | Agenda | Avaliação | Handoff
+        ↓ TIPC
+Main process
+  casos | anamnese | classificação | slots | avaliações | jornada
+        ↓
+PGlite local
 ```
 
-Não existe build válido se a cadeia começar por uma tela ou biblioteca.
+### Regras
 
----
+- um banco local;
+- dados seedados e sintéticos;
+- transações para booking e transições críticas;
+- regra de classificação pura e testável;
+- regra de domínio fora dos componentes;
+- sem autenticação real: modo de papel na UI;
+- sem rede obrigatória no fluxo.
 
-## 2. Estado do repositório
+## 3. Modelo mínimo de persistência
 
-### 2.1 Fundação aproveitável
+O código legado pode ser substituído ou adaptado diretamente. Não existe necessidade de
+migração de dados reais.
 
-- aplicação Electron com React, shadcn/ui e Tailwind;
-- banco PGlite embarcado e IPC tipado;
-- primeiro boot local sem download de modelo;
-- contratos de anamnese versionados e composer;
-- oito widgets técnicos portados do DietFlow;
-- CID-10, medicamentos, classes, MET e recortes clínicos locais;
-- exportação PDF;
-- testes Vitest e Playwright;
-- IA cloud opcional, memória/RAG e STT dormentes.
+### `casos_pre_anestesicos`
 
-### 2.2 Legado sem autoridade
+- identidade sintética do paciente;
+- solicitante e procedimento;
+- estado;
+- anamnese JSONB;
+- categoria sugerida/confirmada;
+- razões e override;
+- timestamps.
 
-O código atual contém schema, handlers e tipos construídos para pessoa descartável,
-jornada no mesmo dia e fila por urgência/espera. Essas peças não serão removidas ou
-adaptadas antes do contrato aprovado pelo Analyst, mas também não serão importadas por novas
-features.
+### `slots_pre_anestesicos`
 
-### 2.3 Branches que não entram por merge
+- data/hora, duração, tipo e profissional;
+- status e caso reservado;
+- restrição única que impeça dupla reserva.
 
-- `codex/motor-fila-logica-v2` e `codex/motor-da-fila-resume`: motor da antiga fila;
-- `origin/hack/02-quais-widgets`: catálogo preso aos antigos invariantes;
-- `origin/zan/widgets`: pesquisa parcialmente útil misturada a rotas e tempos propostos.
+### `avaliacoes_pre_anestesicas`
 
-Reuso dessas branches é por seleção consciente de ideia, dado ou teste — nunca merge ou
-cherry-pick em bloco.
+- resultado, pendências, resumo e timestamps;
+- várias avaliações/retornos podem pertencer ao mesmo caso.
 
----
+### `eventos_caso`
 
-## 3. Princípios técnicos do build
+- jornada append-only com estado anterior/novo, papel, motivo e instante.
 
-1. **Caso, não fila física.** A unidade é o caso pré-anestésico associado a paciente e
-   procedimento.
-2. **Múltiplos eixos.** Prioridade, risco, complexidade, esforço, modalidade, recurso e
-   prontidão não viram uma cor única.
-3. **Ausência é dado.** Campo ausente, desconhecido, não aplicável, recusado e conflitante
-   têm semânticas diferentes.
-4. **Origem e tempo.** Todo fato clínico relevante carrega fonte e instante de validade.
-5. **Procedimento muda a avaliação.** O mesmo paciente para procedimentos diferentes
-   pode exigir perguntas e capacidade diferentes.
-6. **Widget captura; protocolo interpreta.** Regras não ficam escondidas no JSX.
-7. **Humano decide.** Sugestão automatizada nunca se disfarça de decisão clínica.
-8. **Agenda não fabrica recurso.** Sem capacidade compatível, o sistema expõe o gargalo.
-9. **Mock visível.** Integração simulada é marcada na interface, fixture e documentação.
-10. **Offline é propriedade da demo.** Não é decisão de arquitetura hospitalar.
-11. **Sem meta inventada.** Critério de demo é determinístico; KPI clínico depende de
-    baseline.
-12. **Migração consciente.** Código legado só muda depois do mapa de consumidores e de
-    uma decisão de compatibilidade.
+## 4. Regra de classificação
 
----
+Criar contrato puro:
 
-## 4. Modelo de domínio provisório
+```ts
+classificarCaso(input): {
+  sugerido: 'RAPIDO' | 'NORMAL' | 'ESTENDIDO'
+  razoes: string[]
+  pendencias: string[]
+}
+```
 
-Os nomes abaixo organizam a investigação. Não autorizam schema até o Analyst aprovar.
+Princípios:
+
+- regras explícitas e determinísticas;
+- prioridade de `RAPIDO` vence `ESTENDIDO` quando a demo exigir uma única categoria;
+- dado mínimo ausente cria pendência;
+- enfermagem pode confirmar ou sobrescrever;
+- UI chama isso de “recomendação do protótipo”.
+
+As regras exatas são fixtures de produto, não alegação médica institucional.
+
+## 5. Agenda
+
+Começar com lista/grade própria usando componentes existentes. Só usar FullCalendar se já
+estiver disponível e realmente reduzir trabalho.
+
+Slots sintéticos possuem tipo e duração configurados no seed. A busca oferece vagas do
+tipo confirmado e ordena por data/hora. Booking:
+
+1. valida estado do caso;
+2. trava/atualiza slot ainda disponível;
+3. associa caso;
+4. muda caso para `AGENDADO`;
+5. grava evento;
+6. tudo na mesma transação.
+
+## 6. As três minispecs
+
+### 001 · Caso, triagem e classificação
+
+Entrega vertical:
 
 ```text
-PatientReference
-  identidade institucional ou sintética da demo
-
-ProcedureRequest
-  solicitação de avaliação ligada a um procedimento proposto
-
-PreAnestheticCase
-  agregado da solicitação, coleta, avaliações, pendências e decisão operacional
-
-ClinicalFact
-  valor + origem + data + estado de confiança
-
-ProcedureDefinition
-  código e atributos do procedimento vindos de fonte aprovada
-
-ProcedureProtocolVersion
-  composição versionada de perguntas, regras, pendências e requisitos
-
-AssessmentVersion
-  resultado explicável do conjunto de regras, sem apagar versões anteriores
-
-HumanReview
-  confirmação, correção ou rejeição assinada com motivo
-
-SchedulingRequirement
-  prioridade, esforço, recurso, modalidade, janela e prontidão separadas
-
-CapacitySlot / Appointment
-  somente se o produto for dono de agenda; caso contrário, contrato de exportação
-
-AuditEvent
-  ator, ação, objeto, instante, origem e versão
+recepção cria caso
+→ enfermagem preenche anamnese
+→ sistema recomenda categoria
+→ enfermagem confirma/corrige
+→ caso fica pronto para agendar
 ```
-
-### 4.1 Invariantes candidatos
-
-- Um caso sem procedimento identificável não recebe requisito final de agenda.
-- Um dado ausente nunca assume valor normal.
-- Troca de procedimento invalida ou recalcula somente o que depende dele.
-- Publicar nova versão de protocolo não reescreve decisões passadas.
-- Revisão humana preserva sugestão original e motivo da divergência.
-- Regulação vê o necessário para agendar, não o prontuário inteiro.
-- Nenhum agendamento incompatível é persistido silenciosamente.
-
-O Analyst confirma, corrige ou remove cada invariante antes do `PASS MINISPEC 001`.
-
----
-
-## 5. Arquitetura alvo em camadas
-
-```text
-Fonte/entrada
-  solicitação sintética, formulário ou integração mockada
-        ↓
-Caso pré-anestésico
-  identidade, procedimento, proveniência e versões
-        ↓
-Coleta estruturada
-  widgets/perguntas definidos por protocolo
-        ↓
-Avaliação explicável
-  fatos, ausências, conflitos, regras e pendências
-        ↓
-Revisão humana
-  decisão, override, motivo e auditoria
-        ↓
-Tradução operacional
-  prioridade, esforço, recurso, modalidade e prontidão
-        ↓
-Agenda ou adaptador
-  alocação compatível ou declaração de falta de capacidade
-```
-
-Cada seta terá um contrato testável. Camada clínica não importa React; camada de agenda
-não lê detalhes clínicos que não participem da decisão operacional.
-
----
-
-## 6. Os três sprints
-
-### Sprint 001 · Caso, triagem e classificação
-
-**Objetivo:** construir o caso pré-anestésico, a coleta aprovada, a avaliação explicável
-e a revisão humana que produzem um requisito operacional auditável.
-
-Entregas candidatas, todas sujeitas ao `PASS MINISPEC 001`:
-
-- persistência/migração de paciente-referência, solicitação, caso e procedimento;
-- autenticação e RBAC mínimos dos papéis confirmados;
-- intake e composição versionada de perguntas/widgets P0;
-- proveniência, ausência, conflito e temporalidade;
-- régua aprovada, pendências e explicação;
-- revisão/override humano;
-- resumo operacional mínimo e auditoria;
-- fixtures e migração do legado.
-
-**Não entrega:** agenda, vaga, booking ou decisão clínica além do limite aprovado.
 
 Arquivos:
 
 - [`spec.md`](minispecs/001-caso-triagem-classificacao/spec.md)
 - [`writing-plan.md`](minispecs/001-caso-triagem-classificacao/writing-plan.md)
 
-### Sprint 002 · Capacidade, agenda e booking
+### 002 · Capacidade, agenda e booking
 
-**Objetivo:** traduzir o requisito revisado em capacidade compatível e realizar somente
-o caminho A, B ou C aprovado pelo Analyst.
+Entrega vertical:
 
-Entregas candidatas, sujeitas aos Sprints 001 e ao `PASS MINISPEC 002`:
-
-- contrato executável de `SchedulingRequirement` e compatibilidade;
-- adaptador de handoff, agenda demonstrativa mínima ou integração contratada;
-- recursos, disponibilidade, slots e restrições aprovados;
-- atomicidade/idempotência e proteção contra conflito, quando houver booking;
-- alocação compatível e resposta explícita à falta de capacidade;
-- superfícies mínimas de agendamento e explicação da decisão;
-- fixtures de contraste, controle negativo e concorrência.
+```text
+recepção abre casos prontos
+→ vê vagas compatíveis
+→ reserva
+→ caso fica agendado
+```
 
 Arquivos:
 
 - [`spec.md`](minispecs/002-capacidade-agenda-booking/spec.md)
 - [`writing-plan.md`](minispecs/002-capacidade-agenda-booking/writing-plan.md)
 
-### Sprint 003 · Handoff e prova final
+### 003 · Avaliação, handoff e prova final
 
-**Objetivo:** fechar o final real da promessa e provar o fluxo end-to-end sem inventar
-uma consulta, laudo ou planejamento que a descoberta não tenha colocado no produto.
+Entrega vertical:
 
-Entregas candidatas, sujeitas ao `PASS MINISPEC 003`:
-
-- handoff confirmado ao papel/sistema seguinte;
-- consulta e retorno ao serviço cirúrgico somente se estiverem dentro da fronteira
-  validada;
-- estados finais, reabertura, cancelamento e auditoria aprovados;
-- exportação/documento apenas quando houver finalidade e destino;
-- cenários simples, complexos, ausentes, conflitantes, sem capacidade e com falha;
-- prova automatizada e visual das superfícies finais;
-- comparação honesta entre tratamento indiferenciado e diferenciado.
+```text
+anestesiologista atende
+→ conclui ou cria pendência/retorno
+→ conclui avaliação
+→ serviço solicitante recebe resultado
+```
 
 Arquivos:
 
 - [`spec.md`](minispecs/003-handoff-prova-final/spec.md)
 - [`writing-plan.md`](minispecs/003-handoff-prova-final/writing-plan.md)
 
----
+## 7. Ordem de construção
 
-## 7. Decisão sobre calendário
+1. Contratos/DDL/IPC do caso.
+2. Recepção cria caso.
+3. Triagem com widgets.
+4. Classificação + override.
+5. Seed de slots.
+6. Agenda + booking.
+7. Avaliação + pendência/retorno.
+8. Handoff.
+9. Fixtures, demo e polimento.
 
-O Analyst precisa escolher uma destas classes antes do `PASS MINISPEC 002`:
+Não construir infraestrutura pós-vitória no meio dessa ordem.
 
-### A · O produto somente qualifica a solicitação
+## 8. Testes mínimos
 
-Saída é um `SchedulingRequirement` entregue a sistema externo ou operado manualmente.
-Não se constrói calendário; a demo mostra capacidade fictícia apenas para provar o
-contrato.
+### Domínio
 
-### B · O produto mantém agenda demonstrativa
-
-Precisa persistir recursos, disponibilidade, slots e alocações. A biblioteca visual é
-escolhida depois de provar:
-
-- suporte aos recursos e restrições necessários;
-- comportamento com duração variável;
-- acessibilidade e navegação por teclado;
-- licença para hack e eventual produção;
-- tamanho no bundle Electron;
-- testabilidade sem browser frágil;
-- aderência aos componentes já existentes.
-
-Comparar FullCalendar, padrão de agenda do DietFlow e grade própria pequena. Nenhuma
-opção vence por familiaridade.
-
-### C · O produto integra com agenda institucional
-
-Exige contrato real da TI. Sem API ou exportação confirmada, a integração fica fora do
-build e é representada por adaptador mockado.
-
----
-
-## 8. Estratégia de dados e migração
-
-O Analyst deve produzir uma matriz para cada tabela/contrato atual:
-
-| Ação | Quando usar |
-|---|---|
-| manter | semântica continua válida |
-| adaptar | conceito sobrevive com contrato diferente |
-| migrar | dado existente precisa de novo agregado |
-| desativar | código fica sem consumidor durante o hack |
-| remover | conceito pertence exclusivamente ao produto invalidado |
-
-Regras:
-
-- não chamar `registros` de paciente institucional;
-- não conectar casos por nome;
-- não portar `prioridade 1..4` para o novo domínio sem fonte;
-- não converter `registro_jornada` em workflow novo por remendo;
-- preservar compatibilidade do envelope de anamnese apenas se o novo contrato permitir;
-- banco da demo pode ser recriado, mas migrations e fixtures precisam ser determinísticas.
-
----
-
-## 9. Estratégia de testes
-
-### Contrato
-
-- schemas rejeitam estados impossíveis e distinguem ausente/desconhecido;
-- regras são puras, determinísticas e versionadas;
-- mesmo paciente + procedimento diferente pode gerar requisito diferente;
-- protocolo antigo continua explicando avaliação antiga;
-- override não apaga sugestão original.
-
-### Segurança clínica
-
-- dado ausente produz pendência;
-- conflito de fontes permanece visível;
-- medicamento nunca produz ordem automática não aprovada;
-- regra sem versão/dono não carrega;
-- papel não autorizado não acessa dado clínico.
+- cada fixture classifica como esperado;
+- ausência cria pendência;
+- override preserva sugestão;
+- transição inválida falha.
 
 ### Agenda
 
-- alocação incompatível falha;
-- concorrência não duplica slot;
-- falta de capacidade é resposta de domínio;
-- remarcação/cancelamento só entram se o Analyst os aprovar;
-- regra de duração e recurso possui oráculo claro.
+- vaga compatível reserva;
+- vaga incompatível recusa;
+- slot ocupado não reserva duas vezes;
+- ausência de vaga retorna resposta útil.
 
-### Demonstração
+### Jornada
 
-- fixtures sintéticas identificadas;
-- fluxo completo reproduzível;
-- nenhuma rede necessária no primeiro boot;
-- integrações mockadas visíveis;
-- typecheck, testes e build verdes no SHA entregue;
-- prova visual das superfícies finais aprovadas.
+- caso simples conclui;
+- caso pendente agenda retorno e depois conclui;
+- handoff só ocorre depois de conclusão.
 
----
+### Produto
 
-## 10. Definition of Ready
+- fluxo principal E2E;
+- typecheck;
+- testes;
+- build Electron;
+- prints das superfícies-chave.
 
-Uma tarefa só entra no writing plan executável quando possui:
+## 9. Cortes autorizados se o relógio apertar
 
-- vínculo com capacidade do PRD;
-- `PASS` do Analyst;
-- ator e permissão;
-- entrada, saída e origem dos dados;
-- estados válidos/invalidos;
-- regra temporal;
-- fixture;
-- critério de aceite;
-- impacto no legado;
-- dependências e caminho de rollback.
+1. calendário visual vira lista de vagas;
+2. login vira seletor de papel;
+3. PDF vira resumo em tela;
+4. catálogo de widgets é reduzido;
+5. somente quatro fixtures canônicas;
+6. comunicação vira confirmação visual de handoff;
+7. retorno usa o mesmo fluxo de avaliação.
 
-## 11. Definition of Done
+Não cortar:
 
-- implementação e testes do escopo aprovado;
-- nenhum comportamento inventado fora da minispec;
-- typecheck e testes proporcionais verdes;
-- documentação canônica atualizada sem criar nova fonte paralela;
-- WARLOG com decisão, divergência e evidência;
-- Analyst reavalia o gate seguinte;
-- commit e SHA de prova registrados.
+- classificação em três categorias;
+- confirmação/override humano;
+- booking compatível;
+- pendência/retorno;
+- handoff final;
+- dados sintéticos claramente marcados.
 
----
+## 10. Pós-vitória
 
-## 12. Ordem de execução e branches
+Somente depois de prêmio/investimento:
 
-1. O Analyst conclui a descoberta e emite `PASS` antes da primeira branch de build.
-2. Executar uma minispec por vez.
-3. Criar branch `codex/<minispec>` a partir da `main` atualizada.
-4. Não empilhar Sprint 002 antes das provas do Sprint 001.
-5. Não empilhar Sprint 003 antes das provas do Sprint 002.
-6. Branches antigas são doadoras somente leitura.
-7. Cada PR declara qual gate do Analyst foi satisfeito.
-8. Merge só depois de provas no SHA final.
-
-Esta reorganização documental vive em `codex/hack-prd-unico`; ela não autoriza nenhum dos
-três builds por si só.
+- Next.js e Supabase;
+- autenticação/RBAC real;
+- integração hospitalar;
+- validação clínica e jurídica;
+- sync e multiusuário;
+- Stripe, deploy e operação SaaS;
+- importação madura de módulos do DietFlow.

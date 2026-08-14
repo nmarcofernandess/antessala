@@ -3,8 +3,7 @@ import { createWidgetBlock } from './serialization'
 import type { AnamneseContent, AnamneseTemplate, BlocoWidget } from './types'
 
 /**
- * Catálogo deliberadamente vazio. A seleção clínica depende do contrato aprovado pelo
- * Analyst e pertence à MiniSpec 002.
+ * Catálogo inicial vazio. A MiniSpec 001 ativa o conjunto mínimo da demonstração.
  */
 export const ACTIVE_ANAMNESE_TEMPLATES: readonly AnamneseTemplate[] = []
 

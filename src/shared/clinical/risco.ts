@@ -1,9 +1,8 @@
 /**
  * Paridade histórica do classificador do protótipo anterior.
  *
- * A lógica é pura e permanece testada para permitir uma decisão consciente de migração,
- * mas não possui validação clínica do HCFMRP nem consumidor ativo. Não usar como
- * protocolo, requisito de agenda ou decisão do produto antes do PASS da MiniSpec 002.
+ * A lógica é pura e pode ser usada como matéria-prima da regra sintética da MiniSpec
+ * 001. Não possui validação do HCFMRP e nunca deve aparecer como protocolo oficial.
  */
 
 export type SexoRisco = string | null

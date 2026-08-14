@@ -408,19 +408,67 @@ HC. Somente o Analyst pode converter candidato em contrato de build.
 
 ---
 
-## Pendências vivas
+## W-014 · 14/08/2026 · Fluxo decretado e burocracia pré-hack removida
 
-| ID | Pergunta | Dono esperado | Bloqueia |
-|---|---|---|---|
-| P-01 | o que exatamente é semelhante no agendamento? | responsável do desafio/ambulatório | Sprint 002 |
-| P-02 | quem cria, coleta, revisa e agenda? | operação do HC | Sprints 001/002 |
-| P-03 | o que significa “um anestesiologista”? | anestesiologia | capacidade |
-| P-04 | quando a data cirúrgica nasce? | serviço cirúrgico/central | fluxo e prioridade |
-| P-05 | qual sistema contém solicitação e agenda? | TI/operação | integração |
-| P-06 | qual protocolo e catálogo de procedimentos? | dono clínico | Sprint 001 |
-| P-07 | quais dados/catálogos locais são suficientes? | dono clínico + Analyst | Sprint 001 |
-| P-08 | recomendação ou agenda própria? | produto + HC | Sprint 002 |
-| P-09 | qual arquitetura sustenta a demo multiusuário sem fingir handoff? | produto + engenharia | todos os sprints |
-| P-10 | qual é o estado terminal real da promessa do Antessala? | operação + dono do desafio | Sprint 003 |
-| P-11 | quais papéis exigem login separado e qual RBAC por campo? | operação + TI | Sprint 001 |
-| P-12 | quais widgets/documentos possuem consumidor e obrigação reais? | operação + dono clínico | Sprint 001 |
+**Estado:** decidido; invalida o bloqueio de W-013 para o MVP
+
+### Contexto
+
+A entrega ocorre hoje. Exigir screen-share hospitalar, representantes de setores, agenda
+anonimizada e documentação de API antes do build tornaria o plano terminalmente
+impossível: três sprints bloqueados e nenhum produto para apresentar.
+
+### Lei de produto
+
+```text
+médico indica procedimento e encaminha para pré-anestesia
+→ recepção recebe encaminhamento
+→ enfermagem realiza anamnese
+→ confirma RAPIDO, NORMAL ou ESTENDIDO
+→ recepção agenda slot compatível
+→ anestesiologista conclui ou cria pendência/retorno
+→ resultado volta ao serviço solicitante
+```
+
+A triagem geral do SUS e a marcação da cirurgia ficam fora.
+
+### Decisão
+
+- O MVP é Electron + PGlite no Mac.
+- Dados, agenda e regras são sintéticos e declarados como demonstração.
+- Nenhuma integração, autenticação hospitalar ou validação externa bloqueia o hack.
+- Os quatro papéis são modos da interface, não logins reais.
+- O Analyst muda para `READY FOR BUILD`.
+- MiniSpec 001 está liberada; 002 e 003 seguem automaticamente em sequência.
+- Next.js, Supabase, Stripe, integrações e homologação pertencem ao pós-vitória.
+
+### Impacto
+
+PRD, Analyst, Build e minispecs foram reduzidos a contratos executáveis. Os 22 gates da
+versão anterior deixam de bloquear a demo e podem ser recuperados no histórico quando
+existir prêmio, investimento e intenção de piloto.
+
+### Risco aceito
+
+O protótipo não comprova o fluxo real do HC nem validade clínica institucional. Ele prova
+coerência, utilidade e execução de uma solução possível para o desafio, com dados
+sintéticos e revisão humana.
+
+---
+
+## Pendências pós-vitória — não bloqueiam o MVP
+
+| ID | Pergunta futura | Quando volta |
+|---|---|---|
+| P-01 | o que exatamente é semelhante no agendamento real? | discovery de piloto |
+| P-02 | quais cargos executam cada papel no HC? | discovery de piloto |
+| P-03 | como a anestesiologia organiza capacidade real? | desenho operacional |
+| P-04 | quando a data cirúrgica nasce? | integração com planejamento |
+| P-05 | quais sistemas contêm solicitação e agenda? | integração hospitalar |
+| P-06 | qual protocolo e catálogo de procedimentos oficiais? | validação clínica |
+| P-07 | quais dados/catálogos locais são suficientes? | validação clínica |
+| P-08 | qual agenda institucional será integrada? | arquitetura de piloto |
+| P-09 | web, LAN ou outra arquitetura multiusuário? | arquitetura pós-prêmio |
+| P-10 | qual handoff institucional encerra o caso? | discovery de piloto |
+| P-11 | autenticação e RBAC reais por campo? | segurança de produção |
+| P-12 | quais documentos possuem obrigação legal? | jurídico/compliance |

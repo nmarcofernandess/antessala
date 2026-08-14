@@ -3,9 +3,8 @@ import { execDDL } from './query'
 /**
  * Schema clínico legado da hipótese invalidada e catálogos locais reaproveitáveis.
  *
- * `registros`, prioridade e `registro_jornada` são provisórios: não representam o
- * paciente institucional, o caso pré-anestésico nem o fluxo canônico. Não amplie essa
- * superfície antes do mapa de migração aprovado pelo Analyst.
+ * `registros`, prioridade e `registro_jornada` pertencem ao protótipo anterior. As
+ * minispecs podem substituí-los diretamente: não existe dado real para migrar.
  */
 const DDL_CLINICAL = `
 CREATE TABLE IF NOT EXISTS registros (

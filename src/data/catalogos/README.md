@@ -37,6 +37,5 @@ Limites conhecidos:
 - A origem está documentada, mas a licença de redistribuição dos dados ainda
   precisa de confirmação antes de uma distribuição pública.
 
-Esses catálogos não determinam quais widgets, protocolos ou templates entram na
-triagem. Eles serão auditados pelo Analyst e só poderão alimentar o contrato clínico
-depois do `PASS` da `hack/minispecs/001-caso-triagem-classificacao/`.
+Esses catálogos são matéria-prima da demonstração. A MiniSpec 001 seleciona o conjunto
+mínimo e apresenta as regras como regras do protótipo, não como protocolo oficial.
