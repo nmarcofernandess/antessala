@@ -56,6 +56,14 @@ describe('detectFormat', () => {
   it('identifies .html as text', () => {
     expect(detectFormat('/any/path/page.html')).toBe('text')
   })
+
+  it('routes .docx through the structured text registry', () => {
+    expect(detectFormat('/any/path/page.docx')).toBe('text')
+  })
+
+  it.each(['page.doc', 'page.odt', 'page.rtf'])('marks unsupported legacy format %s as unknown', (fileName) => {
+    expect(detectFormat(`/any/path/${fileName}`)).toBe('unknown')
+  })
 })
 
 describe('importFile', () => {
@@ -79,5 +87,34 @@ describe('importFile', () => {
     if (result.type !== 'error') throw new Error('Expected error result')
 
     expect(result.error).toContain('Falha ao importar')
+  })
+
+  it('returns an actionable error for an unsupported legacy office file', async () => {
+    const tmpFile = path.join(os.tmpdir(), 'legacy-document.doc')
+    fs.writeFileSync(tmpFile, 'legacy')
+    try {
+      const result = await importFile(tmpFile)
+      expect(result).toEqual(expect.objectContaining({ type: 'error' }))
+      if (result.type !== 'error') throw new Error('Expected error result')
+      expect(result.error).toMatch(/não suportado.*Converta/i)
+    } finally {
+      fs.unlinkSync(tmpFile)
+    }
+  })
+
+  it('uses the structured sanitizer when HTML enters through the shared registry', async () => {
+    const tmpFile = path.join(os.tmpdir(), 'unsafe-knowledge.html')
+    fs.writeFileSync(tmpFile, '<h1>Treinamento</h1><script>roubar()</script><p onclick="x()">Conteúdo útil</p>')
+    try {
+      const result = await importFile(tmpFile)
+      expect(result.type).toBe('text')
+      if (result.type !== 'text') throw new Error('Expected text result')
+      expect(result.data.text).toContain('Treinamento')
+      expect(result.data.text).toContain('Conteúdo útil')
+      expect(result.data.text).not.toContain('roubar')
+      expect(result.data.text).not.toContain('onclick')
+    } finally {
+      fs.unlinkSync(tmpFile)
+    }
   })
 })

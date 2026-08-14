@@ -1,46 +1,55 @@
 import { expect, test } from '@playwright/test'
 import { launchApp, removeAppData } from './helpers'
 
-test('Antessala exposes only its active shell, routes and three theme modes', async () => {
+test('Antessala exposes the integrated shell, isolated Assistant and three theme modes', async () => {
   const { app, page, dbPath } = await launchApp('active-shell')
 
   try {
     await expect(page).toHaveTitle('Antessala')
-    await expect(page.getByRole('heading', { name: 'Antessala' })).toBeVisible()
-    await expect(page.getByTestId('dashboard-skeleton')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Painel do dia' })).toBeVisible()
     await expect(page.locator('[role="dialog"]')).toHaveCount(0)
 
-    const navItems = page.locator('[data-sidebar="menu-button"]')
-    await expect(navItems).toHaveCount(3)
-    await expect(navItems).toHaveText(['Início', 'Assistente IA', 'Configurações'])
+    // A lateral carrega o fluxo do caso. Configuração e tema saíram dela para o
+    // menu da conta, no rodapé — por isso a contagem é de links, não de botões.
+    const navItems = page.locator('a[data-sidebar="menu-button"]')
+    await expect(navItems).toHaveCount(7)
+    await expect(navItems).toHaveText([
+      'Início',
+      'Novo encaminhamento',
+      'Triagem',
+      'Agenda',
+      'Repertório',
+      'Assistente',
+      'Memória',
+    ])
 
     const hrefs = await navItems.evaluateAll((items) =>
       items.map((item) => item.getAttribute('href')),
     )
-    expect(hrefs).toEqual(['#/', '#/ia', '#/configuracoes'])
+    expect(hrefs).toEqual([
+      '#/',
+      '#/casos/novo',
+      '#/triagem',
+      '#/agenda',
+      '#/repertorio',
+      '#/assistente',
+      '#/memoria',
+    ])
 
-    await navItems.filter({ hasText: 'Assistente IA' }).click()
-    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#/ia')
-    await expect(page.getByRole('main').getByText('Assistente IA', { exact: true })).toBeVisible()
+    await navItems.filter({ hasText: 'Assistente' }).click()
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#/assistente')
     await expect(page.getByRole('textbox', { name: 'Mensagem' })).toBeVisible()
 
-    await page.locator('[data-sidebar="menu-button"]').filter({ hasText: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Menu da conta' }).click()
+    await page.getByRole('menuitem', { name: 'Configurações' }).click()
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#/configuracoes')
-    await expect(page.getByText('Escolha um provedor cloud. Só um fica ativo por vez.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Configurações' })).toBeVisible()
+    await expect(page.getByText('Google Gemini', { exact: true })).toBeVisible()
 
     await page.locator('[data-sidebar="menu-button"]').filter({ hasText: 'Início' }).click()
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#/')
 
-    const iaPanelWidth = () => page.evaluate(() => {
-      const inner = [...document.querySelectorAll<HTMLElement>('div[style]')]
-        .find((element) => element.style.width === '380px')
-      return Math.round(inner?.parentElement?.getBoundingClientRect().width ?? -1)
-    })
-    expect(await iaPanelWidth()).toBeLessThanOrEqual(1)
-    await page.locator('#ia-toggle').click()
-    await expect.poll(iaPanelWidth).toBeGreaterThan(100)
-    await page.locator('#ia-toggle').click()
-    await expect.poll(iaPanelWidth).toBeLessThanOrEqual(1)
+    await expect(page.locator('#ia-toggle')).toHaveCount(0)
 
     const sidebar = page.locator('[data-sidebar="sidebar"]').first()
     const sidebarTrigger = page.locator('[data-sidebar="trigger"]').first()
@@ -57,23 +66,32 @@ test('Antessala exposes only its active shell, routes and three theme modes', as
     await expect.poll(() => sidebar.evaluate((element) => element.getBoundingClientRect().width))
       .toBeGreaterThan(100)
 
-    const light = page.getByRole('radio', { name: 'Tema claro' })
-    const dark = page.getByRole('radio', { name: 'Tema escuro' })
-    const system = page.getByRole('radio', { name: 'Tema sistema' })
+    // Os três temas vivem no submenu do menu da conta. Abrir pelo teclado é
+    // determinístico e prova de quebra que o menu é navegável sem mouse.
+    async function escolherTema(rotulo: 'Claro' | 'Escuro' | 'Sistema') {
+      await page.getByRole('button', { name: 'Menu da conta' }).click()
+      await page.keyboard.press('ArrowDown')
+      await page.keyboard.press('ArrowRight')
+      const opcao = page.getByRole('menuitemradio', { name: rotulo })
+      await expect(opcao).toBeVisible()
+      await opcao.click()
+    }
 
-    await light.click()
+    await escolherTema('Claro')
     await expect(page.locator('html')).toHaveClass(/\blight\b/)
-    await expect(light).toHaveAttribute('aria-checked', 'true')
     expect(await page.evaluate(() => localStorage.getItem('antessala-theme'))).toBe('light')
 
-    await dark.click()
+    await escolherTema('Escuro')
     await expect(page.locator('html')).toHaveClass(/\bdark\b/)
-    await expect(dark).toHaveAttribute('aria-checked', 'true')
     expect(await page.evaluate(() => localStorage.getItem('antessala-theme'))).toBe('dark')
 
-    await system.click()
-    await expect(system).toHaveAttribute('aria-checked', 'true')
+    await escolherTema('Sistema')
     expect(await page.evaluate(() => localStorage.getItem('antessala-theme'))).toBe('system')
+
+    await page.getByRole('button', { name: 'Menu da conta' }).click()
+    await expect(page.getByRole('menuitemradio', { name: 'Sistema' })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: 'Tema' })).toBeVisible()
+    await page.keyboard.press('Escape')
   } finally {
     await app.close()
     removeAppData(dbPath)

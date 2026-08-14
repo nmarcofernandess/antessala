@@ -264,8 +264,16 @@ async function applyEnrichmentToChunk(
 
 async function persistEnrichmentGraph(
   allEntities: Array<{ nome: string; tipo: string }>,
-  allRelations: Array<{ from: string; to: string; tipo_relacao: string; peso: number }>,
+  allRelations: Array<{
+    from: string
+    to: string
+    tipo_relacao: string
+    peso: number
+    section_ref?: string
+    excerpt?: string
+  }>,
   origem: 'sistema' | 'usuario',
+  evidence?: { sourceId: number; sourceRevision: number },
 ): Promise<{ entities_count: number; relations_count: number }> {
   // Dedup entities
   const entityMap = new Map<string, { nome: string; tipo: string }>()
@@ -275,13 +283,12 @@ async function persistEnrichmentGraph(
   }
 
   // Dedup relations
-  const relationMap = new Map<string, { from: string; to: string; tipo_relacao: string; peso: number }>()
+  const relationMap = new Map<string, typeof allRelations>()
   for (const r of allRelations) {
     const key = `${r.from.toLowerCase()}::${r.to.toLowerCase()}::${r.tipo_relacao.toLowerCase()}`
-    const existing = relationMap.get(key)
-    if (!existing || r.peso > existing.peso) {
-      relationMap.set(key, { from: r.from, to: r.to, tipo_relacao: r.tipo_relacao.toLowerCase(), peso: r.peso })
-    }
+    const values = relationMap.get(key) ?? []
+    values.push({ ...r, tipo_relacao: r.tipo_relacao.toLowerCase() })
+    relationMap.set(key, values)
   }
 
   // Persist entities with embeddings
@@ -319,16 +326,50 @@ async function persistEnrichmentGraph(
 
   // Persist relations
   let relationsInserted = 0
-  for (const r of relationMap.values()) {
+  for (const relationEvidence of relationMap.values()) {
+    const r = relationEvidence.reduce((best, candidate) => candidate.peso > best.peso ? candidate : best)
     const fromId = entityIdMap.get(r.from.toLowerCase())
     const toId = entityIdMap.get(r.to.toLowerCase())
     if (!fromId || !toId || fromId === toId) continue
-    await execute(
-      `INSERT INTO knowledge_relations (entity_from_id, entity_to_id, tipo_relacao, peso)
-       VALUES ($1, $2, $3, $4)`,
-      fromId, toId, r.tipo_relacao, r.peso,
+    const existing = await queryOne<{ id: number; peso: number }>(
+      `SELECT id, peso FROM knowledge_relations
+        WHERE entity_from_id = $1 AND entity_to_id = $2 AND tipo_relacao = $3
+          AND (valid_to IS NULL OR valid_to > NOW())
+        ORDER BY id LIMIT 1`,
+      fromId,
+      toId,
+      r.tipo_relacao,
     )
-    relationsInserted++
+    let relationId = existing?.id ?? 0
+    if (relationId) {
+      if (r.peso > Number(existing?.peso ?? 0)) {
+        await execute('UPDATE knowledge_relations SET peso = $1 WHERE id = $2', r.peso, relationId)
+      }
+    } else {
+      relationId = await insertReturningId(
+        `INSERT INTO knowledge_relations (entity_from_id, entity_to_id, tipo_relacao, peso)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        fromId, toId, r.tipo_relacao, r.peso,
+      )
+      relationsInserted += relationId ? 1 : 0
+    }
+    if (relationId && evidence) {
+      for (const item of relationEvidence) {
+        await execute(
+          `INSERT INTO knowledge_relation_evidence (
+             relation_id, source_id, source_revision, section_ref, excerpt
+           ) VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (relation_id, source_id, source_revision, section_ref)
+           DO UPDATE SET excerpt = EXCLUDED.excerpt, invalidated_at = NULL`,
+          relationId,
+          evidence.sourceId,
+          evidence.sourceRevision,
+          item.section_ref ?? 'Documento',
+          item.excerpt ?? null,
+        )
+      }
+    }
   }
 
   return { entities_count: entityIdMap.size, relations_count: relationsInserted }
@@ -400,8 +441,10 @@ export async function enrichAllChunksWithModel(
     source_id: number
     source_titulo: string
     source_tipo: string
+    source_revision: number
   }>(`
-    SELECT kc.id AS chunk_id, kc.conteudo, ks.id AS source_id, ks.titulo AS source_titulo, ks.tipo AS source_tipo
+    SELECT kc.id AS chunk_id, kc.conteudo, ks.id AS source_id, ks.titulo AS source_titulo,
+           ks.tipo AS source_tipo, ks.revision AS source_revision
     FROM knowledge_chunks kc
     JOIN knowledge_sources ks ON ks.id = kc.source_id AND ks.ativo = true
     WHERE length(kc.conteudo) > 50
@@ -444,6 +487,8 @@ export async function enrichAllChunksWithModel(
     chunks: Array<{ id: number; conteudo: string }>
     sourceTitulo: string
     sourceTipo: string
+    sourceId: number
+    sourceRevision: number
   }> = []
 
   for (const [, group] of sourceGroups) {
@@ -453,6 +498,8 @@ export async function enrichAllChunksWithModel(
         chunks: slice.map(c => ({ id: c.chunk_id, conteudo: c.conteudo })),
         sourceTitulo: slice[0].source_titulo,
         sourceTipo: slice[0].source_tipo,
+        sourceId: slice[0].source_id,
+        sourceRevision: Number(slice[0].source_revision),
       })
     }
   }
@@ -466,11 +513,24 @@ export async function enrichAllChunksWithModel(
   // 5. Processar batches
   let totalEnriched = 0
   let batchesFailed = 0
-  const allEntities: Array<{ nome: string; tipo: string }> = []
-  const allRelations: Array<{ from: string; to: string; tipo_relacao: string; peso: number }> = []
+  const failedSources = new Set<number>()
+  const graphBySource = new Map<number, {
+    revision: number
+    tipo: string
+    entities: Array<{ nome: string; tipo: string }>
+    relations: Array<{ from: string; to: string; tipo_relacao: string; peso: number; section_ref: string; excerpt: string }>
+  }>()
 
   for (let b = 0; b < batches.length; b++) {
     const batch = batches[b]
+    if (!graphBySource.has(batch.sourceId)) {
+      graphBySource.set(batch.sourceId, {
+        revision: batch.sourceRevision,
+        tipo: batch.sourceTipo,
+        entities: [],
+        relations: [],
+      })
+    }
     console.log(`[enrichment] batch ${b + 1}/${batches.length} (${batch.chunks.length} chunks de "${batch.sourceTitulo}")`)
     onProgress?.({ fase: 'enriquecendo', batch_atual: b + 1, total_batches: batches.length })
 
@@ -484,6 +544,7 @@ export async function enrichAllChunksWithModel(
 
     if (result.chunks.length === 0) {
       batchesFailed++
+      failedSources.add(batch.sourceId)
       console.warn(`[enrichment]   ⚠ batch ${b + 1} retornou 0 chunks (falha LLM ou timeout)`)
       continue
     }
@@ -499,8 +560,15 @@ export async function enrichAllChunksWithModel(
       totalEnriched++
 
       // Acumular graph data
-      allEntities.push(...enriched.entidades)
-      allRelations.push(...enriched.relacoes)
+      const graph = graphBySource.get(batch.sourceId)!
+      graph.entities.push(...enriched.entidades)
+      const firstLine = originalChunk.conteudo.split('\n').find((line) => line.trim())?.replace(/^#+\s*/, '').trim() || 'Documento'
+      graph.relations.push(...enriched.relacoes.map((relation) => ({
+        ...relation,
+        section_ref: firstLine.slice(0, 180),
+        excerpt: originalChunk.conteudo.slice(0, 500),
+      })))
+      graphBySource.set(batch.sourceId, graph)
 
       // Adicionar novas entidades ao contexto pra próximos batches
       for (const e of enriched.entidades) {
@@ -513,13 +581,35 @@ export async function enrichAllChunksWithModel(
 
   // 7. Persistir graph acumulado
   onProgress?.({ fase: 'graph' })
-  console.log(`[enrichment] persistindo graph: ${allEntities.length} entidades, ${allRelations.length} relações`)
-
-  // Determinar origem do graph pelo tipo mais comum
-  const origem = batches[0]?.sourceTipo === 'sistema' ? 'sistema' as const : 'usuario' as const
-  const graphResult = allEntities.length > 0
-    ? await persistEnrichmentGraph(allEntities, allRelations, origem)
-    : { entities_count: 0, relations_count: 0 }
+  const graphResult = { entities_count: 0, relations_count: 0 }
+  for (const [sourceId, graph] of graphBySource) {
+    const current = await queryOne<{ revision: number }>(
+      'SELECT revision FROM knowledge_sources WHERE id = $1',
+      sourceId,
+    )
+    if (!current || Number(current.revision) !== graph.revision) {
+      console.warn(`[enrichment] descartando resultado atrasado da fonte ${sourceId}, revisão ${graph.revision}`)
+      continue
+    }
+    console.log(`[enrichment] persistindo graph da fonte ${sourceId}: ${graph.entities.length} entidades, ${graph.relations.length} relações`)
+    const persisted = graph.entities.length > 0
+      ? await persistEnrichmentGraph(
+          graph.entities,
+          graph.relations,
+          graph.tipo === 'sistema' ? 'sistema' : 'usuario',
+          { sourceId, sourceRevision: graph.revision },
+        )
+      : { entities_count: 0, relations_count: 0 }
+    graphResult.entities_count += persisted.entities_count
+    graphResult.relations_count += persisted.relations_count
+    await execute(
+      `UPDATE knowledge_sources SET enrichment_status = $1, enriched_revision = $2, atualizada_em = NOW()
+       WHERE id = $3 AND revision = $2`,
+      failedSources.has(sourceId) ? 'failed' : 'ready',
+      graph.revision,
+      sourceId,
+    )
+  }
 
   onProgress?.({
     fase: 'concluido',

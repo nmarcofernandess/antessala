@@ -10,6 +10,10 @@ extraResources:
     to: 'clinical-data/'
     filter:
       - '**/*'
+  - from: 'src/data/knowledge-corpus/'
+    to: 'knowledge-corpus/'
+    filter:
+      - '**/*'
 asarUnpack:
   - '**/*.node'
 mac:

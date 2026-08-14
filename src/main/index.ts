@@ -2,6 +2,7 @@ import path from 'node:path'
 import electron from 'electron'
 import { createTables } from './db/schema'
 import { seedData } from './db/seed'
+import { seedBundledKnowledgeCorpus } from './knowledge/bundled-corpus'
 import { initDb, closeDb } from './db/pglite'
 import { APP_CONFIG } from './config/app-config'
 import { shouldShowMainWindow } from './headless'
@@ -159,6 +160,11 @@ async function bootstrap(): Promise<void> {
   await createTables()
   await maybeSeedIaConfig()
   await seedData()
+  const corpus = await seedBundledKnowledgeCorpus()
+  console.log(
+    `[seed] Corpus de conhecimento pronto: ${corpus.sources_count} documentos, ` +
+      `${corpus.chunks_count} chunks, ${corpus.entities_count} entidades e ${corpus.relations_count} relações.`,
+  )
 
   await app.whenReady()
   installApplicationMenu(app)

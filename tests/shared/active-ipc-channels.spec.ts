@@ -11,9 +11,10 @@ describe('active IPC channels', () => {
     expect(isActiveIpcChannel('app:version')).toBe(true)
     expect(isActiveIpcChannel('knowledge.stats')).toBe(true)
     expect(isActiveIpcChannel('knowledge.importarCompleto')).toBe(true)
-    expect(isActiveIpcChannel('knowledge.listarChunks')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.importar')).toBe(false)
+    expect(isActiveIpcChannel('knowledge.listarChunks')).toBe(false)
     expect(isActiveIpcChannel('knowledge.enrich')).toBe(true)
-    expect(isActiveIpcChannel('knowledge.demo.seed')).toBe(true)
+    expect(isActiveIpcChannel('knowledge.demo.seed')).toBe(false)
     expect(isActiveIpcChannel('knowledge.graphData')).toBe(true)
   })
 
@@ -21,6 +22,7 @@ describe('active IPC channels', () => {
     'ia.memorias.listar',
     'ia.config.memoriaAutomatica',
     'knowledge.rebuildAndExportSistema',
+    'knowledge.listarChunks',
     'registros.salvarAnamnese',
     'catalogos.cid10.buscar',
     'export.imprimirPDF',

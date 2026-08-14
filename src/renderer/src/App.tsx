@@ -9,6 +9,7 @@ import { Dashboard } from './paginas/Dashboard'
 import { ConfiguracoesPagina } from './paginas/ConfiguracoesPagina'
 import { IaPagina } from './paginas/IaPagina'
 import { MemoriaPagina } from './paginas/MemoriaPagina'
+import { DocumentoMemoriaPagina } from './paginas/DocumentoMemoriaPagina'
 import { NaoEncontrado } from './paginas/NaoEncontrado'
 import { RepertorioPagina } from './paginas/RepertorioPagina'
 
@@ -21,6 +22,7 @@ export const ACTIVE_ROUTE_PATHS = [
   '/repertorio/widgets',
   '/assistente',
   '/memoria',
+  '/memoria/documentos/:id',
   '/configuracoes',
 ] as const
 
@@ -53,6 +55,7 @@ export const router = createHashRouter([
       { path: '/repertorio/widgets', element: <RepertorioPagina /> },
       { path: '/assistente', element: <IaPagina /> },
       { path: '/memoria', element: <MemoriaPagina /> },
+      { path: '/memoria/documentos/:id', element: <DocumentoMemoriaPagina /> },
       { path: '/configuracoes', element: <ConfiguracoesPagina /> },
       { path: '*', element: <NaoEncontrado /> },
     ],

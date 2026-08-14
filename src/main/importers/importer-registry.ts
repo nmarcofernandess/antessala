@@ -1,11 +1,10 @@
 import fs from 'fs'
 import path from 'path'
 import type { DetectedFormat, ImportResult } from '../../shared/importer-types'
-import { importText } from './text-importer'
-import { importPdf } from './pdf-importer'
 import { importChatGptFromString } from './chatgpt-importer'
 import { importClaudeFromString } from './claude-importer'
 import { importZip } from './zip-importer'
+import { detectStructuredFormat, importStructuredDocument } from './structured-document-importer'
 
 /**
  * Sniff the first N chars of a JSON string to decide if it's ChatGPT or Claude format.
@@ -29,8 +28,8 @@ export function detectFormat(filePath: string): DetectedFormat {
     return 'text' // JSON but unknown format — treat as text
   }
 
-  // .md, .txt, .html, anything else → text
-  return 'text'
+  const structuredFormat = detectStructuredFormat(filePath)
+  return structuredFormat === 'unsupported' || structuredFormat === 'unknown' ? 'unknown' : 'text'
 }
 
 export async function importFile(filePath: string): Promise<ImportResult> {
@@ -39,9 +38,25 @@ export async function importFile(filePath: string): Promise<ImportResult> {
   try {
     switch (format) {
       case 'text':
-        return { type: 'text', data: importText(filePath) }
-      case 'pdf':
-        return { type: 'text', data: await importPdf(filePath) }
+      case 'pdf': {
+        const document = await importStructuredDocument(filePath)
+        const bridgeText = ['markdown', 'html', 'docx'].includes(document.format)
+          ? document.markdown
+          : document.text
+        return {
+          type: 'text',
+          data: {
+            text: bridgeText,
+            metadata: {
+              fileName: document.metadata.fileName,
+              charCount: bridgeText.length,
+              format: document.format === 'pdf' ? 'pdf' : 'text',
+              pageCount: document.metadata.pageCount,
+              author: document.metadata.author,
+            },
+          },
+        }
+      }
       case 'chatgpt': {
         const content = fs.readFileSync(filePath, 'utf-8')
         return { type: 'conversations', data: importChatGptFromString(content, path.basename(filePath)) }
@@ -53,7 +68,7 @@ export async function importFile(filePath: string): Promise<ImportResult> {
       case 'zip':
         return await importZip(filePath)
       default:
-        return { type: 'error', error: `Formato nao suportado: ${format}` }
+        return { type: 'error', error: `Falha ao importar: Formato não suportado. Converta o arquivo para PDF, DOCX, HTML, Markdown ou TXT.` }
     }
   } catch (err) {
     return { type: 'error', error: `Falha ao importar: ${(err as Error).message}` }

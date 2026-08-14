@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BookOpen,
-  Boxes,
   FileText,
-  FlaskConical,
   Loader2,
   Network,
   RefreshCw,
@@ -12,6 +10,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PageHeader } from '@/componentes/PageHeader'
 import { AdicionarConhecimentoDialog } from '@/componentes/AdicionarConhecimentoDialog'
@@ -32,31 +31,21 @@ type Fonte = {
   ativo: boolean
   criada_em: string
   atualizada_em: string
-  chunks_count: number
-}
-
-type Chunk = {
-  id: number
-  source_id: number
-  conteudo: string
-  importance: string
-  last_accessed_at: string | null
-  access_count: number
+  source_format: string
+  page_count: number | null
+  word_count: number
+  enrichment_status: 'pending' | 'indexing' | 'ready' | 'failed'
 }
 
 type Totais = {
-  total_fontes: number
-  total_chunks: number
-  total_sistema: number
-  total_usuario: number
+  total_documentos: number
+  total_conceitos: number
+  total_relacoes: number
 }
 
-const ZERO_TOTALS: Totais = {
-  total_fontes: 0,
-  total_chunks: 0,
-  total_sistema: 0,
-  total_usuario: 0,
-}
+type Evidence = Awaited<ReturnType<typeof servicoConhecimento.graphNodeEvidence>>
+
+const ZERO_TOTALS: Totais = { total_documentos: 0, total_conceitos: 0, total_relacoes: 0 }
 
 function cleanError(error: unknown): string {
   return (error instanceof Error ? error.message : String(error))
@@ -64,7 +53,16 @@ function cleanError(error: unknown): string {
     .replace(/^Error:\s*/i, '')
 }
 
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(value))
+}
+
+function enrichmentLabel(status: Fonte['enrichment_status']): string {
+  return ({ pending: 'Aguardando enriquecimento', indexing: 'Indexando', ready: 'Enriquecido', failed: 'Enriquecimento pendente' })[status]
+}
+
 export function MemoriaPagina() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState('biblioteca')
   const [fontes, setFontes] = useState<Fonte[]>([])
   const [totais, setTotais] = useState<Totais>(ZERO_TOTALS)
@@ -72,21 +70,21 @@ export function MemoriaPagina() {
   const [links, setLinks] = useState<GraphLink[]>([])
   const [carregando, setCarregando] = useState(true)
   const [enriquecendo, setEnriquecendo] = useState(false)
-  const [carregandoDemo, setCarregandoDemo] = useState(false)
   const [dialogAberto, setDialogAberto] = useState(false)
   const [busca, setBusca] = useState('')
-  const [fonteSelecionada, setFonteSelecionada] = useState<Fonte | null>(null)
-  const [chunks, setChunks] = useState<Chunk[]>([])
-  const [carregandoChunks, setCarregandoChunks] = useState(false)
   const [geminiDisponivel, setGeminiDisponivel] = useState(false)
   const [geminiMensagem, setGeminiMensagem] = useState<string>()
+  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null)
+  const [evidence, setEvidence] = useState<Evidence | null>(null)
+  const [sourceFilter, setSourceFilter] = useState<number | undefined>()
+  const [typeFilter, setTypeFilter] = useState('')
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (query = busca) => {
     setCarregando(true)
     try {
       const [stats, graph, metadata] = await Promise.all([
-        servicoConhecimento.stats(),
-        servicoConhecimento.graphData('usuario', 300),
+        servicoConhecimento.stats(query),
+        servicoConhecimento.graphData(undefined, 500, sourceFilter),
         servicoConhecimento.metadataStatus().catch(() => null),
       ])
       setFontes(stats.fontes)
@@ -100,28 +98,23 @@ export function MemoriaPagina() {
     } finally {
       setCarregando(false)
     }
-  }, [])
+  }, [busca, sourceFilter])
 
-  useEffect(() => { void carregar() }, [carregar])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void carregar(busca), busca ? 250 : 0)
+    return () => window.clearTimeout(timer)
+  }, [busca, carregar, sourceFilter])
 
-  const filtradas = useMemo(() => {
-    const query = busca.trim().toLowerCase()
-    if (!query) return fontes
-    return fontes.filter((fonte) => fonte.titulo.toLowerCase().includes(query))
-  }, [busca, fontes])
-
-  async function abrirChunks(fonte: Fonte) {
-    setFonteSelecionada(fonte)
-    setTab('chunks')
-    setCarregandoChunks(true)
-    try {
-      setChunks(await servicoConhecimento.listarChunks(fonte.id))
-    } catch (error) {
-      toast.error('Não foi possível abrir os chunks', { description: cleanError(error) })
-    } finally {
-      setCarregandoChunks(false)
-    }
-  }
+  const visibleNodes = useMemo(
+    () => typeFilter ? nodes.filter((node) => node.tipo === typeFilter) : nodes,
+    [nodes, typeFilter],
+  )
+  const visibleIds = useMemo(() => new Set(visibleNodes.map((node) => node.id)), [visibleNodes])
+  const visibleLinks = useMemo(
+    () => links.filter((link) => visibleIds.has(Number(link.source)) && visibleIds.has(Number(link.target))),
+    [links, visibleIds],
+  )
+  const entityTypes = useMemo(() => [...new Set(nodes.map((node) => node.tipo))].sort(), [nodes])
 
   async function alternarFonte(fonte: Fonte, ativo: boolean) {
     setFontes((atuais) => atuais.map((item) => item.id === fonte.id ? { ...item, ativo } : item))
@@ -129,7 +122,7 @@ export function MemoriaPagina() {
       await servicoConhecimento.toggleAtivo(fonte.id, ativo)
     } catch (error) {
       setFontes((atuais) => atuais.map((item) => item.id === fonte.id ? { ...item, ativo: !ativo } : item))
-      toast.error('Não foi possível alterar a fonte', { description: cleanError(error) })
+      toast.error('Não foi possível alterar o documento', { description: cleanError(error) })
     }
   }
 
@@ -137,10 +130,6 @@ export function MemoriaPagina() {
     try {
       await servicoConhecimento.removerFonte(fonte.id)
       toast.success('Documento removido')
-      if (fonteSelecionada?.id === fonte.id) {
-        setFonteSelecionada(null)
-        setChunks([])
-      }
       await carregar()
     } catch (error) {
       toast.error('Não foi possível remover', { description: cleanError(error) })
@@ -151,11 +140,11 @@ export function MemoriaPagina() {
     setEnriquecendo(true)
     try {
       const result = await servicoConhecimento.enrich()
-      if (result.chunks_enriquecidos === 0) {
-        toast.info('Nada novo para enriquecer')
+      if (result.entities_count === 0 && result.relations_count === 0) {
+        toast.info('Não há documentos novos aguardando enriquecimento')
       } else {
         toast.success('Grafo enriquecido', {
-          description: `${result.chunks_enriquecidos} chunks · ${result.entities_count} entidades · ${result.relations_count} relações`,
+          description: `${result.entities_count} conceitos · ${result.relations_count} relações`,
         })
       }
       await carregar()
@@ -167,19 +156,12 @@ export function MemoriaPagina() {
     }
   }
 
-  async function carregarDemonstracao() {
-    setCarregandoDemo(true)
+  async function selectNode(node: GraphNode) {
+    setSelectedNodeId(node.id)
     try {
-      const result = await servicoConhecimento.carregarDemonstracao()
-      await carregar()
-      setTab('grafo')
-      toast.success(result.imported > 0 ? 'Demonstração preparada' : 'Demonstração já estava pronta', {
-        description: `${result.sources_count} fontes sintéticas com chunks e grafo determinístico.`,
-      })
+      setEvidence(await servicoConhecimento.graphNodeEvidence(node.id))
     } catch (error) {
-      toast.error('Não foi possível preparar a demonstração', { description: cleanError(error) })
-    } finally {
-      setCarregandoDemo(false)
+      toast.error('Não foi possível abrir as evidências', { description: cleanError(error) })
     }
   }
 
@@ -191,42 +173,33 @@ export function MemoriaPagina() {
         <header className="mb-7 grid gap-5 border-b pb-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="max-w-xl">
             <div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-violet-500" />
-              Knowledge studio
+              <span className="size-1.5 rounded-full bg-violet-500" /> Knowledge studio
             </div>
             <h1 className="text-3xl font-semibold tracking-tight">Memória</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Importe material de treinamento, veja como ele foi fragmentado e transforme os conceitos em um grafo que o Assistente pode consultar.
+              Leia, edite e importe documentos de treinamento. O grafo mostra quais fontes sustentam cada conceito consultado pelo Assistente.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 lg:justify-end">
             <Button size="sm" variant="outline" onClick={() => void carregar()} disabled={carregando} aria-label="Atualizar memória" title="Atualizar memória">
               <RefreshCw className={cn('size-4', carregando && 'animate-spin')} />
             </Button>
-            <Button size="sm" variant="outline" onClick={() => void enriquecer()} disabled={enriquecendo || totais.total_chunks === 0}>
-              {enriquecendo ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-              Enriquecer
+            <Button size="sm" variant="outline" onClick={() => void enriquecer()} disabled={enriquecendo || totais.total_documentos === 0}>
+              {enriquecendo ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Enriquecer
             </Button>
-            <Button size="sm" variant="outline" onClick={() => void carregarDemonstracao()} disabled={carregandoDemo}>
-              {carregandoDemo ? <Loader2 className="size-4 animate-spin" /> : <FlaskConical className="size-4" />}
-              Exemplos
-            </Button>
-            <Button size="sm" onClick={() => setDialogAberto(true)}>
-              <Upload className="size-4" /> Importar
-            </Button>
+            <Button size="sm" onClick={() => setDialogAberto(true)}><Upload className="size-4" /> Importar</Button>
           </div>
         </header>
 
         <div className="mb-7 grid gap-3 sm:grid-cols-3">
-          <Metric icon={BookOpen} label="Fontes" value={totais.total_fontes} detail="documentos indexados" />
-          <Metric icon={Boxes} label="Chunks" value={totais.total_chunks} detail="trechos pesquisáveis" />
-          <Metric icon={Network} label="Grafo" value={nodes.length} detail={`${links.length} relações`} />
+          <Metric icon={BookOpen} label="Documentos" value={totais.total_documentos} detail="fontes editáveis" />
+          <Metric icon={Sparkles} label="Conceitos" value={totais.total_conceitos} detail="entidades rastreadas" />
+          <Metric icon={Network} label="Relações" value={totais.total_relacoes} detail="com evidência" />
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="mb-5">
             <TabsTrigger value="biblioteca" className="gap-2"><BookOpen className="size-4" /> Biblioteca</TabsTrigger>
-            <TabsTrigger value="chunks" className="gap-2"><Boxes className="size-4" /> Chunks</TabsTrigger>
             <TabsTrigger value="grafo" className="gap-2"><Network className="size-4" /> Grafo</TabsTrigger>
           </TabsList>
 
@@ -236,35 +209,30 @@ export function MemoriaPagina() {
                 <div className="flex items-center gap-3 border-b px-5 py-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar documento" className="pl-9" />
+                    <Input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar por título, conteúdo, formato ou fonte" className="pl-9" />
                   </div>
-                  <span className="font-mono text-[11px] text-muted-foreground">{filtradas.length}</span>
+                  <span className="font-mono text-[11px] text-muted-foreground">{fontes.length}</span>
                 </div>
 
-                {carregando ? (
-                  <Loading label="Carregando biblioteca" />
-                ) : filtradas.length === 0 ? (
-                  <EmptyLibrary onImport={() => setDialogAberto(true)} />
+                {carregando ? <Loading label="Carregando biblioteca" /> : fontes.length === 0 ? (
+                  <EmptyLibrary onImport={() => setDialogAberto(true)} hasQuery={Boolean(busca)} />
                 ) : (
                   <div className="divide-y">
-                    {filtradas.map((fonte) => (
+                    {fontes.map((fonte) => (
                       <div key={fonte.id} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/30">
-                        <div className="grid size-10 shrink-0 place-items-center rounded-xl border bg-background text-muted-foreground">
-                          <FileText className="size-4" />
-                        </div>
-                        <button type="button" onClick={() => void abrirChunks(fonte)} className="min-w-0 flex-1 text-left">
+                        <div className="grid size-10 shrink-0 place-items-center rounded-xl border bg-background text-muted-foreground"><FileText className="size-4" /></div>
+                        <button type="button" onClick={() => navigate(`/memoria/documentos/${fonte.id}`)} className="min-w-0 flex-1 text-left">
                           <div className="flex items-center gap-2">
                             <span className="truncate text-sm font-medium">{fonte.titulo}</span>
                             {!fonte.ativo && <Badge variant="outline">Pausado</Badge>}
                           </div>
-                          <p className="mt-1 font-mono text-[10.5px] text-muted-foreground">
-                            {fonte.chunks_count} chunks · {fonte.tipo.replaceAll('_', ' ')}
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {fonte.source_format.toUpperCase()} · {fonte.page_count ? `${fonte.page_count} páginas` : `${fonte.word_count.toLocaleString('pt-BR')} palavras`} · atualizado {formatDate(fonte.atualizada_em)}
                           </p>
+                          <p className={cn('mt-1 text-[10px]', fonte.enrichment_status === 'ready' ? 'text-emerald-600' : 'text-amber-600')}>{enrichmentLabel(fonte.enrichment_status)}</p>
                         </button>
                         <Switch checked={fonte.ativo} onCheckedChange={(ativo) => void alternarFonte(fonte, ativo)} aria-label={`Usar ${fonte.titulo} no Assistente`} />
-                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={() => void removerFonte(fonte)} aria-label={`Remover ${fonte.titulo}`}>
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={() => void removerFonte(fonte)} aria-label={`Remover ${fonte.titulo}`}><Trash2 className="size-4" /></Button>
                       </div>
                     ))}
                   </div>
@@ -273,96 +241,78 @@ export function MemoriaPagina() {
 
               <aside className="space-y-4">
                 <div className="rounded-2xl border bg-card p-5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium">Gemini</span>
-                    <span className={cn('size-2 rounded-full', geminiDisponivel ? 'bg-emerald-500' : 'bg-amber-500')} />
-                  </div>
+                  <div className="flex items-center justify-between"><span className="text-xs font-medium">Gemini</span><span className={cn('size-2 rounded-full', geminiDisponivel ? 'bg-emerald-500' : 'bg-amber-500')} /></div>
                   <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                    {geminiDisponivel ? 'Pronto para enriquecer os chunks e responder usando esta memória.' : geminiMensagem || 'Configure o Gemini para gerar entidades e relações.'}
+                    {geminiDisponivel ? 'Pronto para enriquecer novos documentos e responder com a memória.' : geminiMensagem || 'A biblioteca e a busca funcionam offline. Configure o Gemini para enriquecer novos documentos.'}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-dashed p-5">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Pipeline</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Como funciona</p>
                   <div className="mt-4 space-y-4">
-                    <Step number="01" title="Importação" detail="Texto extraído localmente" />
-                    <Step number="02" title="Chunking" detail="Trechos pesquisáveis" />
-                    <Step number="03" title="Enriquecimento" detail="Entidades e relações" />
-                    <Step number="04" title="Pergunta" detail="RAG no Assistente" />
+                    <Step number="01" title="Documento" detail="Conteúdo integral e editável" />
+                    <Step number="02" title="Conceitos" detail="Enriquecimento rastreável" />
+                    <Step number="03" title="Evidência" detail="Origem e seção verificáveis" />
+                    <Step number="04" title="Pergunta" detail="Resposta no Assistente" />
                   </div>
                 </div>
               </aside>
             </div>
           </TabsContent>
 
-          <TabsContent value="chunks">
-            <section className="overflow-hidden rounded-2xl border bg-card">
-              <div className="flex items-center justify-between border-b px-5 py-4">
-                <div>
-                  <p className="text-sm font-medium">{fonteSelecionada?.titulo || 'Selecione um documento'}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Os trechos abaixo são as unidades recuperadas pelo Assistente.</p>
-                </div>
-                {fonteSelecionada && <Badge variant="secondary">{chunks.length} chunks</Badge>}
-              </div>
-              {carregandoChunks ? <Loading label="Abrindo chunks" /> : !fonteSelecionada ? (
-                <div className="px-6 py-20 text-center text-sm text-muted-foreground">Abra um documento na Biblioteca para inspecionar seus chunks.</div>
-              ) : (
-                <div className="grid gap-3 p-5 md:grid-cols-2">
-                  {chunks.map((chunk, index) => (
-                    <article key={chunk.id} className="rounded-xl border bg-muted/15 p-4">
-                      <div className="mb-3 flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                        <span>Chunk {String(index + 1).padStart(2, '0')}</span>
-                        <span>{chunk.conteudo.length} caracteres</span>
-                      </div>
-                      <p className="line-clamp-6 whitespace-pre-wrap text-xs leading-relaxed text-foreground/80">{chunk.conteudo}</p>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
-          </TabsContent>
-
           <TabsContent value="grafo">
-            <section className="overflow-hidden rounded-2xl border bg-card">
-              <div className="flex items-center justify-between border-b px-5 py-4">
-                <div>
-                  <p className="text-sm font-medium">Grafo de conhecimento</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Entidades extraídas dos seus documentos e as relações encontradas entre elas.</p>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px]">
+              <section className="overflow-hidden rounded-2xl border bg-card">
+                <div className="flex flex-wrap items-center gap-3 border-b px-5 py-4">
+                  <div className="mr-auto"><p className="text-sm font-medium">Grafo de conhecimento</p><p className="mt-1 text-xs text-muted-foreground">Selecione um conceito para ver as fontes e seções que o sustentam.</p></div>
+                  <select aria-label="Filtrar por documento" className="h-8 rounded-md border bg-background px-2 text-xs" value={sourceFilter ?? ''} onChange={(event) => setSourceFilter(event.target.value ? Number(event.target.value) : undefined)}>
+                    <option value="">Todos os documentos</option>{fontes.map((fonte) => <option key={fonte.id} value={fonte.id}>{fonte.titulo}</option>)}
+                  </select>
+                  <select aria-label="Filtrar por tipo" className="h-8 rounded-md border bg-background px-2 text-xs" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+                    <option value="">Todos os tipos</option>{entityTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                  <Badge variant="secondary">{visibleNodes.length} conceitos · {visibleLinks.length} relações</Badge>
                 </div>
-                <Badge variant="secondary">{nodes.length} nós · {links.length} relações</Badge>
-              </div>
-              {nodes.length === 0 ? (
-                <div className="flex flex-col items-center px-6 py-24 text-center">
-                  <Network className="size-10 text-muted-foreground/25" />
-                  <p className="mt-4 text-sm font-medium">O grafo nasce depois do enriquecimento</p>
-                  <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">Importe um documento e clique em Enriquecer grafo. O Gemini encontra conceitos e relações para esta visualização.</p>
-                </div>
-              ) : (
-                <ResponsiveGraph nodes={nodes} links={links} />
-              )}
-            </section>
+                {visibleNodes.length === 0 ? (
+                  <div className="flex flex-col items-center px-6 py-24 text-center"><Network className="size-10 text-muted-foreground/25" /><p className="mt-4 text-sm font-medium">Nenhum conceito neste filtro</p><p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">O corpus inicial já traz evidências offline. Novos documentos podem ser enriquecidos com o Gemini.</p></div>
+                ) : (
+                  <ResponsiveGraph nodes={visibleNodes} links={visibleLinks} selectedNodeId={selectedNodeId} onNodeClick={(node) => void selectNode(node)} />
+                )}
+              </section>
+
+              <aside className="min-h-[300px] rounded-2xl border bg-card p-5">
+                {!evidence ? (
+                  <div className="grid h-full min-h-[280px] place-items-center text-center"><div><Network className="mx-auto size-8 text-muted-foreground/30" /><p className="mt-3 text-sm font-medium">Escolha um conceito</p><p className="mt-1 text-xs text-muted-foreground">As relações e os documentos de evidência aparecerão aqui.</p></div></div>
+                ) : (
+                  <div>
+                    <Badge variant="outline">{evidence.entity.tipo}</Badge>
+                    <h2 className="mt-3 text-xl font-semibold">{evidence.entity.nome}</h2>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{evidence.entity.description}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">{evidence.relations.length} evidências em relações vizinhas</p>
+                    <div className="mt-5 space-y-3">
+                      {evidence.relations.map((item, index) => (
+                        <article key={`${item.relation_id}-${item.source_id}-${item.section_ref}-${index}`} className="rounded-xl border p-3">
+                          <p className="text-xs font-medium">{item.direction === 'saida' ? `${item.tipo_relacao} →` : `← ${item.tipo_relacao}`} {item.neighbor_name}</p>
+                          <button className="mt-2 text-left text-xs font-medium text-violet-600 hover:underline" onClick={() => navigate(`/memoria/documentos/${item.source_id}`)}>{item.source_title}</button>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{item.section_ref} · revisão {item.source_revision}</p>
+                          {item.excerpt && <p className="mt-2 line-clamp-3 text-[11px] leading-relaxed text-foreground/70">{item.excerpt}</p>}
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </aside>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
 
-      <AdicionarConhecimentoDialog
-        open={dialogAberto}
-        onOpenChange={setDialogAberto}
-        onSaved={() => void carregar()}
-        iaDisponivel={geminiDisponivel}
-        iaRouteMessage={geminiMensagem}
-        iaRouteAction="Configure o Gemini para sugerir título e contexto. A importação local continua disponível."
-      />
+      <AdicionarConhecimentoDialog open={dialogAberto} onOpenChange={setDialogAberto} onSaved={() => void carregar()} iaDisponivel={geminiDisponivel} iaRouteMessage={geminiMensagem} iaRouteAction="Configure o Gemini para sugerir título e contexto. A importação local continua disponível." />
     </div>
   )
 }
 
 function Metric({ icon: Icon, label, value, detail }: { icon: typeof BookOpen; label: string; value: number; detail: string }) {
-  return (
-    <div className="flex items-center gap-4 rounded-2xl border bg-card p-4">
-      <div className="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground"><Icon className="size-4" /></div>
-      <div><p className="font-mono text-2xl font-light tabular-nums">{value}</p><p className="text-xs text-muted-foreground"><span className="text-foreground">{label}</span> · {detail}</p></div>
-    </div>
-  )
+  return <div className="flex items-center gap-4 rounded-2xl border bg-card p-4"><div className="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground"><Icon className="size-4" /></div><div><p className="font-mono text-2xl font-light tabular-nums">{value}</p><p className="text-xs text-muted-foreground"><span className="text-foreground">{label}</span> · {detail}</p></div></div>
 }
 
 function Step({ number, title, detail }: { number: string; title: string; detail: string }) {
@@ -373,18 +323,11 @@ function Loading({ label }: { label: string }) {
   return <div className="flex items-center justify-center gap-2 px-6 py-20 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> {label}</div>
 }
 
-function EmptyLibrary({ onImport }: { onImport: () => void }) {
-  return (
-    <div className="flex flex-col items-center px-6 py-20 text-center">
-      <div className="grid size-12 place-items-center rounded-2xl border bg-muted/20"><Upload className="size-5 text-muted-foreground" /></div>
-      <p className="mt-4 text-sm font-medium">Comece com alguns arquivos de treinamento</p>
-      <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">Markdown, texto, PDF ou uma pasta inteira. O Antessala extrai e fragmenta tudo localmente.</p>
-      <Button className="mt-5" size="sm" onClick={onImport}><Upload className="size-4" /> Importar primeiro documento</Button>
-    </div>
-  )
+function EmptyLibrary({ onImport, hasQuery }: { onImport: () => void; hasQuery: boolean }) {
+  return <div className="flex flex-col items-center px-6 py-20 text-center"><div className="grid size-12 place-items-center rounded-2xl border bg-muted/20"><Upload className="size-5 text-muted-foreground" /></div><p className="mt-4 text-sm font-medium">{hasQuery ? 'Nenhum documento encontrado' : 'Importe seu primeiro documento'}</p><p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">PDF, DOCX, Markdown, texto, HTML, CSV ou JSON. O conteúdo integral fica disponível para leitura e busca.</p>{!hasQuery && <Button className="mt-5" size="sm" onClick={onImport}><Upload className="size-4" /> Importar documento</Button>}</div>
 }
 
-function ResponsiveGraph({ nodes, links }: { nodes: GraphNode[]; links: GraphLink[] }) {
+function ResponsiveGraph({ nodes, links, selectedNodeId, onNodeClick }: { nodes: GraphNode[]; links: GraphLink[]; selectedNodeId: number | null; onNodeClick: (node: GraphNode) => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(900)
   useEffect(() => {
@@ -393,5 +336,5 @@ function ResponsiveGraph({ nodes, links }: { nodes: GraphNode[]; links: GraphLin
     observer.observe(ref.current)
     return () => observer.disconnect()
   }, [])
-  return <div ref={ref} className="min-h-[560px] w-full"><GraphVisualizer nodes={nodes} links={links} width={width} height={560} /></div>
+  return <div ref={ref} className="min-h-[600px] w-full"><GraphVisualizer nodes={nodes} links={links} width={width} height={600} selectedNodeId={selectedNodeId} onNodeClick={onNodeClick} /></div>
 }
