@@ -2,11 +2,12 @@ import { execute, queryOne } from '../db/query'
 import type { SlotClass } from '../../shared/clinical/caso'
 
 /**
- * Capacidade da agenda pré-anestésica.
+ * Capacidade inicial da agenda pré-anestésica.
  *
- * Consultórios e vagas nascem no primeiro boot e depois pertencem ao banco —
- * reservar, cancelar e bloquear mexem nas mesmas linhas. Isto **não** é fixture
- * de tela: é a oferta real contra a qual as reservas são gravadas.
+ * Isto é só o ponto de partida do primeiro boot: três consultórios e quatro
+ * semanas, para que o app não abra com agenda vazia. Depois disso quem manda é
+ * a tela de Capacidade — criar sala, mudar horário, gerar mais período — e o
+ * banco, contra o qual as reservas são gravadas. Não é fixture de tela.
  *
  * A agenda é da consulta pré-anestésica. Nenhuma linha daqui representa sala
  * cirúrgica, e o produto não agenda cirurgia.

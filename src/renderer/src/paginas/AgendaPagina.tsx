@@ -1,17 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { EventDropArg } from '@fullcalendar/core'
-import { CalendarClock, Loader2, Users } from 'lucide-react'
+import { CalendarClock, Loader2, Settings2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/componentes/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Sheet,
@@ -23,10 +31,14 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { Rotulo } from '@/vitrine/pecas'
-import { agenda as api, novaChave } from '@/servicos/casos'
+import { agenda as api, casos, novaChave } from '@/servicos/casos'
+import { PainelCapacidade } from './agenda/PainelCapacidade'
 import {
   ROTULO_CLASSE,
+  ROTULO_STATUS,
   type AgendaRangeDTO,
+  type BookingDTO,
+  type CaseDetailDTO,
   type SlotClass,
   type SlotDTO,
 } from '@shared/clinical/caso'
@@ -62,6 +74,13 @@ const COR_CLASSE: Record<SlotClass, { fundo: string; borda: string; texto: strin
   EXTENDED: { fundo: 'rgba(245,158,11,0.18)', borda: 'rgb(245,158,11)', texto: 'inherit' },
 }
 
+/** A mesma cor, mais forte, para a faixa de disponibilidade sem texto. */
+const COR_FAIXA: Record<SlotClass, string> = {
+  QUICK: 'rgba(34,197,94,0.30)',
+  STANDARD: 'rgba(59,130,246,0.30)',
+  EXTENDED: 'rgba(245,158,11,0.32)',
+}
+
 function inicioDaSemana(d = new Date()): Date {
   const base = new Date(d)
   base.setHours(0, 0, 0, 0)
@@ -70,6 +89,7 @@ function inicioDaSemana(d = new Date()): Date {
 }
 
 export function AgendaPagina() {
+  const navegar = useNavigate()
   const [intervalo, setIntervalo] = useState<AgendaRangeDTO>({ resources: [], slots: [] })
   const [fila, setFila] = useState<ItemDaFila[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -86,6 +106,14 @@ export function AgendaPagina() {
   // estava olhando.
   const [irPara, setIrPara] = useState<string | null>(null)
   const calendario = useRef<FullCalendar | null>(null)
+
+  // Filtro de consultório: com três salas sobrepostas no mesmo horário, o
+  // calendário vira borrão. Ver uma sala por vez é o que torna a semana legível.
+  const [consultorio, setConsultorio] = useState('TODOS')
+  const [busca, setBusca] = useState('')
+  const [detalhe, setDetalhe] = useState<{ booking: BookingDTO; caso: CaseDetailDTO | null } | null>(
+    null,
+  )
 
   const [cancelando, setCancelando] = useState<{ id: string; version: number } | null>(null)
   const [motivo, setMotivo] = useState('')
@@ -121,9 +149,21 @@ export function AgendaPagina() {
     setIrPara(null)
   }, [irPara, aba])
 
-  /** Eventos do calendário: reserva é evento sólido, vaga livre é fundo. */
+  /**
+   * Eventos do calendário.
+   *
+   * Reserva é evento sólido com nome. Vaga livre é **fundo sem texto**: três
+   * consultórios oferecendo vagas no mesmo horário empilhavam três títulos um
+   * sobre o outro e nada ficava legível. Quando se filtra por uma sala, o
+   * rótulo volta — aí há espaço para ele.
+   */
   const eventos = useMemo(() => {
-    return intervalo.slots.map((slot) => {
+    const visiveis =
+      consultorio === 'TODOS'
+        ? intervalo.slots
+        : intervalo.slots.filter((s) => s.resourceId === consultorio)
+
+    return visiveis.map((slot) => {
       const cor = COR_CLASSE[slot.slotClass]
       if (slot.booking) {
         return {
@@ -144,17 +184,34 @@ export function AgendaPagina() {
           },
         }
       }
+      // Com todos os consultórios juntos, a vaga livre é só densidade: faixa
+      // colorida, sem texto. Escolhida uma sala, ela vira bloco legível — aí
+      // há espaço para dizer que vaga é aquela.
+      if (consultorio === 'TODOS') {
+        return {
+          id: slot.id,
+          title: '',
+          start: slot.startsAt,
+          end: slot.endsAt,
+          display: 'background' as const,
+          backgroundColor: COR_FAIXA[slot.slotClass],
+          extendedProps: { tipo: 'slot' as const, slotClass: slot.slotClass },
+        }
+      }
       return {
         id: slot.id,
-        title: `${ROTULO_CLASSE[slot.slotClass]} livre · ${slot.resourceName}`,
+        title: `${ROTULO_CLASSE[slot.slotClass]} livre`,
         start: slot.startsAt,
         end: slot.endsAt,
-        display: 'background' as const,
         backgroundColor: cor.fundo,
+        borderColor: cor.borda,
+        textColor: 'inherit',
+        editable: false,
+        classNames: ['vaga-livre'],
         extendedProps: { tipo: 'slot' as const, slotClass: slot.slotClass },
       }
     })
-  }, [intervalo])
+  }, [intervalo, consultorio])
 
   async function abrirDrawer(item: ItemDaFila) {
     setSelecionado(item)
@@ -256,6 +313,18 @@ export function AgendaPagina() {
     }
   }
 
+  /** Clicar numa consulta abre quem ela é: pessoa, caso, estado e ações. */
+  async function abrirConsulta(booking: BookingDTO) {
+    setDetalhe({ booking, caso: null })
+    try {
+      const caso = await casos.obter(booking.caseId)
+      setDetalhe({ booking, caso })
+    } catch {
+      // O detalhe do caso é enfeite útil, não requisito: sem ele o drawer
+      // continua mostrando o que a própria reserva sabe.
+    }
+  }
+
   async function confirmarCancelamento() {
     if (!cancelando) return
     try {
@@ -273,7 +342,17 @@ export function AgendaPagina() {
     }
   }
 
-  const reservas = intervalo.slots.filter((s) => s.booking).map((s) => s.booking!)
+  const termo = busca.trim().toLowerCase()
+  const reservas = intervalo.slots
+    .filter((s) => s.booking)
+    .map((s) => s.booking!)
+    .filter((b) => (consultorio === 'TODOS' ? true : b.resourceId === consultorio))
+    .filter(
+      (b) =>
+        !termo ||
+        b.personName.toLowerCase().includes(termo) ||
+        b.displayCode.toLowerCase().includes(termo),
+    )
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -293,6 +372,9 @@ export function AgendaPagina() {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="capacidade">
+              <Settings2 className="size-4" /> Capacidade
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -308,8 +390,51 @@ export function AgendaPagina() {
             Tentar de novo
           </Button>
         </div>
+      ) : aba === 'capacidade' ? (
+        <PainelCapacidade onMudou={recarregar} />
       ) : aba === 'calendario' ? (
         <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Select value={consultorio} onValueChange={setConsultorio}>
+              <SelectTrigger className="h-9 w-[15rem]" aria-label="Filtrar por consultório">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos os consultórios</SelectItem>
+                {intervalo.resources.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por pessoa ou código do caso"
+              aria-label="Buscar consulta"
+              className="h-9 max-w-xs"
+            />
+            <div className="ml-auto flex flex-wrap items-center gap-3">
+              {(['QUICK', 'STANDARD', 'EXTENDED'] as SlotClass[]).map((c) => (
+                <span key={c} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span
+                    className="size-2.5 rounded-[3px]"
+                    style={{ backgroundColor: COR_CLASSE[c].borda }}
+                    aria-hidden
+                  />
+                  {ROTULO_CLASSE[c]}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {consultorio === 'TODOS' && (
+            <p className="mb-3 text-[11px] text-muted-foreground">
+              As faixas mostram onde há vaga livre em qualquer consultório. Escolha uma sala para
+              ver cada vaga com nome — três salas no mesmo horário não cabem lado a lado.
+            </p>
+          )}
           <div className="antessala-calendario">
             <FullCalendar
               ref={calendario}
@@ -347,12 +472,9 @@ export function AgendaPagina() {
                 void recarregar()
               }}
               eventClick={(info) => {
-                const props = info.event.extendedProps as {
-                  tipo?: string
-                  booking?: { id: string; version: number; caseId: string }
-                }
+                const props = info.event.extendedProps as { tipo?: string; booking?: BookingDTO }
                 if (props.tipo !== 'booking' || !props.booking) return
-                setCancelando({ id: props.booking.id, version: props.booking.version })
+                void abrirConsulta(props.booking)
               }}
             />
           </div>
@@ -389,7 +511,15 @@ export function AgendaPagina() {
                             minute: '2-digit',
                           })}
                         </td>
-                        <td className="py-2">{b.personName}</td>
+                        <td className="py-2">
+                          <button
+                            type="button"
+                            className="underline-offset-2 hover:underline"
+                            onClick={() => void abrirConsulta(b)}
+                          >
+                            {b.personName}
+                          </button>
+                        </td>
                         <td className="py-2">
                           <Link
                             to={`/casos/${b.caseId}`}
@@ -551,6 +681,104 @@ export function AgendaPagina() {
               ))}
             </div>
           </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── a consulta clicada: quem é, em que pé está e o que dá para fazer ── */}
+      <Sheet open={detalhe !== null} onOpenChange={(a) => !a && setDetalhe(null)}>
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+          data-testid="drawer-consulta"
+        >
+          <SheetHeader className="space-y-1 border-b px-5 py-4">
+            <SheetTitle>{detalhe?.booking.personName}</SheetTitle>
+            <SheetDescription>
+              {detalhe?.booking.displayCode} · {detalhe?.booking.procedureDescription}
+            </SheetDescription>
+          </SheetHeader>
+
+          {detalhe && (
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="space-y-4 px-5 py-4">
+                <div className="rounded-lg border px-4 py-3">
+                  <Rotulo>Estado do caso</Rotulo>
+                  <p className="mt-1.5 text-sm font-medium">
+                    {detalhe.caso ? ROTULO_STATUS[detalhe.caso.status] : 'Carregando…'}
+                  </p>
+                  {detalhe.caso?.anamnesis && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Entrevista {detalhe.caso.anamnesis.status === 'FINAL' ? 'publicada' : 'em rascunho'}
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-lg border px-4 py-3">
+                  <Rotulo>Consulta</Rotulo>
+                  <p className="mt-1.5 text-sm">
+                    {new Date(detalhe.booking.startsAt).toLocaleString('pt-BR')}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {detalhe.booking.resourceName} · {ROTULO_CLASSE[detalhe.booking.slotClass]}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    data-testid="drawer-abrir-caso"
+                    onClick={() => navegar(`/casos/${detalhe.booking.caseId}`)}
+                  >
+                    Abrir o caso e a triagem
+                  </Button>
+
+                  {detalhe.booking.status === 'CONFIRMED' && (
+                    <>
+                      <Button
+                        className="w-full"
+                        onClick={async () => {
+                          await marcarChegada(detalhe.booking)
+                          setDetalhe(null)
+                        }}
+                      >
+                        Registrar chegada
+                      </Button>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={async () => {
+                          await marcarAusencia(detalhe.booking)
+                          setDetalhe(null)
+                        }}
+                      >
+                        Registrar ausência
+                      </Button>
+                      <Button
+                        className="w-full"
+                        variant="ghost"
+                        onClick={() => {
+                          setCancelando({
+                            id: detalhe.booking.id,
+                            version: detalhe.booking.version,
+                          })
+                          setDetalhe(null)
+                        }}
+                      >
+                        Cancelar consulta
+                      </Button>
+                    </>
+                  )}
+                  {detalhe.booking.status === 'CHECKED_IN' && (
+                    <p className="rounded-lg border border-dashed px-4 py-3 text-[12px] leading-relaxed text-muted-foreground">
+                      Chegada registrada. A avaliação começa pelo caso — quem a abre é o
+                      anestesiologista, e é lá que a autoria fica gravada.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </ScrollArea>
+          )}
         </SheetContent>
       </Sheet>
 

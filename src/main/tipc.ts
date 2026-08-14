@@ -29,6 +29,16 @@ import {
   registrarAusencia,
 } from './scheduling/agenda-service'
 import {
+  listarRecursos,
+  salvarRecurso,
+  gerarVagas,
+  removerVagasLivres,
+  bloquearVaga,
+  liberarVaga,
+  resumoDaOferta,
+  type PlanoDeVagas,
+} from './scheduling/capacity-service'
+import {
   iniciarEncontro,
   obterEncontro,
   salvarAvaliacao,
@@ -414,6 +424,30 @@ const schedulingCancel = t.procedure
 
 const schedulingQueue = t.procedure.action(async () => comErroDeDominio(() => filaParaAgendar()))
 
+const capacityResources = t.procedure.action(async () => comErroDeDominio(() => listarRecursos()))
+
+const capacitySaveResource = t.procedure
+  .input<{ id?: string; nome: string; capabilities: string[]; ativo?: boolean }>()
+  .action(async ({ input }) => comErroDeDominio(() => salvarRecurso(input)))
+
+const capacityGenerate = t.procedure
+  .input<PlanoDeVagas>()
+  .action(async ({ input }) => comErroDeDominio(() => gerarVagas(input)))
+
+const capacityClear = t.procedure
+  .input<{ resourceId?: string; de: string; ate: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => removerVagasLivres(input)))
+
+const capacityBlock = t.procedure
+  .input<{ slotId: string; motivo: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => bloquearVaga(input)))
+
+const capacityUnblock = t.procedure
+  .input<{ slotId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => liberarVaga(input.slotId)))
+
+const capacitySummary = t.procedure.action(async () => comErroDeDominio(() => resumoDaOferta()))
+
 const schedulingCheckIn = t.procedure
   .input<{ bookingId: string; expectedVersion: number }>()
   .action(async ({ input }) => comErroDeDominio(() => registrarChegada(input)))
@@ -568,6 +602,13 @@ export const router = {
   'scheduling.cancel': schedulingCancel,
   'scheduling.queue': schedulingQueue,
   'scheduling.checkIn': schedulingCheckIn,
+  'capacity.resources': capacityResources,
+  'capacity.saveResource': capacitySaveResource,
+  'capacity.generateSlots': capacityGenerate,
+  'capacity.clearFreeSlots': capacityClear,
+  'capacity.blockSlot': capacityBlock,
+  'capacity.unblockSlot': capacityUnblock,
+  'capacity.summary': capacitySummary,
   'scheduling.noShow': schedulingNoShow,
   'encounters.start': encountersStart,
   'encounters.get': encountersGet,

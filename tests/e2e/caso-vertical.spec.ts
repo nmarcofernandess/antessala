@@ -158,6 +158,16 @@ test('o caso caminha do encaminhamento à consulta marcada e a história registr
     await expect(lista.getByText('Vaga rápida')).toBeVisible()
     await expect(page.locator('.fc')).toBeVisible()
 
+    // Clicar na consulta abre quem ela é: pessoa, estado do caso e o que dá
+    // para fazer com ela agora.
+    await lista.getByRole('button', { name: 'Aparecida Gomes Fontes' }).click()
+    const consulta = page.getByTestId('drawer-consulta')
+    await expect(consulta).toBeVisible()
+    await expect(consulta.getByText('Agendado')).toBeVisible({ timeout: 20_000 })
+    await expect(consulta.getByText('Entrevista publicada')).toBeVisible()
+    await consulta.getByTestId('drawer-abrir-caso').click()
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(caseHash)
+
     /* 11. a história do caso está inteira */
     await page.evaluate((h) => {
       window.location.hash = h
