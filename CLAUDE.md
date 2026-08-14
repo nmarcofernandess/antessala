@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-**`ANALYST IN PROGRESS` — `NO-GO PARA BUILD`.**
+**`AGUARDANDO ASSINATURA DO PRD` — Analyst ainda bloqueado.**
 
 Nenhum agente pode criar ou alterar funcionalidade, schema, teste, fixture, rota, contrato
 ou componente do produto nesta fase.
@@ -10,8 +10,11 @@ ou componente do produto nesta fase.
 ## Leitura obrigatória
 
 1. `hack/PRD.md`;
-2. `hack/ANALYST.md`;
-3. todos os arquivos em `hack/analyst/`.
+2. `hack/CONTRATO-DE-APROVACAO.md`;
+3. `hack/status.json`;
+4. `hack/progress.md`;
+5. `hack/ANALYST.md`;
+6. todos os arquivos em `hack/analyst/`.
 
 `hack/BUILD.md`, `hack/WARLOG.md` e `hack/minispecs/` são rascunhos bloqueados. Não servem
 como fonte de requisito.
@@ -20,18 +23,26 @@ como fonte de requisito.
 
 ```text
 PRD congelado
-→ Analyst completo
-→ Build
-→ Warlog
-→ Sprints
-→ Spec
-→ Plan
+→ assinatura Marco
+→ Analyst completo → assinatura Marco
+→ Build → Critic → assinatura Marco
+→ Warlog-base → assinatura Marco
+→ Sprints → assinatura Marco
+→ Spec da minispec → assinatura Marco
+→ Plan da minispec → assinatura Marco
 → primeiro teste TDD
 → código
+→ QA da minispec → assinatura Marco
+→ próxima minispec
+→ QA final → assinatura Marco
 ```
 
 Não antecipar uma fase. Não escrever “a gente vê no Build”. Não usar código existente como
 desculpa para decidir o domínio por acidente.
+
+Uma IA nunca assina por Marco. Aprovação só existe quando Marco nomeia o artefato, declara
+`APROVADO`, informa a revisão examinada e autoriza a próxima fase. Qualquer alteração
+material posterior invalida a assinatura.
 
 ## Lei do produto
 
@@ -48,7 +59,8 @@ Triagem geral do SUS e marcação da cirurgia ficam fora.
 
 ## Trabalho permitido agora
 
-Somente análise e documentação em `hack/ANALYST.md` e `hack/analyst/`:
+Antes da assinatura do PRD, somente revisão documental e correção do próprio gate. Depois
+da assinatura, o trabalho permitido será análise em `hack/ANALYST.md` e `hack/analyst/`:
 
 - fluxo, entidades, estados e handoffs;
 - atores, logins, permissões e ownership;

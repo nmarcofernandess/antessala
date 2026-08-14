@@ -1,6 +1,6 @@
 # Analyst 03 — Widgets e dados
 
-**Estado:** `IN PROGRESS`
+**Estado:** `DRAFT — BLOCKED BY PRD SIGNATURE`
 **Gate:** obrigatório para Build
 
 ## Objetivo
@@ -83,3 +83,17 @@ procedimento sejam representados quando consumidos.
 - auditoria dos catálogos;
 - modelo de perguntas condicionais por procedimento;
 - lista de lacunas e decisão para cada uma.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `analyst/03-widgets-e-dados.md`
+- Gate conjunto: Analyst → Build
+- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_PRD`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Sem assinatura válida, este dossiê não conta como completo no gate do Analyst.

@@ -1,0 +1,39 @@
+{
+  "schema_version": "superflow.status.v1",
+  "id": "003-handoff-prova-final",
+  "title": "Avaliação, handoff e prova final",
+  "route": "build_plan_execute",
+  "phase_budget": "forensic",
+  "execution_strategy": "single",
+  "source": {"type": "file", "github_issue": null, "file": "../../PRD.md"},
+  "confidence": "low",
+  "current_phase": "blocked_by_minispec_002_qa_approval",
+  "decision": {
+    "verdict": "needs_product_decision",
+    "prd_status": "gathering",
+    "reason": "A MiniSpec 002 e o mapa de sprints ainda não foram aprovados por Marco.",
+    "prd_path": "../../PRD.md",
+    "discard_path": null
+  },
+  "phases": {"taskgen": "complete", "build": "blocked", "critic": "blocked", "plan": "blocked", "execute": "blocked", "qa": "blocked"},
+  "artifacts": {
+    "prd": "../../PRD.md",
+    "analysis": "../../ANALYST.md",
+    "blueprint": "../../BUILD.md",
+    "spec": "spec.md",
+    "progress": "progress.md",
+    "warlog": "../../WARLOG.md",
+    "plan": null,
+    "implementation_log": null,
+    "qa": null
+  },
+  "task_source": {"type": "none", "path": null, "progress": null},
+  "human_approval_policy": {"required": true, "approver": "Marco", "invalidate_on_material_change": true, "ai_may_sign": false},
+  "next_transition": {"from": "spec", "to": "plan", "status": "pending", "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null},
+  "human_gates": {
+    "spec": {"artifact": "spec.md", "status": "pending", "required_before": "plan"},
+    "plan": {"artifact": "plan.md", "status": "pending", "required_before": "tdd_red"},
+    "qa": {"artifact": "qa_report.md", "status": "pending", "required_before": "final_qa"}
+  },
+  "updated_at": "2026-08-14T01:05:00-03:00"
+}

@@ -1,6 +1,6 @@
 # Analyst 01 — Fluxo e domínio
 
-**Estado:** `IN PROGRESS`
+**Estado:** `DRAFT — BLOCKED BY PRD SIGNATURE`
 **Gate:** obrigatório para Build
 
 ## Lei herdada do PRD
@@ -75,4 +75,19 @@ Definir quais artefatos são dados editáveis, snapshots, documentos ou meros re
 - invariantes e falhas;
 - cenários simples, pendente e sem vaga.
 
-Enquanto qualquer item acima estiver aberto, este dossiê permanece `IN PROGRESS`.
+Depois da assinatura do PRD, este dossiê entra em `IN PROGRESS`. Enquanto qualquer item
+acima estiver aberto, ele não pode pedir assinatura de conclusão.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `analyst/01-fluxo-e-dominio.md`
+- Gate conjunto: Analyst → Build
+- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_PRD`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Sem assinatura válida, este dossiê não conta como completo no gate do Analyst.

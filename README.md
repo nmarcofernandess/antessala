@@ -3,7 +3,7 @@
 Produto para diferenciar o agendamento da consulta pré-anestésica a partir da anamnese de
 enfermagem.
 
-> **Estado: `ANALYST IN PROGRESS`. Nenhum Build, teste novo ou código está autorizado.**
+> **Estado: `AGUARDANDO ASSINATURA DO PRD`. O Analyst ainda não está autorizado.**
 
 ## Problema
 
@@ -29,21 +29,27 @@ ficam fora do Antessala.
 ## Documentação
 
 1. [`hack/PRD.md`](hack/PRD.md) — contrato do produto, congelado;
-2. [`hack/ANALYST.md`](hack/ANALYST.md) — fase ativa e barreira do Build;
-3. [`hack/analyst/`](hack/analyst/) — dossiês de domínio, atores, dados, agenda e prova;
-4. [`hack/BUILD.md`](hack/BUILD.md) — rascunho bloqueado;
-5. [`hack/WARLOG.md`](hack/WARLOG.md) — rascunho bloqueado;
-6. [`hack/minispecs/`](hack/minispecs/) — possíveis sprints, ainda sem autorização.
+2. [`hack/status.json`](hack/status.json) — GPS mecânico e assinaturas dos gates;
+3. [`hack/progress.md`](hack/progress.md) — recibo humano do estado;
+4. [`hack/CONTRATO-DE-APROVACAO.md`](hack/CONTRATO-DE-APROVACAO.md) — regra de assinatura;
+5. [`hack/ANALYST.md`](hack/ANALYST.md) — rascunho bloqueado pelo PRD;
+6. [`hack/analyst/`](hack/analyst/) — dossiês de domínio, atores, dados, agenda e prova;
+7. [`hack/BUILD.md`](hack/BUILD.md) e [`hack/CRITIC.md`](hack/CRITIC.md) — rascunhos bloqueados;
+8. [`hack/WARLOG.md`](hack/WARLOG.md) — rascunho bloqueado;
+9. [`hack/SPRINTS.md`](hack/SPRINTS.md) — mapa ainda não aprovado;
+10. [`hack/minispecs/`](hack/minispecs/) — possíveis sprints, sem autorização;
+11. [`hack/qa_report.md`](hack/qa_report.md) — QA final ainda não iniciado.
 
 ## Sequência obrigatória
 
 ```text
-PRD → Analyst → Build → Warlog → Sprints → Spec → Plan → TDD → código
+Taskgen → PRD → Analyst → Build → Critic → Warlog → Sprints
+→ Spec → Plan → TDD → código → QA
 ```
 
-Não se cria artefato de uma fase antes que a anterior esteja concluída. O Analyst só libera
-o Build quando fechar o fluxo ponta a ponta, os dados, os DTOs dos widgets, os papéis, as
-permissões, a classificação, a agenda, a arquitetura e a estratégia de prova.
+Cada seta exige assinatura de Marco no artefato anterior e no gate correspondente de
+`status.json`. Cada minispec repete Spec → assinatura → Plan → assinatura → TDD → código →
+QA → assinatura. Alteração material invalida a assinatura anterior.
 
 ## Fundação técnica existente
 

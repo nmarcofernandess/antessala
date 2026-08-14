@@ -1,6 +1,6 @@
 # Analyst 04 — Classificação e agenda
 
-**Estado:** `IN PROGRESS`
+**Estado:** `DRAFT — BLOCKED BY PRD SIGNATURE`
 **Gate:** obrigatório para Build
 
 ## Lei herdada do PRD
@@ -72,3 +72,17 @@ autoriza uma reserva inválida.
 - invariantes de reserva;
 - cenários de capacidade e concorrência;
 - oráculos de teste para casos diferentes.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `analyst/04-classificacao-e-agenda.md`
+- Gate conjunto: Analyst → Build
+- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_PRD`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Sem assinatura válida, este dossiê não conta como completo no gate do Analyst.

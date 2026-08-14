@@ -1,6 +1,6 @@
 # Analyst 05 — Arquitetura e prova
 
-**Estado:** `IN PROGRESS`
+**Estado:** `DRAFT — BLOCKED BY PRD SIGNATURE`
 **Gate:** obrigatório para Build
 
 ## Arquitetura
@@ -79,3 +79,17 @@ diferentes. Três casos que terminam na mesma vaga não provam a promessa do pro
 - matriz de testes;
 - roteiro de prova ponta a ponta;
 - critérios objetivos para autorizar o Build.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `analyst/05-arquitetura-e-prova.md`
+- Gate conjunto: Analyst → Build
+- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_PRD`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Sem assinatura válida, este dossiê não conta como completo no gate do Analyst.

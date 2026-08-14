@@ -32,3 +32,18 @@ O Build não pode inventar uma resposta que o Analyst deixou aberta.
 - [ ] Arquitetura e estratégia de prova estão fechadas.
 
 Até lá, este documento permanece vazio por decisão de processo.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `BUILD.md`
+- Próxima fase autorizada: Critic
+- Estado: `BLOQUEADO_PELO_ANALYST`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+O Critic revisa o Build antes da assinatura final do gate. Sem assinatura válida de Marco
+sobre Build e Critic corrigidos, o Warlog-base permanece bloqueado.

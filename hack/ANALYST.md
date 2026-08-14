@@ -2,7 +2,7 @@
 
 ## Barreira obrigatória antes do Build
 
-**Estado:** `IN PROGRESS`
+**Estado:** `DRAFT — BLOCKED BY PRD SIGNATURE`
 **Decisão atual:** `NO-GO PARA BUILD`
 **Entrada congelada:** `hack/PRD.md`
 **Saída futura:** `hack/BUILD.md`
@@ -65,11 +65,11 @@ todos obrigatórios:
 
 | Dossiê | Conteúdo | Estado |
 |---|---|---|
-| [Fluxo e domínio](analyst/01-fluxo-e-dominio.md) | fronteiras, identidades, estados, handoffs, falhas | `IN PROGRESS` |
-| [Atores e permissões](analyst/02-atores-e-permissoes.md) | logins, RBAC, ownership e visibilidade | `IN PROGRESS` |
-| [Widgets e dados](analyst/03-widgets-e-dados.md) | catálogo, DTOs, proveniência e terminologias | `IN PROGRESS` |
-| [Classificação e agenda](analyst/04-classificacao-e-agenda.md) | saídas, regras, slots, capacidade e concorrência | `IN PROGRESS` |
-| [Arquitetura e prova](analyst/05-arquitetura-e-prova.md) | fonte de verdade, segurança, reuso e testes | `IN PROGRESS` |
+| [Fluxo e domínio](analyst/01-fluxo-e-dominio.md) | fronteiras, identidades, estados, handoffs, falhas | `BLOCKED` |
+| [Atores e permissões](analyst/02-atores-e-permissoes.md) | logins, RBAC, ownership e visibilidade | `BLOCKED` |
+| [Widgets e dados](analyst/03-widgets-e-dados.md) | catálogo, DTOs, proveniência e terminologias | `BLOCKED` |
+| [Classificação e agenda](analyst/04-classificacao-e-agenda.md) | saídas, regras, slots, capacidade e concorrência | `BLOCKED` |
+| [Arquitetura e prova](analyst/05-arquitetura-e-prova.md) | fonte de verdade, segurança, reuso e testes | `BLOCKED` |
 
 ## 5. Matriz mestra de rastreabilidade
 
@@ -160,5 +160,23 @@ Portanto:
 - Plans: rascunhos;
 - testes e código: proibidos.
 
-O próximo trabalho é preencher os cinco dossiês e eliminar cada `a definir`. Só então este
-documento pode mudar para `READY FOR BUILD`.
+Depois que Marco assinar o PRD, o trabalho autorizado será preencher os cinco dossiês e
+eliminar cada `a definir`. Só então este documento poderá pedir assinatura para liberar o
+Build.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `ANALYST.md` e os cinco dossiês referenciados
+- Próxima fase autorizada: Build
+- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_PRD`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Declaração exigida: “Aprovo o Analyst completo e autorizo o Build.”
+
+A assinatura só vale quando os cinco dossiês também estiverem assinados e a matriz mestra
+não contiver `a definir`.

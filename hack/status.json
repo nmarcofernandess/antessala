@@ -1,0 +1,147 @@
+{
+  "schema_version": "superflow.status.v1",
+  "id": "antessala-hack",
+  "title": "Antessala — agendamento diferenciado da consulta pré-anestésica",
+  "route": "analyst_prd",
+  "phase_budget": "forensic",
+  "execution_strategy": "per_unit",
+  "source": {
+    "type": "file",
+    "github_issue": null,
+    "file": "PRD.md"
+  },
+  "confidence": "medium",
+  "current_phase": "human_approval_contract_and_prd",
+  "decision": {
+    "verdict": "needs_product_decision",
+    "prd_status": "gathering",
+    "reason": "O conteúdo do PRD foi redigido, mas Marco ainda não assinou a revisão que autoriza o Analyst.",
+    "prd_path": "PRD.md",
+    "discard_path": null
+  },
+  "phases": {
+    "inbox": "skipped",
+    "taskgen": "complete",
+    "analyst": "blocked",
+    "build": "blocked",
+    "critic": "blocked",
+    "warlog": "blocked",
+    "sprints": "blocked",
+    "plan": "blocked",
+    "execute": "blocked",
+    "qa": "blocked"
+  },
+  "artifacts": {
+    "prd": "PRD.md",
+    "analysis": "ANALYST.md",
+    "blueprint": "BUILD.md",
+    "critic": "CRITIC.md",
+    "progress": "progress.md",
+    "warlog": "WARLOG.md",
+    "sprints": "SPRINTS.md",
+    "approval_contract": "CONTRATO-DE-APROVACAO.md",
+    "plan": null,
+    "implementation_log": null,
+    "qa": null
+  },
+  "task_source": {
+    "type": "none",
+    "path": null,
+    "progress": null
+  },
+  "human_approval_policy": {
+    "required": true,
+    "approver": "Marco",
+    "signature_fields": [
+      "status",
+      "signed_by",
+      "signed_at",
+      "reviewed_git_revision",
+      "statement"
+    ],
+    "valid_status": "approved",
+    "invalidate_on_material_change": true,
+    "ai_may_sign": false
+  },
+  "next_transition": {
+    "from": "approval_contract_and_prd",
+    "to": "analyst",
+    "status": "pending",
+    "signed_by": null,
+    "signed_at": null,
+    "reviewed_git_revision": null,
+    "statement": null
+  },
+  "human_gates": {
+    "approval_contract": {
+      "artifacts": ["CONTRATO-DE-APROVACAO.md"],
+      "required_before": "prd_approval",
+      "status": "pending"
+    },
+    "prd": {
+      "artifacts": ["PRD.md"],
+      "required_before": "analyst",
+      "status": "pending"
+    },
+    "analyst": {
+      "artifacts": [
+        "ANALYST.md",
+        "analyst/01-fluxo-e-dominio.md",
+        "analyst/02-atores-e-permissoes.md",
+        "analyst/03-widgets-e-dados.md",
+        "analyst/04-classificacao-e-agenda.md",
+        "analyst/05-arquitetura-e-prova.md"
+      ],
+      "required_before": "build",
+      "status": "pending"
+    },
+    "build_and_critic": {
+      "artifacts": ["BUILD.md", "CRITIC.md"],
+      "required_before": "warlog",
+      "status": "pending"
+    },
+    "warlog_baseline": {
+      "artifacts": ["WARLOG.md"],
+      "required_before": "sprints",
+      "status": "pending"
+    },
+    "sprints": {
+      "artifacts": ["SPRINTS.md"],
+      "required_before": "minispec_001_spec",
+      "status": "pending"
+    },
+    "minispec_001": {
+      "artifacts": [
+        "minispecs/001-caso-triagem-classificacao/spec.md",
+        "minispecs/001-caso-triagem-classificacao/plan.md",
+        "minispecs/001-caso-triagem-classificacao/qa_report.md"
+      ],
+      "required_before": "minispec_002_spec",
+      "status": "pending"
+    },
+    "minispec_002": {
+      "artifacts": [
+        "minispecs/002-capacidade-agenda-booking/spec.md",
+        "minispecs/002-capacidade-agenda-booking/plan.md",
+        "minispecs/002-capacidade-agenda-booking/qa_report.md"
+      ],
+      "required_before": "minispec_003_spec",
+      "status": "pending"
+    },
+    "minispec_003": {
+      "artifacts": [
+        "minispecs/003-handoff-prova-final/spec.md",
+        "minispecs/003-handoff-prova-final/plan.md",
+        "minispecs/003-handoff-prova-final/qa_report.md"
+      ],
+      "required_before": "final_qa",
+      "status": "pending"
+    },
+    "final_qa": {
+      "artifacts": ["qa_report.md"],
+      "required_before": "complete",
+      "status": "pending"
+    }
+  },
+  "updated_at": "2026-08-14T01:05:00-03:00"
+}

@@ -9,3 +9,17 @@ Esta pasta reserva uma possível fatia vertical. Escopo, critérios e contratos 
 escritos somente depois das fases anteriores. O nome também poderá mudar.
 
 Proibido usar este arquivo para criar plan, teste ou código.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `minispecs/001-caso-triagem-classificacao/spec.md`
+- Próxima fase autorizada: Plan da MiniSpec 001
+- Estado: `BLOQUEADO_PELO_MAPA_DE_SPRINTS`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Sem assinatura válida de Marco, o Plan desta minispec não pode começar.

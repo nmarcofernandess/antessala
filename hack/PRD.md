@@ -4,14 +4,24 @@
 
 **Hacka Health 2026 · Desafio 1 · HCFMRP-USP**
 **Versão:** 4.0 · 14/08/2026
-**Estado:** `READY FOR ANALYST`
+**Estado:** `AGUARDANDO ASSINATURA DE MARCO`
 **Confiança:** média
 **Rota:** PRD → Analyst → Build → Warlog → Sprints → Spec → Plan → TDD → código
 **Próxima fase:** `hack/ANALYST.md`
 
 ---
 
-## 1. Lei deste documento
+## State
+
+- Source: fluxo decretado por Marco para o hackathon
+- Confidence: `medium`
+- Route: `analyst_prd`
+- Phase budget: `forensic`
+- Execution strategy: `per_unit`
+- Created: `2026-08-14`
+- Status: `gathering`, aguardando assinatura de Marco
+
+## Lei deste documento
 
 Este PRD define o produto. O fluxo abaixo é a decisão canônica do hackathon.
 
@@ -22,7 +32,7 @@ produto. Uma mudança desse porte exige reabrir formalmente o PRD.
 Este documento não define banco, telas, widgets, algoritmo, classes clínicas, permissões,
 agenda ou arquitetura. Essas respostas pertencem ao Analyst.
 
-## 2. Problema
+## Problem
 
 Pacientes encaminhados para consulta pré-anestésica têm necessidades diferentes, mas o
 agendamento não dispõe de informação estruturada para reservar uma vaga compatível com o
@@ -32,7 +42,7 @@ Na prática, a recepção recebe o encaminhamento, mas não deve interpretar dad
 enfermagem coleta a anamnese, porém essa avaliação precisa chegar ao agendamento como uma
 orientação operacional clara. Sem essa ponte, casos diferentes disputam vagas semelhantes.
 
-## 3. Objetivo
+## Goal
 
 Transformar a triagem de enfermagem em uma necessidade de agendamento compreensível pela
 recepção, permitindo reservar a consulta pré-anestésica na categoria de vaga adequada.
@@ -40,7 +50,7 @@ recepção, permitindo reservar a consulta pré-anestésica na categoria de vaga
 O produto também deve acompanhar a consulta do anestesiologista até a conclusão ou a
 abertura de pendências e devolver o resultado ao serviço que solicitou o procedimento.
 
-## 4. Fluxo canônico
+## Fluxo canônico
 
 1. O paciente passa pela triagem geral do SUS. Essa etapa já existe e fica fora do produto.
 2. O paciente consulta o médico do serviço solicitante.
@@ -67,7 +77,7 @@ recepção agenda a consulta correspondente. O anestesiologista avalia o pacient
 eventuais pendências e devolve o resultado à secretaria do Dr. João. A secretaria conduz a
 marcação do procedimento.
 
-## 5. Usuários e atores
+## Users / Actors
 
 | Ator | Responsabilidade no fluxo |
 |---|---|
@@ -81,7 +91,7 @@ marcação do procedimento.
 O Analyst definirá quais atores precisam de login, quais ações cada papel pode executar e
 quais dados cada papel pode ver.
 
-## 6. Histórias de usuário
+## Story de Usuario
 
 ### Paciente
 
@@ -116,7 +126,7 @@ quais dados cada papel pode ver.
 - Como integrante do serviço solicitante, quero receber o resultado da avaliação, para
   continuar o planejamento do procedimento.
 
-## 7. Histórias técnicas
+## Story Tecnica
 
 Estas histórias descrevem obrigações do produto, não soluções de implementação.
 
@@ -131,7 +141,7 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - Como sistema, preciso entregar ao serviço solicitante um resultado compreensível e
   rastreável.
 
-## 8. Escopo
+## Scope
 
 ### Dentro
 
@@ -157,14 +167,19 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - integrações institucionais reais no protótipo;
 - uso de dados reais de pacientes.
 
-## 9. Comportamento atual
+## Expected Behavior
+
+O produto deve conduzir o caso por todo o fluxo canônico, manter a responsabilidade de
+cada ator e diferenciar as opções de agenda conforme a necessidade produzida pela triagem.
+
+## Current Behavior / Bug
 
 A recepção recebe o encaminhamento, mas não dispõe de uma tradução operacional estruturada
 da anamnese. Pacientes com necessidades diferentes podem ser encaminhados a vagas
 semelhantes. O problema observado está na ligação entre triagem e agendamento; este PRD não
 afirma qual sistema, formulário ou agenda o hospital usa hoje.
 
-## 10. Comportamento desejado
+## Desired Behavior
 
 O encaminhamento entra no produto, percorre recepção, enfermagem, agendamento e avaliação
 anestésica, e termina com um resultado entregue ao serviço solicitante. Cada ator recebe a
@@ -174,7 +189,7 @@ A triagem diferencia pelo menos três necessidades de agenda: vaga rápida, vaga
 vaga estendida. O Analyst definirá os nomes canônicos, os critérios, a duração, a
 antecedência e o tratamento de exceções.
 
-## 11. Padrão e contrato do sistema
+## System Pattern / Contract
 
 O produto organiza um caso que atravessa setores. Cada etapa recebe uma entrada, registra
 uma ação, produz uma saída e identifica o próximo responsável. Informação clínica permanece
@@ -184,7 +199,7 @@ para agendar.
 Toda passagem relevante precisa ser rastreável. Pendências mantêm o caso aberto. A conclusão
 só ocorre quando o resultado chega ao serviço solicitante.
 
-## 12. Contexto técnico
+## Technical Context
 
 O repositório atual oferece uma base Electron local, persistência embarcada, widgets de
 anamnese e catálogos offline. Esses recursos são candidatos, não decisões do PRD. O Analyst
@@ -193,7 +208,7 @@ deve provar o que serve, o que precisa mudar e o que deve ficar fora.
 A demonstração deve usar dados sintéticos. O PRD não escolhe schema, biblioteca de agenda,
 modelo de autenticação, algoritmo de classificação ou arquitetura de produção.
 
-## 13. Dados e contratos
+## Data / Contracts
 
 O produto precisa representar encaminhamento, caso, anamnese, necessidade de agenda,
 reserva, avaliação, pendência, retorno e resultado. O Analyst definirá identidades,
@@ -201,7 +216,7 @@ relacionamentos, DTOs, versões, proveniência, permissões e persistência.
 
 Nenhum campo pode surgir no Build sem origem, responsável, consumidor e teste futuro.
 
-## 14. UX e estados
+## UX / States
 
 Cada papel precisa de uma superfície coerente com sua responsabilidade. A interface deve
 mostrar o próximo passo, dados ausentes, ausência de vaga, pendência, retorno e conclusão
@@ -210,7 +225,7 @@ sem depender apenas de cor.
 O Analyst definirá a máquina de estados. Este PRD exige apenas que o caso continue
 identificável do encaminhamento ao handoff final.
 
-## 15. Critérios de aceitação do produto
+## Acceptance Criteria
 
 - Um caso percorre o fluxo completo do encaminhamento ao retorno ao serviço solicitante.
 - A recepção agenda sem precisar interpretar comorbidades, medicamentos ou exames.
@@ -222,7 +237,7 @@ identificável do encaminhamento ao handoff final.
 - A autoria e a sequência dos handoffs podem ser reconstruídas.
 - A demonstração usa somente dados sintéticos.
 
-## 16. Definition of Complete do PRD
+## Definition of Complete
 
 - [x] Problema definido.
 - [x] Objetivo definido.
@@ -233,10 +248,12 @@ identificável do encaminhamento ao handoff final.
 - [x] Escopo interno e externo definido.
 - [x] Critérios de aceitação definidos.
 - [x] Próxima fase definida.
+- [ ] Marco assinou esta revisão e autorizou o Analyst.
 
-O PRD está completo para alimentar o Analyst. Ele não autoriza Build.
+O conteúdo do PRD está redigido. O artefato só termina quando Marco assinar esta revisão.
+Sem assinatura, o Analyst permanece bloqueado.
 
-## 17. Riscos
+## Risks
 
 - Confundir urgência clínica com categoria operacional de agenda.
 - Fazer a recepção interpretar dados clínicos.
@@ -246,7 +263,7 @@ O PRD está completo para alimentar o Analyst. Ele não autoriza Build.
 - Encerrar o fluxo na triagem e esquecer consulta, pendências, retorno e handoff.
 - Tratar a arquitetura local da demonstração como arquitetura hospitalar.
 
-## 18. Perguntas abertas delegadas ao Analyst
+## Open Questions
 
 O Analyst deve fechar, sem alterar este PRD:
 
@@ -263,7 +280,24 @@ O Analyst deve fechar, sem alterar este PRD:
 - segurança, auditoria e dados sintéticos;
 - estratégia de testes e prova ponta a ponta.
 
-## 19. Próxima fase
+## Next Phase
 
-O trabalho segue em `hack/ANALYST.md`. Enquanto qualquer gate obrigatório do Analyst
-estiver aberto, Build, Warlog, Sprints, Specs, Plans, testes e código permanecem proibidos.
+Depois da assinatura de Marco, o trabalho segue em `hack/ANALYST.md`. Enquanto qualquer
+gate obrigatório do Analyst estiver aberto, Build, Warlog, Sprints, Specs, Plans, testes e
+código permanecem proibidos.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `PRD.md`
+- Próxima fase autorizada: Analyst forense
+- Estado: `AGUARDANDO_ASSINATURA`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Declaração exigida: “Aprovo este PRD e autorizo o início do Analyst.”
+
+Sem assinatura válida de Marco, o PRD permanece `gathering` em `status.json`.

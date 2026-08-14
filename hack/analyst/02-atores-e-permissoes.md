@@ -1,6 +1,6 @@
 # Analyst 02 — Atores e permissões
 
-**Estado:** `IN PROGRESS`
+**Estado:** `DRAFT — BLOCKED BY PRD SIGNATURE`
 **Gate:** obrigatório para Build
 
 ## Atores herdados do PRD
@@ -62,3 +62,17 @@ qual correção cria adendo ou nova versão
 - ownership por campo;
 - contratos de leitura e escrita por papel;
 - cenários negativos que provam cada proibição.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `analyst/02-atores-e-permissoes.md`
+- Gate conjunto: Analyst → Build
+- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_PRD`
+- Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
+- Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
+
+Sem assinatura válida, este dossiê não conta como completo no gate do Analyst.
