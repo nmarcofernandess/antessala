@@ -298,9 +298,40 @@ Aplicar um protocolo a um draft novo usa `REPLACE`. Em draft com conteúdo, a pe
 `REPLACE_WITH_CONFIRMATION` explica que respostas ainda não salvas serão removidas. Nenhuma
 aplicação importa respostas ou proveniência de outro caso.
 
-Um template pode omitir widgets, mas isso não relaxa a completude. `submitFinal` continua
-validando a matriz do protocolo ativo e as exigências do domínio. O protocolo de sistema é
-o único caminho feliz garantido da demonstração.
+O protocolo de sistema é o único caminho feliz garantido da demonstração.
+
+#### Emenda de 2026-08-14 — completude segue a composição aplicada
+
+`DEMO_DECISION`. Decisão do dono do produto, registrada aqui porque altera regra deste
+Analyst e não pode viver apenas no código.
+
+Redação anterior, preservada como histórico:
+
+> Um template pode omitir widgets, mas isso não relaxa a completude. `submitFinal` continua
+> validando a matriz do protocolo ativo e as exigências do domínio.
+
+Redação vigente nesta fase:
+
+- cada protocolo tem sua própria composição de blocos;
+- bloco **incluído** na composição é obrigatório para finalizar;
+- bloco **não incluído** não entra na completude daquele protocolo;
+- bloco acrescentado ao caso depois da aplicação é **complementar** e não se torna
+  obrigatório retroativamente;
+- não existe, nesta fase, distinção `obrigatório`/`opcional` dentro da composição:
+  incluído significa obrigatório;
+- procedimento sem composição própria recebe o protocolo geral completo, que permanece
+  como fallback e mantém o comportamento anterior.
+
+Portanto `submitFinal` valida **a composição efetivamente aplicada ao caso**, não a matriz
+fixa dos quatorze widgets. A matriz por `fieldPath` continua válida **dentro** de cada bloco
+presente: o que a emenda muda é quais blocos são exigidos, nunca como um bloco é validado.
+
+Consequência declarada: composição por procedimento sai de `UNRESOLVED` para
+`DEMO_DECISION` nesta fase. As composições publicadas são decisão da demonstração,
+justificadas por regime e anestesia previstos do procedimento — atributos operacionais da
+cirurgia, nunca julgamento clínico de quem será operado. **Nenhuma instituição validou essas
+listas**, a interface declara isso, e elas não constituem protocolo hospitalar, mínimo
+clínico, avaliação de risco ou conduta.
 
 ### Ações do editor
 

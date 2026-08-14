@@ -10,6 +10,7 @@
  */
 
 import { widgetPorTipo, type Bloco } from './registro'
+import type { Protocolo } from './protocolos'
 
 export type ClasseVaga = 'RAPIDA' | 'NORMAL' | 'ESTENDIDA' | 'FORA_DA_FAIXA'
 
@@ -62,17 +63,37 @@ export type Requisito = {
   explicacao: string
 }
 
-export function calcularRequisito(blocos: Bloco[]): Requisito {
+/**
+ * A completude é do protocolo aplicado, não de uma matriz global.
+ *
+ * Emenda de produto de 14/08/2026: o contrato dizia que omitir widget de um
+ * template não relaxava a completude — a matriz dos quatorze valia sempre. O
+ * dono do produto decidiu o contrário para esta fase: cada protocolo tem sua
+ * composição, e **incluído é obrigatório**. Bloco fora da composição não
+ * bloqueia a publicação, e bloco acrescentado depois é complementar — não vira
+ * obrigatório retroativamente.
+ *
+ * O cálculo de minutos não muda: base, teto de três domínios, volume e
+ * acomodação continuam como na regra `demo-workload-v1`.
+ */
+export function calcularRequisito(blocos: Bloco[], protocolo: Protocolo): Requisito {
   const sinais: Sinal[] = []
-  const pendentes: string[] = []
   let dominiosPagos = 0
+
+  const exigidos = new Set(protocolo.blocos)
+  const tratadosPorTipo = new Map<string, boolean>()
 
   for (const b of blocos) {
     const def = widgetPorTipo(b.tipo)
     if (!def) continue
 
     const dados = b.dados as never
-    if (!def.tratado(dados)) pendentes.push(def.nome)
+
+    // Só o que o protocolo pede entra na completude. Um bloco do protocolo
+    // aparecendo duas vezes conta como tratado se qualquer instância estiver.
+    if (exigidos.has(b.tipo)) {
+      tratadosPorTipo.set(b.tipo, (tratadosPorTipo.get(b.tipo) ?? false) || def.tratado(dados))
+    }
 
     const temSinal = def.sinal?.(dados) ?? false
     if (!temSinal) continue
@@ -99,6 +120,13 @@ export function calcularRequisito(blocos: Bloco[]): Requisito {
     // Volume: medicação e diagnóstico somam uma vez, sem entrar no teto.
     sinais.push({ rotulo: def.nome, origem: def.resumo(dados), minutos: 5 })
   }
+
+  // Pendência é bloco que o protocolo pede e o caso não resolveu — seja porque
+  // ninguém respondeu, seja porque o bloco foi removido do caso.
+  const pendentes = protocolo.blocos
+    .filter((tipo) => !tratadosPorTipo.get(tipo))
+    .map((tipo) => widgetPorTipo(tipo)?.nome)
+    .filter((nome): nome is string => !!nome)
 
   const minutos = BASE_MINUTOS + sinais.reduce((s, x) => s + x.minutos, 0)
   const classe: ClasseVaga =

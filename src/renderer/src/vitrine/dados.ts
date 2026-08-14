@@ -121,10 +121,17 @@ export const SERVICOS = [
   'Otorrinolaringologia', 'Ginecologia', 'Urologia', 'Vascular',
 ]
 
+/**
+ * Procedimentos que a recepção pode escolher no encaminhamento.
+ *
+ * A lista cobre todos os casos da fila: antes faltavam dois, e o cadastro não
+ * conseguia reproduzir um caso que a própria agenda exibia.
+ */
 export const PROCEDIMENTOS = [
-  'Artroplastia de quadril', 'Colecistectomia videolaparoscópica', 'Endoscopia digestiva alta',
-  'Herniorrafia inguinal', 'Facectomia com implante', 'Septoplastia',
-  'Colonoscopia diagnóstica', 'Artroscopia de joelho', 'Ressecção transuretral',
+  'Artroplastia de quadril', 'Osteossíntese de fêmur', 'Colecistectomia videolaparoscópica',
+  'Ressecção transuretral', 'Herniorrafia inguinal', 'Artroscopia de joelho',
+  'Septoplastia', 'Endoscopia digestiva alta', 'Colonoscopia diagnóstica',
+  'Facectomia com implante', 'Videolaparoscopia diagnóstica',
 ]
 
 /** Vagas do dia. `casoId` nulo = vaga livre. */
