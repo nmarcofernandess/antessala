@@ -38,5 +38,21 @@ Limites conhecidos:
   precisa de confirmação antes de uma distribuição pública.
 
 Esses catálogos são matéria-prima. O dossiê
-`hack/analyst/03-widgets-e-dados.md` deve auditar cobertura, licença, contratos e uso antes
-que qualquer spec selecione o conjunto do produto.
+`hack/domains/ANALYST-anamnese-e-catalogos.md` audita cobertura, limites, contratos e uso;
+nenhuma Spec pode ampliar o conjunto sem reconciliar esse contrato.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `src/data/catalogos/README.md`.
+- Gate controlador: conjunto do Analyst em `hack/status.json`.
+- Estado: `AGUARDANDO_ASSINATURA`.
+- Assinatura de Marco: `PENDENTE`.
+- Data: `PENDENTE`.
+- Revisão Git examinada: `PENDENTE`.
+- Declaração: `PENDENTE`.
+
+Declaração exigida: “Aprovo o inventário de catálogos como parte do conjunto do Analyst.”
+
+Sem essa assinatura, este arquivo não terminou e não autoriza Spec, Plan, teste ou código.

@@ -2,12 +2,12 @@
 
 > **RASCUNHO NÃO INICIADO — NÃO É HISTÓRICO REAL**
 
-**Estado:** `BLOCKED BY BUILD`
-**Ordem:** PRD → Analyst → Build → Warlog
+**Estado:** `BLOQUEADO POR BUILD + CRITIC + ASSINATURA DE MARCO`
+**Ordem:** Taskgen → PRD → Analyst → Build → Critic → Warlog
 
-O Warlog começa somente depois que o Build estiver completo. Ele registrará decisões,
+O Warlog começa somente depois que Build e Critic estiverem completos e assinados. Ele registrará decisões,
 mudanças, falhas, evidências e desvios ocorridos durante a execução. Como ainda não existe
-Build autorizado, qualquer narrativa de execução seria inventada.
+Build/Critic autorizados, qualquer narrativa de execução seria inventada.
 
 ## Formato futuro de entrada
 

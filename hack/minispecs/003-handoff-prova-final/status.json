@@ -15,7 +15,7 @@
     "prd_path": "../../PRD.md",
     "discard_path": null
   },
-  "phases": {"taskgen": "complete", "build": "blocked", "critic": "blocked", "plan": "blocked", "execute": "blocked", "qa": "blocked"},
+  "phases": {"taskgen": "blocked", "spec": "blocked", "plan": "blocked", "tdd_red": "blocked", "execute": "blocked", "qa": "blocked"},
   "artifacts": {
     "prd": "../../PRD.md",
     "analysis": "../../ANALYST.md",
@@ -23,17 +23,22 @@
     "spec": "spec.md",
     "progress": "progress.md",
     "warlog": "../../WARLOG.md",
-    "plan": null,
+    "plan": "plan.md",
     "implementation_log": null,
-    "qa": null
+    "qa": "qa_report.md"
   },
   "task_source": {"type": "none", "path": null, "progress": null},
   "human_approval_policy": {"required": true, "approver": "Marco", "invalidate_on_material_change": true, "ai_may_sign": false},
-  "next_transition": {"from": "spec", "to": "plan", "status": "pending", "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null},
+  "next_transition": {"from": "minispec_002_qa_approval", "to": "spec", "status": "blocked", "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null},
   "human_gates": {
-    "spec": {"artifact": "spec.md", "status": "pending", "required_before": "plan"},
-    "plan": {"artifact": "plan.md", "status": "pending", "required_before": "tdd_red"},
-    "qa": {"artifact": "qa_report.md", "status": "pending", "required_before": "final_qa"}
+    "spec": {"artifact": "spec.md", "status": "blocked", "required_before": "plan", "signature": {"signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null}},
+    "plan": {"artifact": "plan.md", "status": "blocked", "required_before": "tdd_red", "signature": {"signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null}},
+    "qa": {"artifact": "qa_report.md", "status": "blocked", "required_before": "final_qa", "signature": {"signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null}}
+  },
+  "execution_gates": {
+    "tdd_red": {"required_after": "plan_approved", "status": "blocked", "evidence": null},
+    "implementation": {"required_after": "tdd_red", "status": "blocked", "evidence": null},
+    "qa": {"required_after": "implementation", "status": "blocked", "human_gate": "qa"}
   },
   "updated_at": "2026-08-14T01:05:00-03:00"
 }

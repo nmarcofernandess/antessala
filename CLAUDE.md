@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-**`AGUARDANDO ASSINATURA DO PRD` — Analyst ainda bloqueado.**
+**`ANALYST PRONTO PARA REVISÃO HUMANA` — nenhuma implementação autorizada.**
 
 Nenhum agente pode criar ou alterar funcionalidade, schema, teste, fixture, rota, contrato
 ou componente do produto nesta fase.
@@ -13,11 +13,14 @@ ou componente do produto nesta fase.
 2. `hack/CONTRATO-DE-APROVACAO.md`;
 3. `hack/status.json`;
 4. `hack/progress.md`;
-5. `hack/ANALYST.md`;
-6. todos os arquivos em `hack/analyst/`.
+5. `hack/analysis.md`;
+6. `hack/ANALYST.md`;
+7. todos os `hack/domains/ANALYST-*.md`.
 
-`hack/BUILD.md`, `hack/WARLOG.md` e `hack/minispecs/` são rascunhos bloqueados. Não servem
-como fonte de requisito.
+Os `hack/domains/BUILD-*.md` e `hack/BUILD.md` foram redigidos antecipadamente por ordem
+direta de Marco para revisão conjunta. Continuam rascunhos bloqueados: não são Spec, Plan
+nem autorização de execução. `hack/CRITIC.md`, `hack/WARLOG.md` e `hack/minispecs/`
+permanecem bloqueados.
 
 ## Sequência imutável
 
@@ -59,14 +62,14 @@ Triagem geral do SUS e marcação da cirurgia ficam fora.
 
 ## Trabalho permitido agora
 
-Antes da assinatura do PRD, somente revisão documental e correção do próprio gate. Depois
-da assinatura, o trabalho permitido será análise em `hack/ANALYST.md` e `hack/analyst/`:
+Somente revisão e reconciliação do PRD, `analysis.md`, sete Analysts e sete BUILDs de
+domínio:
 
 - fluxo, entidades, estados e handoffs;
 - atores, logins, permissões e ownership;
 - catálogo de widgets, DTOs, validações e proveniência;
 - procedimentos e catálogos clínicos;
-- classificação, explicação, override e reclassificação;
+- classificação, explicação, override e imutabilidade após publicação;
 - capacidade, slots, agenda e concorrência;
 - arquitetura da demonstração e fronteira futura;
 - segurança, auditoria, testes e prova ponta a ponta;
@@ -74,8 +77,8 @@ da assinatura, o trabalho permitido será análise em `hack/ANALYST.md` e `hack/
 
 ## Trabalho proibido agora
 
-- editar o PRD sem reabertura formal;
-- preencher Build ou Warlog como se fossem reais;
+- editar materialmente o PRD sem ordem direta ou reabertura formal;
+- promover BUILD ou Warlog como se estivessem aprovados;
 - promover minispecs, specs ou plans;
 - escrever teste TDD antes do Plan;
 - escrever código;
@@ -84,14 +87,30 @@ da assinatura, o trabalho permitido será análise em `hack/ANALYST.md` e `hack/
 
 ## Gate do Build
 
-O Build só pode começar quando:
+O BUILD formal só pode começar quando:
 
-- os cinco dossiês do Analyst estiverem completos;
-- a matriz mestra não contiver `a definir`;
+- os sete dossiês do Analyst estiverem completos;
+- `analysis.md` não contiver decisão obrigatória aberta;
 - todos os campos, DTOs e permissões estiverem fechados;
 - todos os estados, falhas e handoffs estiverem fechados;
 - classificação e agenda tiverem contratos completos;
 - a arquitetura e a estratégia de prova estiverem decididas;
-- `hack/ANALYST.md` declarar `READY FOR BUILD`.
+- Marco assinar o PRD e o conjunto do Analyst.
 
 Até isso acontecer, parar no Analyst não é burocracia. É o trabalho.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `CLAUDE.md`.
+- Gate controlador: `taskgen` em `hack/status.json`.
+- Estado: `AGUARDANDO_ASSINATURA`.
+- Assinatura de Marco: `PENDENTE`.
+- Data: `PENDENTE`.
+- Revisão Git examinada: `PENDENTE`.
+- Declaração: `PENDENTE`.
+
+Declaração exigida: “Aprovo o contrato operacional como parte do bundle Taskgen do Antessala.”
+
+Sem essa assinatura, este arquivo não terminou e não autoriza a próxima fase.

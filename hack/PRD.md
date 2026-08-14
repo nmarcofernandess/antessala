@@ -3,10 +3,11 @@
 ## Agendamento diferenciado da consulta pré-anestésica
 
 **Hacka Health 2026 · Desafio 1 · HCFMRP-USP**
-**Versão:** 4.0 · 14/08/2026
+**Versão:** 5.0 · 14/08/2026
 **Estado:** `AGUARDANDO ASSINATURA DE MARCO`
 **Confiança:** média
-**Rota:** PRD → Analyst → Build → Warlog → Sprints → Spec → Plan → TDD → código
+**Rota:** Taskgen → PRD → Analyst → Build + Critic → Warlog → Sprints → por minispec:
+Spec assinada → Plan assinado → TDD RED → código → QA assinado → QA final assinado
 **Próxima fase:** `hack/ANALYST.md`
 
 ---
@@ -29,8 +30,11 @@ Depois desta revisão, o PRD fica congelado. O Analyst pode esclarecer o domíni
 decisões técnicas, mas não pode mudar o problema, os atores, a fronteira ou a promessa do
 produto. Uma mudança desse porte exige reabrir formalmente o PRD.
 
-Este documento não define banco, telas, widgets, algoritmo, classes clínicas, permissões,
-agenda ou arquitetura. Essas respostas pertencem ao Analyst.
+Este documento não define banco, telas, widgets, algoritmo, classes clínicas ou
+arquitetura. Essas respostas pertencem ao Analyst. O acesso do MVP, porém, está decidido:
+o administrador cria contas locais com e-mail, senha e uma função. Não haverá cadastro
+público, confirmação de e-mail, recuperação por e-mail, SSO ou integração com diretório no
+hackathon.
 
 ## Problem
 
@@ -87,9 +91,14 @@ marcação do procedimento.
 | Enfermagem | realiza a anamnese e produz a necessidade operacional da vaga |
 | Anestesiologista | realiza a avaliação, registra pendências e conclui o parecer |
 | Serviço solicitante | recebe o resultado e conduz a marcação da cirurgia |
+| Administrador | cria e desativa contas locais, redefine senha e atribui uma função |
 
-O Analyst definirá quais atores precisam de login, quais ações cada papel pode executar e
-quais dados cada papel pode ver.
+Paciente e médico solicitante não precisam de login no MVP. Os usuários diretos são
+recepção, enfermagem, anestesiologista, serviço solicitante e administrador. Cada conta tem
+uma função. O Analyst fecha as permissões de cada função e a propriedade de cada campo.
+
+Os identificadores canônicos dessas funções são `ADMIN`, `RECEPCAO`, `ENFERMAGEM`,
+`ANESTESIOLOGISTA` e `SOLICITANTE`.
 
 ## Story de Usuario
 
@@ -126,6 +135,13 @@ quais dados cada papel pode ver.
 - Como integrante do serviço solicitante, quero receber o resultado da avaliação, para
   continuar o planejamento do procedimento.
 
+### Administrador
+
+- Como administrador da demonstração, quero criar uma conta com e-mail, senha e função,
+  para preparar os atores do fluxo sem depender de serviços externos.
+- Como administrador, quero desativar contas, trocar sua função e redefinir sua senha, para
+  corrigir a demonstração sem editar o banco manualmente.
+
 ## Story Tecnica
 
 Estas histórias descrevem obrigações do produto, não soluções de implementação.
@@ -140,6 +156,10 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - Como sistema, preciso manter pendências e retornos ligados ao caso original.
 - Como sistema, preciso entregar ao serviço solicitante um resultado compreensível e
   rastreável.
+- Como sistema, preciso autenticar contas locais e aplicar a função do usuário em todas as
+  leituras e escritas, não apenas esconder botões.
+- Como sistema, preciso iniciar a demonstração com contas sintéticas conhecidas e permitir
+  que o administrador crie outras contas locais.
 
 ## Scope
 
@@ -152,7 +172,11 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - agendamento da consulta pré-anestésica;
 - avaliação do anestesiologista;
 - pendências e retornos ligados à avaliação;
-- entrega do resultado ao serviço solicitante.
+- entrega do resultado ao serviço solicitante;
+- login local dos usuários diretos;
+- gestão mínima de contas pelo administrador: criar, listar, desativar, reativar, trocar
+  função e redefinir senha;
+- fixtures sintéticas de usuários, agendas, catálogos e casos para a demonstração.
 
 ### Fora
 
@@ -165,12 +189,18 @@ Estas histórias descrevem obrigações do produto, não soluções de implement
 - gestão de sala, equipe ou mapa cirúrgico;
 - substituição do prontuário hospitalar;
 - integrações institucionais reais no protótipo;
-- uso de dados reais de pacientes.
+- uso de dados reais de pacientes;
+- cadastro público, convite, confirmação de e-mail e recuperação de senha por e-mail;
+- login social, SSO, LDAP, Active Directory ou identidade institucional;
+- perfil editável pelo próprio usuário e múltiplas funções simultâneas;
+- acesso do paciente ao aplicativo.
 
 ## Expected Behavior
 
 O produto deve conduzir o caso por todo o fluxo canônico, manter a responsabilidade de
 cada ator e diferenciar as opções de agenda conforme a necessidade produzida pela triagem.
+Cada usuário direto entra com uma conta local criada pelo administrador e vê somente as
+ações da sua função.
 
 ## Current Behavior / Bug
 
@@ -197,7 +227,8 @@ com os papéis clínicos; a recepção recebe somente a consequência operaciona
 para agendar.
 
 Toda passagem relevante precisa ser rastreável. Pendências mantêm o caso aberto. A conclusão
-só ocorre quando o resultado chega ao serviço solicitante.
+só ocorre quando o resultado chega ao serviço solicitante. A autorização pertence à
+operação, não à aparência: toda ação protegida valida sessão e função no processo principal.
 
 ## Technical Context
 
@@ -206,13 +237,19 @@ anamnese e catálogos offline. Esses recursos são candidatos, não decisões do
 deve provar o que serve, o que precisa mudar e o que deve ficar fora.
 
 A demonstração deve usar dados sintéticos. O PRD não escolhe schema, biblioteca de agenda,
-modelo de autenticação, algoritmo de classificação ou arquitetura de produção.
+algoritmo de classificação ou arquitetura de produção. Para autenticação, escolhe apenas o
+contrato do MVP: contas locais administradas dentro do aplicativo, sem dependência externa.
 
 ## Data / Contracts
 
 O produto precisa representar encaminhamento, caso, anamnese, necessidade de agenda,
 reserva, avaliação, pendência, retorno e resultado. O Analyst definirá identidades,
 relacionamentos, DTOs, versões, proveniência, permissões e persistência.
+
+O produto também precisa representar usuário, função, sessão local e evento de auditoria.
+As fixtures criam, no mínimo, uma conta por função direta e um administrador. As senhas das
+fixtures são dados sintéticos de demonstração; o aplicativo nunca armazena senha em texto
+puro.
 
 Nenhum campo pode surgir no Build sem origem, responsável, consumidor e teste futuro.
 
@@ -221,6 +258,11 @@ Nenhum campo pode surgir no Build sem origem, responsável, consumidor e teste f
 Cada papel precisa de uma superfície coerente com sua responsabilidade. A interface deve
 mostrar o próximo passo, dados ausentes, ausência de vaga, pendência, retorno e conclusão
 sem depender apenas de cor.
+
+O produto inclui uma tela de login e uma área administrativa de usuários. Estado sem sessão
+leva ao login. Conta inativa ou credencial inválida não abre a casca autenticada. O
+administrador recebe feedback claro ao tentar criar e-mail duplicado, senha inválida ou
+conta sem função.
 
 O Analyst definirá a máquina de estados. Este PRD exige apenas que o caso continue
 identificável do encaminhamento ao handoff final.
@@ -236,6 +278,11 @@ identificável do encaminhamento ao handoff final.
 - O serviço solicitante recebe o resultado final do caso.
 - A autoria e a sequência dos handoffs podem ser reconstruídas.
 - A demonstração usa somente dados sintéticos.
+- Cada função direta possui uma conta fixture capaz de entrar offline.
+- O administrador cria uma conta local com e-mail, senha e função, sem confirmação externa.
+- Uma conta inativa não autentica e um usuário autenticado não executa ação proibida para
+  sua função, mesmo que tente chamar o contrato IPC diretamente.
+- E-mails duplicados são rejeitados por comparação normalizada.
 
 ## Definition of Complete
 
@@ -248,6 +295,7 @@ identificável do encaminhamento ao handoff final.
 - [x] Escopo interno e externo definido.
 - [x] Critérios de aceitação definidos.
 - [x] Próxima fase definida.
+- [x] Contrato de autenticação do MVP definido.
 - [ ] Marco assinou esta revisão e autorizou o Analyst.
 
 O conteúdo do PRD está redigido. O artefato só termina quando Marco assinar esta revisão.
@@ -262,13 +310,16 @@ Sem assinatura, o Analyst permanece bloqueado.
 - Modelar uma agenda visual antes de definir capacidade, duração e concorrência.
 - Encerrar o fluxo na triagem e esquecer consulta, pendências, retorno e handoff.
 - Tratar a arquitetura local da demonstração como arquitetura hospitalar.
+- Proteger apenas a interface e deixar o IPC clínico sem validação de sessão e função.
+- Tratar e-mail como verificado ou conta local como identidade institucional.
+- Expor senha em texto puro, log, fixture publicada em tela ou resposta IPC.
 
 ## Open Questions
 
 O Analyst deve fechar, sem alterar este PRD:
 
 - identidade de paciente, encaminhamento, caso e avaliação;
-- papéis, logins, permissões e propriedade de cada campo;
+- matriz de permissões e propriedade de cada campo para as funções já decididas;
 - catálogo de widgets, campos, DTOs, validações e proveniência;
 - dados do procedimento e perguntas condicionais;
 - catálogos clínicos necessários e suas limitações;

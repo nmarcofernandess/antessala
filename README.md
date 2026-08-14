@@ -3,7 +3,7 @@
 Produto para diferenciar o agendamento da consulta pré-anestésica a partir da anamnese de
 enfermagem.
 
-> **Estado: `AGUARDANDO ASSINATURA DO PRD`. O Analyst ainda não está autorizado.**
+> **Estado: Analyst forense redigido e aguardando revisão de Marco. Código bloqueado.**
 
 ## Problema
 
@@ -32,19 +32,22 @@ ficam fora do Antessala.
 2. [`hack/status.json`](hack/status.json) — GPS mecânico e assinaturas dos gates;
 3. [`hack/progress.md`](hack/progress.md) — recibo humano do estado;
 4. [`hack/CONTRATO-DE-APROVACAO.md`](hack/CONTRATO-DE-APROVACAO.md) — regra de assinatura;
-5. [`hack/ANALYST.md`](hack/ANALYST.md) — rascunho bloqueado pelo PRD;
-6. [`hack/analyst/`](hack/analyst/) — dossiês de domínio, atores, dados, agenda e prova;
-7. [`hack/BUILD.md`](hack/BUILD.md) e [`hack/CRITIC.md`](hack/CRITIC.md) — rascunhos bloqueados;
-8. [`hack/WARLOG.md`](hack/WARLOG.md) — rascunho bloqueado;
-9. [`hack/SPRINTS.md`](hack/SPRINTS.md) — mapa ainda não aprovado;
-10. [`hack/minispecs/`](hack/minispecs/) — possíveis sprints, sem autorização;
-11. [`hack/qa_report.md`](hack/qa_report.md) — QA final ainda não iniciado.
+5. [`hack/analysis.md`](hack/analysis.md) — Analyst canônico e síntese ponta a ponta;
+6. [`hack/ANALYST.md`](hack/ANALYST.md) — índice, contratos globais e gate semântico;
+7. [`hack/domains/`](hack/domains/) — sete Analysts e sete BUILDs correspondentes;
+8. [`hack/BUILD.md`](hack/BUILD.md) — síntese técnica em revisão, sem autoridade de execução;
+9. [`hack/CRITIC.md`](hack/CRITIC.md) — rascunho bloqueado;
+10. [`hack/WARLOG.md`](hack/WARLOG.md) — rascunho bloqueado;
+11. [`hack/SPRINTS.md`](hack/SPRINTS.md) — mapa ainda não aprovado;
+12. [`hack/minispecs/`](hack/minispecs/) — possíveis sprints, sem autorização;
+13. [`hack/qa_report.md`](hack/qa_report.md) — QA final ainda não iniciado.
 
 ## Sequência obrigatória
 
 ```text
 Taskgen → PRD → Analyst → Build → Critic → Warlog → Sprints
-→ Spec → Plan → TDD → código → QA
+→ Spec → Plan → TDD → código → QA da minispec
+→ próxima minispec ou QA final
 ```
 
 Cada seta exige assinatura de Marco no artefato anterior e no gate correspondente de
@@ -55,4 +58,21 @@ QA → assinatura. Alteração material invalida a assinatura anterior.
 
 O repositório já contém Electron, React, PGlite, IPC, widgets de anamnese, catálogos
 offline, tema, PDF e testes. Isso é inventário, não autorização para construir o produto.
-O Analyst decidirá o que será copiado, adaptado, mantido ou rejeitado.
+O Analyst registra o que será reutilizado, adaptado ou rejeitado; o código só começa após
+BUILD, Critic, Warlog, Sprints, Spec, Plan e primeiro teste TDD aprovados.
+
+---
+
+## Contrato de encerramento deste arquivo
+
+- Artefato: `README.md`.
+- Gate controlador: `taskgen` em `hack/status.json`.
+- Estado: `AGUARDANDO_ASSINATURA`.
+- Assinatura de Marco: `PENDENTE`.
+- Data: `PENDENTE`.
+- Revisão Git examinada: `PENDENTE`.
+- Declaração: `PENDENTE`.
+
+Declaração exigida: “Aprovo o README como parte do bundle Taskgen do Antessala.”
+
+Sem essa assinatura, este arquivo não terminou e não autoriza a próxima fase.

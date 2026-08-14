@@ -9,6 +9,17 @@ Uma IA não pode decidir, inferir ou fabricar essa assinatura. Ela pode apenas r
 aprovação que Marco tenha declarado de forma explícita, nomeando o artefato ou gate. Silêncio,
 continuidade da conversa, pedido de revisão ou elogio não significam aprovação.
 
+## Autoria antecipada por ordem explícita
+
+Marco pode mandar redigir um artefato posterior antes da assinatura do anterior. Essa ordem
+autoriza somente a **autoria do rascunho**. Ela não aprova o artefato, não promove a fase no
+`status.json`, não libera Plan, teste ou código e não permite que o rascunho invente uma
+decisão ausente no artefato anterior.
+
+Nesta revisão, Marco autorizou a redação conjunta dos dossiês do Analyst e de seus BUILDs
+correspondentes. Todos permanecem `AGUARDANDO_ASSINATURA`; o fluxo formal continua no
+Taskgen, porque este contrato, `status.json` e `progress.md` ainda não foram assinados.
+
 ## Assinatura válida
 
 Cada assinatura deve registrar:
@@ -26,7 +37,9 @@ Qualquer alteração material posterior invalida a assinatura. O artefato volta 
 
 ```mermaid
 flowchart TD
-  taskgen["Taskgen: PRD, status e progress"] --> prd["PRD"]
+  taskgen["Taskgen: contrato, status e progress"] --> signTaskgen{"Marco assinou o Taskgen?"}
+  signTaskgen -->|"não"| stopTaskgen["Bloqueado"]
+  signTaskgen -->|"sim"| prd["PRD"]
   prd --> signPrd{"Marco assinou o PRD?"}
   signPrd -->|"não"| stopPrd["Bloqueado"]
   signPrd -->|"sim"| analyst["Analyst forense e dossiês"]
@@ -80,7 +93,7 @@ Sem os seis itens, a fase seguinte permanece `blocked`.
 ## Contrato de encerramento deste arquivo
 
 - Artefato: `CONTRATO-DE-APROVACAO.md`
-- Próxima fase autorizada: aprovação do PRD
+- Próxima fase autorizada após assinatura: revisão e assinatura do PRD
 - Estado: `AGUARDANDO_ASSINATURA`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`

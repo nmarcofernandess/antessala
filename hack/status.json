@@ -11,17 +11,18 @@
     "file": "PRD.md"
   },
   "confidence": "medium",
-  "current_phase": "human_approval_contract_and_prd",
+  "current_phase": "taskgen_review_and_signature",
   "decision": {
-    "verdict": "needs_product_decision",
+    "verdict": "ready_for_human_review",
     "prd_status": "gathering",
-    "reason": "O conteúdo do PRD foi redigido, mas Marco ainda não assinou a revisão que autoriza o Analyst.",
+    "reason": "PRD, Analyst forense e BUILDs correspondentes foram redigidos por ordem direta; a fase formal permanece no Taskgen até Marco assinar status, progress e o contrato de aprovação.",
     "prd_path": "PRD.md",
     "discard_path": null
   },
   "phases": {
     "inbox": "skipped",
-    "taskgen": "complete",
+    "taskgen": "blocked",
+    "prd": "blocked",
     "analyst": "blocked",
     "build": "blocked",
     "critic": "blocked",
@@ -33,7 +34,7 @@
   },
   "artifacts": {
     "prd": "PRD.md",
-    "analysis": "ANALYST.md",
+    "analysis": "analysis.md",
     "blueprint": "BUILD.md",
     "critic": "CRITIC.md",
     "progress": "progress.md",
@@ -63,9 +64,68 @@
     "invalidate_on_material_change": true,
     "ai_may_sign": false
   },
+  "forensic_flow": [
+    {
+      "order": 1,
+      "phase": "taskgen",
+      "artifacts": ["../README.md", "../CLAUDE.md", "CONTRATO-DE-APROVACAO.md", "status.json", "progress.md"],
+      "requires_marco_signature": true,
+      "status": "pending"
+    },
+    {
+      "order": 2,
+      "phase": "prd",
+      "artifacts": ["CONTRATO-DE-APROVACAO.md", "PRD.md"],
+      "requires_marco_signature": true,
+      "status": "blocked"
+    },
+    {
+      "order": 3,
+      "phase": "analyst",
+      "artifacts": ["ANALYST.md", "analysis.md", "domains/ANALYST-*.md"],
+      "requires_marco_signature": true,
+      "status": "blocked"
+    },
+    {
+      "order": 4,
+      "phase": "build_and_critic",
+      "artifacts": ["BUILD.md", "domains/BUILD-*.md", "CRITIC.md"],
+      "requires_marco_signature": true,
+      "status": "blocked"
+    },
+    {
+      "order": 5,
+      "phase": "warlog_baseline",
+      "artifacts": ["WARLOG.md"],
+      "requires_marco_signature": true,
+      "status": "blocked"
+    },
+    {
+      "order": 6,
+      "phase": "sprints",
+      "artifacts": ["SPRINTS.md"],
+      "requires_marco_signature": true,
+      "status": "blocked"
+    },
+    {
+      "order": 7,
+      "phase": "minispec_loop",
+      "artifacts": ["minispecs/*/spec.md", "minispecs/*/plan.md", "minispecs/*/qa_report.md"],
+      "requires_marco_signature": true,
+      "status": "blocked",
+      "unit_order": ["spec_signature", "plan_signature", "tdd_red", "implementation", "qa_signature"]
+    },
+    {
+      "order": 8,
+      "phase": "final_qa",
+      "artifacts": ["qa_report.md"],
+      "requires_marco_signature": true,
+      "status": "blocked"
+    }
+  ],
   "next_transition": {
-    "from": "approval_contract_and_prd",
-    "to": "analyst",
+    "from": "taskgen_review_and_signature",
+    "to": "prd_review_and_signature",
     "status": "pending",
     "signed_by": null,
     "signed_at": null,
@@ -73,75 +133,153 @@
     "statement": null
   },
   "human_gates": {
-    "approval_contract": {
-      "artifacts": ["CONTRATO-DE-APROVACAO.md"],
+    "taskgen": {
+      "artifacts": ["../README.md", "../CLAUDE.md", "CONTRATO-DE-APROVACAO.md", "status.json", "progress.md"],
       "required_before": "prd_approval",
-      "status": "pending"
+      "status": "pending",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
     "prd": {
       "artifacts": ["PRD.md"],
       "required_before": "analyst",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
     "analyst": {
       "artifacts": [
         "ANALYST.md",
-        "analyst/01-fluxo-e-dominio.md",
-        "analyst/02-atores-e-permissoes.md",
-        "analyst/03-widgets-e-dados.md",
-        "analyst/04-classificacao-e-agenda.md",
-        "analyst/05-arquitetura-e-prova.md"
+        "analysis.md",
+        "domains/ANALYST-caso-e-encaminhamento.md",
+        "domains/ANALYST-acesso-e-auditoria.md",
+        "domains/ANALYST-anamnese-e-catalogos.md",
+        "domains/ANALYST-classificacao-e-agenda.md",
+        "domains/ANALYST-avaliacao-pendencias-e-handoff.md",
+        "domains/ANALYST-superficies-e-configuracoes.md",
+        "domains/ANALYST-arquitetura-offline-e-prova.md",
+        "../src/data/catalogos/README.md"
       ],
       "required_before": "build",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
     "build_and_critic": {
-      "artifacts": ["BUILD.md", "CRITIC.md"],
+      "artifacts": [
+        "BUILD.md",
+        "domains/BUILD-caso-e-encaminhamento.md",
+        "domains/BUILD-acesso-e-auditoria.md",
+        "domains/BUILD-anamnese-e-catalogos.md",
+        "domains/BUILD-classificacao-e-agenda.md",
+        "domains/BUILD-avaliacao-pendencias-e-handoff.md",
+        "domains/BUILD-superficies-e-configuracoes.md",
+        "domains/BUILD-arquitetura-offline-e-prova.md",
+        "CRITIC.md"
+      ],
       "required_before": "warlog",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
     "warlog_baseline": {
       "artifacts": ["WARLOG.md"],
       "required_before": "sprints",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
     "sprints": {
       "artifacts": ["SPRINTS.md"],
       "required_before": "minispec_001_spec",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
-    "minispec_001": {
-      "artifacts": [
-        "minispecs/001-caso-triagem-classificacao/spec.md",
-        "minispecs/001-caso-triagem-classificacao/plan.md",
-        "minispecs/001-caso-triagem-classificacao/qa_report.md"
-      ],
+    "minispec_001_spec": {
+      "artifacts": ["minispecs/001-caso-triagem-classificacao/spec.md"],
+      "required_before": "minispec_001_plan",
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
+    },
+    "minispec_001_plan": {
+      "artifacts": ["minispecs/001-caso-triagem-classificacao/plan.md"],
+      "required_before": "minispec_001_tdd_red",
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
+    },
+    "minispec_001_qa": {
+      "artifacts": ["minispecs/001-caso-triagem-classificacao/qa_report.md"],
       "required_before": "minispec_002_spec",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
-    "minispec_002": {
-      "artifacts": [
-        "minispecs/002-capacidade-agenda-booking/spec.md",
-        "minispecs/002-capacidade-agenda-booking/plan.md",
-        "minispecs/002-capacidade-agenda-booking/qa_report.md"
-      ],
+    "minispec_002_spec": {
+      "artifacts": ["minispecs/002-capacidade-agenda-booking/spec.md"],
+      "required_before": "minispec_002_plan",
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
+    },
+    "minispec_002_plan": {
+      "artifacts": ["minispecs/002-capacidade-agenda-booking/plan.md"],
+      "required_before": "minispec_002_tdd_red",
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
+    },
+    "minispec_002_qa": {
+      "artifacts": ["minispecs/002-capacidade-agenda-booking/qa_report.md"],
       "required_before": "minispec_003_spec",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
-    "minispec_003": {
-      "artifacts": [
-        "minispecs/003-handoff-prova-final/spec.md",
-        "minispecs/003-handoff-prova-final/plan.md",
-        "minispecs/003-handoff-prova-final/qa_report.md"
-      ],
+    "minispec_003_spec": {
+      "artifacts": ["minispecs/003-handoff-prova-final/spec.md"],
+      "required_before": "minispec_003_plan",
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
+    },
+    "minispec_003_plan": {
+      "artifacts": ["minispecs/003-handoff-prova-final/plan.md"],
+      "required_before": "minispec_003_tdd_red",
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
+    },
+    "minispec_003_qa": {
+      "artifacts": ["minispecs/003-handoff-prova-final/qa_report.md"],
       "required_before": "final_qa",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     },
     "final_qa": {
       "artifacts": ["qa_report.md"],
       "required_before": "complete",
-      "status": "pending"
+      "status": "blocked",
+      "signature": { "signed_by": null, "signed_at": null, "reviewed_git_revision": null, "statement": null }
     }
   },
-  "updated_at": "2026-08-14T01:05:00-03:00"
+  "minispec_execution": {
+    "001-caso-triagem-classificacao": {
+      "tdd_red": { "required_after": "minispec_001_plan", "status": "blocked", "evidence": null },
+      "implementation": { "required_after": "tdd_red", "status": "blocked", "evidence": null },
+      "qa": { "required_after": "implementation", "status": "blocked", "human_gate": "minispec_001_qa" }
+    },
+    "002-capacidade-agenda-booking": {
+      "tdd_red": { "required_after": "minispec_002_plan", "status": "blocked", "evidence": null },
+      "implementation": { "required_after": "tdd_red", "status": "blocked", "evidence": null },
+      "qa": { "required_after": "implementation", "status": "blocked", "human_gate": "minispec_002_qa" }
+    },
+    "003-handoff-prova-final": {
+      "tdd_red": { "required_after": "minispec_003_plan", "status": "blocked", "evidence": null },
+      "implementation": { "required_after": "tdd_red", "status": "blocked", "evidence": null },
+      "qa": { "required_after": "implementation", "status": "blocked", "human_gate": "minispec_003_qa" }
+    }
+  },
+  "analyst_evidence_gates": {
+    "end_to_end_flow": "complete",
+    "roles_permissions_and_login": "complete",
+    "entities_states_and_ownership": "complete",
+    "widgets_fields_dtos_and_rules": "complete",
+    "catalogs_and_master_data": "complete",
+    "classification_capacity_and_booking": "complete",
+    "assessment_pendencies_and_handoff": "complete",
+    "screens_routes_components_and_ui_states": "complete",
+    "offline_security_migrations_and_proof": "complete",
+    "cross_domain_build_pairs": "complete",
+    "marco_signature": "pending"
+  },
+  "updated_at": "2026-08-14T03:18:41-03:00"
 }

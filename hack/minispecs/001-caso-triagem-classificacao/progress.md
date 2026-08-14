@@ -14,6 +14,8 @@ Próxima ação futura: escrever a Spec somente depois que Marco assinar `SPRINT
 - Artefato: `progress.md`
 - Estado: `ABERTO`
 - Assinatura de Marco: `PENDENTE`
+- Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`
+- Declaração: `PENDENTE`
 
 Este registro não libera nenhuma fase.

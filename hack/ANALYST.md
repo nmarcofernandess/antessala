@@ -1,182 +1,154 @@
-# ANALYST — Antessala
+# ANALYST — índice canônico do Antessala
 
-## Barreira obrigatória antes do Build
+## Estado
 
-**Estado:** `DRAFT — BLOCKED BY PRD SIGNATURE`
-**Decisão atual:** `NO-GO PARA BUILD`
-**Entrada congelada:** `hack/PRD.md`
-**Saída futura:** `hack/BUILD.md`
+- Documento analítico ativo: [analysis.md](analysis.md)
+- Fonte congelável após assinatura: [PRD.md](PRD.md)
+- Profundidade: `forensic`
+- Conteúdo: `READY FOR HUMAN REVIEW`
+- Transição formal: bloqueada até as assinaturas anteriores do Taskgen e do PRD, além da
+  assinatura deste conjunto por Marco
 
----
+Este arquivo é o índice estável para ferramentas e leitores que procuram
+`hack/ANALYST.md`. A análise consolidada vive em `analysis.md`; os contratos completos
+vivem nos sete dossiês abaixo. Nenhum Build pode compensar uma lacuna do Analyst.
 
-## 1. Mandato
+## Sistema coberto
 
-O Analyst fecha o produto de ponta a ponta. Ele não escreve código, não antecipa schema e
-não empurra decisões para o Build.
-
-O fluxo do PRD é lei. Não aguardaremos entrevistas, APIs ou documentos do hospital para
-produzir o protótipo. Quando faltar uma informação institucional, o Analyst tomará uma
-**decisão explícita para a demonstração**, limitará a alegação e preservará a fronteira
-futura.
-
-O Build só nasce quando todas as decisões obrigatórias abaixo estiverem fechadas e
-rastreáveis.
-
-## 2. Ordem imutável
+O pacote descreve a jornada inteira do MVP local:
 
 ```text
-PRD congelado
-→ Analyst completo
-→ Build
-→ Warlog
-→ Sprints
-→ Spec de uma sprint
-→ Plan dessa spec
-→ primeiro teste TDD
-→ código
+encaminhamento na recepção
+→ anamnese de enfermagem
+→ requisito operacional QUICK | STANDARD | EXTENDED
+→ reserva de vaga compatível
+→ consulta com anestesiologista
+→ pendência e retorno, quando necessários
+→ resultado FINAL imutável
+→ recebimento pelo serviço solicitante
 ```
 
-Qualquer artefato posterior já presente no repositório é rascunho sem autoridade.
+Também fecha os domínios transversais sem os quais essa jornada não funciona: login
+local, papéis e permissões, auditoria, cadastros, configurações, navegação, estados de UI,
+persistência PGlite, fixtures, funcionamento offline, segurança e prova ponta a ponta.
 
-## 3. Como uma decisão passa
+## Dossiês e BUILDs correspondentes
 
-Cada decisão do Analyst deve declarar:
+| # | Domínio | Analyst canônico | BUILD correspondente |
+|---:|---|---|---|
+| 1 | Caso e encaminhamento | [ANALYST-caso-e-encaminhamento](domains/ANALYST-caso-e-encaminhamento.md) | [BUILD-caso-e-encaminhamento](domains/BUILD-caso-e-encaminhamento.md) |
+| 2 | Acesso e auditoria | [ANALYST-acesso-e-auditoria](domains/ANALYST-acesso-e-auditoria.md) | [BUILD-acesso-e-auditoria](domains/BUILD-acesso-e-auditoria.md) |
+| 3 | Anamnese e catálogos | [ANALYST-anamnese-e-catalogos](domains/ANALYST-anamnese-e-catalogos.md) | [BUILD-anamnese-e-catalogos](domains/BUILD-anamnese-e-catalogos.md) |
+| 4 | Classificação e agenda | [ANALYST-classificacao-e-agenda](domains/ANALYST-classificacao-e-agenda.md) | [BUILD-classificacao-e-agenda](domains/BUILD-classificacao-e-agenda.md) |
+| 5 | Avaliação, pendências e handoff | [ANALYST-avaliacao-pendencias-e-handoff](domains/ANALYST-avaliacao-pendencias-e-handoff.md) | [BUILD-avaliacao-pendencias-e-handoff](domains/BUILD-avaliacao-pendencias-e-handoff.md) |
+| 6 | Superfícies e configurações | [ANALYST-superficies-e-configuracoes](domains/ANALYST-superficies-e-configuracoes.md) | [BUILD-superficies-e-configuracoes](domains/BUILD-superficies-e-configuracoes.md) |
+| 7 | Arquitetura offline e prova | [ANALYST-arquitetura-offline-e-prova](domains/ANALYST-arquitetura-offline-e-prova.md) | [BUILD-arquitetura-offline-e-prova](domains/BUILD-arquitetura-offline-e-prova.md) |
 
-| Campo | Obrigatório |
-|---|---:|
-| Pergunta respondida | sim |
-| Decisão | sim |
-| Tipo: lei do PRD, decisão da demo ou evidência do repositório | sim |
-| Ator responsável | sim |
-| Dados de entrada e saída | sim |
-| Quem lê e quem altera | sim |
-| Estado e falhas | sim |
-| Contrato persistido ou DTO | quando houver dado |
-| Teste futuro que provará a decisão | sim |
-| Limite da alegação | sim |
+Um dossiê responde o que o domínio significa e como se comporta. O BUILD de mesmo nome
+traduz somente essas decisões em tabelas, DTOs, serviços, comandos, queries, componentes e
+testes. BUILD não é Spec, Plan nem autorização para código.
 
-Não passam expressões como “configurável”, “depois integra”, “o sistema alerta” ou “usa o
-componente existente” sem dono, contrato, comportamento e prova.
+## Contratos globais fechados
 
-## 4. Dossiês obrigatórios
+### Papéis
 
-O Analyst principal é este índice. Os detalhes vivem em cinco dossiês, todos canônicos e
-todos obrigatórios:
+```text
+ADMIN | RECEPCAO | ENFERMAGEM | ANESTESIOLOGISTA | SOLICITANTE
+```
 
-| Dossiê | Conteúdo | Estado |
+- Paciente e médico solicitante não autenticam no MVP.
+- `ADMIN` administra a operação, mas não herda leitura clínica.
+- `SOLICITANTE` enxerga somente os casos do serviço ao qual sua conta está vinculada.
+- Autorização é aplicada no processo principal; esconder botão não é controle de acesso.
+
+### Estado canônico do caso
+
+```text
+RECEIVED_AT_RECEPTION
+→ WAITING_NURSING
+→ NURSING_IN_PROGRESS ↔ TRIAGE_PENDING
+→ READY_FOR_SCHEDULING
+→ SCHEDULED
+→ WAITING_ANESTHESIA
+→ IN_ASSESSMENT
+→ PENDING → IN_ASSESSMENT
+          ↘ WAITING_RETURN → WAITING_ANESTHESIA → IN_ASSESSMENT
+→ READY_FOR_HANDOFF
+→ DELIVERED_TO_REQUESTER
+```
+
+`CANCELLED` é terminal e exige motivo. Os dossiês podem possuir estados internos próprios
+para sessão, slot, reserva, revisão, encontro, pendência ou resultado; eles não substituem
+o estado do caso.
+
+### Fronteiras
+
+- A triagem geral do SUS termina antes do Antessala.
+- O produto não diagnostica, não atribui ASA e não declara aptidão anestésica.
+- `QUICK`, `STANDARD` e `EXTENDED` descrevem carga de consulta, não cor de pulseira,
+  gravidade clínica ou prioridade cirúrgica.
+- Um caso guarda um snapshot descartável da pessoa; não existe cadastro longitudinal de
+  paciente, deduplicação por nome nem evolução entre casos.
+- O serviço solicitante recebe o resultado; a marcação da cirurgia permanece externa.
+- Todas as regras e pessoas da demonstração são sintéticas e não alegam reproduzir o HC.
+
+## Matriz de suficiência do Analyst
+
+| Pergunta que o código exigirá | Fonte que deve respondê-la | Estado de conteúdo |
 |---|---|---|
-| [Fluxo e domínio](analyst/01-fluxo-e-dominio.md) | fronteiras, identidades, estados, handoffs, falhas | `BLOCKED` |
-| [Atores e permissões](analyst/02-atores-e-permissoes.md) | logins, RBAC, ownership e visibilidade | `BLOCKED` |
-| [Widgets e dados](analyst/03-widgets-e-dados.md) | catálogo, DTOs, proveniência e terminologias | `BLOCKED` |
-| [Classificação e agenda](analyst/04-classificacao-e-agenda.md) | saídas, regras, slots, capacidade e concorrência | `BLOCKED` |
-| [Arquitetura e prova](analyst/05-arquitetura-e-prova.md) | fonte de verdade, segurança, reuso e testes | `BLOCKED` |
+| Quem entra, como entra e o que pode fazer? | acesso e auditoria | coberto |
+| O que chega à recepção e qual identidade nasce? | caso e encaminhamento | coberto |
+| Quais perguntas existem, campos, DTOs e completude? | anamnese e catálogos | coberto |
+| Como a triagem vira requisito e como a vaga é reservada? | classificação e agenda | coberto |
+| Como o anestesiologista conclui, pede algo e devolve? | avaliação, pendências e handoff | coberto |
+| Quais telas, rotas, estados e configurações existem? | superfícies e configurações | coberto |
+| Como persiste, funciona offline e prova o fluxo? | arquitetura offline e prova | coberto |
+| Como tudo se conecta? | `analysis.md` | coberto |
 
-## 5. Matriz mestra de rastreabilidade
+“Coberto” significa que existe decisão verificável no pacote. Não significa aprovação de
+Marco, implementação ou validação clínica institucional.
 
-Antes do PASS, cada ação crítica deve ocupar uma linha:
+## Gate semântico antes do BUILD formal
 
-| Ator | Evento | Superfície | Campo/widget | Fonte | Regra | Saída | Estado | Permissão | Persistência | Teste |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Recepção | encaminhamento entregue | a definir | a definir | documento | a definir | caso aberto | a definir | a definir | a definir | a definir |
-| Enfermagem | caso recebido | a definir | anamnese | relato/aferição | a definir | necessidade de vaga | a definir | a definir | a definir | a definir |
-| Recepção | triagem concluída | a definir | resumo operacional | triagem | compatibilidade | reserva | a definir | a definir | a definir | a definir |
-| Anestesiologista | paciente comparece | a definir | avaliação | caso + consulta | decisão médica | conclusão/pendência | a definir | a definir | a definir | a definir |
-| Serviço solicitante | avaliação concluída | a definir | resultado | avaliação | handoff | recebimento | terminal a definir | leitura | a definir | a definir |
+- [x] Fluxo ponta a ponta possui ator, entrada, ação, saída e próximo responsável.
+- [x] Entidades, estados, transições inválidas e fonte de verdade estão descritos.
+- [x] Cada papel tem capacidade, escopo de leitura e proibição explícitos.
+- [x] Cada widget clínico tem campos, semântica de resposta, DTO, validação e consumo.
+- [x] Cadastros, fixtures e configurações mínimas têm dono e persistência.
+- [x] Agenda define capacidade, slot, compatibilidade, reserva, conflito e recuperação.
+- [x] Telas definem rota, papel, dados, ações, estados vazios, erro e conflito.
+- [x] Segurança, offline, auditoria, migração e provas estão mapeados.
+- [x] Cada Analyst de domínio possui BUILD de mesmo nome.
+- [ ] Marco assinou o Analyst consolidado e os sete dossiês.
 
-As células `a definir` são trabalho ativo, não permissão para o Build.
+## Ordem obrigatória
 
-## 6. Gates de saída
+```text
+PRD assinado
+→ Analyst assinado
+→ BUILD + Critic assinados
+→ Warlog-base assinado
+→ Sprints assinadas
+→ Spec da minispec assinada
+→ Plan assinado
+→ primeiro teste TDD em RED
+→ implementação
+→ QA assinado
+```
 
-### Produto e domínio
-
-- [ ] O fluxo canônico está descrito por ator, entrada, ação, saída e próximo responsável.
-- [ ] Paciente, encaminhamento, caso, anamnese, agendamento e avaliação têm identidades
-  inequívocas.
-- [ ] A máquina de estados cobre caminho feliz, informação ausente, falta de vaga,
-  pendência, retorno, cancelamento e handoff.
-- [ ] Cada estado tem owner, entrada, saída, ações permitidas e terminalidade.
-- [ ] A fronteira com triagem geral, prontuário e marcação cirúrgica está congelada.
-
-### Atores e permissões
-
-- [ ] Os logins necessários à demonstração estão definidos.
-- [ ] Cada campo tem criador, editor, leitor, confirmador e regra de correção.
-- [ ] A recepção não interpreta nem altera dados clínicos.
-- [ ] A enfermagem não conclui avaliação médica.
-- [ ] O anestesiologista não altera silenciosamente a entrevista de enfermagem.
-- [ ] O serviço solicitante recebe somente o conteúdo autorizado.
-- [ ] A matriz RBAC cobre interface e fronteira de dados.
-
-### Widgets e dados
-
-- [ ] O catálogo de widgets está completo.
-- [ ] Cada widget tem ID, versão, DTO, validação, defaults, completude e resumo.
-- [ ] Cada campo distingue negativo, desconhecido, não aplicável e não perguntado.
-- [ ] Cada campo tem proveniência e owner.
-- [ ] Cada dado consumido por uma regra existe em um widget ou no contexto do procedimento.
-- [ ] Procedimentos, medicamentos, CID, exames e demais catálogos foram auditados.
-- [ ] Perguntas específicas por procedimento têm modelo e fallback definidos.
-
-### Classificação e agenda
-
-- [ ] A saída operacional rápida, normal e estendida tem nome, significado e efeito.
-- [ ] Complexidade, antecedência, prontidão e decisão médica não foram misturadas.
-- [ ] Regras, explicações, versão, override e reclassificação estão definidos.
-- [ ] Informação ausente nunca é tratada como normal.
-- [ ] Recurso, capacidade, duração, slot, bloqueio e reserva estão definidos.
-- [ ] Falta de capacidade, reagendamento, retorno e falta do paciente têm fluxo.
-- [ ] Dupla reserva e demais corridas têm contrato de prevenção e recuperação.
-- [ ] O calendário foi tratado como projeção, não como fonte de verdade.
-
-### Arquitetura e prova
-
-- [ ] A arquitetura do protótipo foi escolhida e não se apresenta como arquitetura do HC.
-- [ ] A fonte de verdade e o funcionamento offline foram definidos por operação.
-- [ ] O reuso de Antessala, DietFlow e EscalaFlow foi classificado em copiar, adaptar ou
-  rejeitar.
-- [ ] Segurança, dados sintéticos, auditoria, retenção e exportação estão definidos.
-- [ ] Testes de domínio, contrato, RBAC, concorrência e ponta a ponta estão enumerados.
-- [ ] A prova demonstra casos que exigem tratamentos de agenda diferentes.
-- [ ] Métricas da demo medem o que ela realmente executa.
-
-### Entrega documental
-
-- [ ] Nenhuma decisão obrigatória ficou “para o Build”.
-- [ ] A matriz mestra não contém `a definir`.
-- [ ] Todos os cinco dossiês estão `COMPLETE`.
-- [ ] O Analyst narra o fluxo simples, o fluxo com pendência e o fluxo sem vaga.
-- [ ] O escopo futuro do Build pode ser escrito sem inventar domínio.
-
-## 7. Veredito atual
-
-O PRD está pronto. O Analyst não está.
-
-Portanto:
-
-- Build: proibido;
-- Warlog: não iniciado;
-- Sprints: rascunhos;
-- Specs: rascunhos;
-- Plans: rascunhos;
-- testes e código: proibidos.
-
-Depois que Marco assinar o PRD, o trabalho autorizado será preencher os cinco dossiês e
-eliminar cada `a definir`. Só então este documento poderá pedir assinatura para liberar o
-Build.
+Os BUILDs de domínio foram redigidos por ordem direta para permitir revisão conjunta. Isso
+não promoveu a fase, não criou Plan e não autorizou uma linha de implementação.
 
 ---
 
 ## Contrato de encerramento deste arquivo
 
-- Artefato: `ANALYST.md` e os cinco dossiês referenciados
-- Próxima fase autorizada: Build
-- Estado: `BLOQUEADO_PELA_ASSINATURA_DO_PRD`
+- Artefato: `ANALYST.md`, `analysis.md` e sete `ANALYST-*.md`
+- Próxima fase autorizada após assinatura: BUILD formal e Critic
+- Estado: `AGUARDANDO_ASSINATURA`
 - Assinatura de Marco: `PENDENTE`
 - Data: `PENDENTE`
 - Revisão Git examinada: `PENDENTE`
 - Declaração: `PENDENTE`
 
-Declaração exigida: “Aprovo o Analyst completo e autorizo o Build.”
-
-A assinatura só vale quando os cinco dossiês também estiverem assinados e a matriz mestra
-não contiver `a definir`.
+Declaração exigida: “Aprovo o Analyst completo e autorizo o BUILD formal.”
