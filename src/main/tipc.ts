@@ -3,16 +3,8 @@ import { createRequire } from 'node:module'
 import { execute, queryAll, queryOne } from './db/query'
 import { iaEnviarMensagem, iaTestarConexao } from './ia/cliente'
 import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
-import { exportHtmlToPdf } from './export/pdf'
-import { dormantKnowledgeRouter } from './knowledge/router'
-import {
-  mapCatalogoCidRow,
-  mapCatalogoMedicamentoRow,
-  type CatalogoCidRow,
-  type CatalogoMedicamentoRow,
-} from './catalogos/dto'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
-import { validateAnamneseContent } from '../shared/anamnese'
+import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
 
 const require = createRequire(import.meta.url)
 const { tipc } = require('@egoist/tipc/main') as typeof import('@egoist/tipc/main')
@@ -262,116 +254,7 @@ const iaMensagensDeletarApos = t.procedure
     return { ok: true }
   })
 
-export type RegistroInput = {
-  nome: string
-  sexo: string
-  idade: number
-  plano: string
-  anamnese?: { _v: 2; blocos: unknown[] }
-}
-
-const registrosCriar = t.procedure.input<RegistroInput>().action(async ({ input }) => {
-  const id = randomUUID()
-  const anamnese = validateAnamneseContent(input.anamnese ?? { _v: 2, blocos: [] })
-  await execute(
-    `INSERT INTO registros (id, nome, sexo, idade, plano, anamnese)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
-    id,
-    input.nome.trim(),
-    input.sexo.trim(),
-    input.idade,
-    input.plano.trim(),
-    JSON.stringify(anamnese),
-  )
-  return queryOne('SELECT * FROM registros WHERE id = $1', id)
-})
-
-const registrosListar = t.procedure.action(async () =>
-  queryAll('SELECT * FROM registros ORDER BY criado_em, id'),
-)
-
-const registrosObter = t.procedure.input<{ id: string }>().action(async ({ input }) => {
-  const registro = await queryOne('SELECT * FROM registros WHERE id = $1', input.id)
-  if (!registro) throw new Error('Registro não encontrado.')
-  const jornada = await queryAll(
-    'SELECT * FROM registro_jornada WHERE registro_id = $1 ORDER BY entrou_em, id',
-    input.id,
-  )
-  return { registro, jornada }
-})
-
-const registrosSalvarAnamnese = t.procedure
-  .input<{ id: string; anamnese: { _v: 2; blocos: unknown[] } }>()
-  .action(async ({ input }) => {
-    const anamnese = validateAnamneseContent(input.anamnese)
-    await execute(
-      'UPDATE registros SET anamnese = $1::jsonb, atualizado_em = NOW() WHERE id = $2',
-      JSON.stringify(anamnese),
-      input.id,
-    )
-    return { ok: true }
-  })
-
-const jornadaAdicionar = t.procedure
-  .input<{
-    registro_id: string
-    estado:
-      | 'aguardando_triagem'
-      | 'anamnese_em_andamento'
-      | 'na_fila'
-      | 'analisado_pelo_especialista'
-      | 'no_hub'
-      | 'encerrado'
-    entrou_em?: string
-  }>()
-  .action(async ({ input }) => {
-    await execute(
-      `INSERT INTO registro_jornada (registro_id, estado, entrou_em)
-       VALUES ($1, $2, COALESCE($3::timestamptz, NOW()))`,
-      input.registro_id,
-      input.estado,
-      input.entrou_em ?? null,
-    )
-    return { ok: true }
-  })
-
-const catalogoCidBuscar = t.procedure
-  .input<{ busca: string; limite?: number }>()
-  .action(async ({ input }) => {
-    const rows = await queryAll<CatalogoCidRow>(
-      `SELECT id, codigo, descricao, capitulo_descricao
-       FROM catalogo_cid10
-       WHERE codigo ILIKE '%' || $1 || '%' OR descricao ILIKE '%' || $1 || '%'
-       ORDER BY relevancia DESC NULLS LAST, codigo
-       LIMIT $2`,
-      input.busca.trim(),
-      Math.min(Math.max(input.limite ?? 20, 1), 100),
-    )
-    return rows.map(mapCatalogoCidRow)
-  })
-
-const catalogoMedicamentosBuscar = t.procedure
-  .input<{ busca: string; limite?: number }>()
-  .action(async ({ input }) => {
-    const rows = await queryAll<CatalogoMedicamentoRow>(
-      `SELECT m.id, m.nome, m.principio_ativo, m.nomes_comerciais,
-              c.nome AS classe_terapeutica, g.rotulo AS grupo_risco
-       FROM catalogo_medicamentos m
-       LEFT JOIN catalogo_classes_terapeuticas c ON c.id = m.classe_id
-       LEFT JOIN catalogo_grupos_risco g ON g.id = m.grupo_risco_id
-       WHERE m.nome ILIKE '%' || $1 || '%'
-          OR m.principio_ativo ILIKE '%' || $1 || '%'
-          OR m.nomes_comerciais::text ILIKE '%' || $1 || '%'
-       ORDER BY m.nome
-       LIMIT $2`,
-      input.busca.trim(),
-      Math.min(Math.max(input.limite ?? 20, 1), 100),
-    )
-    return rows.map(mapCatalogoMedicamentoRow)
-  })
-
 export const router = {
-  ...dormantKnowledgeRouter,
   'ia.configuracao.obter': iaConfiguracaoObter,
   'ia.configuracao.salvar': iaConfiguracaoSalvar,
   'ia.configuracao.testar': iaConfiguracaoTestar,
@@ -388,16 +271,6 @@ export const router = {
   'ia.mensagens.salvar': iaMensagensSalvar,
   'ia.mensagens.atualizar': iaMensagensAtualizar,
   'ia.mensagens.deletarApos': iaMensagensDeletarApos,
-  'registros.criar': registrosCriar,
-  'registros.listar': registrosListar,
-  'registros.obter': registrosObter,
-  'registros.salvarAnamnese': registrosSalvarAnamnese,
-  'registros.jornada.adicionar': jornadaAdicionar,
-  'catalogos.cid10.buscar': catalogoCidBuscar,
-  'catalogos.medicamentos.buscar': catalogoMedicamentosBuscar,
-  'export.imprimirPDF': t.procedure
-    .input<{ html: string; filename?: string; landscape?: boolean }>()
-    .action(async ({ input }) => exportHtmlToPdf(input)),
   'app:version': t.procedure.action(async () => {
     try {
       const electron = require('electron') as { app?: { getVersion?: () => string } }
@@ -406,6 +279,6 @@ export const router = {
       return '0.0.0'
     }
   }),
-}
+} satisfies Record<ActiveIpcChannel, unknown>
 
 export type Router = typeof router

@@ -1,17 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { isActiveIpcChannel } from '../shared/active-ipc-channels'
 
-// Expose only whitelisted IPC methods to renderer
+function assertActiveIpcChannel(channel: unknown): asserts channel is string {
+  if (!isActiveIpcChannel(channel)) {
+    throw new Error('Canal IPC indisponível.')
+  }
+}
+
+// Keep the renderer bridge smaller than Electron's ipcRenderer surface.
 contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
-    invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
-    on: (channel: string, callback: (...args: any[]) => void) => {
-      const wrapper = (_event: Electron.IpcRendererEvent, ...args: any[]) => callback(...args)
-      ipcRenderer.on(channel, wrapper)
-      // Return disposer so callers can remove just their own listener
-      return () => { ipcRenderer.removeListener(channel, wrapper) }
-    },
-    removeAllListeners: (channel: string) => {
-      ipcRenderer.removeAllListeners(channel)
+    invoke: (channel: string, ...args: unknown[]) => {
+      assertActiveIpcChannel(channel)
+      return ipcRenderer.invoke(channel, ...args)
     },
   },
 })

@@ -1,0 +1,26 @@
+import { describe, expect, it } from 'vitest'
+import {
+  ACTIVE_IPC_CHANNELS,
+  isActiveIpcChannel,
+} from '../../src/shared/active-ipc-channels'
+
+describe('active IPC channels', () => {
+  it('keeps one unique, closed list for the published shell', () => {
+    expect(new Set(ACTIVE_IPC_CHANNELS).size).toBe(ACTIVE_IPC_CHANNELS.length)
+    expect(isActiveIpcChannel('ia.chat.enviar')).toBe(true)
+    expect(isActiveIpcChannel('app:version')).toBe(true)
+  })
+
+  it.each([
+    'knowledge.obterTextoOriginal',
+    'knowledge.rebuildGraph',
+    'registros.salvarAnamnese',
+    'catalogos.cid10.buscar',
+    'export.imprimirPDF',
+    'ia.stt.download',
+    '',
+    null,
+  ])('rejects unpublished or privileged channel %j', (channel) => {
+    expect(isActiveIpcChannel(channel)).toBe(false)
+  })
+})
