@@ -48,7 +48,6 @@ import {
   WidgetHabitos,
   WidgetObservacoes,
 } from './Apoio'
-import { CASOS } from '../dados'
 import { WidgetAcompanhante, WidgetJejum } from './Operacional'
 import { positiva, responder, tratada } from './tipos'
 import type {
@@ -125,24 +124,6 @@ const def = <D,>(w: {
   sinal?: (d: D) => boolean
   minutosForaDoTeto?: number
 }): DefWidget => w as unknown as DefWidget
-
-/* ══════════════ o caso ══════════════ */
-
-/**
- * O caso em tela deriva do primeiro caso da fila, não de uma cópia paralela.
- * Antes eram duas fontes com três grafias diferentes do mesmo procedimento, o
- * que fazia a anamnese e a agenda discordarem sobre o que a paciente vai operar.
- */
-const CASO = CASOS[0]
-
-export const PACIENTE = {
-  nome: CASO.nome,
-  idade: CASO.idade,
-  codigo: CASO.codigo,
-  procedimento: CASO.procedimento,
-  servico: CASO.servico,
-  solicitante: 'Dr. Aurélio Prado · CRM-SP 118432',
-}
 
 const enfermeira = 'Enf. Renata Duarte'
 

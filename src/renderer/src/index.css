@@ -208,3 +208,72 @@
     print-color-adjust: exact !important;
   }
 }
+
+/**
+ * FullCalendar dentro do tema do Antessala.
+ *
+ * A biblioteca traz o próprio CSS; aqui só reapontamos as variáveis dela para
+ * os tokens da casca, para o calendário não virar uma ilha clara dentro do tema
+ * escuro. Nenhuma regra de layout é reescrita.
+ */
+.antessala-calendario {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: color-mix(in oklch, var(--muted) 60%, transparent);
+  --fc-today-bg-color: color-mix(in oklch, var(--primary) 7%, transparent);
+  --fc-now-indicator-color: var(--destructive);
+  --fc-event-text-color: var(--foreground);
+  font-size: 0.85rem;
+}
+
+.antessala-calendario .fc .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.antessala-calendario .fc .fc-button {
+  background: var(--background);
+  border-color: var(--border);
+  color: var(--foreground);
+  text-transform: none;
+  font-size: 0.8rem;
+  box-shadow: none;
+}
+
+.antessala-calendario .fc .fc-button:hover {
+  background: var(--accent);
+}
+
+.antessala-calendario .fc .fc-button-primary:not(:disabled).fc-button-active,
+.antessala-calendario .fc .fc-button-primary:not(:disabled):active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.antessala-calendario .fc .fc-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.antessala-calendario .fc-theme-standard td,
+.antessala-calendario .fc-theme-standard th,
+.antessala-calendario .fc-theme-standard .fc-scrollgrid {
+  border-color: var(--border);
+}
+
+.antessala-calendario .fc .fc-timegrid-slot-label,
+.antessala-calendario .fc .fc-col-header-cell-cushion,
+.antessala-calendario .fc .fc-daygrid-day-number {
+  color: var(--muted-foreground);
+}
+
+.antessala-calendario .fc-event {
+  border-left-width: 3px;
+  border-radius: 0.375rem;
+  padding: 1px 3px;
+}
+
+.antessala-calendario .fc-list-event:hover td {
+  background: var(--accent);
+}

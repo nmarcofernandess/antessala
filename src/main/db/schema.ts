@@ -1,5 +1,6 @@
 import { execDDL } from './query'
 import { createClinicalTables } from './clinical-schema'
+import { createCaseTables } from './case-schema'
 
 // ══════════════════════════════════════════
 // CORE
@@ -288,6 +289,7 @@ END $$;
 export async function createTables(): Promise<void> {
   await execDDL(DDL_CORE)
   await createClinicalTables()
+  await createCaseTables()
   await execDDL(DDL_KNOWLEDGE)
   await execDDL(DDL_IA_CHAT)
   await execDDL(DDL_MIGRATIONS)

@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto'
 import { gunzipSync } from 'node:zlib'
 import { execute, queryOne, transaction } from './query'
 import { seedProtocolos } from './protocolos'
+import { garantirContaSintetica } from '../auth/session'
+import { garantirCapacidadeFutura } from '../scheduling/capacity-seed'
 
 type CatalogFile<T> = {
   _meta: Record<string, unknown>
@@ -127,6 +129,35 @@ async function insertJsonRows(
 }
 
 /**
+ * Serviços solicitantes da demonstração.
+ *
+ * Catálogo pequeno e estável: é a lista que a recepção escolhe ao abrir o
+ * encaminhamento, e a chave estrangeira que amarra o caso ao serviço. Não é
+ * cadastro de unidade hospitalar nem hierarquia institucional.
+ */
+const SERVICOS_SOLICITANTES = [
+  'Ortopedia',
+  'Cirurgia geral',
+  'Gastroenterologia',
+  'Oftalmologia',
+  'Otorrinolaringologia',
+  'Ginecologia',
+  'Urologia',
+  'Vascular',
+]
+
+async function seedServicosSolicitantes(): Promise<void> {
+  for (const nome of SERVICOS_SOLICITANTES) {
+    await execute(
+      `INSERT INTO catalogo_servicos_solicitantes (id, nome) VALUES ($1, $2)
+       ON CONFLICT (id) DO NOTHING`,
+      slug(nome),
+      nome,
+    )
+  }
+}
+
+/**
  * Primeiro boot inteiramente local. Lê apenas assets versionados no bundle e
  * grava o PGlite embarcado. Não chama embeddings, RAG, LLM ou rede.
  */
@@ -139,6 +170,9 @@ export async function seedData(): Promise<void> {
   // Antes da checagem de revisão: os catálogos são substituídos quando o asset
   // muda, os protocolos não — eles só nascem, e depois pertencem ao operador.
   await seedProtocolos()
+  await seedServicosSolicitantes()
+  await garantirContaSintetica()
+  await garantirCapacidadeFutura()
 
   const current = await queryOne<{ sha256: string }>(
     `SELECT sha256 FROM catalogo_seed_state WHERE catalogo = 'clinical-v1'`,
