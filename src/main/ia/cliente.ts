@@ -1,7 +1,6 @@
 import { generateText } from 'ai'
 import type { ModelMessage } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { queryOne } from '../db/query'
 import { isGeminiCloudApiEnabled } from '../config/app-config'
 import { resolveModel, resolveProviderApiKey } from './config'
@@ -44,8 +43,8 @@ function friendlyProviderError(error: unknown): Error {
 
 function assertCloudConfig(config: IaConfiguracao | undefined): asserts config is IaConfiguracao {
   if (!config || config.ativo === false) throw new Error('Assistente IA não configurado.')
-  if (config.provider !== 'gemini' && config.provider !== 'openrouter') {
-    throw new Error('Somente Gemini e OpenRouter são suportados nesta versão.')
+  if (config.provider !== 'gemini') {
+    throw new Error('O Antessala usa somente Gemini nesta versão.')
   }
 }
 
@@ -63,9 +62,7 @@ export async function iaEnviarMensagem(
   const modelo = resolveModel(config, config.provider)
 
   try {
-    const model = config.provider === 'gemini'
-      ? createGoogleGenerativeAI({ apiKey })(modelo)
-      : createOpenRouter({ apiKey })(modelo)
+    const model = createGoogleGenerativeAI({ apiKey })(modelo)
     const result = await generateText({
       model,
       system: SYSTEM_PROMPT,
@@ -84,8 +81,8 @@ export async function iaTestarConexao(
   apiKey: string,
   modelo: string,
 ): Promise<{ sucesso: boolean; mensagem: string }> {
-  if (provider !== 'gemini' && provider !== 'openrouter') {
-    throw new Error('Provider inválido. Escolha Gemini ou OpenRouter.')
+  if (provider !== 'gemini') {
+    throw new Error('Provider inválido. O Antessala usa somente Gemini.')
   }
   if (!apiKey.trim()) throw new Error('Chave de API não fornecida.')
   if (!modelo.trim()) throw new Error('Modelo não fornecido.')
@@ -94,13 +91,11 @@ export async function iaTestarConexao(
   }
 
   try {
-    const model = provider === 'gemini'
-      ? createGoogleGenerativeAI({ apiKey: apiKey.trim() })(modelo.trim())
-      : createOpenRouter({ apiKey: apiKey.trim() })(modelo.trim())
+    const model = createGoogleGenerativeAI({ apiKey: apiKey.trim() })(modelo.trim())
     const result = await generateText({ model, prompt: 'Responda apenas: OK' })
     return {
       sucesso: true,
-      mensagem: `${provider === 'gemini' ? 'Gemini' : 'OpenRouter'} conectado: ${result.text.trim().slice(0, 50)}`,
+      mensagem: `Gemini conectado: ${result.text.trim().slice(0, 50)}`,
     }
   } catch (error) {
     throw friendlyProviderError(error)

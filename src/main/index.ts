@@ -76,11 +76,10 @@ async function maybeSeedIaConfig(): Promise<void> {
     const { queryOne, execute } = await import('./db/query')
     const { PROVIDER_DEFAULTS, shouldAutoSeedIaConfig } = await import('./ia/config')
     const geminiKey = process.env.GOOGLE_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim()
-    const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
-    if (!geminiKey && !openrouterKey) return
+    if (!geminiKey) return
 
-    const provider = geminiKey ? ('gemini' as const) : ('openrouter' as const)
-    const apiKey = geminiKey ?? openrouterKey!
+    const provider = 'gemini' as const
+    const apiKey = geminiKey
     const modelo = PROVIDER_DEFAULTS[provider]
     const current = await queryOne<{
       provider: 'gemini' | 'openrouter'
