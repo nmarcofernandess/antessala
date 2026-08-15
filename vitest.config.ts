@@ -19,6 +19,10 @@ export default defineConfig({
       ...configDefaults.exclude,
       'scripts/**/*.spec.ts',
       'tests/e2e/**',
+      // `hack/arquivo` guarda código que nunca foi integrado. Ele está ali para
+      // ser lido, não para rodar — os imports apontam para caminhos que não
+      // existem mais, e coletá-lo só produziria vermelho sem significado.
+      'hack/arquivo/**',
     ],
     coverage: {
       provider: 'v8',
