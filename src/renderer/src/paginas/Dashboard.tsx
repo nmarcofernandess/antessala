@@ -10,7 +10,7 @@ import { agenda, casos } from '@/servicos/casos'
 import {
   ROTULO_CLASSE,
   ROTULO_STATUS,
-  type AgendaRangeDTO,
+  type AgendaIntervaloDTO,
   type CaseStatus,
   type CaseSummaryDTO,
   type SlotClass,
@@ -66,7 +66,7 @@ function hora(iso: string): string {
 export function Dashboard() {
   const [lista, setLista] = useState<CaseSummaryDTO[]>([])
   const [contagens, setContagens] = useState<Record<string, number>>({})
-  const [dia, setDia] = useState<AgendaRangeDTO>({ resources: [], slots: [] })
+  const [dia, setDia] = useState<AgendaIntervaloDTO>({ resources: [], dias: [] })
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -93,10 +93,28 @@ export function Dashboard() {
     void carregar()
   }, [carregar])
 
-  const vagas = dia.slots
-  const ocupadas = vagas.filter((s) => s.booking)
-  const livres = vagas.filter((s) => !s.booking && s.status === 'OPEN')
-  const minutosLivres = livres.reduce((s, v) => s + DURACAO[v.slotClass], 0)
+  // O dia não tem vaga contada: tem tempo. Consultas marcadas, minutos livres e
+  // quantas ainda cabem de cada tamanho — que é o que o main calcula da regra.
+  const consultas = dia.dias.flatMap((d) =>
+    d.consultas.filter((c) => c.status !== 'CANCELLED' && c.status !== 'NO_SHOW'),
+  )
+  const minutosLivres = dia.dias.reduce((t, d) => t + d.minutosLivres, 0)
+  const minutosDoDia = dia.dias.reduce((t, d) => t + d.minutosDeAtendimento, 0)
+  const cabem: Record<SlotClass, number> = CLASSES_DO_DIA.reduce(
+    (acc, k) => ({ ...acc, [k]: dia.dias.reduce((t, d) => t + d.capacidade[k], 0) }),
+    { QUICK: 0, STANDARD: 0, EXTENDED: 0 },
+  )
+  const buracos = dia.dias
+    .flatMap((d) =>
+      d.livres.map((l) => ({
+        resourceName: d.resourceName,
+        inicio: l.inicio,
+        minutos: Math.round(
+          (new Date(l.fim).getTime() - new Date(l.inicio).getTime()) / 60_000,
+        ),
+      })),
+    )
+    .sort((a, b) => a.inicio.localeCompare(b.inicio))
 
   const comVaga = useMemo(
     () =>
@@ -237,54 +255,33 @@ export function Dashboard() {
 
           <aside className="space-y-4">
             <ValorHero
-              valor={ocupadas.length}
-              unidade={`de ${vagas.length} vagas`}
+              valor={consultas.length}
+              unidade={consultas.length === 1 ? 'consulta hoje' : 'consultas hoje'}
               metricas={<Metrica valor={minutosLivres} rotulo="min livres" />}
             >
-              <div className="flex h-2.5 gap-1">
-                {CLASSES_DO_DIA.map((k) => {
-                  const total = vagas.filter((v) => v.slotClass === k).length
-                  const usadas = vagas.filter((v) => v.slotClass === k && v.booking).length
-                  if (total === 0 || vagas.length === 0) return null
-                  return (
-                    <div
-                      key={k}
-                      className="flex overflow-hidden rounded-full bg-muted"
-                      style={{ width: `${(total / vagas.length) * 100}%` }}
-                      title={`${ROTULO_CLASSE[k]}: ${usadas} de ${total} ocupadas`}
-                    >
-                      <span
-                        className={TOM_CLASSE[k].ponto}
-                        style={{ width: `${(usadas / total) * 100}%` }}
-                        aria-hidden
-                      />
-                      <span
-                        className={cn('opacity-25', TOM_CLASSE[k].ponto)}
-                        style={{ width: `${((total - usadas) / total) * 100}%` }}
-                        aria-hidden
-                      />
-                    </div>
-                  )
-                })}
+              <div className="flex h-2.5 overflow-hidden rounded-full bg-muted">
+                <span
+                  className="bg-primary"
+                  style={{
+                    width: `${minutosDoDia > 0 ? ((minutosDoDia - minutosLivres) / minutosDoDia) * 100 : 0}%`,
+                  }}
+                  aria-hidden
+                />
               </div>
 
               <div className="mt-3.5 space-y-2">
-                {CLASSES_DO_DIA.map((k) => {
-                  const total = vagas.filter((v) => v.slotClass === k).length
-                  const disponiveis = vagas.filter((v) => v.slotClass === k && !v.booking).length
-                  return (
-                    <div key={k} className="flex items-baseline gap-2 text-xs">
-                      <span
-                        className={cn('size-1.5 shrink-0 rounded-full', TOM_CLASSE[k].ponto)}
-                        aria-hidden
-                      />
-                      <span className="flex-1 truncate">{ROTULO_CLASSE[k]}</span>
-                      <span className="font-mono tabular-nums text-muted-foreground">
-                        {disponiveis} livre{disponiveis === 1 ? '' : 's'} de {total}
-                      </span>
-                    </div>
-                  )
-                })}
+                {CLASSES_DO_DIA.map((k) => (
+                  <div key={k} className="flex items-baseline gap-2 text-xs">
+                    <span
+                      className={cn('size-1.5 shrink-0 rounded-full', TOM_CLASSE[k].ponto)}
+                      aria-hidden
+                    />
+                    <span className="flex-1 truncate">{ROTULO_CLASSE[k]}</span>
+                    <span className="font-mono tabular-nums text-muted-foreground">
+                      cabem {cabem[k]}
+                    </span>
+                  </div>
+                ))}
               </div>
             </ValorHero>
 
@@ -294,43 +291,34 @@ export function Dashboard() {
 
         <section className="mt-6">
           <div className="flex items-baseline justify-between gap-4">
-            <Rotulo>Vagas livres hoje</Rotulo>
+            <Rotulo>Espaços livres hoje</Rotulo>
             <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-              {livres.length} de {vagas.length}
+              {minutosLivres} de {minutosDoDia} min
             </span>
           </div>
 
-          {livres.length === 0 ? (
+          {buracos.length === 0 ? (
             <p className="mt-3 rounded-xl border border-dashed px-5 py-6 text-center text-sm text-muted-foreground">
-              Nenhuma vaga livre hoje.
+              Nada livre hoje.
             </p>
           ) : (
             <div className="mt-3 flex flex-wrap gap-px overflow-hidden rounded-xl border bg-border">
-              {livres.slice(0, 12).map((v) => (
+              {buracos.slice(0, 12).map((b) => (
                 <Link
-                  key={v.id}
+                  key={`${b.resourceName}|${b.inicio}`}
                   to="/agenda"
                   className="flex min-w-[120px] flex-1 flex-col items-start gap-2 bg-card px-4 py-3.5 transition-colors hover:bg-accent/50"
                 >
                   <span className="flex items-baseline gap-2">
                     <span className="font-mono text-[19px] font-light leading-none tabular-nums">
-                      {hora(v.startsAt)}
+                      {hora(b.inicio)}
                     </span>
                     <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                      {DURACAO[v.slotClass]} min
+                      {b.minutos} min
                     </span>
                   </span>
-                  <span
-                    className={cn(
-                      'flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider',
-                      TOM_CLASSE[v.slotClass].texto,
-                    )}
-                  >
-                    <span
-                      className={cn('size-1.5 rounded-full', TOM_CLASSE[v.slotClass].ponto)}
-                      aria-hidden
-                    />
-                    {ROTULO_CLASSE[v.slotClass]}
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {b.resourceName}
                   </span>
                 </Link>
               ))}

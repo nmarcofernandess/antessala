@@ -31,7 +31,7 @@ import {
   listarIntervalo,
   moverReserva,
   reservar,
-  vagasCompativeis,
+  sugerirHorarios,
 } from '../../../src/main/scheduling/agenda-service'
 import { responder } from '../../../src/shared/clinical/anamnese-tipos'
 import { ErroDeCaso, serializarErro, type AnamnesisBlock } from '../../../src/shared/clinical/caso'
@@ -310,7 +310,7 @@ describe('fluxo do caso pré-anestésico', () => {
 
     // Calculado ainda não é agendável.
     expect((await obterCaso(caso.id)).status).toBe('NURSING_IN_PROGRESS')
-    await expect(vagasCompativeis({ requirementId: requisito.id })).rejects.toThrow(/confirmado/)
+    await expect(sugerirHorarios({ requirementId: requisito.id })).rejects.toThrow(/confirmado/)
 
     const confirmado = await confirmarRequisito({
       requirementId: requisito.id,
@@ -387,14 +387,15 @@ describe('fluxo do caso pré-anestésico', () => {
 
   it('reservar grava a consulta, muda o caso e aparece na timeline', async () => {
     const { caso, requisito } = await casoPronto()
-    const vagas = await vagasCompativeis({ requirementId: requisito.id })
+    const vagas = await sugerirHorarios({ requirementId: requisito.id })
     expect(vagas.length).toBeGreaterThan(0)
     expect(vagas.every((v) => v.slotClass === requisito.slotClass)).toBe(true)
 
     const booking = await reservar({
       caseId: caso.id,
       requirementId: requisito.id,
-      slotId: vagas[0].id,
+      resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
       idempotencyKey: randomUUID(),
     })
 
@@ -410,19 +411,30 @@ describe('fluxo do caso pré-anestésico', () => {
       de: new Date(Date.parse(booking.startsAt) - 3600_000).toISOString(),
       ate: new Date(Date.parse(booking.startsAt) + 3600_000).toISOString(),
     })
-    const slot = intervalo.slots.find((s) => s.id === booking.slotId)
-    expect(slot?.booking?.id).toBe(booking.id)
+    const marcadas = intervalo.dias.flatMap((d) => d.consultas)
+    expect(marcadas.some((c) => c.bookingId === booking.id)).toBe(true)
+
+    // O horário reservado deixa de ser oferecido — porque "livre" é conta, não
+    // uma linha que alguém precisa lembrar de atualizar.
+    const dia = intervalo.dias.find((d) => d.resourceId === booking.resourceId)!
+    const inicio = Date.parse(booking.startsAt)
+    expect(
+      dia.livres.some(
+        (l) => Date.parse(l.inicio) <= inicio && Date.parse(l.fim) > inicio,
+      ),
+    ).toBe(false)
   })
 
-  it('duas reservas na mesma vaga: a segunda perde no banco', async () => {
+  it('duas reservas no mesmo horário: a segunda perde dentro da transação', async () => {
     const a = await casoPronto()
     const b = await casoPronto()
-    const vagas = await vagasCompativeis({ requirementId: a.requisito.id })
+    const vagas = await sugerirHorarios({ requirementId: a.requisito.id })
 
     await reservar({
       caseId: a.caso.id,
       requirementId: a.requisito.id,
-      slotId: vagas[0].id,
+      resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
       idempotencyKey: randomUUID(),
     })
 
@@ -430,27 +442,29 @@ describe('fluxo do caso pré-anestésico', () => {
       reservar({
         caseId: b.caso.id,
         requirementId: b.requisito.id,
-        slotId: vagas[0].id,
+        resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
         idempotencyKey: randomUUID(),
       }),
-    ).rejects.toThrow(/SLOT_TAKEN|reservada/)
+    ).rejects.toThrow(/não está livre/)
   })
 
-  it('vaga de classe errada é recusada', async () => {
+  it('sala sem o que o caso exige é recusada, com o código na frente do erro', async () => {
     const { caso, requisito } = await casoPronto()
-    const outraClasse = await queryOne<{ id: string }>(
-      `SELECT id FROM scheduling_slots
-        WHERE slot_class <> $1 AND status = 'OPEN'
-          AND NOT EXISTS (SELECT 1 FROM scheduling_bookings b WHERE b.slot_id = scheduling_slots.id
-                            AND b.status IN ('CONFIRMED','CHECKED_IN','COMPLETED'))
-        LIMIT 1`,
-      requisito.slotClass,
+    // O horário existe e cabe — o que muda é a exigência do caso, feita depois
+    // de o horário ser oferecido.
+    const vagas = await sugerirHorarios({ requirementId: requisito.id })
+    await execute(
+      `UPDATE scheduling_requirements SET required_capabilities = '["SALA_INVENTADA"]'::jsonb
+        WHERE id = $1`,
+      requisito.id,
     )
 
     const erro = await reservar({
       caseId: caso.id,
       requirementId: requisito.id,
-      slotId: outraClasse!.id,
+      resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
       idempotencyKey: randomUUID(),
     }).catch((e) => e)
 
@@ -462,21 +476,26 @@ describe('fluxo do caso pré-anestésico', () => {
 
   it('mover a reserva valida no main e registra remarcação', async () => {
     const { caso, requisito } = await casoPronto()
-    const vagas = await vagasCompativeis({ requirementId: requisito.id })
+    const vagas = await sugerirHorarios({ requirementId: requisito.id })
     const booking = await reservar({
       caseId: caso.id,
       requirementId: requisito.id,
-      slotId: vagas[0].id,
+      resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
       idempotencyKey: randomUUID(),
     })
 
+    const destino = vagas.find(
+      (v) => v.startsAt !== booking.startsAt || v.resourceId !== booking.resourceId,
+    )!
     const movido = await moverReserva({
       bookingId: booking.id,
-      slotId: vagas[1].id,
+      resourceId: destino.resourceId,
+      startsAt: destino.startsAt,
       expectedVersion: booking.version,
     })
-    expect(movido.slotId).toBe(vagas[1].id)
-    expect(movido.startsAt).toBe(vagas[1].startsAt)
+    expect(movido.resourceId).toBe(destino.resourceId)
+    expect(Date.parse(movido.startsAt)).toBe(Date.parse(destino.startsAt))
 
     const depois = await obterCaso(caso.id)
     expect(depois.timeline.at(-1)?.eventType).toBe('BOOKING_RESCHEDULED')
@@ -484,11 +503,12 @@ describe('fluxo do caso pré-anestésico', () => {
 
   it('cancelar a consulta devolve o caso à fila sem cancelar o caso', async () => {
     const { caso, requisito } = await casoPronto()
-    const vagas = await vagasCompativeis({ requirementId: requisito.id })
+    const vagas = await sugerirHorarios({ requirementId: requisito.id })
     const booking = await reservar({
       caseId: caso.id,
       requirementId: requisito.id,
-      slotId: vagas[0].id,
+      resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
       idempotencyKey: randomUUID(),
     })
 
@@ -506,11 +526,12 @@ describe('fluxo do caso pré-anestésico', () => {
 
   it('a listagem projeta reserva e requisito sem expor conteúdo clínico', async () => {
     const { caso, requisito } = await casoPronto()
-    const vagas = await vagasCompativeis({ requirementId: requisito.id })
+    const vagas = await sugerirHorarios({ requirementId: requisito.id })
     await reservar({
       caseId: caso.id,
       requirementId: requisito.id,
-      slotId: vagas[0].id,
+      resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
       idempotencyKey: randomUUID(),
     })
 

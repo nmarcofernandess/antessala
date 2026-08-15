@@ -11,11 +11,13 @@ import { seedProtocolos } from '../../../src/main/db/protocolos'
 import { semearCapacidade } from '../../../src/main/scheduling/capacity-seed'
 import { listarRecursos, salvarRecurso } from '../../../src/main/scheduling/capacity-service'
 import {
-  materializar,
+  capacidadeDoDia,
+  diaDaSala,
+  encaixesNoDia,
   obterDisponibilidade,
   salvarDisponibilidade,
 } from '../../../src/main/scheduling/availability-service'
-import { reservar, vagasCompativeis } from '../../../src/main/scheduling/agenda-service'
+import { reservar, sugerirHorarios } from '../../../src/main/scheduling/agenda-service'
 import { criarCaso, aceitarHandoff } from '../../../src/main/clinical/case-service'
 import {
   abrirAnamnese,
@@ -30,10 +32,11 @@ import { responder } from '../../../src/shared/clinical/anamnese-tipos'
 import type { AnamnesisBlock } from '../../../src/shared/clinical/caso'
 
 /**
- * A disponibilidade é a regra; as vagas são a materialização dela.
+ * A disponibilidade é a regra, e nada é materializado dela.
  *
- * O que estes testes protegem: mudar a regra muda a agenda inteira adiante, e
- * nunca toca no que já virou compromisso com uma pessoa.
+ * O que estes testes protegem: o livre é sempre calculado do expediente menos o
+ * que já existe; a cota reserva tempo por classe sem criar horário; e mudar a
+ * regra nunca toca no que já virou compromisso com uma pessoa.
  */
 describe('disponibilidade e capacidade', () => {
   let dbDir: string
@@ -59,7 +62,17 @@ describe('disponibilidade e capacidade', () => {
     await rm(dbDir, { recursive: true, force: true })
   })
 
-  it('o primeiro boot deixa três salas com regra de dias úteis e vagas materializadas', async () => {
+  /** A próxima segunda-feira — dia que o seed deixa aberto em todas as salas. */
+  function proximaSegunda(): Date {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    do {
+      d.setDate(d.getDate() + 1)
+    } while (d.getDay() !== 1)
+    return d
+  }
+
+  it('o primeiro boot deixa três salas com regra de dias úteis e nenhuma vaga criada', async () => {
     const disp = await obterDisponibilidade()
     expect(disp).toHaveLength(3)
 
@@ -68,47 +81,70 @@ describe('disponibilidade e capacidade', () => {
     expect(primeira.dias[0].ativo).toBe(false) // domingo fechado
     expect(primeira.dias[1].ativo).toBe(true) // segunda aberta
     expect(primeira.dias[1].pausas).toHaveLength(1) // almoço
-    expect(primeira.vagasFuturas).toBeGreaterThan(0)
-  })
+    expect(primeira.cotas.QUICK + primeira.cotas.STANDARD + primeira.cotas.EXTENDED).toBe(100)
 
-  it('a duração de cada vaga vem da regra de dimensionamento, nunca da tela', async () => {
-    const fora = await queryOne<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM scheduling_slots
-        WHERE EXTRACT(EPOCH FROM (ends_at - starts_at)) / 60 NOT IN (20, 35, 50)`,
+    // Nada de horário é pré-criado: a tabela de vagas não existe mais.
+    const tabela = await queryOne<{ existe: boolean }>(
+      `SELECT to_regclass('public.scheduling_slots') IS NOT NULL AS existe`,
     )
-    expect(fora?.n).toBe(0)
+    expect(tabela?.existe).toBe(false)
   })
 
-  it('nenhuma vaga nasce dentro da pausa do expediente', async () => {
+  it('o dia livre é o expediente menos a pausa, calculado na hora', async () => {
     const disp = await obterDisponibilidade()
     const sala = disp[0]
     const pausa = sala.dias[1].pausas[0]
 
+    const dia = (await diaDaSala(sala.resourceId, proximaSegunda()))!
+    expect(dia).toBeTruthy()
+
     // A conta é feita no fuso local, como a tela lê — `EXTRACT` no banco
     // devolveria hora UTC e a comparação viraria mentira.
-    const vagas = await queryAll<{ starts_at: string }>(
-      `SELECT starts_at FROM scheduling_slots WHERE resource_id = $1`,
-      sala.resourceId,
-    )
-    const dentroDaPausa = vagas.filter((v) => {
-      const d = new Date(v.starts_at)
-      if (d.getDay() !== 1) return false
-      const min = d.getHours() * 60 + d.getMinutes()
+    const dentroDaPausa = dia.livres.filter((l) => {
+      const min = l.inicio.getHours() * 60 + l.inicio.getMinutes()
       return min >= pausa.inicio && min < pausa.fim
     })
     expect(dentroDaPausa).toHaveLength(0)
+    expect(dia.minutosLivres).toBe(
+      sala.dias[1].fim - sala.dias[1].inicio - (pausa.fim - pausa.inicio),
+    )
   })
 
-  it('materializar de novo não duplica nem apaga nada', async () => {
+  it('a cota reserva tempo por classe sem criar horário nenhum', async () => {
     const disp = await obterDisponibilidade()
-    const antes = disp[0].vagasFuturas
-    const r = await materializar(disp[0].resourceId)
-    expect(r.criadas).toBe(0)
-    expect(r.removidas).toBe(0)
-    expect((await obterDisponibilidade())[0].vagasFuturas).toBe(antes)
+    const sala = disp[0]
+    await salvarDisponibilidade({
+      resourceId: sala.resourceId,
+      cotas: { QUICK: 60, STANDARD: 40, EXTENDED: 0 },
+      dias: sala.dias,
+    })
+
+    const dia = (await diaDaSala(sala.resourceId, proximaSegunda()))!
+    expect(dia.cota.QUICK.reservado).toBe(Math.round(dia.minutosDeAtendimento * 0.6))
+    expect(dia.cota.EXTENDED.reservado).toBe(0)
+
+    // Zero por cento significa "esta sala não atende isso" — e a recusa aparece
+    // como ausência de encaixe, não como erro depois do clique.
+    expect(encaixesNoDia(dia, 'EXTENDED')).toHaveLength(0)
+    expect(encaixesNoDia(dia, 'QUICK').length).toBeGreaterThan(0)
+    expect(capacidadeDoDia(dia).EXTENDED).toBe(0)
+
+    await expect(
+      salvarDisponibilidade({
+        resourceId: sala.resourceId,
+        cotas: { QUICK: 50, STANDARD: 40, EXTENDED: 0 },
+        dias: sala.dias,
+      }),
+    ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })
+
+    await salvarDisponibilidade({
+      resourceId: sala.resourceId,
+      cotas: { QUICK: 40, STANDARD: 40, EXTENDED: 20 },
+      dias: sala.dias,
+    })
   })
 
-  it('mudar a regra reconcilia a agenda adiante', async () => {
+  it('mudar a regra muda a agenda adiante sem migrar nada', async () => {
     const disp = await obterDisponibilidade()
     const sala = disp[0]
 
@@ -118,50 +154,18 @@ describe('disponibilidade e capacidade', () => {
       if (d.weekday === 1) return { ...d, fim: 12 * 60, pausas: [] }
       return d
     })
-    const r = await salvarDisponibilidade({
-      resourceId: sala.resourceId,
-      mistura: sala.mistura,
-      dias,
-    })
-    expect(r.criadas).toBeGreaterThan(0) // sábados
-    expect(r.removidas).toBeGreaterThan(0) // tardes de segunda
+    await salvarDisponibilidade({ resourceId: sala.resourceId, cotas: sala.cotas, dias })
 
-    const vagas = await queryAll<{ starts_at: string }>(
-      `SELECT starts_at FROM scheduling_slots WHERE resource_id = $1 AND starts_at >= NOW()`,
-      sala.resourceId,
-    )
-    const tardeDeSegunda = vagas.filter((v) => {
-      const d = new Date(v.starts_at)
-      return d.getDay() === 1 && d.getHours() >= 13
-    })
-    expect(tardeDeSegunda).toHaveLength(0)
+    const segunda = (await diaDaSala(sala.resourceId, proximaSegunda()))!
+    expect(segunda.livres.every((l) => l.fim.getHours() <= 12)).toBe(true)
 
-    const sabados = vagas.filter((v) => new Date(v.starts_at).getDay() === 6)
-    expect(sabados.length).toBeGreaterThan(0)
+    const sabado = proximaSegunda()
+    sabado.setDate(sabado.getDate() + 5)
+    const noSabado = await diaDaSala(sala.resourceId, sabado)
+    expect(noSabado?.minutosLivres).toBeGreaterThan(0)
   })
 
-  it('a mistura escolhida é a única que aparece na agenda daquela sala', async () => {
-    const disp = await obterDisponibilidade()
-    const sala = disp[1]
-    await salvarDisponibilidade({
-      resourceId: sala.resourceId,
-      mistura: ['QUICK'],
-      dias: sala.dias,
-    })
-
-    const outras = await queryOne<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM scheduling_slots
-        WHERE resource_id = $1 AND slot_class <> 'QUICK' AND starts_at >= NOW()`,
-      sala.resourceId,
-    )
-    expect(outras?.n).toBe(0)
-
-    await expect(
-      salvarDisponibilidade({ resourceId: sala.resourceId, mistura: [], dias: sala.dias }),
-    ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })
-  })
-
-  it('a vaga com consulta marcada sobrevive à mudança de regra', async () => {
+  it('a consulta marcada sobrevive ao fechamento da sala', async () => {
     const disp = await obterDisponibilidade()
     const sala = disp[2]
 
@@ -192,61 +196,58 @@ describe('disponibilidade e capacidade', () => {
       slotClassEscolhida: req.slotClass,
     })
 
-    const vagas = await vagasCompativeis({ requirementId: confirmado.id, limite: 300 })
+    const vagas = await sugerirHorarios({ requirementId: confirmado.id, limite: 300 })
     const daSala = vagas.find((v) => v.resourceId === sala.resourceId)
     expect(daSala).toBeTruthy()
-    await reservar({
+    const booking = await reservar({
       caseId: caso.id,
       requirementId: confirmado.id,
-      slotId: daSala!.id,
+      resourceId: daSala!.resourceId,
+      startsAt: daSala!.startsAt,
       idempotencyKey: randomUUID(),
     })
 
     // A sala fecha em todos os dias — e mesmo assim a consulta continua de pé.
     await salvarDisponibilidade({
       resourceId: sala.resourceId,
-      mistura: sala.mistura,
+      cotas: sala.cotas,
       dias: sala.dias.map((d) => ({ ...d, ativo: false })),
     })
 
-    const aindaExiste = await queryOne<{ id: string }>(
-      `SELECT id FROM scheduling_slots WHERE id = $1`,
-      daSala!.id,
+    const aindaExiste = await queryOne<{ status: string }>(
+      `SELECT status FROM scheduling_bookings WHERE id = $1`,
+      booking.id,
     )
-    expect(aindaExiste?.id).toBe(daSala!.id)
-
-    const livresDaSala = await queryOne<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM scheduling_slots s
-        WHERE s.resource_id = $1 AND s.starts_at >= NOW()
-          AND NOT EXISTS (SELECT 1 FROM scheduling_bookings b WHERE b.slot_id = s.id)`,
-      sala.resourceId,
-    )
-    expect(livresDaSala?.n).toBe(0)
+    expect(aindaExiste?.status).toBe('CONFIRMED')
+    expect(await diaDaSala(sala.resourceId, new Date(daSala!.startsAt))).toBeNull()
   })
 
-  it('consultório novo entra sem vaga até ganhar regra própria', async () => {
+  it('consultório novo não oferece nada até ganhar regra própria', async () => {
     const salvo = await salvarRecurso({
       nome: 'Consultório da Ala Norte',
       capabilities: ['SALA_ACESSIVEL', 'INVENTADA'],
     })
     expect(salvo.capabilities).toEqual(['SALA_ACESSIVEL'])
-    expect(salvo.vagasFuturas).toBe(0)
+    expect(salvo.diasAtivos).toBe(0)
     expect((await listarRecursos()).length).toBe(4)
+
+    const quarta = proximaSegunda()
+    quarta.setDate(quarta.getDate() + 2)
+    expect(await diaDaSala(salvo.id, quarta)).toBeNull()
 
     const disp = (await obterDisponibilidade()).find((d) => d.resourceId === salvo.id)!
     await salvarDisponibilidade({
       resourceId: salvo.id,
-      mistura: ['STANDARD'],
+      cotas: { QUICK: 0, STANDARD: 100, EXTENDED: 0 },
       dias: disp.dias.map((d) =>
         d.weekday === 3 ? { ...d, ativo: true, inicio: 9 * 60, fim: 11 * 60, pausas: [] } : d,
       ),
     })
 
-    const criadas = await queryOne<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM scheduling_slots WHERE resource_id = $1`,
-      salvo.id,
-    )
-    expect(criadas?.n).toBeGreaterThan(0)
+    const dia = (await diaDaSala(salvo.id, quarta))!
+    expect(dia.minutosLivres).toBe(120)
+    expect(capacidadeDoDia(dia).STANDARD).toBeGreaterThan(0)
+    expect(capacidadeDoDia(dia).QUICK).toBe(0)
   })
 
   it('expediente invertido e pausa fora do expediente são recusados', async () => {
@@ -254,21 +255,17 @@ describe('disponibilidade e capacidade', () => {
     await expect(
       salvarDisponibilidade({
         resourceId: disp.resourceId,
-        mistura: ['QUICK'],
-        dias: disp.dias.map((d) =>
-          d.weekday === 2 ? { ...d, inicio: 14 * 60, fim: 9 * 60 } : d,
-        ),
+        cotas: disp.cotas,
+        dias: disp.dias.map((d) => (d.weekday === 2 ? { ...d, inicio: 14 * 60, fim: 9 * 60 } : d)),
       }),
     ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })
 
     await expect(
       salvarDisponibilidade({
         resourceId: disp.resourceId,
-        mistura: ['QUICK'],
+        cotas: disp.cotas,
         dias: disp.dias.map((d) =>
-          d.weekday === 2
-            ? { ...d, pausas: [{ id: 'x', inicio: 5 * 60, fim: 6 * 60 }] }
-            : d,
+          d.weekday === 2 ? { ...d, pausas: [{ id: 'x', inicio: 5 * 60, fim: 6 * 60 }] } : d,
         ),
       }),
     ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })

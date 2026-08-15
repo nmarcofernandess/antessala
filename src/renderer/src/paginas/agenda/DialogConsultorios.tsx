@@ -20,8 +20,8 @@ type Recurso = {
   nome: string
   capabilities: string[]
   ativo: boolean
-  vagasFuturas: number
-  vagasOcupadas: number
+  diasAtivos: number
+  consultasFuturas: number
 }
 
 const MARCAS = [
@@ -49,7 +49,9 @@ export function DialogConsultorios({ onMudou }: { onMudou?: () => void }) {
   }, [recarregar])
 
   function editar(r: Recurso | null) {
-    setEditando(r ?? { id: '', nome: '', capabilities: [], ativo: true, vagasFuturas: 0, vagasOcupadas: 0 })
+    setEditando(
+      r ?? { id: '', nome: '', capabilities: [], ativo: true, diasAtivos: 0, consultasFuturas: 0 },
+    )
     setNome(r?.nome ?? '')
     setMarcas(r?.capabilities ?? [])
   }
@@ -91,7 +93,7 @@ export function DialogConsultorios({ onMudou }: { onMudou?: () => void }) {
                 </Badge>
               ))}
               <span className="font-mono text-[10.5px] tabular-nums text-muted-foreground">
-                {r.vagasFuturas} vagas
+                {r.diasAtivos} dias/semana
               </span>
             </div>
           </div>

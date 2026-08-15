@@ -83,7 +83,7 @@ export const requisitos = {
 
 export const agenda = {
   intervalo: (de: string, ate: string) => chamar(() => client['scheduling.range']({ de, ate })),
-  vagasCompativeis: (input: Parameters<typeof client['scheduling.compatibleSlots']>[0]) =>
+  sugestoes: (input: Parameters<typeof client['scheduling.compatibleSlots']>[0]) =>
     chamar(() => client['scheduling.compatibleSlots'](input)),
   reservar: (input: Parameters<typeof client['scheduling.book']>[0]) =>
     chamar(() => client['scheduling.book'](input)),
@@ -105,10 +105,9 @@ export const capacidade = {
   disponibilidade: () => chamar(() => client['capacity.availability']()),
   salvarDisponibilidade: (input: Parameters<typeof client['capacity.saveAvailability']>[0]) =>
     chamar(() => client['capacity.saveAvailability'](input)),
-  bloquearVaga: (input: Parameters<typeof client['capacity.blockSlot']>[0]) =>
-    chamar(() => client['capacity.blockSlot'](input)),
-  liberarVaga: (slotId: string) => chamar(() => client['capacity.unblockSlot']({ slotId })),
-  resumo: () => chamar(() => client['capacity.summary']()),
+  bloquear: (input: Parameters<typeof client['capacity.block']>[0]) =>
+    chamar(() => client['capacity.block'](input)),
+  desbloquear: (blockId: string) => chamar(() => client['capacity.unblock']({ blockId })),
 }
 
 /* ══════════════ avaliação ══════════════ */

@@ -1,4 +1,4 @@
-import { execute, queryAll, queryOne, transaction } from '../db/query'
+import { execute, queryAll, queryOne } from '../db/query'
 import { garantirContaSintetica } from '../auth/session'
 import { ErroDeCaso, type SlotClass } from '../../shared/clinical/caso'
 /**
@@ -30,28 +30,21 @@ export type RecursoDTO = {
   capabilities: string[]
   ordem: number
   ativo: boolean
-  /** Vagas futuras, para a tela dizer o tamanho da oferta sem contar na mão. */
-  vagasFuturas: number
-  vagasOcupadas: number
+  /** Quantos dias da semana esta sala atende — o tamanho da oferta em uma linha. */
+  diasAtivos: number
+  /** Consultas marcadas adiante nesta sala. */
+  consultasFuturas: number
 }
 
 export async function listarRecursos(): Promise<RecursoDTO[]> {
   return queryAll<RecursoDTO>(
     `SELECT r.id, r.nome, r.kind, r.capabilities, r.ordem, r.ativo,
-            COALESCE(f.total, 0)::int AS "vagasFuturas",
-            COALESCE(f.ocupadas, 0)::int AS "vagasOcupadas"
+            (SELECT COUNT(*) FROM scheduling_availability a
+              WHERE a.resource_id = r.id AND a.ativo)::int AS "diasAtivos",
+            (SELECT COUNT(*) FROM scheduling_bookings b
+              WHERE b.resource_id = r.id AND b.starts_at >= NOW()
+                AND b.status IN ('CONFIRMED','CHECKED_IN'))::int AS "consultasFuturas"
        FROM scheduling_resources r
-       LEFT JOIN LATERAL (
-         SELECT COUNT(*) AS total,
-                COUNT(*) FILTER (
-                  WHERE EXISTS (
-                    SELECT 1 FROM scheduling_bookings b
-                     WHERE b.slot_id = s.id AND b.status IN ('CONFIRMED','CHECKED_IN','COMPLETED')
-                  )
-                ) AS ocupadas
-           FROM scheduling_slots s
-          WHERE s.resource_id = r.id AND s.starts_at >= NOW()
-       ) f ON TRUE
       ORDER BY r.ordem, r.nome`,
   )
 }
@@ -126,62 +119,4 @@ export async function salvarRecurso(entrada: {
   const salvo = lista.find((r) => r.id === id)
   if (!salvo) throw new ErroDeCaso('NOT_FOUND', 'Consultório não encontrado depois de salvar.')
   return salvo
-}
-
-/** Fecha uma vaga com motivo — férias, manutenção, sala emprestada. */
-export async function bloquearVaga(entrada: {
-  slotId: string
-  motivo: string
-}): Promise<void> {
-  const motivo = exigirTexto(entrada.motivo, 'O motivo do bloqueio', 5, 200)
-
-  const ocupada = await queryOne<{ id: string }>(
-    `SELECT b.id FROM scheduling_bookings b
-      WHERE b.slot_id = $1 AND b.status IN ('CONFIRMED','CHECKED_IN','COMPLETED')`,
-    entrada.slotId,
-  )
-  if (ocupada) {
-    throw new ErroDeCaso(
-      'SLOT_TAKEN',
-      'Esta vaga tem consulta marcada. Cancele ou remarque a consulta antes de bloquear.',
-    )
-  }
-
-  await execute(
-    `UPDATE scheduling_slots SET status = 'BLOCKED', block_reason = $2 WHERE id = $1`,
-    entrada.slotId,
-    motivo,
-  )
-}
-
-export async function liberarVaga(slotId: string): Promise<void> {
-  await execute(
-    `UPDATE scheduling_slots SET status = 'OPEN', block_reason = NULL WHERE id = $1`,
-    slotId,
-  )
-}
-
-/** Resumo da oferta futura, por classe — o que a tela mostra em uma linha. */
-export async function resumoDaOferta(): Promise<{
-  porClasse: Array<{ slotClass: SlotClass; livres: number; ocupadas: number }>
-  ate: string | null
-}> {
-  const porClasse = await queryAll<{ slotClass: SlotClass; livres: number; ocupadas: number }>(
-    `SELECT s.slot_class AS "slotClass",
-            COUNT(*) FILTER (WHERE s.status = 'OPEN' AND NOT EXISTS (
-              SELECT 1 FROM scheduling_bookings b
-               WHERE b.slot_id = s.id AND b.status IN ('CONFIRMED','CHECKED_IN','COMPLETED')
-            ))::int AS livres,
-            COUNT(*) FILTER (WHERE EXISTS (
-              SELECT 1 FROM scheduling_bookings b
-               WHERE b.slot_id = s.id AND b.status IN ('CONFIRMED','CHECKED_IN','COMPLETED')
-            ))::int AS ocupadas
-       FROM scheduling_slots s
-      WHERE s.starts_at >= NOW()
-      GROUP BY s.slot_class`,
-  )
-  const limite = await queryOne<{ ate: string | null }>(
-    `SELECT MAX(starts_at)::text AS ate FROM scheduling_slots`,
-  )
-  return { porClasse, ate: limite?.ate ?? null }
 }

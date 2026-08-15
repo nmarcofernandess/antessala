@@ -27,25 +27,21 @@ import {
 } from './clinical/requirement-service'
 import {
   listarIntervalo,
-  vagasCompativeis,
+  sugerirHorarios,
   reservar,
   moverReserva,
   cancelarReserva,
   filaParaAgendar,
   registrarChegada,
   registrarAusencia,
+  bloquear,
+  desbloquear,
 } from './scheduling/agenda-service'
-import {
-  listarRecursos,
-  salvarRecurso,
-  bloquearVaga,
-  liberarVaga,
-  resumoDaOferta,
-} from './scheduling/capacity-service'
+import { listarRecursos, salvarRecurso } from './scheduling/capacity-service'
 import {
   obterDisponibilidade,
   salvarDisponibilidade,
-  materializarTudo,
+  type Cotas,
   type DiaDisponivel,
 } from './scheduling/availability-service'
 import {
@@ -421,15 +417,21 @@ const schedulingRange = t.procedure
   .action(async ({ input }) => comErroDeDominio(() => listarIntervalo(input)))
 
 const schedulingCompatibleSlots = t.procedure
-  .input<{ requirementId: string; de?: string; limite?: number }>()
-  .action(async ({ input }) => comErroDeDominio(() => vagasCompativeis(input)))
+  .input<{ requirementId: string; limite?: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => sugerirHorarios(input)))
 
 const schedulingBook = t.procedure
-  .input<{ caseId: string; requirementId: string; slotId: string; idempotencyKey: string }>()
+  .input<{
+    caseId: string
+    requirementId: string
+    resourceId: string
+    startsAt: string
+    idempotencyKey: string
+  }>()
   .action(async ({ input }) => comErroDeDominio(() => reservar(input)))
 
 const schedulingMove = t.procedure
-  .input<{ bookingId: string; slotId: string; expectedVersion: number }>()
+  .input<{ bookingId: string; resourceId: string; startsAt: string; expectedVersion: number }>()
   .action(async ({ input }) => comErroDeDominio(() => moverReserva(input)))
 
 const schedulingCancel = t.procedure
@@ -449,22 +451,16 @@ const capacityAvailability = t.procedure.action(async () =>
 )
 
 const capacitySaveAvailability = t.procedure
-  .input<{ resourceId: string; mistura: SlotClass[]; dias: DiaDisponivel[] }>()
+  .input<{ resourceId: string; cotas: Cotas; dias: DiaDisponivel[] }>()
   .action(async ({ input }) => comErroDeDominio(() => salvarDisponibilidade(input)))
 
-const capacityRematerialize = t.procedure.action(async () =>
-  comErroDeDominio(() => materializarTudo()),
-)
-
 const capacityBlock = t.procedure
-  .input<{ slotId: string; motivo: string }>()
-  .action(async ({ input }) => comErroDeDominio(() => bloquearVaga(input)))
+  .input<{ resourceId: string; inicio: string; fim: string; motivo: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => bloquear(input)))
 
 const capacityUnblock = t.procedure
-  .input<{ slotId: string }>()
-  .action(async ({ input }) => comErroDeDominio(() => liberarVaga(input.slotId)))
-
-const capacitySummary = t.procedure.action(async () => comErroDeDominio(() => resumoDaOferta()))
+  .input<{ blockId: string }>()
+  .action(async ({ input }) => comErroDeDominio(() => desbloquear(input.blockId)))
 
 const schedulingCheckIn = t.procedure
   .input<{ bookingId: string; expectedVersion: number }>()
@@ -625,10 +621,8 @@ export const router = {
   'capacity.saveResource': capacitySaveResource,
   'capacity.availability': capacityAvailability,
   'capacity.saveAvailability': capacitySaveAvailability,
-  'capacity.rematerialize': capacityRematerialize,
-  'capacity.blockSlot': capacityBlock,
-  'capacity.unblockSlot': capacityUnblock,
-  'capacity.summary': capacitySummary,
+  'capacity.block': capacityBlock,
+  'capacity.unblock': capacityUnblock,
   'scheduling.noShow': schedulingNoShow,
   'encounters.start': encountersStart,
   'encounters.get': encountersGet,

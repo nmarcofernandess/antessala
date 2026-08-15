@@ -1077,13 +1077,43 @@ commands próprios, mas não reclassifica o caso nem o devolve à enfermagem.
 >    vaga — usa a mesma peça.
 >
 > A capacidade também mudou de modelo: `scheduling_availability` guarda a regra semanal
-> por consultório (dias, expediente, pausas, mistura de classes) e as vagas são
-> **materializadas** dela até um horizonte de 8 semanas, reconciliando o que sobrou e o
-> que falta. Vaga com consulta marcada nunca é tocada. O DnD de reserva saiu junto com o
-> calendário; remarcar é comando explícito.
+> por consultório (dias, expediente, pausas) e as vagas eram **materializadas** dela até
+> um horizonte de 8 semanas. Esse segundo passo caiu no mesmo dia — ver a decisão
+> abaixo. O DnD de reserva saiu junto com o calendário; remarcar é comando explícito.
 >
-> O que esta seção mantém válido: a projeção por intervalo, o `SlotCardDTO` sem campo
+> O que esta seção mantém válido: a projeção por intervalo, o DTO de agenda sem campo
 > clínico, os estados UX e a regra de que nenhuma validação vive no renderer.
+
+> **DEMO_DECISION — 14/08/2026: a vaga pré-criada deixou de existir.**
+>
+> `scheduling_slots` foi removida, junto com `materializar`/`gerarVagas`. O que sobrou é
+> mais simples e mais honesto: `scheduling_availability` (expediente semanal),
+> `scheduling_blocks` (recusa pontual com motivo e autoria) e `scheduling_bookings`
+> (o compromisso, com `buffer_minutes` próprio). **Livre é conta, não linha**:
+> expediente − pausas − bloqueios − consultas-com-buffer, calculado em
+> `availability-service.diaDaSala()`.
+>
+> Por que: horário fixo desperdiça o dia. A vaga de 50 min que ninguém usou não virava
+> duas de 20, e a sala ficava vazia com gente esperando. Pior, a materialização era uma
+> segunda fonte de verdade que precisava ser reconciliada a cada mudança de regra — e
+> qualquer bug ali deixava a agenda mentindo.
+>
+> O contrapeso é a **cota**: `scheduling_resources.cotas` guarda a porcentagem do
+> expediente reservada a cada classe (soma exatamente 100). Sem ela, uma fila de casos
+> curtos comeria o dia e o caso longo nunca acharia lugar. Zero por cento significa "esta
+> sala não atende esta classe" — e a recusa aparece como ausência de encaixe, não como
+> erro depois do clique. `encaixesNoDia()` só oferece horário que cabe **e** tem cota.
+>
+> Concorrência: sem `btree_gist` no PGlite não existe `EXCLUDE (resource WITH =, faixa
+> WITH &&)`. A barreira é `pg_advisory_xact_lock(hashtext('sala:AAAA-MM-DD'))` mais a
+> verificação dentro da mesma transação, em `agenda-service.reservar/moverReserva`. Duas
+> marcações simultâneas na mesma sala se enfileiram; a segunda lê o que a primeira
+> gravou e é recusada com `SLOT_TAKEN`.
+>
+> Superfície: a barra de cotas do modal de Disponibilidade responde "40% grave / 60%
+> rápido" arrastando a divisória — três campos separados deixariam somar 90 ou 130. As
+> pausas passaram a nascer de um popover no próprio bloco de expediente (padrão DietFlow),
+> não de um botão `+` fora da barra.
 
 #### Rotas e superfícies
 

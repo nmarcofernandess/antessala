@@ -225,9 +225,9 @@ FOR EACH ROW EXECUTE FUNCTION bloquear_mutacao_revisao_anamnese();
  * compatibilidade que a recepção enxerga é
  * `caseId + requirementId + versão + classe + duração + recursos`.
  *
- * `scheduling_bookings` reserva **consulta pré-anestésica**. O índice parcial de
- * unicidade por slot é o que impede duas reservas ativas na mesma vaga; a
- * concorrência morre no banco, não numa checagem otimista do renderer.
+ * `scheduling_bookings` reserva **consulta pré-anestésica**, e guarda o intervalo
+ * de verdade: começo, fim e o buffer que ainda ocupa a sala depois. Não existe
+ * tabela de vagas — o livre é calculado do expediente menos o que está aqui.
  */
 const DDL_AGENDA = `
 CREATE TABLE IF NOT EXISTS scheduling_requirements (
@@ -288,29 +288,29 @@ CREATE TABLE IF NOT EXISTS scheduling_resources (
   ativo BOOLEAN NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS scheduling_slots (
+-- Bloqueio pontual: a sala existe, o expediente existe, mas aquele pedaço não
+-- pode ser usado. Não é ausência de vaga — é uma recusa com motivo e autoria.
+CREATE TABLE IF NOT EXISTS scheduling_blocks (
   id TEXT PRIMARY KEY,
-  resource_id TEXT NOT NULL REFERENCES scheduling_resources(id) ON DELETE RESTRICT,
-  slot_class TEXT NOT NULL CHECK (slot_class IN ('QUICK', 'STANDARD', 'EXTENDED')),
+  resource_id TEXT NOT NULL REFERENCES scheduling_resources(id) ON DELETE CASCADE,
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
-  status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'BLOCKED')),
-  block_reason TEXT,
-  CHECK (ends_at > starts_at),
-  CHECK ((status = 'OPEN' AND block_reason IS NULL) OR (status = 'BLOCKED' AND block_reason IS NOT NULL)),
-  UNIQUE (resource_id, starts_at)
+  motivo TEXT NOT NULL CHECK (char_length(trim(motivo)) BETWEEN 5 AND 200),
+  criado_por JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (ends_at > starts_at)
 );
 
-CREATE INDEX IF NOT EXISTS idx_slots_intervalo
-  ON scheduling_slots(starts_at, ends_at);
+CREATE INDEX IF NOT EXISTS idx_blocks_intervalo
+  ON scheduling_blocks(resource_id, starts_at, ends_at);
 
 CREATE TABLE IF NOT EXISTS scheduling_bookings (
   id TEXT PRIMARY KEY,
   case_id TEXT NOT NULL REFERENCES preop_cases(id) ON DELETE RESTRICT,
   requirement_id TEXT NOT NULL REFERENCES scheduling_requirements(id) ON DELETE RESTRICT,
   requirement_version INTEGER NOT NULL CHECK (requirement_version > 0),
-  slot_id TEXT NOT NULL REFERENCES scheduling_slots(id) ON DELETE RESTRICT,
   resource_id TEXT NOT NULL REFERENCES scheduling_resources(id) ON DELETE RESTRICT,
+  buffer_minutes INTEGER NOT NULL DEFAULT 5 CHECK (buffer_minutes >= 0),
   kind TEXT NOT NULL DEFAULT 'INITIAL' CHECK (kind IN ('INITIAL', 'RETURN')),
   slot_class TEXT NOT NULL CHECK (slot_class IN ('QUICK', 'STANDARD', 'EXTENDED')),
   starts_at TIMESTAMPTZ NOT NULL,
@@ -330,10 +330,12 @@ CREATE TABLE IF NOT EXISTS scheduling_bookings (
   UNIQUE (id, case_id)
 );
 
--- Uma vaga aceita uma reserva ativa. A corrida morre aqui, no banco.
-CREATE UNIQUE INDEX IF NOT EXISTS uniq_booking_ativo_por_slot
-  ON scheduling_bookings(slot_id)
-  WHERE status IN ('CONFIRMED', 'CHECKED_IN', 'COMPLETED');
+-- Sobreposição não pode ser barrada por índice: o PGlite não traz btree_gist,
+-- então EXCLUDE (resource WITH =, faixa WITH &&) não existe aqui. A barreira é
+-- pg_advisory_xact_lock(recurso, dia) + verificação dentro da transação, em
+-- agenda-service. Se algum dia a extensão aparecer, este é o lugar do índice.
+CREATE INDEX IF NOT EXISTS idx_bookings_recurso_intervalo
+  ON scheduling_bookings(resource_id, starts_at, ends_at);
 
 -- E um caso não segura duas consultas ativas ao mesmo tempo.
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_booking_ativo_por_caso
@@ -343,8 +345,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_booking_ativo_por_caso
 CREATE INDEX IF NOT EXISTS idx_bookings_intervalo
   ON scheduling_bookings(starts_at, ends_at);
 
--- A disponibilidade é a regra; as vagas são a materialização dela. Mudar o
--- horário de uma quarta muda todas as quartas adiante, não uma semana só.
+-- A disponibilidade é a regra, e é a única coisa persistida sobre horário. Nada
+-- é materializado dela: mudar a quarta muda todas as quartas adiante, e a
+-- consulta já marcada continua onde está porque ela é um fato, não uma projeção.
 CREATE TABLE IF NOT EXISTS scheduling_availability (
   resource_id TEXT NOT NULL REFERENCES scheduling_resources(id) ON DELETE CASCADE,
   weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 0 AND 6),
@@ -357,8 +360,22 @@ CREATE TABLE IF NOT EXISTS scheduling_availability (
   CHECK (jsonb_typeof(pausas) = 'array')
 );
 
+-- A cota é a reserva de tempo por classe, em porcentagem do expediente do dia.
+-- Ela não cria horário nenhum: protege o caso longo de perder o dia para uma
+-- fila de casos curtos. Zero por cento significa "esta sala não atende isso".
 ALTER TABLE scheduling_resources
-  ADD COLUMN IF NOT EXISTS mistura JSONB NOT NULL DEFAULT '["STANDARD","QUICK","EXTENDED"]'::jsonb;
+  ADD COLUMN IF NOT EXISTS cotas JSONB NOT NULL
+  DEFAULT '{"QUICK":40,"STANDARD":40,"EXTENDED":20}'::jsonb;
+
+-- Migração do modelo antigo, de vagas pré-criadas.
+-- A tabela de vagas some inteira; o que era vaga ocupada vira o intervalo que já
+-- está no próprio booking. Nenhuma consulta marcada se perde nisso.
+ALTER TABLE scheduling_bookings
+  ADD COLUMN IF NOT EXISTS buffer_minutes INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE scheduling_bookings DROP COLUMN IF EXISTS slot_id;
+ALTER TABLE scheduling_resources DROP COLUMN IF EXISTS mistura;
+DROP INDEX IF EXISTS uniq_booking_por_slot;
+DROP TABLE IF EXISTS scheduling_slots CASCADE;
 
 CREATE TABLE IF NOT EXISTS scheduling_command_receipts (
   idempotency_key TEXT PRIMARY KEY,

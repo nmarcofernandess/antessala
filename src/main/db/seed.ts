@@ -5,7 +5,7 @@ import { gunzipSync } from 'node:zlib'
 import { execute, queryOne, transaction } from './query'
 import { seedProtocolos } from './protocolos'
 import { garantirContaSintetica } from '../auth/session'
-import { garantirCapacidadeFutura } from '../scheduling/capacity-seed'
+import { semearCapacidade } from '../scheduling/capacity-seed'
 
 type CatalogFile<T> = {
   _meta: Record<string, unknown>
@@ -172,7 +172,7 @@ export async function seedData(): Promise<void> {
   await seedProtocolos()
   await seedServicosSolicitantes()
   await garantirContaSintetica()
-  await garantirCapacidadeFutura()
+  await semearCapacidade()
 
   const current = await queryOne<{ sha256: string }>(
     `SELECT sha256 FROM catalogo_seed_state WHERE catalogo = 'clinical-v1'`,
