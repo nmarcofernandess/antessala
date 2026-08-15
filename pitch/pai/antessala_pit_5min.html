@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7fbf8">
+  <meta name="description" content="PIT de 5 minutos da Antessala para o Desafio 1 Hacka Health 2026.">
+  <title>Antessala — PIT Inteligente · 5 minutos</title>
+  <style>
+    :root {
+      --paper: #f7fbf8;
+      --paper-2: #edf5f0;
+      --paper-3: #fffdf8;
+      --ink: #173a31;
+      --ink-soft: #3f5d54;
+      --muted: #70877e;
+      --hair: #d7e7df;
+      --accent: #149875;
+      --accent-dark: #0e775d;
+      --accent-soft: #dff3ea;
+      --peach: #f7d9c3;
+      --peach-strong: #d7774c;
+      --blue-soft: #e1eef5;
+      --blue: #4e7e9e;
+      --rose-soft: #f8e5e2;
+      --rose: #b75f5b;
+      --sans: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+      --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+      --shadow: 5px 5px 0 rgba(23, 58, 49, .10);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: var(--paper); }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        repeating-linear-gradient(0deg, rgba(23,58,49,.012) 0 1px, transparent 1px 4px),
+        var(--paper);
+      font-family: var(--sans);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    button { font: inherit; }
+    p, h1, h2, h3, figure, blockquote, ol, ul { margin: 0; }
+    .skip-link {
+      position: fixed; left: 14px; top: -60px; z-index: 20;
+      padding: 9px 12px; background: var(--ink); color: var(--paper);
+      font: 11px var(--mono); text-decoration: none; text-transform: uppercase;
+    }
+    .skip-link:focus { top: 14px; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      border-bottom: 1px solid var(--hair);
+      background: var(--paper);
+    }
+    .topbar-inner {
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      max-width: 1280px; margin: 0 auto; padding: 11px clamp(18px, 5vw, 72px);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 9px;
+      font: 11px var(--mono); letter-spacing: .14em; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      display: grid; place-items: center; width: 22px; height: 22px;
+      border: 1.5px solid var(--accent); border-radius: 50%;
+      color: var(--accent); font: 13px var(--serif); font-weight: 700;
+    }
+    .topnav { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; }
+    .topnav::-webkit-scrollbar { display: none; }
+    .topnav a {
+      min-width: 28px; padding: 5px 7px; color: var(--muted);
+      font: 10px var(--mono); text-align: center; text-decoration: none;
+      border-bottom: 2px solid transparent;
+    }
+    .topnav a:hover, .topnav a.active { color: var(--accent-dark); border-color: var(--accent); }
+
+    .screen {
+      min-height: calc(100svh - 48px);
+      padding: clamp(36px, 6vh, 78px) clamp(18px, 6vw, 88px);
+      border-bottom: 1px solid var(--hair);
+      scroll-margin-top: 48px;
+      position: relative;
+      display: flex; align-items: center;
+    }
+    .screen-inner { width: min(1120px, 100%); margin: 0 auto; }
+    .section-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      width: min(1120px, 100%); margin: 0 auto 22px;
+      color: var(--muted); font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase;
+    }
+    .section-head b { color: var(--accent); font-size: 18px; letter-spacing: 0; }
+    .section-head time { white-space: nowrap; color: var(--accent-dark); }
+    .kicker, .eyebrow, .fig-label, .micro-label, .mini-label {
+      color: var(--accent-dark); font: 10px var(--mono); letter-spacing: .16em; text-transform: uppercase;
+    }
+    .cover .screen-inner { display: grid; grid-template-columns: minmax(0, .88fr) minmax(360px, 1.12fr); gap: clamp(28px, 6vw, 90px); align-items: center; }
+    .cover h1 {
+      max-width: 10ch; margin: 18px 0 22px;
+      font: 400 clamp(48px, 6vw, 82px)/.94 var(--serif); letter-spacing: -.045em;
+    }
+    h1 em { color: var(--accent); font-style: italic; }
+    .lead { max-width: 48ch; color: var(--ink-soft); font-size: clamp(17px, 1.8vw, 22px); line-height: 1.38; }
+    .lead strong { color: var(--ink); }
+    .signal-note {
+      display: grid; gap: 4px; max-width: 520px; margin-top: 28px;
+      padding: 13px 16px; border-left: 3px solid var(--peach-strong); background: var(--paper-2);
+      color: var(--ink-soft); font-size: 13px;
+    }
+    .signal-note strong { color: var(--peach-strong); font: 10px var(--mono); letter-spacing: .14em; }
+    .cover-meta { display: flex; gap: 16px; margin-top: 30px; color: var(--muted); font: 10px var(--mono); letter-spacing: .10em; text-transform: uppercase; }
+    .time { color: var(--accent-dark); }
+
+    .fig {
+      position: relative; overflow: hidden;
+      border: 1px solid var(--ink); background-color: var(--paper-3);
+      background-image: linear-gradient(rgba(23,58,49,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(23,58,49,.045) 1px, transparent 1px);
+      background-size: 22px 22px; box-shadow: var(--shadow);
+    }
+    .fig::after {
+      content: attr(data-fig); position: absolute; right: -1px; bottom: -1px;
+      padding: 4px 10px; background: var(--ink); color: var(--paper);
+      font: 9px var(--mono); letter-spacing: .08em; text-transform: uppercase;
+    }
+    .case-contrast { padding: 28px 26px 42px; }
+    .case-contrast .fig-label { margin-bottom: 16px; color: var(--muted); }
+    .case-row { display: grid; grid-template-columns: 1fr 30px 1fr; gap: 10px; align-items: center; }
+    .patient-card {
+      min-width: 0; padding: 15px; border: 1.5px solid var(--ink); background: #fff;
+      box-shadow: 4px 4px 0 rgba(23,58,49,.08);
+    }
+    .patient-card.maria { background: #fffaf7; border-color: var(--rose); }
+    .patient-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .avatar { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border: 1px solid var(--ink); border-radius: 50%; background: var(--accent-soft); font: 700 13px var(--serif); }
+    .maria .avatar { background: var(--rose-soft); border-color: var(--rose); }
+    .patient-name { font: 700 17px var(--serif); }
+    .patient-type { display: block; margin-top: 2px; color: var(--muted); font: 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .patient-card ul { padding-left: 15px; color: var(--ink-soft); font-size: 12px; }
+    .patient-card li + li { margin-top: 4px; }
+    .versus { display: grid; place-items: center; color: var(--peach-strong); font: italic 25px var(--serif); }
+    .shared-lane { display: grid; gap: 2px; margin-top: 20px; padding: 12px 14px; border: 1px dashed var(--ink-soft); background: rgba(255,255,255,.72); text-align: center; }
+    .shared-lane span { color: var(--muted); font: 9px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+    .shared-lane b { font: 17px var(--serif); }
+    .case-contrast figcaption, .fig-caption { margin-top: 15px; max-width: 56ch; color: var(--muted); font-size: 11px; }
+
+    .section-intro { display: flex; justify-content: space-between; align-items: end; gap: 22px; margin-bottom: 26px; }
+    .section-intro h2, .timeline-copy h2, .logic-copy h2, .gains-copy h2, .closing-copy h2 {
+      max-width: 16ch; font: 400 clamp(32px, 4vw, 56px)/.98 var(--serif); letter-spacing: -.035em;
+    }
+    .section-intro p { max-width: 42ch; color: var(--ink-soft); font-size: 15px; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .flow-panel { min-width: 0; border: 1px solid var(--ink); background: var(--paper-3); box-shadow: var(--shadow); }
+    .flow-panel > header { display: flex; justify-content: space-between; gap: 10px; padding: 14px 17px; border-bottom: 1px solid var(--ink); font: 700 13px var(--mono); letter-spacing: .12em; }
+    .flow-panel > header small { color: var(--muted); font: 10px var(--sans); letter-spacing: 0; }
+    .flow-panel.with > header { color: var(--accent-dark); background: var(--accent-soft); }
+    .flow-list { display: grid; gap: 7px; padding: 20px 21px 16px; }
+    .flow-step { display: grid; grid-template-columns: 25px 1fr; gap: 10px; align-items: center; min-height: 33px; }
+    .flow-step b { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--ink); border-radius: 50%; color: var(--ink-soft); font: 10px var(--mono); }
+    .with .flow-step b { border-color: var(--accent); color: var(--accent-dark); background: #fff; }
+    .flow-step span { color: var(--ink-soft); font-size: 13px; }
+    .flow-step strong { color: var(--ink); }
+    .flow-arrow { margin-left: 11px; height: 12px; color: var(--muted); font: 15px var(--mono); line-height: 12px; }
+    .late-callout { display: grid; grid-template-columns: 28px 1fr; gap: 8px; margin: 0 20px 20px; padding: 12px 13px; border-left: 3px solid var(--peach-strong); background: #fff4ec; }
+    .late-callout > span { color: var(--peach-strong); font-size: 18px; }
+    .late-callout strong { display: block; color: var(--peach-strong); font: 12px var(--mono); letter-spacing: .04em; }
+    .late-callout small { display: block; margin-top: 2px; color: var(--ink-soft); font-size: 11px; }
+    .output-box { margin: 0 20px 20px; padding: 12px 14px; border: 1px solid var(--accent); background: #fff; }
+    .output-box b { display: block; color: var(--accent-dark); font: 11px var(--mono); letter-spacing: .10em; text-transform: uppercase; }
+    .output-box span { display: block; margin-top: 3px; color: var(--ink-soft); font-size: 11px; }
+
+    .timeline-screen .screen-inner { display: grid; grid-template-columns: minmax(240px, .72fr) minmax(0, 1.28fr); gap: clamp(28px, 6vw, 82px); align-items: center; }
+    .timeline-copy p { max-width: 36ch; margin-top: 19px; color: var(--ink-soft); font-size: 15px; }
+    .boundary-banner { display: grid; gap: 4px; margin-top: 25px; padding: 16px 17px; border: 1px solid var(--accent); background: var(--accent-soft); }
+    .boundary-banner strong { font: 700 14px var(--serif); }
+    .boundary-banner span { color: var(--ink-soft); font-size: 11px; }
+    .timeline-figure { padding: 28px 26px 44px; }
+    .timeline { position: relative; display: grid; gap: 0; }
+    .timeline::before { content: ""; position: absolute; left: 13px; top: 16px; bottom: 16px; width: 1px; background: repeating-linear-gradient(to bottom, var(--accent) 0 7px, transparent 7px 12px); }
+    .timeline-item { position: relative; display: grid; grid-template-columns: 28px 1fr; gap: 13px; align-items: center; min-height: 49px; }
+    .timeline-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 27px; height: 27px; border: 1.5px solid var(--accent); border-radius: 50%; background: var(--paper-3); color: var(--accent-dark); font: 10px var(--mono); }
+    .timeline-item.highlight .timeline-dot { background: var(--accent); color: white; }
+    .timeline-item.highlight .timeline-text { color: var(--accent-dark); font-weight: 700; }
+    .timeline-text { color: var(--ink-soft); font-size: 13px; }
+    .timeline-text small { display: block; margin-top: 1px; color: var(--muted); font-size: 10px; }
+
+    .intelligence-screen .screen-inner { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(0, 1.28fr); gap: clamp(28px, 6vw, 82px); align-items: center; }
+    .logic-copy > p { max-width: 39ch; margin-top: 18px; color: var(--ink-soft); font-size: 15px; }
+    .question { margin-top: 22px; padding: 15px 17px; border-left: 3px solid var(--accent); background: var(--accent-soft); font: italic 21px/1.25 var(--serif); }
+    .route-board { padding: 25px 24px 44px; }
+    .board-flow { display: grid; grid-template-columns: 1fr 30px 1fr; gap: 10px; align-items: center; }
+    .board-node { padding: 12px 13px; border: 1px solid var(--ink); background: #fff; }
+    .board-node b { display: block; font: 700 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+    .board-node span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .board-arrow { color: var(--accent); font: 24px var(--serif); text-align: center; }
+    .dimensions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 17px; }
+    .dimension { min-width: 0; padding: 9px 6px; border: 1px solid var(--hair); background: var(--paper-2); color: var(--ink-soft); font: 9px/1.2 var(--mono); text-align: center; }
+    .dimension:nth-child(2), .dimension:nth-child(4) { background: var(--blue-soft); }
+    .dimension:nth-child(3) { background: #fff0e4; }
+    .profiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+    .profile { min-width: 0; padding: 12px; border: 1px solid var(--ink); background: #fff; }
+    .profile h3 { font: 700 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    .profile p { margin-top: 7px; color: var(--ink-soft); font-size: 10.5px; line-height: 1.35; }
+    .profile .tagline { display: block; margin-top: 8px; color: var(--accent-dark); font: 9px/1.25 var(--mono); }
+    .profile.standard { border-color: var(--blue); background: #fbfdff; }
+    .profile.early { border-color: var(--rose); background: #fffaf9; }
+    .microcases { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+    .microcase { padding: 10px 11px; border-left: 3px solid var(--accent); background: var(--paper-2); }
+    .microcase.maria-case { border-color: var(--rose); background: var(--rose-soft); }
+    .microcase b { font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .microcase p { margin-top: 3px; color: var(--ink-soft); font-size: 10px; }
+    .microcase em { display: block; margin-top: 5px; color: var(--accent-dark); font: 9px var(--mono); font-style: normal; }
+    .microcase.maria-case em { color: var(--rose); }
+    .micro-note { margin-top: 11px; color: var(--muted); font: 10px var(--mono); text-align: center; }
+
+    .gains-screen { background: #f5faf7; }
+    .gains-screen .screen-inner { display: grid; grid-template-columns: .67fr 1.33fr; gap: clamp(28px, 6vw, 78px); align-items: center; }
+    .gains-copy p { max-width: 34ch; margin-top: 17px; color: var(--ink-soft); font-size: 15px; }
+    .gain-stamp { display: inline-block; margin-top: 28px; padding: 9px 12px; border: 1px solid var(--accent); color: var(--accent-dark); font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; transform: rotate(-2deg); }
+    .gain-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .gain { position: relative; min-height: 118px; padding: 16px 16px 14px; border: 1px solid var(--ink); background: #fff; box-shadow: 4px 4px 0 rgba(23,58,49,.08); }
+    .gain::before { content: ""; display: block; width: 26px; height: 3px; margin-bottom: 12px; background: var(--accent); }
+    .gain:nth-child(2)::before, .gain:nth-child(5)::before { background: var(--peach-strong); }
+    .gain:nth-child(3)::before, .gain:nth-child(6)::before { background: var(--blue); }
+    .gain strong { display: block; font: 700 14px/1.15 var(--serif); }
+    .gain span { display: block; margin-top: 7px; color: var(--ink-soft); font-size: 11px; line-height: 1.35; }
+    .pilot-note { grid-column: 1 / -1; padding: 13px 15px; border: 1px dashed var(--peach-strong); background: #fff6ef; color: var(--ink-soft); font-size: 11px; }
+    .pilot-note strong { color: var(--peach-strong); font: 10px var(--mono); letter-spacing: .10em; text-transform: uppercase; }
+
+    .close-screen { background: var(--paper-2); }
+    .close-screen .screen-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, .8fr); gap: clamp(30px, 7vw, 100px); align-items: center; }
+    .closing-copy h2 { max-width: 14ch; }
+    .closing-line { max-width: 18ch; margin-top: 23px; font: italic clamp(24px, 3.2vw, 41px)/1.12 var(--serif); }
+    .closing-line em { color: var(--accent-dark); font-style: normal; }
+    .sequence { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; max-width: 570px; margin-top: 31px; }
+    .sequence div { min-width: 0; padding: 13px 11px; border: 1px solid var(--ink); background: var(--paper-3); font: 10px var(--mono); letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+    .sequence div + div { position: relative; }
+    .sequence div + div::before { content: "→"; position: absolute; left: -10px; top: 13px; color: var(--accent); font: 17px var(--serif); }
+    .references { padding: 23px 22px 45px; }
+    .references > header { display: flex; align-items: end; justify-content: space-between; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--hair); }
+    .references > header b { font: 400 23px var(--serif); }
+    .ref-card { display: grid; grid-template-columns: 105px 1fr; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--hair); }
+    .ref-card strong { color: var(--accent-dark); font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .ref-card p { color: var(--ink-soft); font-size: 11px; }
+    .ref-card a { display: inline-block; margin-top: 5px; color: var(--muted); font: 9px var(--mono); text-decoration: none; }
+    .ref-card a:hover { color: var(--accent-dark); text-decoration: underline; }
+    .reference-caveat { margin-top: 15px; color: var(--muted); font-size: 10px; }
+    .final-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 15px; margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--hair); color: var(--muted); font: 9px/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+
+    .reveal { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
+    .d1 { animation-delay: .05s; } .d2 { animation-delay: .14s; } .d3 { animation-delay: .23s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+    @media (max-width: 900px) {
+      .cover .screen-inner, .timeline-screen .screen-inner, .intelligence-screen .screen-inner, .gains-screen .screen-inner, .close-screen .screen-inner { grid-template-columns: 1fr; }
+      .cover h1 { max-width: 13ch; }
+      .cover .screen-inner, .timeline-screen .screen-inner, .intelligence-screen .screen-inner, .gains-screen .screen-inner, .close-screen .screen-inner { gap: 30px; }
+      .timeline-copy p, .gains-copy p { max-width: 58ch; }
+      .close-screen .screen-inner { align-items: start; }
+    }
+    @media (max-width: 650px) {
+      .topbar-inner { padding: 9px 14px; }
+      .brand { font-size: 9px; letter-spacing: .08em; }
+      .topnav a { min-width: 24px; padding-inline: 5px; font-size: 9px; }
+      .screen { min-height: auto; padding: 38px 16px 54px; }
+      .section-head { margin-bottom: 17px; }
+      .section-head b { font-size: 15px; }
+      .cover { padding-top: 48px; }
+      .cover h1 { margin-top: 13px; font-size: clamp(46px, 14vw, 70px); }
+      .lead { font-size: 16px; }
+      .cover-meta { flex-wrap: wrap; margin-top: 22px; }
+      .case-contrast, .timeline-figure, .route-board, .references { padding-inline: 15px; }
+      .case-row, .compare-grid, .microcases, .sequence { grid-template-columns: 1fr; }
+      .versus { height: 19px; }
+      .shared-lane { margin-top: 14px; }
+      .section-intro { display: block; }
+      .section-intro h2 { margin-bottom: 14px; }
+      .flow-panel > header { align-items: start; flex-direction: column; gap: 4px; }
+      .board-flow { grid-template-columns: 1fr; }
+      .board-arrow { transform: rotate(90deg); height: 18px; }
+      .dimensions { grid-template-columns: repeat(2, 1fr); }
+      .dimension:last-child { grid-column: 1 / -1; }
+      .profiles, .gain-grid { grid-template-columns: 1fr; }
+      .pilot-note { grid-column: auto; }
+      .gain { min-height: 0; }
+      .sequence div + div::before { content: "↓"; left: calc(50% - 5px); top: -14px; }
+      .ref-card { grid-template-columns: 1fr; gap: 5px; }
+      .final-footer { display: block; }
+      .final-footer span + span { display: block; margin-top: 7px; }
+    }
+    @media print {
+      .topbar { position: static; }
+      .topnav { display: none; }
+      .screen { min-height: auto; break-inside: avoid; padding-block: 28px; }
+      .reveal { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#s1">Ir para o conteúdo</a>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-mark">A</span> antessala · pit 5 min</div>
+      <nav class="topnav" aria-label="Navegação da apresentação">
+        <a href="#s1" class="active" data-nav="s1">01</a>
+        <a href="#s2" data-nav="s2">02</a>
+        <a href="#s3" data-nav="s3">03</a>
+        <a href="#s4" data-nav="s4">04</a>
+        <a href="#s5" data-nav="s5">05</a>
+        <a href="#s6" data-nav="s6">06</a>
+      </nav>
+    </div>
+  </div>
+
+  <main class="deck" id="conteudo">
+    <section class="screen cover" id="s1" aria-labelledby="titulo-problema">
+      <div class="screen-inner">
+        <div class="reveal d1">
+          <div class="kicker">Desafio 1 · Hacka Health 2026 · HCFMRP-USP</div>
+          <h1 id="titulo-problema">Casos diferentes.<br><em>Agendamento semelhante.</em></h1>
+          <p class="lead">O problema não é <strong>quem opera primeiro</strong>. É tratar necessidades pré-anestésicas diferentes de forma semelhante, antes de entender o caso.</p>
+          <div class="signal-note"><strong>A VIRADA</strong><span>A prioridade cirúrgica vem de montante; a Antessala qualifica a necessidade pré-anestésica.</span></div>
+          <div class="cover-meta"><span class="time">0:00–0:35</span><span>apresentação · protótipo visual</span></div>
+        </div>
+
+        <figure class="fig case-contrast reveal d2" data-fig="Fig. 1 — o mesmo caminho">
+          <div class="fig-label">O que chega a montante</div>
+          <div class="case-row">
+            <article class="patient-card">
+              <div class="patient-head"><span class="avatar">J</span><div><span class="patient-name">João</span><span class="patient-type">caso simples</span></div></div>
+              <ul><li>procedimento simples</li><li>paciente saudável</li><li>sem pendências</li></ul>
+            </article>
+            <div class="versus">×</div>
+            <article class="patient-card maria">
+              <div class="patient-head"><span class="avatar">M</span><div><span class="patient-name">Maria</span><span class="patient-type">caso complexo</span></div></div>
+              <ul><li>procedimento de maior complexidade</li><li>cardiopatia + anticoagulante</li><li>dispneia progressiva</li></ul>
+            </article>
+          </div>
+          <div class="shared-lane"><span>entrada operacional semelhante</span><b>consulta pré-anestésica</b></div>
+          <figcaption>O desafio oficial pede diferenciar risco e complexidade antes de consumir o mesmo recurso.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="screen" id="s2" aria-labelledby="titulo-comparacao">
+      <div class="screen-inner">
+        <div class="section-head"><span><b>02</b> · Hoje × com Antessala</span><time>0:35–1:20</time></div>
+        <div class="section-intro">
+          <h2 id="titulo-comparacao">Antes de procurar a vaga, entendemos a necessidade.</h2>
+          <p>O fluxo deixa de ser um funil único e passa a entregar ao HC um requisito de avaliação coerente com o caso.</p>
+        </div>
+        <div class="compare-grid">
+          <article class="flow-panel reveal d1">
+            <header><span>HOJE</span><small>um caminho único</small></header>
+            <div class="flow-list">
+              <div class="flow-step"><b>1</b><span><strong>Solicitação</strong></span></div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-step"><b>2</b><span>pouca diferenciação operacional</span></div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-step"><b>3</b><span><strong>vaga semelhante</strong></span></div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-step"><b>4</b><span>anestesiologista reconstrói o caso</span></div>
+            </div>
+            <div class="late-callout"><span>⌁</span><div><strong>Pendências podem aparecer tarde</strong><small>informação clínica, exames ou preparo surgem quando o recurso já foi consumido.</small></div></div>
+          </article>
+
+          <article class="flow-panel with reveal d2">
+            <header><span>COM ANTESSALA</span><small>necessidade primeiro</small></header>
+            <div class="flow-list">
+              <div class="flow-step"><b>1</b><span><strong>Solicitação</strong></span></div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-step"><b>2</b><span><strong>pré-anamnese estruturada</strong></span></div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-step"><b>3</b><span>risco + complexidade + red flags + pendências</span></div>
+              <div class="flow-arrow">↓</div>
+              <div class="flow-step"><b>4</b><span><strong>requisito pré-anestésico</strong></span></div>
+            </div>
+            <div class="output-box"><b>depois</b><span>equipe/sistema do HC agenda conforme o requisito recebido.</span></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen timeline-screen" id="s3" aria-labelledby="titulo-timeline">
+      <div class="screen-inner">
+        <div class="timeline-copy reveal d1">
+          <div class="section-head" style="margin-left:0"><span><b>03</b> · posição no fluxo</span><time>1:20–2:00</time></div>
+          <h2 id="titulo-timeline">A Antessala prepara o caso. O HC agenda.</h2>
+          <p>A indicação e a prioridade cirúrgica já chegam do processo assistencial. A solução atua na fronteira da avaliação pré-anestésica.</p>
+          <div class="boundary-banner"><strong>A Antessala não decide quem opera primeiro.</strong><span>A prioridade cirúrgica externa já está definida a montante.</span></div>
+        </div>
+        <figure class="fig timeline-figure reveal d2" data-fig="Fig. 3 — fronteira de responsabilidade">
+          <ol class="timeline">
+            <li class="timeline-item"><span class="timeline-dot">01</span><span class="timeline-text">indicação cirúrgica</span></li>
+            <li class="timeline-item"><span class="timeline-dot">02</span><span class="timeline-text">prioridade cirúrgica externa já definida<small>processo/equipe cirúrgica</small></span></li>
+            <li class="timeline-item"><span class="timeline-dot">03</span><span class="timeline-text">solicitação de avaliação pré-anestésica</span></li>
+            <li class="timeline-item highlight"><span class="timeline-dot">04</span><span class="timeline-text">ANTESSALA<small>qualifica a necessidade</small></span></li>
+            <li class="timeline-item"><span class="timeline-dot">05</span><span class="timeline-text">requisito de avaliação</span></li>
+            <li class="timeline-item"><span class="timeline-dot">06</span><span class="timeline-text">equipe/sistema do HC agenda</span></li>
+            <li class="timeline-item"><span class="timeline-dot">07</span><span class="timeline-text">consulta pré-anestésica</span></li>
+            <li class="timeline-item"><span class="timeline-dot">08</span><span class="timeline-text">cirurgia</span></li>
+          </ol>
+          <figcaption class="fig-caption">A Antessala recomenda o preparo e a antecedência necessários; a decisão clínica final continua com o anestesiologista.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="screen intelligence-screen" id="s4" aria-labelledby="titulo-inteligencia">
+      <div class="screen-inner">
+        <div class="logic-copy reveal d1">
+          <div class="section-head" style="margin-left:0"><span><b>04</b> · inteligência explicável</span><time>2:00–2:55</time></div>
+          <h2 id="titulo-inteligencia">Uma pergunta melhor muda o fluxo.</h2>
+          <p>A pré-anamnese estruturada organiza sinais, procedimento, preparo e incertezas. Não substitui a avaliação do anestesiologista.</p>
+          <div class="question">“Que tipo de avaliação pré-anestésica este episódio necessita?”</div>
+        </div>
+        <figure class="fig route-board reveal d2" data-fig="Fig. 4 — recomendação explicável">
+          <div class="board-flow"><div class="board-node"><b>pré-anamnese</b><span>dados do paciente + procedimento</span></div><div class="board-arrow">→</div><div class="board-node"><b>requisito</b><span>rota, antecedência e pendências</span></div></div>
+          <div class="dimensions" aria-label="Cinco dimensões de triagem">
+            <span class="dimension">complexidade<br>clínica</span><span class="dimension">antecedência<br>necessária</span><span class="dimension">esforço<br>esperado</span><span class="dimension">prontidão</span><span class="dimension">alertas /<br>pendências</span>
+          </div>
+          <div class="profiles">
+            <article class="profile"><h3>Simplificada</h3><p>baixa complexidade, dados completos, sem red flags.</p><span class="tagline">candidato a fluxo simplificado conforme protocolo do HC</span></article>
+            <article class="profile standard"><h3>Padrão</h3><p>quadro estável e necessidade convencional.</p><span class="tagline">avaliação completa no fluxo usual</span></article>
+            <article class="profile early"><h3>Antecipada / otimização</h3><p>red flags, medicamento crítico ou pendência que precisa de tempo.</p><span class="tagline">avaliar cedo para preparar melhor</span></article>
+          </div>
+          <div class="microcases">
+            <div class="microcase"><b>João</b><p>simples + saudável + sem pendências</p><em>→ rota simplificada candidata</em></div>
+            <div class="microcase maria-case"><b>Maria</b><p>cardiopatia + anticoagulante + dispneia</p><em>→ antecipada / otimização</em></div>
+          </div>
+          <div class="micro-note">não é unha vs coração; é paciente + procedimento + condição clínica.</div>
+        </figure>
+      </div>
+    </section>
+
+    <section class="screen gains-screen" id="s5" aria-labelledby="titulo-ganhos">
+      <div class="screen-inner">
+        <div class="gains-copy reveal d1">
+          <div class="section-head" style="margin-left:0"><span><b>05</b> · ganhos para o sistema</span><time>2:55–3:45</time></div>
+          <h2 id="titulo-ganhos">Ganhos esperados. Visíveis. Pilotáveis.</h2>
+          <p>A proposta não promete um resultado já medido. Ela cria hipóteses operacionais que podem ser acompanhadas no piloto.</p>
+          <span class="gain-stamp">hipóteses de valor · não fatos comprovados</span>
+        </div>
+        <div class="gain-grid reveal d2">
+          <div class="gain"><strong>Capacidade proporcional</strong><span>uso do recurso conforme a necessidade de cada caso.</span></div>
+          <div class="gain"><strong>Menos reconstrução</strong><span>informação chega organizada à consulta.</span></div>
+          <div class="gain"><strong>Pendências mais cedo</strong><span>alertas, exames e preparo aparecem antes.</span></div>
+          <div class="gain"><strong>Slot mais adequado</strong><span>melhor ajuste entre complexidade, esforço e modalidade.</span></div>
+          <div class="gain"><strong>Mais previsibilidade</strong><span>gestão enxerga demanda por perfil operacional.</span></div>
+          <div class="gain"><strong>Menos retrabalho potencial</strong><span>hipótese de reduzir remarcações e adiamentos evitáveis.</span></div>
+          <div class="pilot-note"><strong>O que precisa de piloto:</strong> impacto em retrabalho, remarcações e adiamentos não é fato comprovado aqui; depende de linha de base, protocolo local e métricas do HCFMRP-USP.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen close-screen" id="s6" aria-labelledby="titulo-fechamento">
+      <div class="screen-inner">
+        <div class="closing-copy reveal d1">
+          <div class="section-head" style="margin-left:0"><span><b>06</b> · fechamento</span><time>3:45–5:00</time></div>
+          <h2 id="titulo-fechamento">Não é mais agenda.<br>É melhor adequação.</h2>
+          <p class="closing-line">A Antessala não cria mais anestesistas. <em>Faz a capacidade existente ser usada de acordo com a necessidade de cada caso.</em></p>
+          <div class="sequence"><div>casos<br>diferentes</div><div>necessidades<br>diferentes</div><div>avaliações<br>diferentes</div></div>
+        </div>
+        <figure class="fig references reveal d2" data-fig="Fig. 6 — precedentes de princípio">
+          <header><b>Não é uma ideia isolada</b><span class="fig-label">referências internacionais</span></header>
+          <article class="ref-card"><strong>NHS England</strong><div><p>screening precoce, triagem, avaliação de risco e otimização perioperatória.</p><a href="https://www.england.nhs.uk/long-read/earlier-screening-risk-assessment-and-health-optimisation-in-perioperative-pathways/" target="_blank" rel="noopener">fonte oficial ↗</a></div></article>
+          <article class="ref-card"><strong>Queensland Health</strong><div><p>framework de avaliação pré-anestésica e diretrizes de triagem para procedimentos.</p><a href="https://www.health.qld.gov.au/clinical-practice/guidelines-procedures/clinical-resources/anaesthesia-and-perioperative-resources-for-health-professionals" target="_blank" rel="noopener">fonte oficial ↗</a></div></article>
+          <p class="reference-caveat">Precedentes de princípio — não validam automaticamente as regras locais do HCFMRP-USP.</p>
+        </figure>
+        <div class="final-footer"><span>Protótipo de hackathon · não uso clínico · regras locais dependem de validação do HCFMRP-USP</span><span>antessala · desafio 1 · 2026</span></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var sections = Array.prototype.slice.call(document.querySelectorAll('.screen'));
+      var links = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          links.forEach(function (link) { link.classList.toggle('active', link.getAttribute('data-nav') === entry.target.id); });
+        });
+      }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+      sections.forEach(function (section) { observer.observe(section); });
+      document.addEventListener('keydown', function (event) {
+        if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+        var current = sections.reduce(function (best, section, index) {
+          var distance = Math.abs(section.getBoundingClientRect().top);
+          return distance < best.distance ? { index: index, distance: distance } : best;
+        }, { index: 0, distance: Infinity });
+        var next = current.index;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = Math.min(sections.length - 1, current.index + 1);
+        if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = Math.max(0, current.index - 1);
+        if (event.key === 'Home') next = 0;
+        if (event.key === 'End') next = sections.length - 1;
+        event.preventDefault();
+        sections[next].scrollIntoView({ behavior: 'smooth' });
+      });
+    }());
+  </script>
+</body>
+</html>

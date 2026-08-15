@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Antessala — PRD do Marco × Gap Encontrado</title>
+<style>
+:root{
+  --bg:#f5f1ea;--paper:#fffdf9;--ink:#1f2d33;--muted:#66747b;--line:#ddd5c9;
+  --green:#dfeee8;--green-ink:#315f52;--blue:#e2edf3;--blue-ink:#31586b;
+  --amber:#f6ead0;--amber-ink:#7b5a21;--rose:#f2dddd;--rose-ink:#7a4141;
+  --shadow:0 14px 36px rgba(42,52,58,.08);--radius:22px
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{
+  margin:0;background:
+  radial-gradient(circle at top right,rgba(219,235,231,.7),transparent 32rem),
+  radial-gradient(circle at top left,rgba(226,237,243,.75),transparent 30rem),var(--bg);
+  color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5
+}
+.container{width:min(1180px,calc(100% - 32px));margin:auto}.hero{padding:62px 0 34px}
+.kicker{display:inline-flex;gap:8px;align-items:center;padding:7px 11px;border-radius:999px;background:var(--blue);color:var(--blue-ink);font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+h1{font-size:clamp(38px,6vw,72px);line-height:.98;margin:18px 0;letter-spacing:-.04em}.hero p{font-size:clamp(18px,2.2vw,24px);max-width:900px;color:var(--muted);margin:0}.hero strong{color:var(--ink)}
+section{padding:22px 0 30px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:16px}.section-head h2{font-size:clamp(28px,4vw,44px);margin:0;letter-spacing:-.03em}.section-head p{margin:0;max-width:640px;color:var(--muted)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:rgba(255,253,249,.94);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}.card h3{margin:0 0 8px;font-size:24px;letter-spacing:-.02em}.card p{margin:0;color:var(--muted)}
+.badge{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;margin-bottom:12px}.badge.green{background:var(--green);color:var(--green-ink)}.badge.blue{background:var(--blue);color:var(--blue-ink)}.badge.amber{background:var(--amber);color:var(--amber-ink)}.badge.rose{background:var(--rose);color:var(--rose-ink)}
+ul{margin:14px 0 0;padding-left:19px}li{margin:8px 0}.good li::marker{color:#4e8c79}.warn li::marker{color:#b88432}.cut li::marker{color:#b55b5b}
+.compare{position:relative}.compare:before{content:"";position:absolute;left:50%;top:14px;bottom:14px;width:1px;background:var(--line)}.vs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--ink);color:#fff;border-radius:999px;font-size:11px;font-weight:900;width:42px;height:42px;display:grid;place-items:center;border:5px solid var(--bg);z-index:2}
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}.node{flex:1 1 150px;min-height:78px;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff;font-weight:750}.node.key{background:var(--green);border-color:#c7ddd5;color:var(--green-ink)}.node.external{background:var(--blue);border-color:#c9dae3;color:var(--blue-ink)}.node.cut{background:var(--rose);border-color:#e2c1c1;color:var(--rose-ink)}.arrow{font-size:24px;color:#8c989d;font-weight:900}
+.timeline{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;align-items:stretch}.step{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px;min-height:150px}.step small{display:block;color:var(--muted);font-weight:700;margin-bottom:7px}.step b{display:block;font-size:15px}.step.highlight{background:var(--green);border-color:#c7ddd5}.step.external{background:var(--blue);border-color:#c9dae3}.step:not(:last-child):after{content:"→";position:absolute;right:-16px;top:50%;transform:translateY(-50%);color:#89969c;font-size:22px;font-weight:900;z-index:2}
+.pivot-card{min-height:310px}.pivot-card h3{font-size:28px}.pivot-card.keep{border-top:6px solid #79a994}.pivot-card.rewire{border-top:6px solid #7ca8ba}.pivot-card.cut{border-top:6px solid #c98383}
+.output{max-width:760px;margin:0 auto;background:#1f2d33;color:#f7faf9;border-radius:26px;padding:24px;box-shadow:0 18px 46px rgba(31,45,51,.18)}.output .top{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:16px}.output .top span{font-size:12px;color:#b9c7cb;text-transform:uppercase;letter-spacing:.08em;font-weight:900}.output h3{margin:0;font-size:30px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:18px 0}.metric{padding:13px 14px;border-radius:14px;background:rgba(255,255,255,.08)}.metric small{display:block;color:#b9c7cb;margin-bottom:4px}.metric strong{font-size:18px}.reason{padding:13px 14px;border-radius:14px;background:rgba(255,255,255,.06);margin-top:10px}.reason small{display:block;color:#b9c7cb;margin-bottom:4px}
+.statement{margin:12px auto 0;max-width:980px;text-align:center;padding:30px 26px;border-radius:26px;background:linear-gradient(135deg,var(--green),var(--blue));border:1px solid #c8dcd9}.statement p{font-size:clamp(24px,3.4vw,42px);line-height:1.14;margin:0;font-weight:850;letter-spacing:-.03em}
+.note{margin-top:12px;color:var(--muted);font-size:13px}.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}.legend span{font-size:12px;padding:6px 9px;border-radius:999px;background:#fff;border:1px solid var(--line)}
+footer{padding:32px 0 44px;color:var(--muted);font-size:12px;text-align:center}
+@media(max-width:950px){.grid-2,.grid-3{grid-template-columns:1fr}.compare:before,.vs{display:none}.timeline{grid-template-columns:1fr 1fr}.step:not(:last-child):after{display:none}}
+@media(max-width:620px){.container{width:min(100% - 22px,1180px)}.hero{padding-top:36px}.timeline,.metrics{grid-template-columns:1fr}.card{padding:17px}.node{flex-basis:100%}.arrow{transform:rotate(90deg);width:100%;text-align:center}}
+@media print{body{background:#fff}.card,.output{box-shadow:none}section{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <span class="kicker">Hacka Health 2026 · Antessala</span>
+    <h1>PRD do Marco <span style="color:#6c8f9d">×</span><br>Gap Encontrado</h1>
+    <p><strong>O problema estava certo.</strong> A fronteira de responsabilidade entre processo cirúrgico, qualificação pré-anestésica e agendamento precisava ser corrigida.</p>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div><span class="badge blue">LEITURA CONSOLIDADA</span><h2>O PRD acertou o essencial</h2></div>
+      <p>O pivot não exige recomeçar. Ele exige separar corretamente o que pertence ao processo cirúrgico do que pertence à avaliação pré-anestésica.</p>
+    </div>
+    <div class="grid-2 compare">
+      <article class="card">
+        <span class="badge green">O QUE O PRD ACERTOU</span>
+        <h3>Problema e unidade corretos</h3>
+        <ul class="good">
+          <li>Casos com <b>risco e complexidade diferentes</b> podem chegar ao agendamento de forma semelhante.</li>
+          <li>A unidade é o <b>caso pré-anestésico</b>: paciente + procedimento + contexto atual.</li>
+          <li>O produto trabalha em <b>múltiplos eixos</b>: complexidade, esforço, prontidão, recurso/modalidade e antecedência.</li>
+          <li><b>ASA não é motor único</b> e não substitui julgamento clínico.</li>
+          <li>A decisão final é <b>revisada por humano</b>.</li>
+          <li>Hipóteses e desconhecidos são explicitados, sem fingir fluxo institucional não confirmado.</li>
+          <li>O problema não é fila física, pulseira, centro cirúrgico ou “quem opera primeiro”.</li>
+        </ul>
+      </article>
+
+      <div class="vs">VS</div>
+
+      <article class="card">
+        <span class="badge amber">GAP ENCONTRADO</span>
+        <h3>A fronteira precisava ficar explícita</h3>
+        <ul class="warn">
+          <li><b>Prioridade cirúrgica é externa</b>: nasce antes, no processo/equipe cirúrgica, e entra como contexto.</li>
+          <li>A Antessala <b>não calcula urgência da cirurgia</b> nem decide quem opera primeiro.</li>
+          <li>“Prioridade de acesso” deve ser apresentada como <b>antecedência necessária da avaliação pré-anestésica</b>, evitando confusão com fila cirúrgica.</li>
+          <li>O MVP não precisa virar outro sistema de booking: deve produzir um <b>requisito de avaliação/agendamento</b>.</li>
+          <li>Quem escolhe a vaga continua sendo a <b>equipe/sistema institucional do HC</b>, salvo integração futura validada.</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div><span class="badge rose">ANTES × CORREÇÃO</span><h2>O desvio era de saída, não de coleta</h2></div>
+      <p>A pré-anamnese, os widgets e a identificação de risco continuam úteis. O que muda é a pergunta que o produto responde.</p>
+    </div>
+    <div class="grid-2">
+      <article class="card">
+        <span class="badge rose">ANTES — VIESADO</span>
+        <div class="flow">
+          <div class="node">Anamnese</div><div class="arrow">→</div>
+          <div class="node cut">Urgência / prioridade</div><div class="arrow">→</div>
+          <div class="node cut">Fila / slot</div>
+        </div>
+        <p class="note"><b>Problema:</b> misturava urgência cirúrgica, risco anestésico, complexidade e ordem de atendimento.</p>
+      </article>
+
+      <article class="card">
+        <span class="badge green">CORREÇÃO — FRONTEIRA CERTA</span>
+        <div class="flow">
+          <div class="node external">Prioridade cirúrgica externa</div><div class="arrow">→</div>
+          <div class="node key">Antessala</div><div class="arrow">→</div>
+          <div class="node">Requisito pré-anestésico</div>
+        </div>
+        <p class="note"><b>Novo foco:</b> qual avaliação este caso precisa, com que antecedência, esforço e pendências.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div><span class="badge blue">TIMELINE CORRIGIDA</span><h2>Onde a Antessala realmente entra</h2></div>
+      <p>A prioridade da cirurgia já existe antes da Antessala. A solução qualifica a demanda antes da consulta pré-anestésica.</p>
+    </div>
+    <div class="timeline">
+      <div class="step"><small>01</small><b>Indicação cirúrgica</b><p>Procedimento proposto.</p></div>
+      <div class="step external"><small>02 · EXTERNO</small><b>Prioridade cirúrgica</b><p>Definida no processo cirúrgico.</p></div>
+      <div class="step"><small>03</small><b>Solicitação de CPA</b><p>Nasce o caso pré-anestésico.</p></div>
+      <div class="step highlight"><small>04 · ANTESSALA</small><b>Qualificação do caso</b><p>Risco, complexidade, pendências e necessidade.</p></div>
+      <div class="step highlight"><small>05 · SAÍDA</small><b>Requisito pré-anestésico</b><p>Antecedência, esforço, prontidão e recurso.</p></div>
+      <div class="step"><small>06</small><b>Agendamento HC</b><p>Equipe/sistema procura a vaga adequada.</p></div>
+      <div class="step"><small>07</small><b>Consulta pré-anestésica</b><p>Anestesiologista avalia e decide.</p></div>
+      <div class="step"><small>08</small><b>Cirurgia</b><p>Segue o processo assistencial.</p></div>
+    </div>
+
+    <div class="statement" style="margin-top:18px">
+      <p>A Antessala não decide quem opera primeiro. Ela diz <u>qual avaliação pré-anestésica o caso exige</u>.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div><span class="badge green">O PIVOT</span><h2>Preservar, redirecionar, cortar</h2></div>
+      <p>O objetivo é salvar o máximo de trabalho correto e remover apenas o que pertence à interpretação antiga.</p>
+    </div>
+    <div class="grid-3">
+      <article class="card pivot-card keep">
+        <span class="badge green">KEEP</span>
+        <h3>Manter</h3>
+        <ul class="good">
+          <li>Pré-anamnese estruturada</li><li>Widgets e catálogos</li><li>Comorbidades e medicamentos</li>
+          <li>Capacidade funcional</li><li>Risco / complexidade</li><li>Red flags e pendências</li>
+          <li>Parecer explicável</li><li>Revisão humana</li>
+        </ul>
+      </article>
+
+      <article class="card pivot-card rewire">
+        <span class="badge blue">REWIRE</span>
+        <h3>Redirecionar</h3>
+        <ul>
+          <li>Saída → <b>requisito de avaliação pré-anestésica</b></li>
+          <li>“Prioridade” → <b>antecedência necessária</b></li>
+          <li>“Fila” → <b>esforço / prontidão / recurso</b></li>
+          <li>Urgência cirúrgica → <b>input externo</b></li>
+          <li>Rota → recomendação operacional revisável</li>
+        </ul>
+      </article>
+
+      <article class="card pivot-card cut">
+        <span class="badge rose">CUT</span>
+        <h3>Cortar</h3>
+        <ul class="cut">
+          <li>Urgência cirúrgica calculada pela anamnese</li><li>Fila por tempo de espera</li>
+          <li>“Quem passa primeiro”</li><li>Agenda própria como obrigação do hack</li>
+          <li>Booking/centro cirúrgico</li><li>Reserva de sala</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <div><span class="badge amber">SOLUÇÃO CORRIGIDA</span><h2>A saída que o sistema deve produzir</h2></div>
+      <p>Em vez de uma “cor de urgência”, a Antessala devolve uma necessidade operacional explicável para quem agenda e para o anestesiologista.</p>
+    </div>
+
+    <div class="output">
+      <div class="top">
+        <div><span>REQUISITO PRÉ-ANESTÉSICO</span><h3>Avaliação antecipada / ampliada</h3></div>
+        <div class="badge amber" style="margin:0">REVISÁVEL</div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><small>Complexidade</small><strong>Alta</strong></div>
+        <div class="metric"><small>Antecedência</small><strong>Antecipada</strong></div>
+        <div class="metric"><small>Esforço esperado</small><strong>Ampliado</strong></div>
+        <div class="metric"><small>Prontidão</small><strong>Incompleta</strong></div>
+        <div class="metric"><small>Pendências</small><strong>2</strong></div>
+        <div class="metric"><small>Decisão clínica</small><strong>Humana</strong></div>
+      </div>
+      <div class="reason"><small>MOTIVOS</small><strong>Anticoagulante em uso · dispneia aos esforços · baixa capacidade funcional</strong></div>
+      <div class="reason"><small>PENDÊNCIAS</small><strong>Plano perioperatório da medicação · revisão cardiovascular</strong></div>
+    </div>
+
+    <div class="legend">
+      <span>Não libera cirurgia</span><span>Não determina ASA final</span>
+      <span>Não suspende medicação</span><span>Não escolhe quem opera primeiro</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="statement">
+      <p>O PRD acertou o problema.<br>O gap estava na <strong>fronteira de responsabilidade</strong> entre processo cirúrgico, qualificação pré-anestésica e agendamento.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="container">
+    Hacka Health 2026 · Antessala · Documento de alinhamento interno · não uso clínico<br>
+    Fluxos locais, critérios e integrações dependem de validação do HCFMRP-USP.
+  </div>
+</footer>
+
+</body>
+</html>
