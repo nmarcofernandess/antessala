@@ -55,6 +55,8 @@ export const casos = {
   servicos: () => chamar(() => client['cases.servicos']()),
   aceitarHandoff: (input: Parameters<typeof client['handoffs.acknowledge']>[0]) =>
     chamar(() => client['handoffs.acknowledge'](input)),
+  cancelar: (input: Parameters<typeof client['cases.cancel']>[0]) =>
+    chamar(() => client['cases.cancel'](input)),
 }
 
 /* ══════════════ anamnese ══════════════ */

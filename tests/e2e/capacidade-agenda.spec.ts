@@ -71,6 +71,35 @@ test('a operação cria consultório, gera vagas e a oferta muda de tamanho', as
 
     await page.getByRole('tab', { name: /Capacidade/ }).click()
     await expect(page.getByTestId('consultorio-item')).toHaveCount(4)
+
+    /* um caso que não vai acontecer some da fila e vai para o arquivo */
+    await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Novo encaminhamento' }).click()
+    await page.getByLabel('Nome completo').fill('Teodoro Vilela Machado')
+    await page.getByLabel('Data de nascimento').fill('1966-05-30')
+    await page.getByLabel('Sexo').click()
+    await page.getByRole('option', { name: 'Masculino' }).click()
+    await page.getByLabel('Procedimento').click()
+    await page.getByRole('option', { name: 'Facectomia com implante' }).click()
+    await page.getByLabel('Serviço solicitante').click()
+    await page.getByRole('option', { name: 'Oftalmologia' }).click()
+    await page.getByLabel('Profissional solicitante').fill('Dr. Nelson Aguiar')
+    await page.getByRole('button', { name: 'Abrir caso' }).click()
+    await expect
+      .poll(() => page.evaluate(() => window.location.hash), { timeout: 15_000 })
+      .toMatch(/#\/casos\/[0-9a-f-]{36}$/)
+
+    await page.getByTestId('cancelar-caso').click()
+    await page
+      .getByLabel('Motivo do cancelamento')
+      .fill('Encaminhamento duplicado: já existe caso aberto para esta cirurgia.')
+    await page.getByTestId('confirmar-cancelamento').click()
+    await expect(page.getByTestId('status-do-caso')).toHaveText('Cancelado', { timeout: 20_000 })
+    await expect(page.getByTestId('timeline').getByText('Caso cancelado')).toBeVisible()
+
+    await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Arquivados' }).click()
+    const arquivados = page.getByTestId('arquivados')
+    await expect(arquivados.getByText('Teodoro Vilela Machado')).toBeVisible({ timeout: 20_000 })
+    await expect(arquivados.getByText('Cancelado', { exact: true })).toBeVisible()
   } finally {
     await app.close()
     removeAppData(dbPath)

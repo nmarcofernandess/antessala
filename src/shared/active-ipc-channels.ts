@@ -46,6 +46,7 @@ export const ACTIVE_IPC_CHANNELS = [
   'cases.get',
   'cases.counts',
   'cases.servicos',
+  'cases.cancel',
   'handoffs.acknowledge',
   'anamnesis.open',
   'anamnesis.get',
