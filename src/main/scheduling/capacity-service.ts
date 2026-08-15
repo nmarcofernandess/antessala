@@ -1,8 +1,6 @@
 import { execute, queryAll, queryOne, transaction } from '../db/query'
 import { garantirContaSintetica } from '../auth/session'
 import { ErroDeCaso, type SlotClass } from '../../shared/clinical/caso'
-import { BUFFER_POR_CLASSE, DURACAO_POR_CLASSE } from '../../shared/clinical/carga'
-
 /**
  * Capacidade da agenda: consultórios e as vagas que eles oferecem.
  *
@@ -11,19 +9,13 @@ import { BUFFER_POR_CLASSE, DURACAO_POR_CLASSE } from '../../shared/clinical/car
  * edita. Quem sabe quantos consultórios existem e a que horas eles abrem é o
  * serviço, não quem escreveu o seed.
  *
- * Duas recusas guiam tudo: vaga com consulta marcada não é apagada nem movida
- * por gestão de capacidade — remarcar é decisão de agenda, com motivo e autoria
- * —, e desativar consultório não some com o que já foi combinado com alguém.
+ * Aqui moram as salas. **Quando** elas atendem é outra coisa, e vive em
+ * `availability-service`: a regra semanal, de onde as vagas são materializadas.
+ *
+ * Uma recusa guia tudo: vaga com consulta marcada não é apagada nem bloqueada
+ * por gestão de capacidade — desmarcar alguém é decisão de agenda, com motivo e
+ * autoria.
  */
-
-// Duração e buffer vêm da mesma regra que calcula o requisito: se um dia a
-// vaga rápida mudar de 20 minutos, a agenda muda junto sem ninguém lembrar.
-const DURACAO = DURACAO_POR_CLASSE
-const BUFFER: Record<SlotClass, number> = {
-  QUICK: BUFFER_POR_CLASSE.RAPIDA,
-  STANDARD: BUFFER_POR_CLASSE.NORMAL,
-  EXTENDED: BUFFER_POR_CLASSE.ESTENDIDA,
-}
 
 export const CAPABILITIES_CONHECIDAS = [
   { id: 'SALA_ACESSIVEL', rotulo: 'Sala acessível' },
@@ -134,160 +126,6 @@ export async function salvarRecurso(entrada: {
   const salvo = lista.find((r) => r.id === id)
   if (!salvo) throw new ErroDeCaso('NOT_FOUND', 'Consultório não encontrado depois de salvar.')
   return salvo
-}
-
-export type PlanoDeVagas = {
-  resourceIds: string[]
-  /** Datas `YYYY-MM-DD`, inclusive. */
-  de: string
-  ate: string
-  /** 0 = domingo. Vazio significa todos os dias. */
-  diasDaSemana: number[]
-  /** Blocos em minutos do dia, ex.: 8h → 480. */
-  blocos: Array<{ inicio: number; fim: number }>
-  /** Sequência de classes repetida dentro de cada bloco. */
-  mistura: SlotClass[]
-}
-
-function comMinutos(dia: Date, minutos: number): Date {
-  const d = new Date(dia)
-  d.setHours(0, 0, 0, 0)
-  d.setMinutes(minutos)
-  return d
-}
-
-/**
- * Gera vagas no intervalo, sem duplicar o que já existe.
- *
- * A unicidade `(resource_id, starts_at)` é quem garante que rodar duas vezes
- * não cria vaga repetida — a operação pode reexecutar o plano depois de mudar
- * um detalhe sem limpar nada antes.
- */
-export async function gerarVagas(plano: PlanoDeVagas): Promise<{ criadas: number; puladas: number }> {
-  await garantirContaSintetica()
-
-  if (plano.resourceIds.length === 0) {
-    throw new ErroDeCaso('VALIDATION_ERROR', 'Escolha pelo menos um consultório.')
-  }
-  if (plano.mistura.length === 0) {
-    throw new ErroDeCaso('VALIDATION_ERROR', 'Escolha pelo menos um tipo de vaga.')
-  }
-  if (plano.blocos.length === 0) {
-    throw new ErroDeCaso('VALIDATION_ERROR', 'Defina pelo menos um período de atendimento.')
-  }
-  for (const b of plano.blocos) {
-    if (b.fim <= b.inicio) {
-      throw new ErroDeCaso('VALIDATION_ERROR', 'Cada período precisa terminar depois de começar.')
-    }
-  }
-
-  const inicio = new Date(`${plano.de}T00:00:00`)
-  const fim = new Date(`${plano.ate}T00:00:00`)
-  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) {
-    throw new ErroDeCaso('VALIDATION_ERROR', 'Datas inválidas.')
-  }
-  if (fim < inicio) {
-    throw new ErroDeCaso('VALIDATION_ERROR', 'A data final precisa ser igual ou posterior à inicial.')
-  }
-  const dias = Math.round((fim.getTime() - inicio.getTime()) / 86_400_000)
-  if (dias > 180) {
-    throw new ErroDeCaso('VALIDATION_ERROR', 'O intervalo máximo de geração é de 180 dias.')
-  }
-
-  let criadas = 0
-  let puladas = 0
-
-  await transaction(async () => {
-    for (const [indice, resourceId] of plano.resourceIds.entries()) {
-      const recurso = await queryOne<{ id: string }>(
-        `SELECT id FROM scheduling_resources WHERE id = $1`,
-        resourceId,
-      )
-      if (!recurso) throw new ErroDeCaso('NOT_FOUND', `Consultório ${resourceId} não existe.`)
-
-      // Cada consultório entra num ponto diferente do ciclo: sem isso, todos
-      // abrem a mesma vaga no mesmo horário e a agenda fica sem variedade.
-      let passo = indice
-
-      for (let d = 0; d <= dias; d++) {
-        const dia = new Date(inicio)
-        dia.setDate(inicio.getDate() + d)
-        if (plano.diasDaSemana.length > 0 && !plano.diasDaSemana.includes(dia.getDay())) continue
-
-        for (const bloco of plano.blocos) {
-          let minuto = bloco.inicio
-          while (minuto < bloco.fim) {
-            const classe = plano.mistura[passo % plano.mistura.length]
-            const duracao = DURACAO[classe]
-            if (minuto + duracao > bloco.fim) break
-
-            const comeco = comMinutos(dia, minuto)
-            const termino = comMinutos(dia, minuto + duracao)
-            const slotId = `${resourceId}:${comeco.toISOString()}`
-
-            const { changes } = await execute(
-              `INSERT INTO scheduling_slots (id, resource_id, slot_class, starts_at, ends_at, status)
-               VALUES ($1,$2,$3,$4,$5,'OPEN')
-               ON CONFLICT (resource_id, starts_at) DO NOTHING`,
-              slotId,
-              resourceId,
-              classe,
-              comeco.toISOString(),
-              termino.toISOString(),
-            )
-            if (changes > 0) criadas++
-            else puladas++
-
-            minuto += duracao + BUFFER[classe]
-            passo++
-          }
-        }
-      }
-    }
-  })
-
-  return { criadas, puladas }
-}
-
-/**
- * Apaga vagas livres de um intervalo.
- *
- * Só some o que ninguém marcou. Vaga com consulta é combinado com uma pessoa —
- * desfazer isso é remarcar ou cancelar, com motivo, não faxina de capacidade.
- */
-export async function removerVagasLivres(entrada: {
-  resourceId?: string
-  de: string
-  ate: string
-}): Promise<{ removidas: number; preservadas: number }> {
-  const inicio = new Date(`${entrada.de}T00:00:00`).toISOString()
-  const fim = new Date(`${entrada.ate}T23:59:59`).toISOString()
-
-  const ocupadas = await queryOne<{ total: number }>(
-    `SELECT COUNT(*)::int AS total
-       FROM scheduling_slots s
-      WHERE s.starts_at BETWEEN $1 AND $2
-        AND ($3::text IS NULL OR s.resource_id = $3)
-        AND EXISTS (
-          SELECT 1 FROM scheduling_bookings b
-           WHERE b.slot_id = s.id AND b.status IN ('CONFIRMED','CHECKED_IN','COMPLETED')
-        )`,
-    inicio,
-    fim,
-    entrada.resourceId ?? null,
-  )
-
-  const { changes } = await execute(
-    `DELETE FROM scheduling_slots s
-      WHERE s.starts_at BETWEEN $1 AND $2
-        AND ($3::text IS NULL OR s.resource_id = $3)
-        AND NOT EXISTS (SELECT 1 FROM scheduling_bookings b WHERE b.slot_id = s.id)`,
-    inicio,
-    fim,
-    entrada.resourceId ?? null,
-  )
-
-  return { removidas: changes, preservadas: ocupadas?.total ?? 0 }
 }
 
 /** Fecha uma vaga com motivo — férias, manutenção, sala emprestada. */

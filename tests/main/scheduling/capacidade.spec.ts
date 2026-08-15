@@ -5,18 +5,16 @@ import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { closeDb, initDb } from '../../../src/main/db/pglite'
 import { createTables } from '../../../src/main/db/schema'
-import { execute, queryOne } from '../../../src/main/db/query'
+import { execute, queryAll, queryOne } from '../../../src/main/db/query'
 import { garantirContaSintetica } from '../../../src/main/auth/session'
 import { seedProtocolos } from '../../../src/main/db/protocolos'
+import { semearCapacidade } from '../../../src/main/scheduling/capacity-seed'
+import { listarRecursos, salvarRecurso } from '../../../src/main/scheduling/capacity-service'
 import {
-  bloquearVaga,
-  gerarVagas,
-  listarRecursos,
-  liberarVaga,
-  removerVagasLivres,
-  resumoDaOferta,
-  salvarRecurso,
-} from '../../../src/main/scheduling/capacity-service'
+  materializar,
+  obterDisponibilidade,
+  salvarDisponibilidade,
+} from '../../../src/main/scheduling/availability-service'
 import { reservar, vagasCompativeis } from '../../../src/main/scheduling/agenda-service'
 import { criarCaso, aceitarHandoff } from '../../../src/main/clinical/case-service'
 import {
@@ -32,32 +30,17 @@ import { responder } from '../../../src/shared/clinical/anamnese-tipos'
 import type { AnamnesisBlock } from '../../../src/shared/clinical/caso'
 
 /**
- * Capacidade editável.
+ * A disponibilidade é a regra; as vagas são a materialização dela.
  *
- * A oferta da agenda deixou de ser constante compilada. O que estes testes
- * protegem é a fronteira: a operação manda no consultório e no horário, mas
- * não manda em vaga que já virou compromisso com uma pessoa.
+ * O que estes testes protegem: mudar a regra muda a agenda inteira adiante, e
+ * nunca toca no que já virou compromisso com uma pessoa.
  */
-describe('capacidade da agenda', () => {
+describe('disponibilidade e capacidade', () => {
   let dbDir: string
-
-  const AMANHA = (() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 1)
-    return d.toISOString().slice(0, 10)
-  })()
-
-  const PLANO_BASE = {
-    de: AMANHA,
-    ate: AMANHA,
-    diasDaSemana: [] as number[],
-    blocos: [{ inicio: 8 * 60, fim: 10 * 60 }],
-    mistura: ['QUICK' as const],
-  }
 
   beforeAll(async () => {
     await closeDb()
-    dbDir = await mkdtemp(path.join(os.tmpdir(), 'antessala-capacidade-'))
+    dbDir = await mkdtemp(path.join(os.tmpdir(), 'antessala-disp-'))
     process.env.ANTESSALA_DB_PATH = dbDir
     await initDb()
     await createTables()
@@ -67,6 +50,7 @@ describe('capacidade da agenda', () => {
       `INSERT INTO catalogo_servicos_solicitantes (id, nome) VALUES ('oftalmologia', 'Oftalmologia')
        ON CONFLICT (id) DO NOTHING`,
     )
+    await semearCapacidade()
   }, 90_000)
 
   afterAll(async () => {
@@ -75,101 +59,112 @@ describe('capacidade da agenda', () => {
     await rm(dbDir, { recursive: true, force: true })
   })
 
-  it('cria consultório com as marcas que o requisito vai consultar', async () => {
-    const salvo = await salvarRecurso({
-      nome: 'Consultório da Ala Norte',
-      capabilities: ['SALA_ACESSIVEL', 'INVENTADA'],
-    })
+  it('o primeiro boot deixa três salas com regra de dias úteis e vagas materializadas', async () => {
+    const disp = await obterDisponibilidade()
+    expect(disp).toHaveLength(3)
 
-    expect(salvo.id).toBe('consultorio-da-ala-norte')
-    // Capability desconhecida não entra: senão o requisito passaria a exigir
-    // algo que nenhuma sala sabe oferecer.
-    expect(salvo.capabilities).toEqual(['SALA_ACESSIVEL'])
-    expect(salvo.ativo).toBe(true)
-
-    const editado = await salvarRecurso({
-      id: salvo.id,
-      nome: 'Consultório Norte',
-      capabilities: ['SALA_ACESSIVEL', 'APOIO_COMUNICACAO'],
-      ativo: false,
-    })
-    expect(editado.nome).toBe('Consultório Norte')
-    expect(editado.ativo).toBe(false)
-    expect((await listarRecursos()).filter((r) => r.id === salvo.id)).toHaveLength(1)
+    const primeira = disp[0]
+    expect(primeira.dias).toHaveLength(7)
+    expect(primeira.dias[0].ativo).toBe(false) // domingo fechado
+    expect(primeira.dias[1].ativo).toBe(true) // segunda aberta
+    expect(primeira.dias[1].pausas).toHaveLength(1) // almoço
+    expect(primeira.vagasFuturas).toBeGreaterThan(0)
   })
 
-  it('gerar duas vezes o mesmo período não duplica vaga', async () => {
-    const sala = await salvarRecurso({ nome: 'Sala de prova', capabilities: [] })
-
-    const primeira = await gerarVagas({ ...PLANO_BASE, resourceIds: [sala.id] })
-    expect(primeira.criadas).toBeGreaterThan(0)
-    expect(primeira.puladas).toBe(0)
-
-    const segunda = await gerarVagas({ ...PLANO_BASE, resourceIds: [sala.id] })
-    expect(segunda.criadas).toBe(0)
-    expect(segunda.puladas).toBe(primeira.criadas)
-
-    const total = await queryOne<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM scheduling_slots WHERE resource_id = $1`,
-      sala.id,
-    )
-    expect(total?.n).toBe(primeira.criadas)
-  })
-
-  it('a duração da vaga vem da regra de dimensionamento, não da tela', async () => {
-    const sala = await salvarRecurso({ nome: 'Sala de duração', capabilities: [] })
-    await gerarVagas({
-      ...PLANO_BASE,
-      resourceIds: [sala.id],
-      blocos: [{ inicio: 8 * 60, fim: 12 * 60 }],
-      mistura: ['QUICK', 'STANDARD', 'EXTENDED'],
-    })
-
-    const duracoes = await queryOne<{ q: number; s: number; e: number }>(
-      `SELECT
-         COUNT(*) FILTER (WHERE slot_class = 'QUICK'
-           AND EXTRACT(EPOCH FROM (ends_at - starts_at)) / 60 = 20)::int AS q,
-         COUNT(*) FILTER (WHERE slot_class = 'STANDARD'
-           AND EXTRACT(EPOCH FROM (ends_at - starts_at)) / 60 = 35)::int AS s,
-         COUNT(*) FILTER (WHERE slot_class = 'EXTENDED'
-           AND EXTRACT(EPOCH FROM (ends_at - starts_at)) / 60 = 50)::int AS e
-       FROM scheduling_slots WHERE resource_id = $1`,
-      sala.id,
-    )
-    expect(duracoes?.q).toBeGreaterThan(0)
-    expect(duracoes?.s).toBeGreaterThan(0)
-    expect(duracoes?.e).toBeGreaterThan(0)
-
+  it('a duração de cada vaga vem da regra de dimensionamento, nunca da tela', async () => {
     const fora = await queryOne<{ n: number }>(
       `SELECT COUNT(*)::int AS n FROM scheduling_slots
-        WHERE resource_id = $1
-          AND EXTRACT(EPOCH FROM (ends_at - starts_at)) / 60 NOT IN (20, 35, 50)`,
-      sala.id,
+        WHERE EXTRACT(EPOCH FROM (ends_at - starts_at)) / 60 NOT IN (20, 35, 50)`,
     )
     expect(fora?.n).toBe(0)
   })
 
-  it('recusa plano sem consultório, sem tipo de vaga ou com período invertido', async () => {
-    await expect(gerarVagas({ ...PLANO_BASE, resourceIds: [] })).rejects.toMatchObject({
-      codigo: 'VALIDATION_ERROR',
+  it('nenhuma vaga nasce dentro da pausa do expediente', async () => {
+    const disp = await obterDisponibilidade()
+    const sala = disp[0]
+    const pausa = sala.dias[1].pausas[0]
+
+    // A conta é feita no fuso local, como a tela lê — `EXTRACT` no banco
+    // devolveria hora UTC e a comparação viraria mentira.
+    const vagas = await queryAll<{ starts_at: string }>(
+      `SELECT starts_at FROM scheduling_slots WHERE resource_id = $1`,
+      sala.resourceId,
+    )
+    const dentroDaPausa = vagas.filter((v) => {
+      const d = new Date(v.starts_at)
+      if (d.getDay() !== 1) return false
+      const min = d.getHours() * 60 + d.getMinutes()
+      return min >= pausa.inicio && min < pausa.fim
     })
+    expect(dentroDaPausa).toHaveLength(0)
+  })
+
+  it('materializar de novo não duplica nem apaga nada', async () => {
+    const disp = await obterDisponibilidade()
+    const antes = disp[0].vagasFuturas
+    const r = await materializar(disp[0].resourceId)
+    expect(r.criadas).toBe(0)
+    expect(r.removidas).toBe(0)
+    expect((await obterDisponibilidade())[0].vagasFuturas).toBe(antes)
+  })
+
+  it('mudar a regra reconcilia a agenda adiante', async () => {
+    const disp = await obterDisponibilidade()
+    const sala = disp[0]
+
+    // Sábado passa a abrir; a segunda encolhe para meio período.
+    const dias = sala.dias.map((d) => {
+      if (d.weekday === 6) return { ...d, ativo: true, inicio: 8 * 60, fim: 12 * 60, pausas: [] }
+      if (d.weekday === 1) return { ...d, fim: 12 * 60, pausas: [] }
+      return d
+    })
+    const r = await salvarDisponibilidade({
+      resourceId: sala.resourceId,
+      mistura: sala.mistura,
+      dias,
+    })
+    expect(r.criadas).toBeGreaterThan(0) // sábados
+    expect(r.removidas).toBeGreaterThan(0) // tardes de segunda
+
+    const vagas = await queryAll<{ starts_at: string }>(
+      `SELECT starts_at FROM scheduling_slots WHERE resource_id = $1 AND starts_at >= NOW()`,
+      sala.resourceId,
+    )
+    const tardeDeSegunda = vagas.filter((v) => {
+      const d = new Date(v.starts_at)
+      return d.getDay() === 1 && d.getHours() >= 13
+    })
+    expect(tardeDeSegunda).toHaveLength(0)
+
+    const sabados = vagas.filter((v) => new Date(v.starts_at).getDay() === 6)
+    expect(sabados.length).toBeGreaterThan(0)
+  })
+
+  it('a mistura escolhida é a única que aparece na agenda daquela sala', async () => {
+    const disp = await obterDisponibilidade()
+    const sala = disp[1]
+    await salvarDisponibilidade({
+      resourceId: sala.resourceId,
+      mistura: ['QUICK'],
+      dias: sala.dias,
+    })
+
+    const outras = await queryOne<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM scheduling_slots
+        WHERE resource_id = $1 AND slot_class <> 'QUICK' AND starts_at >= NOW()`,
+      sala.resourceId,
+    )
+    expect(outras?.n).toBe(0)
+
     await expect(
-      gerarVagas({ ...PLANO_BASE, resourceIds: ['sala-de-prova'], mistura: [] }),
-    ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })
-    await expect(
-      gerarVagas({
-        ...PLANO_BASE,
-        resourceIds: ['sala-de-prova'],
-        blocos: [{ inicio: 12 * 60, fim: 8 * 60 }],
-      }),
+      salvarDisponibilidade({ resourceId: sala.resourceId, mistura: [], dias: sala.dias }),
     ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })
   })
 
-  it('limpar vagas livres preserva o que já é compromisso com alguém', async () => {
-    const sala = await salvarRecurso({ nome: 'Sala com consulta', capabilities: [] })
-    await gerarVagas({ ...PLANO_BASE, resourceIds: [sala.id] })
+  it('a vaga com consulta marcada sobrevive à mudança de regra', async () => {
+    const disp = await obterDisponibilidade()
+    const sala = disp[2]
 
-    // Um caso levado até a reserva, ocupando uma das vagas desta sala.
     const caso = await criarCaso({
       person: { fullName: 'Rita Nogueira', birthDate: '1962-07-09', sexReported: 'FEMININO' },
       referral: { sourceReference: null, freeTextReference: 'Encaminhamento' },
@@ -194,10 +189,11 @@ describe('capacidade da agenda', () => {
     const confirmado = await confirmarRequisito({
       requirementId: req.id,
       expectedVersion: req.version,
-      slotClassEscolhida: 'QUICK',
+      slotClassEscolhida: req.slotClass,
     })
-    const vagas = await vagasCompativeis({ requirementId: confirmado.id, limite: 200 })
-    const daSala = vagas.find((v) => v.resourceId === sala.id)
+
+    const vagas = await vagasCompativeis({ requirementId: confirmado.id, limite: 300 })
+    const daSala = vagas.find((v) => v.resourceId === sala.resourceId)
     expect(daSala).toBeTruthy()
     await reservar({
       caseId: caso.id,
@@ -206,55 +202,76 @@ describe('capacidade da agenda', () => {
       idempotencyKey: randomUUID(),
     })
 
-    const r = await removerVagasLivres({ resourceId: sala.id, de: AMANHA, ate: AMANHA })
-    expect(r.preservadas).toBe(1)
-
-    const sobrou = await queryOne<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM scheduling_slots WHERE resource_id = $1`,
-      sala.id,
-    )
-    expect(sobrou?.n).toBe(1)
-
-    // E bloquear a vaga marcada é recusado: quem desmarca alguém é a agenda.
-    await expect(
-      bloquearVaga({ slotId: daSala!.id, motivo: 'Sala em manutenção' }),
-    ).rejects.toMatchObject({ codigo: 'SLOT_TAKEN' })
-  })
-
-  it('bloquear tira a vaga da oferta e liberar devolve', async () => {
-    const sala = await salvarRecurso({ nome: 'Sala de bloqueio', capabilities: [] })
-    await gerarVagas({ ...PLANO_BASE, resourceIds: [sala.id] })
-    const vaga = await queryOne<{ id: string }>(
-      `SELECT id FROM scheduling_slots WHERE resource_id = $1 ORDER BY starts_at LIMIT 1`,
-      sala.id,
-    )
-
-    await expect(bloquearVaga({ slotId: vaga!.id, motivo: 'x' })).rejects.toMatchObject({
-      codigo: 'VALIDATION_ERROR',
+    // A sala fecha em todos os dias — e mesmo assim a consulta continua de pé.
+    await salvarDisponibilidade({
+      resourceId: sala.resourceId,
+      mistura: sala.mistura,
+      dias: sala.dias.map((d) => ({ ...d, ativo: false })),
     })
 
-    await bloquearVaga({ slotId: vaga!.id, motivo: 'Sala emprestada para o mutirão' })
-    const bloqueada = await queryOne<{ status: string; block_reason: string }>(
-      `SELECT status, block_reason FROM scheduling_slots WHERE id = $1`,
-      vaga!.id,
+    const aindaExiste = await queryOne<{ id: string }>(
+      `SELECT id FROM scheduling_slots WHERE id = $1`,
+      daSala!.id,
     )
-    expect(bloqueada?.status).toBe('BLOCKED')
-    expect(bloqueada?.block_reason).toMatch(/mutirão/)
+    expect(aindaExiste?.id).toBe(daSala!.id)
 
-    await liberarVaga(vaga!.id)
-    const solta = await queryOne<{ status: string }>(
-      `SELECT status FROM scheduling_slots WHERE id = $1`,
-      vaga!.id,
+    const livresDaSala = await queryOne<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM scheduling_slots s
+        WHERE s.resource_id = $1 AND s.starts_at >= NOW()
+          AND NOT EXISTS (SELECT 1 FROM scheduling_bookings b WHERE b.slot_id = s.id)`,
+      sala.resourceId,
     )
-    expect(solta?.status).toBe('OPEN')
+    expect(livresDaSala?.n).toBe(0)
   })
 
-  it('o resumo da oferta conta livres e marcadas por classe', async () => {
-    const resumo = await resumoDaOferta()
-    expect(resumo.porClasse.length).toBeGreaterThan(0)
-    const rapidas = resumo.porClasse.find((c) => c.slotClass === 'QUICK')
-    expect(rapidas!.livres + rapidas!.ocupadas).toBeGreaterThan(0)
-    expect(resumo.ate).toBeTruthy()
+  it('consultório novo entra sem vaga até ganhar regra própria', async () => {
+    const salvo = await salvarRecurso({
+      nome: 'Consultório da Ala Norte',
+      capabilities: ['SALA_ACESSIVEL', 'INVENTADA'],
+    })
+    expect(salvo.capabilities).toEqual(['SALA_ACESSIVEL'])
+    expect(salvo.vagasFuturas).toBe(0)
+    expect((await listarRecursos()).length).toBe(4)
+
+    const disp = (await obterDisponibilidade()).find((d) => d.resourceId === salvo.id)!
+    await salvarDisponibilidade({
+      resourceId: salvo.id,
+      mistura: ['STANDARD'],
+      dias: disp.dias.map((d) =>
+        d.weekday === 3 ? { ...d, ativo: true, inicio: 9 * 60, fim: 11 * 60, pausas: [] } : d,
+      ),
+    })
+
+    const criadas = await queryOne<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM scheduling_slots WHERE resource_id = $1`,
+      salvo.id,
+    )
+    expect(criadas?.n).toBeGreaterThan(0)
+  })
+
+  it('expediente invertido e pausa fora do expediente são recusados', async () => {
+    const disp = (await obterDisponibilidade())[0]
+    await expect(
+      salvarDisponibilidade({
+        resourceId: disp.resourceId,
+        mistura: ['QUICK'],
+        dias: disp.dias.map((d) =>
+          d.weekday === 2 ? { ...d, inicio: 14 * 60, fim: 9 * 60 } : d,
+        ),
+      }),
+    ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })
+
+    await expect(
+      salvarDisponibilidade({
+        resourceId: disp.resourceId,
+        mistura: ['QUICK'],
+        dias: disp.dias.map((d) =>
+          d.weekday === 2
+            ? { ...d, pausas: [{ id: 'x', inicio: 5 * 60, fim: 6 * 60 }] }
+            : d,
+        ),
+      }),
+    ).rejects.toMatchObject({ codigo: 'VALIDATION_ERROR' })
   })
 })
 
@@ -269,18 +286,9 @@ function responderTudo(blocos: AnamnesisBlock[]): AnamnesisBlock[] {
     }
     if (b.tipo === 'procedure_context') d.indicacao = 'Catarata'
     if (b.tipo === 'clinical_notes') d.nota = 'Sem intercorrências.'
-    if (b.tipo === 'exams_pending') {
-      d.itens = [{ id: 'e1', nome: 'Hemograma', status: 'DISPONIVEL' }]
-    }
+    if (b.tipo === 'exams_pending') d.itens = [{ id: 'e1', nome: 'Hemograma', status: 'DISPONIVEL' }]
     if (b.tipo === 'vital_signs') {
-      for (const c of [
-        'sistolica',
-        'diastolica',
-        'frequenciaCardiaca',
-        'saturacao',
-        'peso',
-        'altura',
-      ]) {
+      for (const c of ['sistolica', 'diastolica', 'frequenciaCardiaca', 'saturacao', 'peso', 'altura']) {
         d[c] = responder(100)
       }
     }

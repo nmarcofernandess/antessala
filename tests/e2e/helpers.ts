@@ -22,6 +22,9 @@ export async function launchApp(testName: string, existingDbPath?: string): Prom
       ...process.env,
       ANTESSALA_DB_PATH: dbPath,
       NODE_ENV: 'test',
+      // A janela existe (screenshot funciona), mas não sobe na frente de quem
+      // está trabalhando. O main já sabia disso; faltava o teste pedir.
+      ANTESSALA_HEADLESS: '1',
     },
     timeout: 30_000,
   })

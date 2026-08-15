@@ -38,13 +38,16 @@ import {
 import {
   listarRecursos,
   salvarRecurso,
-  gerarVagas,
-  removerVagasLivres,
   bloquearVaga,
   liberarVaga,
   resumoDaOferta,
-  type PlanoDeVagas,
 } from './scheduling/capacity-service'
+import {
+  obterDisponibilidade,
+  salvarDisponibilidade,
+  materializarTudo,
+  type DiaDisponivel,
+} from './scheduling/availability-service'
 import {
   iniciarEncontro,
   obterEncontro,
@@ -441,13 +444,17 @@ const capacitySaveResource = t.procedure
   .input<{ id?: string; nome: string; capabilities: string[]; ativo?: boolean }>()
   .action(async ({ input }) => comErroDeDominio(() => salvarRecurso(input)))
 
-const capacityGenerate = t.procedure
-  .input<PlanoDeVagas>()
-  .action(async ({ input }) => comErroDeDominio(() => gerarVagas(input)))
+const capacityAvailability = t.procedure.action(async () =>
+  comErroDeDominio(() => obterDisponibilidade()),
+)
 
-const capacityClear = t.procedure
-  .input<{ resourceId?: string; de: string; ate: string }>()
-  .action(async ({ input }) => comErroDeDominio(() => removerVagasLivres(input)))
+const capacitySaveAvailability = t.procedure
+  .input<{ resourceId: string; mistura: SlotClass[]; dias: DiaDisponivel[] }>()
+  .action(async ({ input }) => comErroDeDominio(() => salvarDisponibilidade(input)))
+
+const capacityRematerialize = t.procedure.action(async () =>
+  comErroDeDominio(() => materializarTudo()),
+)
 
 const capacityBlock = t.procedure
   .input<{ slotId: string; motivo: string }>()
@@ -616,8 +623,9 @@ export const router = {
   'scheduling.checkIn': schedulingCheckIn,
   'capacity.resources': capacityResources,
   'capacity.saveResource': capacitySaveResource,
-  'capacity.generateSlots': capacityGenerate,
-  'capacity.clearFreeSlots': capacityClear,
+  'capacity.availability': capacityAvailability,
+  'capacity.saveAvailability': capacitySaveAvailability,
+  'capacity.rematerialize': capacityRematerialize,
   'capacity.blockSlot': capacityBlock,
   'capacity.unblockSlot': capacityUnblock,
   'capacity.summary': capacitySummary,

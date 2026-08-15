@@ -1058,6 +1058,33 @@ commands próprios, mas não reclassifica o caso nem o devolve à enfermagem.
 
 ### Frontend
 
+> **DEMO_DECISION — 14/08/2026: a superfície de agenda deixou de usar FullCalendar.**
+>
+> O que esta seção descreve (FullCalendar month/week/day, toolbar portada, DnD/resize)
+> foi construído e recusado pelo dono do produto: com três consultórios oferecendo vaga
+> no mesmo horário, o swimlane empilha títulos ilegíveis e a informação que a recepção
+> precisa — *quantas vagas de cada tamanho sobraram* — não aparece em lugar nenhum.
+>
+> No lugar entraram três peças:
+>
+> 1. **Grade semanal de densidade** (`paginas/agenda/GradeSemanal.tsx`): dias em coluna,
+>    faixas de hora em linha, barras proporcionais por classe e a contagem de livres. A
+>    grade cresce com o expediente.
+> 2. **Dia empilhado** (`DiaEmpilhado.tsx`): as salas do mesmo horário viram linhas
+>    seguidas numa coluna só, com chegada, ausência e link para o caso.
+> 3. **Modal de horários** (`ModalAgendar.tsx`): marcar é escolher entre as próximas
+>    vagas compatíveis, não navegar um calendário. O caminho inverso — quem cabe nesta
+>    vaga — usa a mesma peça.
+>
+> A capacidade também mudou de modelo: `scheduling_availability` guarda a regra semanal
+> por consultório (dias, expediente, pausas, mistura de classes) e as vagas são
+> **materializadas** dela até um horizonte de 8 semanas, reconciliando o que sobrou e o
+> que falta. Vaga com consulta marcada nunca é tocada. O DnD de reserva saiu junto com o
+> calendário; remarcar é comando explícito.
+>
+> O que esta seção mantém válido: a projeção por intervalo, o `SlotCardDTO` sem campo
+> clínico, os estados UX e a regra de que nenhuma validação vive no renderer.
+
 #### Rotas e superfícies
 
 - `/agenda` — FullCalendar com Agenda, Programação e Para agendar.

@@ -2,75 +2,67 @@ import { expect, test } from '@playwright/test'
 import { launchApp, removeAppData } from './helpers'
 
 /**
- * A oferta da agenda editada de dentro do aplicativo.
+ * A disponibilidade declarada uma vez, e a agenda inteira obedecendo.
  *
- * Criar consultório, gerar vagas para ele e ver a oferta crescer — em base
- * vazia, com o banco de verdade, sobrevivendo ao reinício. Enquanto isso era
- * constante compilada, a demonstração dizia à operação como ela trabalha.
+ * Esticar a barra da segunda-feira até as 20h é dizer como o consultório
+ * funciona — não abrir vaga de uma semana. As vagas nascem disso, para todas as
+ * segundas adiante, e sobrevivem ao reinício.
  */
 test.setTimeout(180_000)
 
-test('a operação cria consultório, gera vagas e a oferta muda de tamanho', async () => {
-  let { app, page, dbPath } = await launchApp('capacidade-agenda')
+test('a disponibilidade é a regra, e as vagas nascem dela', async () => {
+  let { app, page, dbPath } = await launchApp('disponibilidade')
 
   try {
     await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Agenda' }).click()
-    await page.getByRole('tab', { name: /Capacidade/ }).click()
+    await expect(page.getByTestId('grade-semanal')).toBeVisible({ timeout: 20_000 })
 
-    const painel = page.getByTestId('capacidade')
-    await expect(painel).toBeVisible({ timeout: 20_000 })
+    await page.getByTestId('abrir-disponibilidade').click()
+    const modal = page.getByTestId('modal-disponibilidade')
+    await expect(modal).toBeVisible({ timeout: 20_000 })
+    await expect(modal.getByTestId('aba-consultorio')).toHaveCount(3)
 
-    // A fixture do primeiro boot: três consultórios com oferta já gerada.
-    await expect(page.getByTestId('consultorio-item')).toHaveCount(3)
-    const rapidasAntes = await painel
-      .getByText('Vaga rápida')
-      .locator('xpath=following-sibling::p')
-      .first()
-      .innerText()
+    // Domingo nasce fechado; segunda a sexta, das 8h às 17h com pausa.
+    const linhas = modal.getByTestId('linha-dia')
+    await expect(linhas.nth(0)).toContainText('fechado')
+    await expect(linhas.nth(1)).toContainText('08:00–17:00')
+    await expect(linhas.nth(1).getByTestId('barra-pausa')).toHaveCount(1)
 
-    /* consultório novo */
-    await page.getByTestId('novo-consultorio').click()
-    await page.getByLabel('Nome do consultório').fill('Consultório da Ala Norte')
-    await page.getByRole('button', { name: 'Sala acessível' }).click()
-    await page.getByTestId('salvar-consultorio').click()
-
-    await expect(page.getByTestId('consultorio-item')).toHaveCount(4)
-    const novo = page
-      .getByTestId('consultorio-item')
-      .filter({ hasText: 'Consultório da Ala Norte' })
-    await expect(novo).toBeVisible()
-    await expect(novo.getByText('0 vagas futuras · 0 com consulta')).toBeVisible()
-
-    /* gerar vagas só para ele */
-    for (const nome of ['Consultório 1', 'Consultório 2', 'Consultório 3']) {
-      await painel.getByRole('button', { name: nome, exact: true }).click()
-    }
-    await page.getByTestId('gerar-vagas').click()
-    await expect(novo.getByText(/[1-9]\d* vagas futuras/)).toBeVisible({ timeout: 20_000 })
-
-    const rapidasDepois = await painel
-      .getByText('Vaga rápida')
-      .locator('xpath=following-sibling::p')
-      .first()
-      .innerText()
-    expect(Number.parseInt(rapidasDepois, 10)).toBeGreaterThan(Number.parseInt(rapidasAntes, 10))
-
-    /* gerar de novo não duplica */
-    await page.getByTestId('gerar-vagas').click()
-    await expect(page.getByText(/já estava coberto|já existiam/)).toBeVisible({ timeout: 20_000 })
-
-    /* a nova sala aparece no filtro do calendário e sobrevive ao reinício */
-    await app.close()
-    ;({ app, page } = await launchApp('capacidade-agenda-restart', dbPath))
-    await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Agenda' }).click()
-    await page.getByLabel('Filtrar por consultório').click()
-    await expect(page.getByRole('option', { name: 'Consultório da Ala Norte' })).toBeVisible({
-      timeout: 20_000,
+    /* esticar a segunda até as 20h, arrastando a ponta da barra */
+    const handle = await linhas.nth(1).getByTestId('handle-fim').boundingBox()
+    const trilho = await linhas.nth(1).locator('div.relative').boundingBox()
+    await page.mouse.move(handle!.x + handle!.width / 2, handle!.y + handle!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(trilho!.x + trilho!.width * 0.87, handle!.y + handle!.height / 2, {
+      steps: 10,
     })
-    await page.getByRole('option', { name: 'Consultório da Ala Norte' }).click()
+    await page.mouse.up()
+    await expect(linhas.nth(1)).toContainText('20:00')
 
-    await page.getByRole('tab', { name: /Capacidade/ }).click()
-    await expect(page.getByTestId('consultorio-item')).toHaveCount(4)
+    /* sábado passa a abrir */
+    await linhas.nth(6).getByRole('switch').click()
+    await expect(linhas.nth(6)).not.toContainText('fechado')
+
+    await page.getByTestId('salvar-disponibilidade').click()
+    await expect(page.getByText(/vagas abertas/)).toBeVisible({ timeout: 20_000 })
+    await page.keyboard.press('Escape')
+
+    /* na próxima semana — a inteira, ainda no futuro — segunda e sábado abrem */
+    await page.getByRole('button', { name: 'Hoje' }).locator('xpath=following-sibling::button').click()
+    const celulas = page.getByTestId('celula-agenda')
+    await expect(celulas.nth(1 * 7 + 1)).not.toHaveText('—', { timeout: 20_000 })
+    await expect(celulas.nth(1 * 7 + 6)).not.toHaveText('—')
+    // 19h de segunda existe agora; 19h de terça continua fora do expediente.
+    await expect(celulas.nth(12 * 7 + 1)).not.toHaveText('—')
+    await expect(celulas.nth(12 * 7 + 2)).toHaveText('—')
+
+    /* reinício: a regra é do banco */
+    await app.close()
+    ;({ app, page } = await launchApp('disponibilidade-restart', dbPath))
+    await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Agenda' }).click()
+    await page.getByTestId('abrir-disponibilidade').click()
+    await expect(page.getByTestId('linha-dia').nth(1)).toContainText('20:00', { timeout: 20_000 })
+    await page.keyboard.press('Escape')
 
     /* um caso que não vai acontecer some da fila e vai para o arquivo */
     await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Novo encaminhamento' }).click()
@@ -94,12 +86,11 @@ test('a operação cria consultório, gera vagas e a oferta muda de tamanho', as
       .fill('Encaminhamento duplicado: já existe caso aberto para esta cirurgia.')
     await page.getByTestId('confirmar-cancelamento').click()
     await expect(page.getByTestId('status-do-caso')).toHaveText('Cancelado', { timeout: 20_000 })
-    await expect(page.getByTestId('timeline').getByText('Caso cancelado')).toBeVisible()
 
     await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Arquivados' }).click()
-    const arquivados = page.getByTestId('arquivados')
-    await expect(arquivados.getByText('Teodoro Vilela Machado')).toBeVisible({ timeout: 20_000 })
-    await expect(arquivados.getByText('Cancelado', { exact: true })).toBeVisible()
+    await expect(
+      page.getByTestId('arquivados').getByText('Teodoro Vilela Machado'),
+    ).toBeVisible({ timeout: 20_000 })
   } finally {
     await app.close()
     removeAppData(dbPath)

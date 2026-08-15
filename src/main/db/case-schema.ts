@@ -343,6 +343,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_booking_ativo_por_caso
 CREATE INDEX IF NOT EXISTS idx_bookings_intervalo
   ON scheduling_bookings(starts_at, ends_at);
 
+-- A disponibilidade é a regra; as vagas são a materialização dela. Mudar o
+-- horário de uma quarta muda todas as quartas adiante, não uma semana só.
+CREATE TABLE IF NOT EXISTS scheduling_availability (
+  resource_id TEXT NOT NULL REFERENCES scheduling_resources(id) ON DELETE CASCADE,
+  weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 0 AND 6),
+  ativo BOOLEAN NOT NULL DEFAULT FALSE,
+  inicio_min INTEGER NOT NULL CHECK (inicio_min >= 0 AND inicio_min < 1440),
+  fim_min INTEGER NOT NULL CHECK (fim_min > 0 AND fim_min <= 1440),
+  pausas JSONB NOT NULL DEFAULT '[]'::jsonb,
+  PRIMARY KEY (resource_id, weekday),
+  CHECK (fim_min > inicio_min),
+  CHECK (jsonb_typeof(pausas) = 'array')
+);
+
+ALTER TABLE scheduling_resources
+  ADD COLUMN IF NOT EXISTS mistura JSONB NOT NULL DEFAULT '["STANDARD","QUICK","EXTENDED"]'::jsonb;
+
 CREATE TABLE IF NOT EXISTS scheduling_command_receipts (
   idempotency_key TEXT PRIMARY KEY,
   action TEXT NOT NULL,
