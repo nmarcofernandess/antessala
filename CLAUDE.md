@@ -53,10 +53,12 @@ Leis:
 
 - Anamnese: Composer no padrão DietFlow, 14 widgets pré-anestésicos, WidgetCards, DnD,
   teclado, drawer multi-select e protocolos salvos.
-- Agenda: grade semanal de densidade (vagas livres por faixa e classe) + dia empilhado
-  numa coluna só, filtros por classe, modal que oferece os próximos horários compatíveis.
-  Disponibilidade é regra semanal por consultório, editada em barras arrastáveis, e as
-  vagas são materializadas dela. **FullCalendar saiu** — decisão de 14/08/2026, ver
+- Agenda: grade semanal de densidade (minutos livres por faixa; com filtro de classe,
+  quantas consultas cabem) + dia empilhado numa coluna só, e modal que oferece os
+  próximos horários compatíveis. Disponibilidade é regra semanal por consultório —
+  dias, expediente e pausas em barras arrastáveis, mais a cota de tempo por classe em
+  porcentagem. **Nenhuma vaga é materializada**: o livre é calculado do expediente menos
+  bloqueios e consultas. **FullCalendar saiu** — decisões de 14/08/2026, ver
   `BUILD-classificacao-e-agenda.md`.
 - Compatibilidade: requisito operacional opaco/versionado; nunca ID de paciente.
 - Assistente: somente `/assistente`; zero painel global, toggle no header ou IA em widget.

@@ -7,7 +7,7 @@ import { SidebarProvider } from '../../src/renderer/src/components/ui/sidebar'
 const respostas = vi.hoisted(() => ({
   casos: [] as unknown[],
   contagens: {} as Record<string, number>,
-  agenda: { resources: [], slots: [] as unknown[] },
+  agenda: { resources: [], dias: [] as unknown[] },
 }))
 
 /**
@@ -71,7 +71,7 @@ describe('Painel do dia — conta o que existe, não inventa', () => {
     stubMatchMedia()
     respostas.casos = []
     respostas.contagens = {}
-    respostas.agenda = { resources: [], slots: [] }
+    respostas.agenda = { resources: [], dias: [] }
     Object.assign(window, {
       electron: { ipcRenderer: { invoke: vi.fn(async () => '1.0.0'), on: vi.fn(() => vi.fn()) } },
     })

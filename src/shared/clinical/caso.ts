@@ -289,16 +289,64 @@ export interface RequirementDTO {
 
 /* ══════════════ agenda ══════════════ */
 
-export interface SlotDTO {
-  id: string
+/**
+ * A agenda não tem vaga guardada em lugar nenhum.
+ *
+ * O que existe é expediente (regra semanal por consultório), o que foi bloqueado
+ * e o que já está marcado. "Livre" é o que sobra dessa conta, calculado na hora.
+ * Vaga pré-criada desperdiçava o dia: a de 50 min que ninguém usou não virava
+ * duas de 20.
+ */
+export interface IntervaloDTO {
+  inicio: string
+  fim: string
+}
+
+/** A cota é reserva de tempo por classe — em minutos do expediente daquele dia. */
+export interface CotaDoDia {
+  reservado: number
+  usado: number
+}
+
+export interface DiaDaAgendaDTO {
+  data: string
   resourceId: string
   resourceName: string
-  slotClass: SlotClass
+  atendimento: IntervaloDTO[]
+  livres: IntervaloDTO[]
+  bloqueios: IntervaloDTO[]
+  consultas: Array<{
+    bookingId: string
+    caseId: string
+    displayCode: string
+    personName: string
+    slotClass: SlotClass
+    status: string
+    version: number
+    inicio: string
+    fim: string
+    /** Fim + buffer: o tempo que a sala fica de fato ocupada. */
+    ocupaAte: string
+  }>
+  minutosDeAtendimento: number
+  minutosLivres: number
+  /** Quantas consultas de cada classe ainda cabem, respeitando a cota. */
+  capacidade: Record<SlotClass, number>
+  cota: Record<SlotClass, CotaDoDia>
+}
+
+export interface AgendaIntervaloDTO {
+  resources: Array<{ id: string; name: string; capabilities: string[] }>
+  dias: DiaDaAgendaDTO[]
+}
+
+/** Um horário que serve para este requisito — o que o modal de marcar oferece. */
+export interface SugestaoDTO {
+  resourceId: string
+  resourceName: string
   startsAt: string
   endsAt: string
-  status: 'OPEN' | 'BLOCKED'
-  blockReason: string | null
-  booking: BookingDTO | null
+  slotClass: SlotClass
 }
 
 export interface BookingDTO {
@@ -308,22 +356,17 @@ export interface BookingDTO {
   personName: string
   procedureDescription: string
   requirementId: string
-  slotId: string
   resourceId: string
   resourceName: string
   kind: 'INITIAL' | 'RETURN'
   slotClass: SlotClass
   startsAt: string
   endsAt: string
+  bufferMinutes: number
   status: 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED'
   version: number
   createdAt: string
   checkedInAt: string | null
-}
-
-export interface AgendaRangeDTO {
-  resources: Array<{ id: string; name: string; capabilities: string[] }>
-  slots: SlotDTO[]
 }
 
 /* ══════════════ erros ══════════════ */

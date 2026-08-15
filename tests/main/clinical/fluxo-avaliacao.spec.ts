@@ -28,7 +28,7 @@ import {
   registrarAusencia,
   registrarChegada,
   reservar,
-  vagasCompativeis,
+  sugerirHorarios,
 } from '../../../src/main/scheduling/agenda-service'
 import {
   abrirPendencia,
@@ -145,11 +145,12 @@ describe('avaliação, pendências, resultado e entrega', () => {
       slotClassEscolhida: requisito.slotClass,
     })
 
-    const vagas = await vagasCompativeis({ requirementId: confirmado.id, limite: 5 })
+    const vagas = await sugerirHorarios({ requirementId: confirmado.id, limite: 5 })
     const booking = await reservar({
       caseId: caso.id,
       requirementId: confirmado.id,
-      slotId: vagas[0].id,
+      resourceId: vagas[0].resourceId,
+      startsAt: vagas[0].startsAt,
       idempotencyKey: randomUUID(),
     })
 

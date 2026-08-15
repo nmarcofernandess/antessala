@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Não sei qual é o problema — Desafio 1 · Hacka Health 2026</title>
+<style>
+:root{
+  --paper:#f3efe6; --paper-2:#ece7da;
+  --ink:#191613; --ink-soft:#4f4a42; --ink-faint:#8a8377;
+  --signal:#e84e0f; --signal-soft:#f9ddd0;
+  --ok:#2c6e49; --rule:#d6cfc0;
+  --display:'Futura','Avenir Next','Century Gothic','Trebuchet MS',sans-serif;
+  --mono:'SF Mono','Menlo','Cascadia Code','Consolas',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--display); background:var(--paper); color:var(--ink); line-height:1.5;
+  background-image:
+    repeating-linear-gradient(0deg,transparent 0 2px,rgba(25,22,19,.012) 2px 4px),
+    radial-gradient(ellipse 120% 90% at 50% -10%,rgba(255,255,255,.5),transparent 60%);
+}
+.page{max-width:900px;margin:0 auto;padding:0 32px 96px}
+
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.r{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+.d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+.doc-plate{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-soft);
+  text-transform:uppercase;border:1px solid var(--ink);padding:8px 14px;margin:24px 0 48px}
+.doc-plate b{color:var(--signal)}
+
+header{padding:24px 0 40px;border-bottom:3px solid var(--ink)}
+h1{font-size:clamp(40px,7.5vw,74px);font-weight:700;letter-spacing:-.02em;line-height:.95;text-transform:uppercase}
+h1 .thin{font-weight:400;display:block;font-size:.36em;letter-spacing:.14em;margin-top:16px;color:var(--ink-soft)}
+.lede{margin-top:26px;font-size:19px;max-width:62ch;color:var(--ink-soft)}
+.lede b{color:var(--ink)}
+
+.rail{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--ink);border-top:none;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
+.rail a{color:var(--ink-soft);text-decoration:none;padding:10px 6px 12px;text-align:center;
+  border-right:1px solid var(--rule);transition:.15s}
+.rail a:last-child{border-right:none}
+.rail a b{display:block;font-size:15px;color:var(--ink)}
+.rail a:hover{background:var(--ink);color:var(--paper)}
+.rail a:hover b{color:var(--signal)}
+
+.step{display:grid;grid-template-columns:1fr 1fr;gap:44px;padding:60px 0;
+  border-bottom:1px solid var(--rule);align-items:center}
+.step.solo{grid-template-columns:1fr}
+.step:nth-of-type(even) .step-text{order:2}
+.step:nth-of-type(even) .step-vis{order:1}
+.step-num{font-size:84px;font-weight:700;line-height:1;color:transparent;
+  -webkit-text-stroke:1.5px var(--ink);letter-spacing:-.03em}
+h2{font-size:29px;line-height:1.1;margin:10px 0 14px;letter-spacing:-.01em}
+.step-text p{color:var(--ink-soft);margin-bottom:12px;max-width:52ch}
+.step-text p b{color:var(--ink)}
+
+.where{margin-top:18px;font-family:var(--mono);font-size:11.5px;color:var(--ink);
+  background:var(--paper-2);border-left:3px solid var(--signal);padding:8px 12px;display:inline-block}
+.where span{color:var(--ink-faint)}
+
+.fig{position:relative;border:1px solid var(--ink);
+  background:linear-gradient(rgba(22,24,21,.04) 1px,transparent 1px),
+             linear-gradient(90deg,rgba(22,24,21,.04) 1px,transparent 1px);
+  background-size:22px 22px;background-color:#FFFFFC;
+  padding:30px 26px;display:flex;flex-direction:column;justify-content:center;gap:13px;min-height:240px}
+.fig::after{content:attr(data-fig);position:absolute;bottom:-1px;right:-1px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--ink);color:var(--paper);padding:4px 12px}
+
+.ui-card{background:#fff;border:1.5px solid var(--ink);box-shadow:4px 4px 0 rgba(25,22,19,.12);padding:14px 16px}
+.ui-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:6px}
+.ui-input{border-bottom:2px solid var(--ink);font-size:15px;font-weight:600;padding-bottom:3px}
+.blank{border-bottom:2px solid var(--ink);display:inline-block;min-width:120px;height:17px;vertical-align:-3px}
+.caret{display:inline-block;width:2px;height:15px;background:var(--signal);vertical-align:-2px;
+  animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.quote-brief{background:#fff;border:1.5px solid var(--ink);padding:16px 18px;font-size:14.5px;
+  line-height:1.6;box-shadow:4px 4px 0 rgba(25,22,19,.1)}
+.amb{background:var(--signal-soft);border-bottom:2px solid var(--signal);padding:1px 3px;font-weight:700}
+
+.fluxo{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;flex-wrap:wrap}
+.fluxo .no{border:1.5px solid var(--ink);background:#fff;padding:7px 11px;letter-spacing:.06em;
+  text-transform:uppercase;white-space:nowrap}
+.fluxo .no.hot{background:var(--signal);border-color:var(--signal);color:#fff}
+.fluxo .seta{flex:1;min-width:18px;height:1.5px;
+  background:repeating-linear-gradient(90deg,var(--ink) 0 6px,transparent 6px 11px)}
+
+.tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid var(--rule);background:var(--paper-2);padding:4px 9px;white-space:nowrap}
+.tag.hot{border-color:var(--signal);color:var(--signal);background:var(--signal-soft)}
+.tag.ok{border-color:var(--ok);color:var(--ok);background:#e6f0ea}
+
+table{width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:14px}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-faint);border-bottom:1.5px solid var(--ink)}
+td.h{font-family:var(--mono);font-size:11px;color:var(--signal);white-space:nowrap;font-weight:700}
+td b{display:block}
+td small{color:var(--ink-soft);font-size:12.5px}
+
+.ia{margin:76px 0;background:var(--ink);color:var(--paper);padding:44px 38px;position:relative;overflow:hidden}
+.ia::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(rgba(243,239,230,.05) 1px,transparent 1px),
+             linear-gradient(90deg,rgba(243,239,230,.05) 1px,transparent 1px);
+  background-size:22px 22px}
+.ia>*{position:relative}
+.ia h2{color:var(--paper);margin-bottom:16px;max-width:22ch}
+.ia p{color:#cfc9bd;max-width:60ch;margin-bottom:14px}
+.ia .msg{font-family:var(--mono);font-size:12px;background:rgba(243,239,230,.08);
+  border:1px solid rgba(243,239,230,.18);border-left:3px solid var(--signal);padding:10px 14px;margin-top:8px}
+.ia .msg::before{content:'> ';color:var(--signal)}
+
+.kicker{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--signal)}
+
+.close{padding:72px 0 20px;display:flex;gap:44px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.close .frase{font-size:26px;line-height:1.25;max-width:22ch;font-weight:700}
+.stamp{display:grid;place-items:center;width:190px;height:190px;border-radius:50%;
+  border:3px double var(--signal);color:var(--signal);transform:rotate(-8deg);
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+  text-align:center;line-height:1.8;flex-shrink:0}
+.stamp b{font-size:15px}
+@keyframes stampIn{from{opacity:0;transform:rotate(-8deg) scale(1.7)}to{opacity:1;transform:rotate(-8deg) scale(1)}}
+.reveal.in .stamp{animation:stampIn .6s cubic-bezier(.2,1.6,.4,1) .35s both}
+
+footer{border-top:1px solid var(--ink);padding-top:14px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+@media (max-width:760px){
+  .step{grid-template-columns:1fr;gap:28px;padding:44px 0}
+  .step:nth-of-type(even) .step-text{order:0}
+  .step:nth-of-type(even) .step-vis{order:0}
+  .rail{grid-template-columns:repeat(2,1fr)}
+  .page{padding:0 20px 64px}
+  table{font-size:13px}
+  th,td{padding:9px 7px}
+}
+@media print{
+  .r,.reveal,.stamp{animation:none!important;opacity:1!important;transform:none!important}
+  .step,section{break-inside:avoid}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-plate r d1">
+    <span>Levantamento zero · <b>HH26-D1-LEV-000</b></span>
+    <span>Hacka Health 2026 · Desafio 1</span>
+  </div>
+
+  <header class="r d2">
+    <h1>Não sei<br>qual é o<br>problema
+      <span class="thin">e o briefing também não sabe</span>
+    </h1>
+    <p class="lede">Este documento <b>não propõe solução</b>. Ele lista o que a gente não sabe,
+    as oito problemáticas diferentes que cabem dentro do mesmo parágrafo do briefing, e as
+    perguntas que — respondidas — eliminam sete delas em vinte minutos de conversa.
+    Enquanto essas respostas não existirem, qualquer PRD é ficção bem formatada.</p>
+  </header>
+
+  <nav class="rail r d3">
+    <a href="#s0"><b>00</b>o texto</a>
+    <a href="#s1"><b>01</b>8 rivais</a>
+    <a href="#s2"><b>02</b>a tela</a>
+    <a href="#s3"><b>03</b>os tiros</a>
+    <a href="#s4"><b>04</b>artefatos</a>
+  </nav>
+
+  <!-- 00 -->
+  <section class="step reveal" id="s0">
+    <div class="step-text">
+      <div class="step-num">00</div>
+      <h2>Três expressões carregam o briefing inteiro — e nenhuma tem significado único</h2>
+      <p>O enunciado do Desafio 1 tem 42 palavras. Três delas decidem tudo, e as três são
+      ambíguas ao ponto de sustentar produtos que não se parecem em nada.</p>
+      <p><b>"Agendados de forma semelhante"</b> pode ser: mesma duração de slot, mesma ordem de
+      fila, mesma modalidade, ou mesmo momento no processo. São quatro problemas distintos.</p>
+      <p><b>"Sobrecarregar equipes"</b> pode ser volume, pode ser retrabalho, pode ser falta de
+      gente. Só o terceiro não se resolve com software.</p>
+      <div class="where"><span>o buraco →</span> ninguém escreveu o processo atual. Só o incômodo.</div>
+    </div>
+    <div class="step-vis">
+      <figure class="fig" data-fig="Fig. 1 — o texto e suas minas">
+        <div class="quote-brief">
+          "A consulta pré-anestésica é uma etapa obrigatória antes de procedimentos cirúrgicos.
+          Atualmente, pacientes com diferentes níveis de risco e complexidade são
+          <span class="amb">agendados de forma semelhante</span>, o que pode
+          <span class="amb">sobrecarregar equipes assistenciais</span> e
+          <span class="amb">comprometer o uso da infraestrutura hospitalar</span>."
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <span class="tag hot">duração?</span>
+          <span class="tag hot">ordem?</span>
+          <span class="tag hot">modalidade?</span>
+          <span class="tag hot">momento?</span>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 01 -->
+  <section class="step solo reveal" id="s1">
+    <div class="step-text" style="max-width:none">
+      <div class="step-num">01</div>
+      <h2>Oito problemas rivais cabem no mesmo parágrafo. Cada um pede um produto diferente.</h2>
+      <p style="max-width:64ch">Não são variações de um tema. São oito diagnósticos incompatíveis.
+      Escolher errado significa construir algo funcional que não move nenhum número do hospital.</p>
+      <table>
+        <tr><th>Hipótese</th><th>Se o problema for isto…</th><th>…o produto é outro</th></tr>
+        <tr><td class="h">H1<br>DURAÇÃO</td>
+          <td><b>Todo slot tem o mesmo tamanho.</b><small>ASA I gasta 8 min num slot de 30. ASA IV precisa de 50 e leva 30.</small></td>
+          <td><small>Alocação de slot variável por complexidade. Nada de triagem sofisticada.</small></td></tr>
+        <tr><td class="h">H2<br>ORDEM</td>
+          <td><b>A fila é por ordem de chegada.</b><small>O grave espera atrás do simples e chega na cirurgia sem janela de otimização.</small></td>
+          <td><small>Reordenador de fila. O tamanho do slot nem importa.</small></td></tr>
+        <tr><td class="h">H3<br>MODALIDADE</td>
+          <td><b>Todo mundo é obrigado a vir presencialmente.</b><small>Metade poderia resolver por formulário ou vídeo.</small></td>
+          <td><small>Canal assíncrono + regra de quem pode usá-lo. Deflection, não classificação.</small></td></tr>
+        <tr><td class="h">H4<br>SEQUÊNCIA</td>
+          <td><b>A data da cirurgia é prometida ANTES da pré-anestésica.</b><small>A consulta vira carimbo. Se reprova, o mapa já foi comprometido e a sala já foi bloqueada.</small></td>
+          <td><small>Inverter o encadeamento do processo. Zero linha de IA resolve isso — é regra de negócio e política interna.</small></td></tr>
+        <tr><td class="h">H5<br>CEGUEIRA</td>
+          <td><b>Quem agenda é administrativo e não vê nenhum dado clínico.</b><small>Ele não poderia diferenciar nem se quisesse. A informação existe, mas não chega na tela dele.</small></td>
+          <td><small>Levar informação ao ponto de decisão. O score é detalhe; o problema é encanamento.</small></td></tr>
+        <tr><td class="h">H6<br>CAPACIDADE</td>
+          <td><b>Faltam anestesiologistas-hora, ponto.</b><small>A fila é de oferta, não de organização.</small></td>
+          <td><small>Nenhum software resolve. Triagem só muda quem espera. Honestidade sobre isso ganha mais ponto que fingir.</small></td></tr>
+        <tr><td class="h">H7<br>ABSENTEÍSMO</td>
+          <td><b>O paciente falta e o slot queima.</b><small>Fila longa convivendo com sala vazia — o pior dos dois mundos.</small></td>
+          <td><small>Confirmação ativa e overbooking calculado. Problema de logística, não de risco.</small></td></tr>
+        <tr><td class="h">H8<br>PRÉ-REQUISITO</td>
+          <td><b>O paciente chega sem exame e tem que voltar.</b><small>Uma consulta vira duas ou três. A fila é de retrabalho.</small></td>
+          <td><small>Motor de pré-requisitos por procedimento + bloqueio de agendamento incompleto.</small></td></tr>
+      </table>
+      <div class="where"><span>consequência →</span> o PRD de ontem assumiu H1+H2+H3 misturados. Se a verdade for H4 ou H6, ele é bonito e inútil.</div>
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section class="step reveal" id="s2">
+    <div class="step-text">
+      <div class="step-num">02</div>
+      <h2>Ninguém descreveu a tela. Sem a tela, não existe requisito.</h2>
+      <p>Requisito de verdade tem cheiro de terça-feira às 7h40. Tem nome de sistema, nome de
+      campo, nome de quem clica. O briefing tem substantivo abstrato.</p>
+      <p>O formulário ao lado é o mínimo. <b>Uma pessoa real, um turno real, uma tela real.</b>
+      Enquanto essas lacunas estiverem em branco, o que estamos fazendo é chute com CSS.</p>
+      <p>A última linha é a mais valiosa de todas: <b>o que ela faz fora do sistema</b>. Planilha,
+      caderno, grupo de WhatsApp. O processo-sombra é onde o problema real mora — sempre.</p>
+      <div class="where"><span>regra →</span> se você não consegue preencher, não pergunte o que construir. Pergunte o que acontece.</div>
+    </div>
+    <div class="step-vis">
+      <figure class="fig" data-fig="Fig. 2 — o as-is em branco">
+        <div class="ui-card">
+          <div class="ui-label">quem fala</div>
+          <div class="ui-input">Eu, <span class="blank" style="min-width:90px"></span>,
+            <span class="blank" style="min-width:100px"></span> do
+            <span class="blank" style="min-width:80px"></span><span class="caret"></span></div>
+        </div>
+        <div class="ui-card">
+          <div class="ui-label">7h40 — abro o sistema</div>
+          <div class="ui-input">Nome do sistema: <span class="blank"></span></div>
+          <div class="ui-input" style="margin-top:9px">Primeira tela: <span class="blank"></span></div>
+        </div>
+        <div class="ui-card">
+          <div class="ui-label">pra marcar uma pré-anestésica eu…</div>
+          <div class="ui-input"><span class="blank" style="min-width:200px"></span></div>
+          <div class="ui-label" style="margin-top:11px">e nessa hora eu vejo do paciente</div>
+          <div class="ui-input"><span class="blank" style="min-width:200px"></span></div>
+          <div class="ui-label" style="margin-top:11px">o que eu NÃO vejo e mudaria tudo</div>
+          <div class="ui-input"><span class="blank" style="min-width:200px"></span></div>
+        </div>
+        <div class="ui-card" style="border-color:var(--signal);box-shadow:4px 4px 0 var(--signal-soft)">
+          <div class="ui-label" style="color:var(--signal)">o que eu faço fora do sistema</div>
+          <div class="ui-input" style="border-color:var(--signal)">
+            <span class="blank" style="min-width:200px;border-color:var(--signal)"></span></div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 03 -->
+  <section class="step solo reveal" id="s3">
+    <div class="step-text" style="max-width:none">
+      <div class="step-num">03</div>
+      <h2>Cinco tiros. Cada resposta mata hipóteses.</h2>
+      <p style="max-width:64ch">Não é entrevista. É eliminação. Perguntadas nesta ordem, cinco
+      perguntas derrubam de oito para uma ou duas hipóteses vivas. Levam vinte minutos com
+      qualquer pessoa que trabalhe no fluxo.</p>
+      <table>
+        <tr><th>#</th><th>A pergunta, literal</th><th>O que a resposta mata</th></tr>
+        <tr><td class="h">Q1</td>
+          <td><b>"A data da cirurgia é definida antes ou depois da consulta pré-anestésica?"</b>
+            <small>A mais importante de todas. Faça primeiro.</small></td>
+          <td><small>Se for <b>antes</b>: H4 é o problema e todo o resto é sintoma — triagem por risco não resolve nada. Se for <b>depois</b>: H4 morre e H1/H2/H3 ficam vivas.</small></td></tr>
+        <tr><td class="h">Q2</td>
+          <td><b>"Quem clica no botão que marca a pré-anestésica — o cargo, não o setor — e o que aparece na tela dele nesse instante?"</b></td>
+          <td><small>Se a resposta for "administrativo, e ele vê nome e data": H5 confirmada, e o produto é encanamento de informação, não algoritmo.</small></td></tr>
+        <tr><td class="h">Q3</td>
+          <td><b>"Todo slot tem a mesma duração? Quantos minutos, quantos por período, quantos anestesiologistas fazem isso por semana?"</b></td>
+          <td><small>Mata H1 ou confirma. E o segundo número dá o teto de capacidade: se a demanda passar o teto, H6 é a verdade e nenhuma triagem salva.</small></td></tr>
+        <tr><td class="h">Q4</td>
+          <td><b>"De cada 100 pré-anestésicas marcadas: quantas acontecem, em quantas o paciente falta, quantas viram uma segunda visita por falta de exame?"</b></td>
+          <td><small>Separa H7 de H8. Se falta muito, a fila é fantasma. Se volta muito, a fila é retrabalho.</small></td></tr>
+        <tr><td class="h">Q5</td>
+          <td><b>"De cada 100 cirurgias eletivas, quantas suspendem — e quais são os três motivos no topo da lista?"</b></td>
+          <td><small>Prova se a pré-anestésica é a causa ou o bode expiatório. Se o topo for jejum, material ou leito de UTI, o Desafio 1 é o desafio errado.</small></td></tr>
+      </table>
+      <div class="where"><span>bônus, no fim →</span> "Se você pudesse mudar UMA coisa nesse processo amanhã de manhã, qual seria?" — costuma entregar o problema inteiro numa frase.</div>
+    </div>
+  </section>
+
+  <!-- 04 -->
+  <section class="step reveal" id="s4">
+    <div class="step-text">
+      <div class="step-num">04</div>
+      <h2>Cinco artefatos valem mais que cinco horas de reunião</h2>
+      <p>Documento não mente sobre o processo. Gente, sem querer, mente — descreve o processo
+      oficial, não o que faz de verdade.</p>
+      <p>Peça <b>o formulário</b>, <b>a foto da tela</b>, <b>um dia da agenda</b>. Em quinze
+      minutos olhando esses três você sabe mais do que em duas horas de conversa.</p>
+      <div class="where"><span>frase que abre porta →</span> "não precisa explicar, me mostra a tela."</div>
+    </div>
+    <div class="step-vis">
+      <figure class="fig" data-fig="Fig. 3 — o que pedir hoje">
+        <div class="fluxo"><span class="no hot">peça</span><span class="seta"></span>
+          <span class="no">foto da tela de agendamento</span></div>
+        <div class="fluxo"><span class="no hot">peça</span><span class="seta"></span>
+          <span class="no">o formulário de solicitação cirúrgica, em branco</span></div>
+        <div class="fluxo"><span class="no hot">peça</span><span class="seta"></span>
+          <span class="no">um dia da agenda de CPA, anonimizado</span></div>
+        <div class="fluxo"><span class="no hot">peça</span><span class="seta"></span>
+          <span class="no">o log de suspensão do último mês</span></div>
+        <div class="fluxo"><span class="no hot">peça</span><span class="seta"></span>
+          <span class="no">o nome e a versão do sistema. só o nome.</span></div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:4px">
+          <span class="tag ok">15 min</span><span class="tag ok">zero permissão especial</span>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- callout -->
+  <div class="ia reveal">
+    <div class="kicker" style="color:var(--signal)">a virada estratégica</div>
+    <h2>Você não precisa da verdade. Precisa de uma escolha defendida.</h2>
+    <p>Briefing de hackathon é vago de propósito — se fosse específico, todos os times entregariam
+    a mesma coisa. Isso significa que <b style="color:var(--paper)">a banca não tem uma resposta
+    certa guardada na cabeça</b>. Não existe hipótese premiada.</p>
+    <p>O que muda o jogo não é acertar qual das oito é a verdadeira. É subir no palco e ser o único
+    time que percebeu que são oito — e mostrar por que escolheu aquela.</p>
+    <div class="msg">A gente não sabia qual era o problema. Descobrimos que o briefing continha oito.</div>
+    <div class="msg">Fizemos cinco perguntas que eliminam sete. Aqui está o que sobrou, e a evidência.</div>
+    <div class="msg">Construímos a menor coisa possível que ataca só essa. Se a resposta da Q1 tivesse sido a outra, teríamos construído outra coisa.</div>
+    <p style="margin-top:18px">Isso é raciocínio de produto na frente de uma banca que passou o dia
+    inteiro vendo telas bonitas resolvendo problemas inventados. E tem um efeito colateral honesto:
+    o que já foi construído deixa de ser desperdício e vira <b style="color:var(--paper)">a hipótese
+    que você testou primeiro</b>.</p>
+  </div>
+
+  <div class="close reveal">
+    <div class="frase">Levantamento incompleto não vira PRD.<br>Vira mapa de ignorância — e mapa de ignorância também é entregável.</div>
+    <div class="stamp"><span>· problema ·<br><b>não sei</b><br>ainda</span></div>
+  </div>
+
+  <footer>
+    <span>HH26-D1-LEV-000 · levantamento zero</span>
+    <span>8 hipóteses · 5 perguntas · 0 solução</span>
+  </footer>
+
+</div>
+<script>
+const io=new IntersectionObserver(function(es){es.forEach(function(e){e.isIntersecting&&e.target.classList.add('in')})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)});
+</script>
+</body>
+</html>

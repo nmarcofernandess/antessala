@@ -5,8 +5,9 @@ import { launchApp, removeAppData } from './helpers'
  * A disponibilidade declarada uma vez, e a agenda inteira obedecendo.
  *
  * Esticar a barra da segunda-feira até as 20h é dizer como o consultório
- * funciona — não abrir vaga de uma semana. As vagas nascem disso, para todas as
- * segundas adiante, e sobrevivem ao reinício.
+ * funciona — não abrir vaga de uma semana. Nenhuma vaga é criada: o livre da
+ * agenda é calculado dessa regra, para todas as segundas adiante, e a regra
+ * sobrevive ao reinício.
  */
 test.setTimeout(180_000)
 
@@ -43,8 +44,19 @@ test('a disponibilidade é a regra, e as vagas nascem dela', async () => {
     await linhas.nth(6).getByRole('switch').click()
     await expect(linhas.nth(6)).not.toContainText('fechado')
 
+    /* a reserva de tempo: arrastar a divisória troca porcentagem entre classes */
+    const barra = await modal.getByTestId('barra-cotas').locator('div.relative').boundingBox()
+    const divisoria = await modal.getByTestId('divisoria-0').boundingBox()
+    await page.mouse.move(divisoria!.x + divisoria!.width / 2, divisoria!.y + divisoria!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(barra!.x + barra!.width * 0.6, divisoria!.y + divisoria!.height / 2, {
+      steps: 10,
+    })
+    await page.mouse.up()
+    await expect(modal.getByTestId('cota-QUICK')).toContainText('60%')
+
     await page.getByTestId('salvar-disponibilidade').click()
-    await expect(page.getByText(/vagas abertas/)).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/atualizado/)).toBeVisible({ timeout: 20_000 })
     await page.keyboard.press('Escape')
 
     /* na próxima semana — a inteira, ainda no futuro — segunda e sábado abrem */
@@ -53,8 +65,9 @@ test('a disponibilidade é a regra, e as vagas nascem dela', async () => {
     await expect(celulas.nth(1 * 7 + 1)).not.toHaveText('—', { timeout: 20_000 })
     await expect(celulas.nth(1 * 7 + 6)).not.toHaveText('—')
     // 19h de segunda existe agora; 19h de terça continua fora do expediente.
-    await expect(celulas.nth(12 * 7 + 1)).not.toHaveText('—')
-    await expect(celulas.nth(12 * 7 + 2)).toHaveText('—')
+    // A grade começa na primeira hora de expediente (8h), então 19h é a linha 11.
+    await expect(celulas.nth(11 * 7 + 1)).not.toHaveText('—')
+    await expect(celulas.nth(11 * 7 + 2)).toHaveText('—')
 
     /* reinício: a regra é do banco */
     await app.close()
@@ -62,6 +75,7 @@ test('a disponibilidade é a regra, e as vagas nascem dela', async () => {
     await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Agenda' }).click()
     await page.getByTestId('abrir-disponibilidade').click()
     await expect(page.getByTestId('linha-dia').nth(1)).toContainText('20:00', { timeout: 20_000 })
+    await expect(page.getByTestId('cota-QUICK')).toContainText('60%')
     await page.keyboard.press('Escape')
 
     /* um caso que não vai acontecer some da fila e vai para o arquivo */

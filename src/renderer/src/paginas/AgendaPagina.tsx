@@ -1,57 +1,49 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Loader2, Pencil, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/componentes/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { agenda as api } from '@/servicos/casos'
-import {
-  ROTULO_CLASSE,
-  type AgendaRangeDTO,
-  type SlotClass,
-  type SlotDTO,
-} from '@shared/clinical/caso'
+import { ROTULO_CLASSE, type AgendaIntervaloDTO, type SlotClass } from '@shared/clinical/caso'
 import { COR_CLASSE, GradeSemanal, diasDaSemana } from './agenda/GradeSemanal'
-import { DiaEmpilhado } from './agenda/DiaEmpilhado'
+import { DiaEmpilhado, type BuracoDoDia, type ConsultaDoDia } from './agenda/DiaEmpilhado'
 import { ModalAgendar, ModalQuemCabe, type CasoDaFila } from './agenda/ModalAgendar'
-import { DialogConsultorios } from './agenda/DialogConsultorios'
 import { ModalDisponibilidade } from './agenda/ModalDisponibilidade'
 
 /**
  * A agenda da consulta pré-anestésica.
  *
- * Duas leituras e um modo. A semana responde "onde ainda cabe alguém" em
- * densidade; o dia responde "o que acontece agora" empilhado numa coluna só —
- * três consultórios viram três linhas seguidas, não três colunas paralelas.
+ * Duas leituras. A semana responde "onde ainda cabe alguém", em densidade de
+ * tempo livre. O dia responde "o que acontece agora", empilhado numa coluna só —
+ * três consultórios viram linhas seguidas, não colunas paralelas.
  *
- * O modo capacidade usa a mesma grade para declarar quando se atende: arrastar
- * sobre as faixas é o gesto, e o main grava as vagas com a duração que a regra
- * de dimensionamento manda. A grade que mostra a oferta é a que a define.
+ * Nada de vaga é criado em lugar nenhum: o expediente é regra, e o livre é o
+ * que sobra dele depois do que já foi marcado. Quem define a regra é o modal de
+ * Disponibilidade; esta tela só a lê.
  */
 
 const CLASSES: SlotClass[] = ['QUICK', 'STANDARD', 'EXTENDED']
+
+const VAZIO: AgendaIntervaloDTO = { resources: [], dias: [] }
 
 export function AgendaPagina() {
   const navegar = useNavigate()
 
   const [referencia, setReferencia] = useState(() => new Date())
   const [diaAberto, setDiaAberto] = useState<Date | null>(null)
-  const [intervalo, setIntervalo] = useState<AgendaRangeDTO>({ resources: [], slots: [] })
+  const [intervalo, setIntervalo] = useState<AgendaIntervaloDTO>(VAZIO)
   const [fila, setFila] = useState<CasoDaFila[]>([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 
-  const [classesVisiveis, setClassesVisiveis] = useState<SlotClass[]>(CLASSES)
-  const [salas, setSalas] = useState<string[]>([])
+  const [classe, setClasse] = useState<SlotClass | null>(null)
   const [disponibilidade, setDisponibilidade] = useState(false)
-  const [consultorios, setConsultorios] = useState(false)
 
   const [agendando, setAgendando] = useState<CasoDaFila | null>(null)
-  const [vagaEscolhida, setVagaEscolhida] = useState<SlotDTO | null>(null)
+  const [buracoEscolhido, setBuracoEscolhido] = useState<BuracoDoDia | null>(null)
 
   const semana = useMemo(() => diasDaSemana(referencia), [referencia])
 
@@ -66,7 +58,6 @@ export function AgendaPagina() {
       ])
       setIntervalo(faixa)
       setFila(listaFila as CasoDaFila[])
-      setSalas((atual) => (atual.length > 0 ? atual : faixa.resources.map((r) => r.id)))
       setErro(null)
     } catch (e) {
       setErro(e instanceof Error ? e.message : String(e))
@@ -79,18 +70,18 @@ export function AgendaPagina() {
     void recarregar()
   }, [recarregar])
 
-  async function chegada(b: NonNullable<SlotDTO['booking']>) {
+  async function chegada(c: ConsultaDoDia) {
     try {
-      await api.chegada({ bookingId: b.id, expectedVersion: b.version })
+      await api.chegada({ bookingId: c.bookingId, expectedVersion: c.version })
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e))
     }
     await recarregar()
   }
 
-  async function ausencia(b: NonNullable<SlotDTO['booking']>) {
+  async function ausencia(c: ConsultaDoDia) {
     try {
-      await api.ausencia({ bookingId: b.id, expectedVersion: b.version })
+      await api.ausencia({ bookingId: c.bookingId, expectedVersion: c.version })
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e))
     }
@@ -112,9 +103,9 @@ export function AgendaPagina() {
     setDiaAberto(null)
   }
 
-  const slotsVisiveis = intervalo.slots.filter(
-    (s) => salas.length === 0 || salas.includes(s.resourceId),
-  )
+  const diasDoDiaAberto = diaAberto
+    ? intervalo.dias.filter((d) => d.data === chaveDoDia(diaAberto))
+    : []
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -142,16 +133,14 @@ export function AgendaPagina() {
 
             <div className="ml-auto flex flex-wrap items-center gap-1.5">
               {CLASSES.map((c) => {
-                const on = classesVisiveis.includes(c)
+                const on = classe === c
                 return (
                   <button
                     key={c}
                     type="button"
                     aria-pressed={on}
                     data-testid={`filtro-${c}`}
-                    onClick={() =>
-                      setClassesVisiveis((a) => (on ? a.filter((x) => x !== c) : [...a, c]))
-                    }
+                    onClick={() => setClasse(on ? null : c)}
                     className={cn(
                       'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors',
                       on ? 'bg-accent' : 'text-muted-foreground/60',
@@ -187,8 +176,8 @@ export function AgendaPagina() {
           ) : (
             <GradeSemanal
               semana={semana}
-              slots={slotsVisiveis}
-              classesVisiveis={classesVisiveis}
+              dias={intervalo.dias}
+              classe={classe}
               onAbrirDia={setDiaAberto}
             />
           )}
@@ -208,13 +197,12 @@ export function AgendaPagina() {
                 </Button>
               </div>
               <DiaEmpilhado
-                dia={diaAberto}
-                slots={slotsVisiveis}
-                classesVisiveis={classesVisiveis}
+                dias={diasDoDiaAberto}
+                classe={classe}
                 onChegada={chegada}
                 onAusencia={ausencia}
                 onAbrirCaso={(id) => navegar(`/casos/${id}`)}
-                onUsarVaga={setVagaEscolhida}
+                onUsarBuraco={setBuracoEscolhido}
               />
             </section>
           )}
@@ -274,10 +262,10 @@ export function AgendaPagina() {
         onMarcado={irParaConsulta}
       />
       <ModalQuemCabe
-        slot={vagaEscolhida}
+        buraco={buracoEscolhido}
         fila={fila}
-        aberto={vagaEscolhida !== null}
-        onFechar={() => setVagaEscolhida(null)}
+        aberto={buracoEscolhido !== null}
+        onFechar={() => setBuracoEscolhido(null)}
         onMarcado={irParaConsulta}
       />
 
@@ -286,19 +274,10 @@ export function AgendaPagina() {
         onFechar={() => setDisponibilidade(false)}
         onMudou={recarregar}
       />
-
-      <Dialog open={consultorios} onOpenChange={setConsultorios}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Consultórios</DialogTitle>
-          </DialogHeader>
-          <DialogConsultorios onMudou={recarregar} />
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
 
-function iso(d: Date): string {
+function chaveDoDia(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }

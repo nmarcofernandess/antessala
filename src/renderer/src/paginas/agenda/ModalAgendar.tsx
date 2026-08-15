@@ -10,16 +10,17 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { agenda as api, novaChave } from '@/servicos/casos'
-import { ROTULO_CLASSE, type SlotClass, type SlotDTO } from '@shared/clinical/caso'
+import { ROTULO_CLASSE, type SlotClass, type SugestaoDTO } from '@shared/clinical/caso'
+import type { BuracoDoDia } from './DiaEmpilhado'
 
 /**
  * Marcar não é escolher no calendário: é escolher entre os próximos horários
  * que servem.
  *
- * O modal já abre com a resposta — as vagas compatíveis com o requisito
- * daquele caso, em ordem de quem vem primeiro. Quem marca não precisa navegar
- * a agenda nem saber qual sala tem qual característica: o main já filtrou por
- * classe e por capacidade da sala.
+ * O modal já abre com a resposta — os encaixes compatíveis com o requisito
+ * daquele caso, em ordem de quem vem primeiro. Quem marca não precisa navegar a
+ * agenda nem saber qual sala tem qual característica: o main já filtrou por
+ * classe, por capacidade da sala e pela reserva de tempo do dia.
  */
 
 export type CasoDaFila = {
@@ -44,7 +45,7 @@ export function ModalAgendar({
   onFechar: () => void
   onMarcado: (quando: string) => void
 }) {
-  const [vagas, setVagas] = useState<SlotDTO[]>([])
+  const [sugestoes, setSugestoes] = useState<SugestaoDTO[]>([])
   const [buscando, setBuscando] = useState(false)
   const [marcando, setMarcando] = useState<string | null>(null)
 
@@ -53,8 +54,8 @@ export function ModalAgendar({
     let vivo = true
     setBuscando(true)
     api
-      .vagasCompativeis({ requirementId: caso.requirementId, limite: 24 })
-      .then((v) => vivo && setVagas(v))
+      .sugestoes({ requirementId: caso.requirementId, limite: 24 })
+      .then((v) => vivo && setSugestoes(v))
       .catch((e) => vivo && toast.error(e instanceof Error ? e.message : String(e)))
       .finally(() => vivo && setBuscando(false))
     return () => {
@@ -62,18 +63,19 @@ export function ModalAgendar({
     }
   }, [aberto, caso])
 
-  async function marcar(slot: SlotDTO) {
+  async function marcar(s: SugestaoDTO) {
     if (!caso) return
-    setMarcando(slot.id)
+    setMarcando(s.startsAt + s.resourceId)
     try {
       await api.reservar({
         caseId: caso.caseId,
         requirementId: caso.requirementId,
-        slotId: slot.id,
+        resourceId: s.resourceId,
+        startsAt: s.startsAt,
         idempotencyKey: novaChave(),
       })
-      toast.success(`${caso.personName} marcada para ${quando(slot.startsAt)}.`)
-      onMarcado(slot.startsAt)
+      toast.success(`${caso.personName} marcada para ${quando(s.startsAt)}.`)
+      onMarcado(s.startsAt)
       onFechar()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e))
@@ -83,10 +85,10 @@ export function ModalAgendar({
   }
 
   // Agrupado por dia: a decisão é "que dia", e só depois "que hora".
-  const porDia = new Map<string, SlotDTO[]>()
-  for (const v of vagas) {
-    const chave = new Date(v.startsAt).toDateString()
-    porDia.set(chave, [...(porDia.get(chave) ?? []), v])
+  const porDia = new Map<string, SugestaoDTO[]>()
+  for (const s of sugestoes) {
+    const chave = new Date(s.startsAt).toDateString()
+    porDia.set(chave, [...(porDia.get(chave) ?? []), s])
   }
 
   return (
@@ -108,9 +110,10 @@ export function ModalAgendar({
           <p className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Procurando horários…
           </p>
-        ) : vagas.length === 0 ? (
+        ) : sugestoes.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            Nenhuma vaga compatível adiante. Gere capacidade na própria agenda.
+            Nada cabe adiante. Amplie o expediente ou a reserva desta classe em
+            Disponibilidade.
           </p>
         ) : (
           <div className="max-h-[26rem] space-y-4 overflow-auto">
@@ -124,23 +127,23 @@ export function ModalAgendar({
                   })}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {doDia.map((v) => (
+                  {doDia.map((s) => (
                     <button
-                      key={v.id}
+                      key={s.resourceId + s.startsAt}
                       type="button"
                       disabled={marcando !== null}
-                      onClick={() => marcar(v)}
+                      onClick={() => marcar(s)}
                       data-testid="vaga-sugerida"
                       className="rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent disabled:opacity-50"
                     >
                       <span className="block font-mono text-[13px] tabular-nums">
-                        {new Date(v.startsAt).toLocaleTimeString('pt-BR', {
+                        {new Date(s.startsAt).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
                       </span>
                       <span className="block text-[10.5px] text-muted-foreground">
-                        {v.resourceName}
+                        {s.resourceName}
                       </span>
                     </button>
                   ))}
@@ -154,35 +157,44 @@ export function ModalAgendar({
   )
 }
 
-/** Quem cabe nesta vaga: o caminho inverso, a partir do horário. */
+/**
+ * Quem cabe neste buraco: o caminho inverso, a partir do horário vago.
+ *
+ * O filtro é o tempo: só entra quem couber no espaço que sobrou naquela sala.
+ * A validação final continua sendo do main — aqui a lista só evita oferecer o
+ * que vai ser recusado.
+ */
 export function ModalQuemCabe({
-  slot,
+  buraco,
   fila,
   aberto,
   onFechar,
   onMarcado,
 }: {
-  slot: SlotDTO | null
+  buraco: BuracoDoDia | null
   fila: CasoDaFila[]
   aberto: boolean
   onFechar: () => void
   onMarcado: (quando: string) => void
 }) {
   const [marcando, setMarcando] = useState<string | null>(null)
-  const cabem = slot ? fila.filter((c) => c.slotClass === slot.slotClass) : []
+  const cabem = buraco
+    ? fila.filter((c) => c.durationMinutes + 10 <= buraco.minutos)
+    : []
 
   async function marcar(caso: CasoDaFila) {
-    if (!slot) return
+    if (!buraco) return
     setMarcando(caso.caseId)
     try {
       await api.reservar({
         caseId: caso.caseId,
         requirementId: caso.requirementId,
-        slotId: slot.id,
+        resourceId: buraco.resourceId,
+        startsAt: buraco.inicio,
         idempotencyKey: novaChave(),
       })
-      toast.success(`${caso.personName} marcada para ${quando(slot.startsAt)}.`)
-      onMarcado(slot.startsAt)
+      toast.success(`${caso.personName} marcada para ${quando(buraco.inicio)}.`)
+      onMarcado(buraco.inicio)
       onFechar()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : String(e))
@@ -195,15 +207,15 @@ export function ModalQuemCabe({
     <Dialog open={aberto} onOpenChange={(a) => !a && onFechar()}>
       <DialogContent className="max-w-lg" data-testid="modal-quem-cabe">
         <DialogHeader>
-          <DialogTitle>{slot && quando(slot.startsAt)}</DialogTitle>
+          <DialogTitle>{buraco && quando(buraco.inicio)}</DialogTitle>
           <DialogDescription>
-            {slot && `${slot.resourceName} · ${ROTULO_CLASSE[slot.slotClass]}`}
+            {buraco && `${buraco.resourceName} · ${buraco.minutos} min livres`}
           </DialogDescription>
         </DialogHeader>
 
         {cabem.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            Ninguém na fila precisa deste tamanho de vaga.
+            Ninguém na fila cabe neste espaço.
           </p>
         ) : (
           <div className="max-h-[26rem] space-y-1.5 overflow-auto">
