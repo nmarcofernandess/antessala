@@ -627,6 +627,106 @@ export async function aceitarHandoff(entrada: {
   return obterCaso(entrada.caseId)
 }
 
+/* ══════════════ cancelamento ══════════════ */
+
+/**
+ * Encerra um caso que não vai acontecer.
+ *
+ * Encaminhamento duplicado, cirurgia desmarcada lá fora, pessoa que desistiu:
+ * sem isso o caso fica preso na fila para sempre, e uma fila que não esvazia
+ * deixa de ser fila. O motivo é obrigatório porque é ele que explica a ausência
+ * do caso depois — e o que já foi vivido continua na história.
+ *
+ * Um caso com resultado emitido **não** é cancelado: o que existe já foi
+ * comunicado, e apagá-lo por cima seria reescrever o passado. Ali o caminho é
+ * corrigir a versão.
+ */
+export async function cancelarCaso(entrada: {
+  caseId: string
+  motivo: string
+  expectedCaseVersion: number
+}): Promise<CaseDetailDTO> {
+  await garantirContaSintetica()
+  const atorRecepcao = ator('RECEPCAO')
+  const motivo = exigirTexto(entrada.motivo, 'O motivo do cancelamento', 10, 500)
+
+  await transaction(async () => {
+    const caso = await queryOne<{ status: CaseStatus; version: number }>(
+      `SELECT status, version FROM preop_cases WHERE id = $1 FOR UPDATE`,
+      entrada.caseId,
+    )
+    if (!caso) throw new ErroDeCaso('NOT_FOUND', 'Caso não encontrado.')
+    if (caso.version !== entrada.expectedCaseVersion) {
+      throw new ErroDeCaso('VERSION_CONFLICT', 'O caso mudou enquanto a tela estava aberta.')
+    }
+    if (caso.status === 'CANCELLED' || caso.status === 'DELIVERED_TO_REQUESTER') {
+      throw new ErroDeCaso('INVALID_TRANSITION', 'Este caso já está encerrado.')
+    }
+    if (caso.status === 'READY_FOR_HANDOFF') {
+      throw new ErroDeCaso(
+        'INVALID_TRANSITION',
+        'Este caso já tem resultado emitido. Corrija a versão em vez de cancelar o caso.',
+      )
+    }
+
+    // A consulta marcada cai junto: manter uma vaga presa a um caso cancelado
+    // tiraria da agenda um horário que ninguém vai usar.
+    const booking = await queryOne<{ id: string }>(
+      `SELECT id FROM scheduling_bookings
+        WHERE case_id = $1 AND status IN ('CONFIRMED','CHECKED_IN')
+        ORDER BY created_at DESC LIMIT 1`,
+      entrada.caseId,
+    )
+    if (booking) {
+      await execute(
+        `UPDATE scheduling_bookings
+            SET status = 'CANCELLED', closed_at = NOW(), closed_reason = $2,
+                version = version + 1, updated_at = NOW()
+          WHERE id = $1`,
+        booking.id,
+        `Caso cancelado: ${motivo}`,
+      )
+    }
+
+    const encontro = await queryOne<{ id: string }>(
+      `SELECT id FROM anesthesia_encounters
+        WHERE case_id = $1 AND status IN ('IN_PROGRESS','WAITING_PENDING')`,
+      entrada.caseId,
+    )
+    if (encontro) {
+      await execute(
+        `UPDATE anesthesia_encounters
+            SET status = 'COMPLETED', completion_reason = 'INTERRUPTED', completed_at = NOW(),
+                version = version + 1, updated_at = NOW()
+          WHERE id = $1`,
+        encontro.id,
+      )
+    }
+
+    await execute(
+      `UPDATE preop_cases
+          SET status = 'CANCELLED', closed_at = NOW(), version = version + 1, updated_at = NOW()
+        WHERE id = $1`,
+      entrada.caseId,
+    )
+
+    await registrarEvento({
+      caseId: entrada.caseId,
+      eventType: 'CASE_CANCELLED',
+      fromStatus: caso.status,
+      toStatus: 'CANCELLED',
+      actor: atorRecepcao,
+      reason: motivo,
+      payload: { bookingCancelado: booking?.id ?? null, encontroInterrompido: encontro?.id ?? null },
+      receiptDomain: 'CASE',
+      receiptId: `${entrada.caseId}:cancel`,
+      commandEventIndex: 1,
+    })
+  })
+
+  return obterCaso(entrada.caseId)
+}
+
 /* ══════════════ contagem para o painel ══════════════ */
 
 export async function contarPorStatus(): Promise<Record<string, number>> {

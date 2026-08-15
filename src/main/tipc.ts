@@ -6,7 +6,14 @@ import { PROVIDER_DEFAULTS, resolveProviderApiKey } from './ia/config'
 import type { IaConfiguracao, IaMensagem } from '../shared/types'
 import type { ActiveIpcChannel } from '../shared/active-ipc-channels'
 import { knowledgeStudioRouter } from './knowledge/router'
-import { criarCaso, listarCasos, obterCaso, aceitarHandoff, contarPorStatus } from './clinical/case-service'
+import {
+  criarCaso,
+  listarCasos,
+  obterCaso,
+  aceitarHandoff,
+  cancelarCaso,
+  contarPorStatus,
+} from './clinical/case-service'
 import {
   abrirAnamnese,
   obterAnamnese,
@@ -369,6 +376,10 @@ const handoffsAcknowledge = t.procedure
   .input<{ caseId: string; handoffId: string; expectedCaseVersion: number; idempotencyKey: string }>()
   .action(async ({ input }) => comErroDeDominio(() => aceitarHandoff(input)))
 
+const casesCancel = t.procedure
+  .input<{ caseId: string; motivo: string; expectedCaseVersion: number }>()
+  .action(async ({ input }) => comErroDeDominio(() => cancelarCaso(input)))
+
 const anamnesisOpen = t.procedure
   .input<{ caseId: string }>()
   .action(async ({ input }) => comErroDeDominio(() => abrirAnamnese(input.caseId)))
@@ -587,6 +598,7 @@ export const router = {
   'cases.get': casesGet,
   'cases.counts': casesCounts,
   'cases.servicos': casesServicos,
+  'cases.cancel': casesCancel,
   'handoffs.acknowledge': handoffsAcknowledge,
   'anamnesis.open': anamnesisOpen,
   'anamnesis.get': anamnesisGet,

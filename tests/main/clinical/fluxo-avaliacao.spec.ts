@@ -9,7 +9,12 @@ import { execute, queryOne } from '../../../src/main/db/query'
 import { garantirContaSintetica } from '../../../src/main/auth/session'
 import { seedProtocolos } from '../../../src/main/db/protocolos'
 import { semearCapacidade } from '../../../src/main/scheduling/capacity-seed'
-import { criarCaso, aceitarHandoff, obterCaso } from '../../../src/main/clinical/case-service'
+import {
+  criarCaso,
+  aceitarHandoff,
+  cancelarCaso,
+  obterCaso,
+} from '../../../src/main/clinical/case-service'
 import {
   abrirAnamnese,
   finalizarAnamnese,
@@ -695,6 +700,60 @@ describe('avaliação, pendências, resultado e entrega', () => {
       caseId,
     )
     expect(entregas?.total).toBe(2)
+  })
+
+  /* ── cancelamento do caso ── */
+
+  it('cancelar o caso derruba a consulta marcada e preserva a história', async () => {
+    const { caseId, booking } = await casoAgendado()
+    const antes = await obterCaso(caseId)
+    const eventosAntes = antes.timeline.length
+
+    const cancelado = await cancelarCaso({
+      caseId,
+      motivo: 'A cirurgia foi desmarcada pelo serviço solicitante.',
+      expectedCaseVersion: antes.version,
+    })
+
+    expect(cancelado.status).toBe('CANCELLED')
+    expect(cancelado.responsibility.currentRoles).toEqual([])
+    expect(cancelado.timeline).toHaveLength(eventosAntes + 1)
+    expect(cancelado.timeline.at(-1)?.eventType).toBe('CASE_CANCELLED')
+    expect(cancelado.timeline.at(-1)?.reason).toMatch(/desmarcada/)
+
+    const vaga = await queryOne<{ status: string }>(
+      `SELECT status FROM scheduling_bookings WHERE id = $1`,
+      booking.id,
+    )
+    expect(vaga?.status).toBe('CANCELLED')
+
+    await expect(
+      cancelarCaso({ caseId, motivo: 'Tentativa repetida.', expectedCaseVersion: cancelado.version }),
+    ).rejects.toMatchObject({ codigo: 'INVALID_TRANSITION' })
+  })
+
+  it('caso com resultado emitido não é cancelado: o caminho é corrigir', async () => {
+    const { caseId, encontro } = await casoEmAvaliacao()
+    const salvo = await salvarAvaliacao({
+      encounterId: encontro.id,
+      expectedVersion: encontro.version,
+      assessment: avaliacaoCompleta(),
+    })
+    await finalizarResultado({
+      encounterId: encontro.id,
+      expectedEncounterVersion: salvo.version,
+      content: CONTEUDO,
+      idempotencyKey: randomUUID(),
+    })
+    const caso = await obterCaso(caseId)
+
+    await expect(
+      cancelarCaso({
+        caseId,
+        motivo: 'Tentativa de apagar o que já foi comunicado.',
+        expectedCaseVersion: caso.version,
+      }),
+    ).rejects.toThrow(/Corrija a versão/)
   })
 
   it('o esquema de avaliação não guarda nada que pareça paciente longitudinal', async () => {

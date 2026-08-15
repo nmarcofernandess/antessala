@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowRight,
+  Ban,
   CalendarCheck,
   CheckCircle2,
   ClipboardList,
@@ -15,6 +16,17 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/componentes/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { Rotulo } from '@/vitrine/pecas'
 import {
@@ -57,6 +69,8 @@ export function CasoPagina() {
   const [caso, setCaso] = useState<CaseDetailDTO | null>(null)
   const [requisito, setRequisito] = useState<RequirementDTO | null>(null)
   const [avaliacao, setAvaliacao] = useState<ResultadoDoCasoDTO | null>(null)
+  const [cancelando, setCancelando] = useState(false)
+  const [motivo, setMotivo] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [agindo, setAgindo] = useState(false)
@@ -149,6 +163,11 @@ export function CasoPagina() {
     entrega && avaliacao?.current && entrega.resultId === avaliacao.current.id,
   )
   const podeEntregar = caso.status === 'READY_FOR_HANDOFF' && !entregaCobreCorrente
+  // Cancelar existe até o resultado sair. Depois disso o caminho é corrigir a
+  // versão: o que já foi comunicado não se apaga.
+  const podeCancelar = !['CANCELLED', 'DELIVERED_TO_REQUESTER', 'READY_FOR_HANDOFF'].includes(
+    caso.status,
+  )
 
   return (
     <div className="flex flex-1 flex-col">
@@ -262,6 +281,16 @@ export function CasoPagina() {
                 <Link to={`/casos/${caso.id}/avaliacao`}>
                   <Stethoscope className="size-4" /> Abrir avaliação
                 </Link>
+              </Button>
+            )}
+            {podeCancelar && (
+              <Button
+                variant="ghost"
+                disabled={agindo}
+                data-testid="cancelar-caso"
+                onClick={() => setCancelando(true)}
+              >
+                <Ban className="size-4" /> Cancelar caso
               </Button>
             )}
             {podeEntregar && (
@@ -474,6 +503,46 @@ export function CasoPagina() {
           </aside>
         </div>
       </div>
+
+      <AlertDialog open={cancelando} onOpenChange={setCancelando}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar este caso?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A consulta marcada, se houver, cai junto e a vaga volta para a agenda. O que já foi
+              vivido continua na história do caso — cancelar encerra, não apaga.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            rows={3}
+            aria-label="Motivo do cancelamento"
+            value={motivo}
+            placeholder="Por que este caso não vai acontecer (10 a 500 caracteres)."
+            onChange={(e) => setMotivo(e.target.value)}
+            className="text-[13px]"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMotivo('')}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={motivo.trim().length < 10}
+              data-testid="confirmar-cancelamento"
+              onClick={() =>
+                comandar(async () => {
+                  await casos.cancelar({
+                    caseId: caso.id,
+                    motivo,
+                    expectedCaseVersion: caso.version,
+                  })
+                  setCancelando(false)
+                  setMotivo('')
+                }, 'Caso cancelado.')
+              }
+            >
+              Cancelar o caso
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
