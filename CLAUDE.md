@@ -53,8 +53,11 @@ Leis:
 
 - Anamnese: Composer no padrão DietFlow, 14 widgets pré-anestésicos, WidgetCards, DnD,
   teclado, drawer multi-select e protocolos salvos.
-- Agenda: FullCalendar v6 portado/adaptado do DietFlow, mês/semana/dia/programação,
-  dropdowns, busca/filtros, drawer, DnD/resize com validação no main e `revert()`.
+- Agenda: grade semanal de densidade (vagas livres por faixa e classe) + dia empilhado
+  numa coluna só, filtros por classe, modal que oferece os próximos horários compatíveis.
+  Disponibilidade é regra semanal por consultório, editada em barras arrastáveis, e as
+  vagas são materializadas dela. **FullCalendar saiu** — decisão de 14/08/2026, ver
+  `BUILD-classificacao-e-agenda.md`.
 - Compatibilidade: requisito operacional opaco/versionado; nunca ID de paciente.
 - Assistente: somente `/assistente`; zero painel global, toggle no header ou IA em widget.
 - User menu: Configurações, Claro/Escuro/Sistema, Amostra de uso e Sair.

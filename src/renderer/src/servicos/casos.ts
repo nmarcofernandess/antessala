@@ -102,10 +102,9 @@ export const capacidade = {
   consultorios: () => chamar(() => client['capacity.resources']()),
   salvarConsultorio: (input: Parameters<typeof client['capacity.saveResource']>[0]) =>
     chamar(() => client['capacity.saveResource'](input)),
-  gerarVagas: (input: Parameters<typeof client['capacity.generateSlots']>[0]) =>
-    chamar(() => client['capacity.generateSlots'](input)),
-  limparVagasLivres: (input: Parameters<typeof client['capacity.clearFreeSlots']>[0]) =>
-    chamar(() => client['capacity.clearFreeSlots'](input)),
+  disponibilidade: () => chamar(() => client['capacity.availability']()),
+  salvarDisponibilidade: (input: Parameters<typeof client['capacity.saveAvailability']>[0]) =>
+    chamar(() => client['capacity.saveAvailability'](input)),
   bloquearVaga: (input: Parameters<typeof client['capacity.blockSlot']>[0]) =>
     chamar(() => client['capacity.blockSlot'](input)),
   liberarVaga: (slotId: string) => chamar(() => client['capacity.unblockSlot']({ slotId })),

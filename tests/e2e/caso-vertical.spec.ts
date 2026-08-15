@@ -142,30 +142,24 @@ test('o caso caminha do encaminhamento à consulta marcada e a história registr
 
     /* 9. reservar a consulta pré-anestésica */
     await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Agenda' }).click()
-    await page.getByRole('tab', { name: /Para agendar/ }).click()
     const fila = page.getByTestId('fila-para-agendar')
     await expect(fila.getByText('Aparecida Gomes Fontes')).toBeVisible({ timeout: 20_000 })
-    await fila.getByRole('button', { name: 'Escolher vaga' }).click()
+    await fila.getByTestId('marcar-consulta').first().click()
 
-    const drawer = page.getByRole('dialog')
-    await expect(drawer.getByText('Vagas compatíveis')).toBeVisible()
-    await drawer.locator('button').filter({ hasText: /\d{2}:\d{2}/ }).first().click()
+    // O modal abre já com os próximos horários que servem — não com um calendário.
+    const modal = page.getByTestId('modal-agendar')
+    await expect(modal).toBeVisible()
+    await modal.getByTestId('vaga-sugerida').first().click()
 
-    /* 10. a reserva aparece na agenda */
-    await page.getByRole('tab', { name: /Calendário/ }).click()
-    const lista = page.getByTestId('agenda-lista')
-    await expect(lista.getByText('Aparecida Gomes Fontes')).toBeVisible({ timeout: 20_000 })
-    await expect(lista.getByText('Vaga rápida')).toBeVisible()
-    await expect(page.locator('.fc')).toBeVisible()
+    /* 10. a reserva aparece na agenda e abre o caso */
+    await expect(fila.getByText('Aparecida Gomes Fontes')).toHaveCount(0, { timeout: 20_000 })
+    const marcada = page.getByTestId('celula-agenda').filter({ hasText: '✓' }).first()
+    await expect(marcada).toBeVisible({ timeout: 20_000 })
+    await marcada.click()
 
-    // Clicar na consulta abre quem ela é: pessoa, estado do caso e o que dá
-    // para fazer com ela agora.
-    await lista.getByRole('button', { name: 'Aparecida Gomes Fontes' }).click()
-    const consulta = page.getByTestId('drawer-consulta')
-    await expect(consulta).toBeVisible()
-    await expect(consulta.getByText('Agendado')).toBeVisible({ timeout: 20_000 })
-    await expect(consulta.getByText('Entrevista publicada')).toBeVisible()
-    await consulta.getByTestId('drawer-abrir-caso').click()
+    const dia = page.getByTestId('dia-empilhado')
+    await expect(dia.getByText('Aparecida Gomes Fontes')).toBeVisible({ timeout: 20_000 })
+    await dia.getByRole('button', { name: 'Aparecida Gomes Fontes' }).click()
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(caseHash)
 
     /* 11. a história do caso está inteira */

@@ -1,13 +1,13 @@
-import { execute, queryOne } from '../db/query'
-import type { SlotClass } from '../../shared/clinical/caso'
+import { execute } from '../db/query'
+import { materializarTudo, semearDisponibilidadePadrao } from './availability-service'
 
 /**
- * Capacidade inicial da agenda pré-anestésica.
+ * Os consultórios do primeiro boot.
  *
- * Isto é só o ponto de partida do primeiro boot: três consultórios e quatro
- * semanas, para que o app não abra com agenda vazia. Depois disso quem manda é
- * a tela de Capacidade — criar sala, mudar horário, gerar mais período — e o
- * banco, contra o qual as reservas são gravadas. Não é fixture de tela.
+ * Só as salas nascem aqui, para o app não abrir sem lugar nenhum de atender.
+ * **Quando** cada uma atende é regra editável — vive em `scheduling_availability`
+ * e é dela que as vagas são materializadas. Isto não é fixture de tela: é o
+ * ponto de partida de uma configuração que a operação assume em seguida.
  *
  * A agenda é da consulta pré-anestésica. Nenhuma linha daqui representa sala
  * cirúrgica, e o produto não agenda cirurgia.
@@ -19,34 +19,13 @@ const CONSULTORIOS = [
   { id: 'consultorio-3', nome: 'Consultório 3', ordem: 3, capabilities: ['SALA_ACESSIVEL', 'APOIO_COMUNICACAO'] },
 ] as const
 
-const DURACAO: Record<SlotClass, number> = { QUICK: 20, STANDARD: 35, EXTENDED: 50 }
-const BUFFER: Record<SlotClass, number> = { QUICK: 5, STANDARD: 5, EXTENDED: 10 }
-
-/** Cada consultório começa o dia num ponto diferente do ciclo, para haver mistura. */
-const CICLO: SlotClass[] = ['STANDARD', 'QUICK', 'EXTENDED', 'STANDARD', 'QUICK']
-
-const PERIODOS = [
-  { inicio: 8 * 60, fim: 12 * 60 },
-  { inicio: 13 * 60 + 30, fim: 17 * 60 },
-]
-
-const DIAS_A_FRENTE = 28
-
-function comMinutos(base: Date, minutosDoDia: number): Date {
-  const d = new Date(base)
-  d.setHours(0, 0, 0, 0)
-  d.setMinutes(minutosDoDia)
-  return d
-}
-
 /**
- * Gera vagas para os próximos dias úteis, sem duplicar o que já existe.
+ * Cria as salas, a disponibilidade padrão e materializa as vagas.
  *
- * A unicidade por `(resource_id, starts_at)` é quem garante idempotência: rodar
- * duas vezes não cria vaga repetida, e a reserva já gravada numa vaga
- * preexistente continua de pé.
+ * Idempotente: rodar de novo não duplica sala nem vaga, e não sobrescreve a
+ * disponibilidade que a operação já editou.
  */
-export async function semearCapacidade(hoje = new Date()): Promise<{ criadas: number }> {
+export async function semearCapacidade(): Promise<{ criadas: number }> {
   for (const c of CONSULTORIOS) {
     await execute(
       `INSERT INTO scheduling_resources (id, nome, kind, capabilities, ordem)
@@ -59,59 +38,15 @@ export async function semearCapacidade(hoje = new Date()): Promise<{ criadas: nu
     )
   }
 
-  let criadas = 0
-  const inicio = new Date(hoje)
-  inicio.setHours(0, 0, 0, 0)
-
-  for (let dia = 0; dia < DIAS_A_FRENTE; dia++) {
-    const data = new Date(inicio)
-    data.setDate(inicio.getDate() + dia)
-    const semana = data.getDay()
-    if (semana === 0 || semana === 6) continue
-
-    for (const [indice, consultorio] of CONSULTORIOS.entries()) {
-      let passo = indice
-      for (const periodo of PERIODOS) {
-        let minuto = periodo.inicio
-        while (minuto < periodo.fim) {
-          const classe = CICLO[passo % CICLO.length]
-          const duracao = DURACAO[classe]
-          const ocupacao = duracao + BUFFER[classe]
-          if (minuto + duracao > periodo.fim) break
-
-          const comeco = comMinutos(data, minuto)
-          const fim = comMinutos(data, minuto + duracao)
-          const slotId = `${consultorio.id}:${comeco.toISOString()}`
-
-          const { changes } = await execute(
-            `INSERT INTO scheduling_slots (id, resource_id, slot_class, starts_at, ends_at, status)
-             VALUES ($1,$2,$3,$4,$5,'OPEN')
-             ON CONFLICT (resource_id, starts_at) DO NOTHING`,
-            slotId,
-            consultorio.id,
-            classe,
-            comeco.toISOString(),
-            fim.toISOString(),
-          )
-          criadas += changes
-
-          minuto += ocupacao
-          passo++
-        }
-      }
-    }
-  }
-
+  await semearDisponibilidadePadrao()
+  const { criadas } = await materializarTudo()
   if (criadas > 0) {
-    console.log(`[agenda] ${criadas} vagas de consulta pré-anestésica geradas.`)
+    console.log(`[agenda] ${criadas} vagas de consulta pré-anestésica materializadas.`)
   }
   return { criadas }
 }
 
-/** Garante que existe capacidade adiante mesmo depois de o app ficar dias fechado. */
+/** No boot, a agenda volta a cobrir o horizonte inteiro. */
 export async function garantirCapacidadeFutura(): Promise<void> {
-  const linha = await queryOne<{ total: number }>(
-    `SELECT COUNT(*)::int AS total FROM scheduling_slots WHERE starts_at > NOW()`,
-  )
-  if ((linha?.total ?? 0) < 40) await semearCapacidade()
+  await semearCapacidade()
 }

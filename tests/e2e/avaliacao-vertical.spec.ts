@@ -111,23 +111,18 @@ test('o caso vai da chegada ao resultado entregue, e só termina quando alguém 
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe(caseHash)
 
     await page.locator('a[data-sidebar="menu-button"]').filter({ hasText: 'Agenda' }).click()
-    await page.getByRole('tab', { name: /Para agendar/ }).click()
-    await page
-      .getByTestId('fila-para-agendar')
-      .getByRole('button', { name: 'Escolher vaga' })
-      .click()
-    await page
-      .getByRole('dialog')
-      .locator('button')
-      .filter({ hasText: /\d{2}:\d{2}/ })
-      .first()
-      .click()
+    const fila = page.getByTestId('fila-para-agendar')
+    await expect(fila.getByText('Benedito Alves Portela')).toBeVisible({ timeout: 20_000 })
+    await fila.getByTestId('marcar-consulta').first().click()
+    await page.getByTestId('modal-agendar').getByTestId('vaga-sugerida').first().click()
 
     /* 2. a recepção registra a chegada — o relógio não faz isso sozinho */
-    const lista = page.getByTestId('agenda-lista')
-    await expect(lista.getByText('Benedito Alves Portela')).toBeVisible({ timeout: 20_000 })
-    await lista.getByTestId('agenda-chegada').first().click()
-    await expect(lista.getByText('Chegada registrada')).toBeVisible({ timeout: 20_000 })
+    const marcada = page.getByTestId('celula-agenda').filter({ hasText: '✓' }).first()
+    await expect(marcada).toBeVisible({ timeout: 20_000 })
+    await marcada.click()
+    const dia = page.getByTestId('dia-empilhado')
+    await dia.getByRole('button', { name: 'Chegou' }).first().click()
+    await expect(dia.getByText('chegou')).toBeVisible({ timeout: 20_000 })
 
     /* 3. o anestesista abre a avaliação */
     await page.evaluate((h) => {
